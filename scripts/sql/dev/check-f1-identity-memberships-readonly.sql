@@ -116,7 +116,7 @@ ORDER BY object_name, column_name;
 -- row_count NULL = tabela ausente (não interpretar como zero)
 SELECT 'A4_row_count' AS check_name, 'public.app_users' AS object_name,
   CASE WHEN to_regclass('public.app_users') IS NULL THEN NULL
-       ELSE (SELECT NULLIF((xpath('/table/row/cnt/text()', query_to_xml(
+       ELSE (SELECT NULLIF((xpath('/row/cnt/text()', query_to_xml(
               'SELECT count(*)::bigint AS cnt FROM public.app_users', false, true, ''
             )))[1]::text, '')::bigint)
   END AS row_count,
@@ -124,7 +124,7 @@ SELECT 'A4_row_count' AS check_name, 'public.app_users' AS object_name,
 
 SELECT 'A4_row_count' AS check_name, 'public.app_roles' AS object_name,
   CASE WHEN to_regclass('public.app_roles') IS NULL THEN NULL
-       ELSE (SELECT NULLIF((xpath('/table/row/cnt/text()', query_to_xml(
+       ELSE (SELECT NULLIF((xpath('/row/cnt/text()', query_to_xml(
               'SELECT count(*)::bigint AS cnt FROM public.app_roles', false, true, ''
             )))[1]::text, '')::bigint)
   END AS row_count,
@@ -132,7 +132,7 @@ SELECT 'A4_row_count' AS check_name, 'public.app_roles' AS object_name,
 
 SELECT 'A4_row_count' AS check_name, 'public.companies' AS object_name,
   CASE WHEN to_regclass('public.companies') IS NULL THEN NULL
-       ELSE (SELECT NULLIF((xpath('/table/row/cnt/text()', query_to_xml(
+       ELSE (SELECT NULLIF((xpath('/row/cnt/text()', query_to_xml(
               'SELECT count(*)::bigint AS cnt FROM public.companies', false, true, ''
             )))[1]::text, '')::bigint)
   END AS row_count,
@@ -140,7 +140,7 @@ SELECT 'A4_row_count' AS check_name, 'public.companies' AS object_name,
 
 SELECT 'A4_row_count' AS check_name, 'public.branches' AS object_name,
   CASE WHEN to_regclass('public.branches') IS NULL THEN NULL
-       ELSE (SELECT NULLIF((xpath('/table/row/cnt/text()', query_to_xml(
+       ELSE (SELECT NULLIF((xpath('/row/cnt/text()', query_to_xml(
               'SELECT count(*)::bigint AS cnt FROM public.branches', false, true, ''
             )))[1]::text, '')::bigint)
   END AS row_count,
@@ -148,7 +148,7 @@ SELECT 'A4_row_count' AS check_name, 'public.branches' AS object_name,
 
 SELECT 'A4_row_count' AS check_name, 'public.company_memberships' AS object_name,
   CASE WHEN to_regclass('public.company_memberships') IS NULL THEN NULL
-       ELSE (SELECT NULLIF((xpath('/table/row/cnt/text()', query_to_xml(
+       ELSE (SELECT NULLIF((xpath('/row/cnt/text()', query_to_xml(
               'SELECT count(*)::bigint AS cnt FROM public.company_memberships', false, true, ''
             )))[1]::text, '')::bigint)
   END AS row_count,
@@ -156,7 +156,7 @@ SELECT 'A4_row_count' AS check_name, 'public.company_memberships' AS object_name
 
 SELECT 'A4_row_count' AS check_name, 'auth.users' AS object_name,
   CASE WHEN to_regclass('auth.users') IS NULL THEN NULL
-       ELSE (SELECT NULLIF((xpath('/table/row/cnt/text()', query_to_xml(
+       ELSE (SELECT NULLIF((xpath('/row/cnt/text()', query_to_xml(
               'SELECT count(*)::bigint AS cnt FROM auth.users', false, true, ''
             )))[1]::text, '')::bigint)
   END AS row_count,
