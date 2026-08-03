@@ -1,0 +1,72 @@
+import type { CompanyRole } from '@/Lib/tenant/types'
+
+/** Fallback when role_permissions table is unavailable. */
+const FALLBACK: Record<CompanyRole, string[]> = {
+  owner: [
+    'users.view',
+    'users.manage',
+    'users.invite',
+    'quotes.view',
+    'quotes.manage',
+    'customers.view',
+    'customers.manage',
+    'catalog.view',
+    'catalog.manage',
+    'company.settings',
+    'audit.view',
+  ],
+  admin: [
+    'users.view',
+    'users.manage',
+    'users.invite',
+    'quotes.view',
+    'quotes.manage',
+    'customers.view',
+    'customers.manage',
+    'catalog.view',
+    'catalog.manage',
+    'company.settings',
+    'audit.view',
+  ],
+  manager: [
+    'users.view',
+    'quotes.view',
+    'quotes.manage',
+    'customers.view',
+    'customers.manage',
+    'catalog.view',
+    'catalog.manage',
+    'audit.view',
+  ],
+  sales: [
+    'quotes.view',
+    'quotes.manage',
+    'customers.view',
+    'customers.manage',
+    'catalog.view',
+  ],
+  operator: ['quotes.view', 'customers.view', 'catalog.view'],
+  kitchen: ['quotes.view', 'catalog.view'],
+  finance: ['quotes.view', 'customers.view', 'catalog.view', 'audit.view'],
+  viewer: ['quotes.view', 'customers.view', 'catalog.view'],
+}
+
+export function fallbackPermissionsForRole(role: CompanyRole | null | undefined): string[] {
+  if (!role) return []
+  return FALLBACK[role] ?? []
+}
+
+export function hasPermission(
+  permissions: string[] | null | undefined,
+  key: string,
+): boolean {
+  return Boolean(permissions?.includes(key))
+}
+
+export function canManageUsers(permissions: string[]): boolean {
+  return hasPermission(permissions, 'users.manage')
+}
+
+export function canInviteUsers(permissions: string[]): boolean {
+  return hasPermission(permissions, 'users.invite') || canManageUsers(permissions)
+}

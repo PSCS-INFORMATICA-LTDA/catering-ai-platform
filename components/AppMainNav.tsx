@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import AuthSessionBar from '@/components/auth/AuthSessionBar'
 import BuildVersionBadge from '@/components/BuildVersionBadge'
 import TenantContextBar from '@/components/tenant/TenantContextBar'
 
@@ -12,6 +13,8 @@ const NAV_LINKS = [
   { href: '/additional-items', label: 'Cadastro de itens' },
   { href: '/commercial-rules', label: 'Regras' },
   { href: '/packages/images', label: 'Imagens' },
+  { href: '/users', label: 'Usuários' },
+  { href: '/profile', label: 'Perfil' },
 ] as const
 
 function isNavActive(pathname: string, href: string) {
@@ -45,6 +48,12 @@ function isNavActive(pathname: string, href: string) {
       pathname.startsWith('/commercial-rules/')
     )
   }
+  if (href === '/users') {
+    return pathname === '/users' || pathname.startsWith('/users/')
+  }
+  if (href === '/profile') {
+    return pathname === '/profile' || pathname.startsWith('/profile/')
+  }
   return pathname === href
 }
 
@@ -56,6 +65,7 @@ export default function AppMainNav({ className = '' }: { className?: string }) {
   return (
     <div className={`w-full ${className}`}>
       <TenantContextBar />
+      <AuthSessionBar />
       <nav
         className="mt-2 flex flex-wrap items-center gap-2"
         aria-label="Navegação principal"

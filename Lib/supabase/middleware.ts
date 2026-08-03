@@ -1,0 +1,68 @@
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
+
+const PUBLIC_PREFIXES = [
+  '/login',
+  '/auth/',
+  '/customer-quote',
+  '/quote-request',
+]
+
+function isPublicPath(pathname: string): boolean {
+  if (pathname === '/') return false
+  return PUBLIC_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p.endsWith('/') ? p : `${p}/`) || pathname.startsWith(p),
+  )
+}
+
+export async function updateSession(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request })
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || !anon) {
+    return supabaseResponse
+  }
+
+  const supabase = createServerClient(url, anon, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll()
+      },
+      setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+        supabaseResponse = NextResponse.next({ request })
+        cookiesToSet.forEach(({ name, value, options }) =>
+          supabaseResponse.cookies.set(name, value, options),
+        )
+      },
+    },
+  })
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const pathname = request.nextUrl.pathname
+  const isApi = pathname.startsWith('/api/')
+  const isPublic = isPublicPath(pathname)
+
+  if (!user && !isPublic) {
+    if (isApi) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/login'
+    redirectUrl.search = ''
+    redirectUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  if (user && pathname === '/login') {
+    const next = request.nextUrl.searchParams.get('next')
+    const dest = next?.startsWith('/') ? next : '/quotes'
+    return NextResponse.redirect(new URL(dest, request.nextUrl.origin))
+  }
+
+  return supabaseResponse
+}
