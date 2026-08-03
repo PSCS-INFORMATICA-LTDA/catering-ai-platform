@@ -17,7 +17,7 @@ import {
   dedupeCustomersList,
   sortCustomersByRecency,
 } from '@/Lib/searchCustomers'
-import { supabase } from '@/Lib/supabase'
+import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -103,6 +103,7 @@ export async function POST(request: Request) {
       phone,
   })
 
+  const supabase = getSupabaseServerClient()
   const { data, error } = await supabase
     .from('customers')
     .insert(row)

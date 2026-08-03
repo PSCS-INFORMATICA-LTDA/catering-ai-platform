@@ -1,4 +1,4 @@
-import { supabase } from '@/Lib/supabase'
+import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import type { Branch, Company, FeatureFlagKey, TenantContext } from './types'
 import {
   getActiveBranchIdFromEnv,
@@ -12,6 +12,7 @@ export async function fetchTenantContext(options?: {
 }): Promise<TenantContext> {
   const companyId = options?.companyId?.trim() || getActiveCompanyId()
   const envBranchId = options?.branchId ?? getActiveBranchIdFromEnv()
+  const supabase = getSupabaseServerClient()
 
   const companyColumnsBase =
     'id, franchise_group_id, company_name, company_code, legal_name, trade_name, slug, currency_code, default_language, timezone, subscription_status, google_calendar_enabled, google_calendar_id, google_calendar_timezone, active'

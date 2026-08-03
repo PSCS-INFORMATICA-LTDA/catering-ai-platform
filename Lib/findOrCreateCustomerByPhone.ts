@@ -10,7 +10,7 @@ import {
 } from './getCustomerDisplayName'
 import { getNextAbNumber } from './getNextDocumentNumber'
 import { isUsablePhone, normalizePhone } from './normalizePhone'
-import { supabase } from './supabase'
+import { getSupabaseServerClient } from './supabaseServer'
 
 export type CustomerRecord = {
   id: string
@@ -88,6 +88,7 @@ async function findActiveCustomerByPhoneNormalized(
   companyId: string,
   phoneNormalized: string,
 ): Promise<CustomerRecord | null> {
+  const supabase = getSupabaseServerClient()
   const { data, error } = await supabase
     .from('customers')
     .select(buildCustomersListSelect())
@@ -113,6 +114,7 @@ async function findActiveCustomerByPhoneFallback(
   companyId: string,
   phoneNormalized: string,
 ): Promise<CustomerRecord | null> {
+  const supabase = getSupabaseServerClient()
   const { data, error } = await supabase
     .from('customers')
     .select(buildCustomersListSelect())
@@ -171,6 +173,7 @@ export async function findOrCreateCustomerByPhone(
     await buildInsertRow(input, companyId, phoneNormalized),
   )
 
+  const supabase = getSupabaseServerClient()
   const { data: created, error: insertError } = await supabase
     .from('customers')
     .insert(insertRow)

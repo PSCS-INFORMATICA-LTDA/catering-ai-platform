@@ -8,7 +8,7 @@ import { fetchQuoteLinkedPackageCatalog } from '@/Lib/fetchQuoteLinkedPackageCat
 import type { CustomerNameSource } from '@/Lib/getCustomerDisplayName'
 import type { CatalogItemListItem } from '@/Lib/itemCatalog'
 import { getActiveCompanyId } from '@/Lib/tenant/resolveTenant'
-import { supabase } from './supabase'
+import { getSupabaseServerClient } from './supabaseServer'
 
 function normalizeQuoteDetailRow(
   raw: Record<string, unknown>,
@@ -49,6 +49,7 @@ const OFFICIAL_GUEST_COLUMNS =
 
 export async function fetchQuoteDetail(id: string) {
   const companyId = getActiveCompanyId()
+  const supabase = getSupabaseServerClient()
 
   const [viewRes, guestRes] = await Promise.all([
     supabase

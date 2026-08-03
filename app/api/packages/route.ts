@@ -4,7 +4,7 @@ import {
   pickPackagesInsertPayload,
   type PackagesInsertPayload,
 } from '@/Lib/packagesTableSchema'
-import { supabase } from '@/Lib/supabase'
+import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
     updated_at: now,
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseServerClient()
     .from('packages')
     .insert(payload)
     .select('id')

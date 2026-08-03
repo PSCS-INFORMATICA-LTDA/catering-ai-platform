@@ -8,7 +8,7 @@ import {
   getCustomerDisplayName,
   type CustomerNameSource,
 } from './getCustomerDisplayName'
-import { supabase } from './supabase'
+import { getSupabaseServerClient } from './supabaseServer'
 
 export type QuoteListGrillFields = {
   has_grill: boolean
@@ -150,6 +150,7 @@ async function fetchGrillFieldsByQuoteId(
 ): Promise<Map<string, QuoteListGrillFields>> {
   if (quoteIds.length === 0) return new Map()
 
+  const supabase = getSupabaseServerClient()
   const { data, error } = await supabase
     .from('quote_detail_view')
     .select('id, has_grill, grill_photo_required, grill_rental_required')
@@ -184,6 +185,7 @@ export function sortQuoteListItems(items: QuoteListItem[]): QuoteListItem[] {
  */
 export async function fetchQuoteList() {
   const companyId = getCdlCompanyId()
+  const supabase = getSupabaseServerClient()
 
   const { data: quotes, error } = await supabase
     .from('quotes')

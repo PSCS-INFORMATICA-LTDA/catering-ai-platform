@@ -14,7 +14,7 @@ import {
   logSaveQuoteError,
   type SaveQuoteErrorInfo,
 } from './supabaseSaveError'
-import { supabase } from './supabase'
+import { getSupabaseServerClient } from './supabaseServer'
 
 export type CreateQuoteResult = {
   data: { id: string; quote_number: string | null } | null
@@ -127,6 +127,7 @@ async function resolveCustomerIdForSave(
 }
 
 export async function createQuote(input: QuoteSaveInput): Promise<CreateQuoteResult> {
+  const supabase = getSupabaseServerClient()
   const validationError = validateSaveInput(input)
   if (validationError) {
     logSaveQuoteError(validationError)

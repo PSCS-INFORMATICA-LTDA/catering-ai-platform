@@ -1,0 +1,76 @@
+{
+  "fixtureId": "catering-functional-validation-v1",
+  "environment": "DEV_ONLY",
+  "projectRefRequired": "yasprgtlqclwsjcshtls",
+  "projectRefForbidden": "eapwtirhevxrqinytans",
+  "notes": [
+    "Dados 100% fictícios. Não copiar PII de PROD.",
+    "Empresa principal reutiliza CDL_DEFAULT_COMPANY_ID da aplicação.",
+    "Schema de packages não possui charge_type fixed; PKG-FIXED usa price_per_person documentado.",
+    "Categorias = package_categories; itens = catalog_items; adicionais = catalog_items com can_be_additional."
+  ],
+  "ids": {
+    "franchiseMain": "a0000000-0000-4000-8000-000000000001",
+    "companyMain": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+    "branchMain": "b0000000-0000-4000-8000-000000000001",
+    "companyIso": "a1111111-1111-4111-8111-111111111111",
+    "catMeats": "a2000000-0000-4000-8000-000000000001",
+    "catSides": "a2000000-0000-4000-8000-000000000002",
+    "catDrinks": "a2000000-0000-4000-8000-000000000003",
+    "catServices": "a2000000-0000-4000-8000-000000000004",
+    "catIso": "a2000000-0000-4000-8000-000000000099",
+    "pkgEssential": "c2000000-0000-4000-8000-000000000001",
+    "pkgPremium": "c2000000-0000-4000-8000-000000000002",
+    "pkgFixed": "c2000000-0000-4000-8000-000000000003",
+    "pkgIso": "c2000000-0000-4000-8000-000000000099",
+    "itemBeef": "d2000000-0000-4000-8000-000000000001",
+    "itemChicken": "d2000000-0000-4000-8000-000000000002",
+    "itemRice": "d2000000-0000-4000-8000-000000000003",
+    "itemSalad": "d2000000-0000-4000-8000-000000000004",
+    "itemBread": "d2000000-0000-4000-8000-000000000005",
+    "itemSetup": "d2000000-0000-4000-8000-000000000006",
+    "addDessert": "d2000000-0000-4000-8000-000000000011",
+    "addTable": "d2000000-0000-4000-8000-000000000012",
+    "addTravel": "d2000000-0000-4000-8000-000000000013",
+    "addStaff": "d2000000-0000-4000-8000-000000000014",
+    "itemIso": "d2000000-0000-4000-8000-000000000099",
+    "customerMain": "f2000000-0000-4000-8000-000000000001",
+    "customerIso": "f2000000-0000-4000-8000-000000000099",
+    "eventMain": "f2100000-0000-4000-8000-000000000001",
+    "quoteMain": "f2200000-0000-4000-8000-000000000001"
+  },
+  "companyMain": {
+    "company_code": "CDL-DEV-VAL",
+    "slug": "cdl-bbq-at-home-dev-validation",
+    "company_name": "CDL BBQ At Home — DEV Validation",
+    "trade_name": "CDL BBQ At Home DEV",
+    "default_language": "pt",
+    "currency_code": "USD"
+  },
+  "companyIso": {
+    "company_code": "TEST-DEV-ISO",
+    "slug": "teste-dev-empresa-isolamento",
+    "company_name": "TESTE DEV — Empresa Isolamento",
+    "trade_name": "TESTE DEV Isolamento",
+    "default_language": "pt",
+    "currency_code": "USD"
+  },
+  "quoteCalc": {
+    "formula": "calculateQuoteTotals (Lib/calculateQuoteTotals.ts)",
+    "adults": 50,
+    "childrenUnder3": 0,
+    "children4To12": 0,
+    "packagePricePerPerson": 45,
+    "mileageDistance": 0,
+    "mileageFreeLimit": 20,
+    "mileageRate": 2,
+    "reservationPercentage": 30,
+    "currency": "USD",
+    "additionals": [
+      { "code": "TEST-DEV-ADD-DESSERT", "quantity": 1, "unitPrice": 6, "perPerson": true },
+      { "code": "TEST-DEV-ADD-TABLE", "quantity": 2, "unitPrice": 35, "perPerson": false },
+      { "code": "TEST-DEV-ADD-TRAVEL", "quantity": 1, "unitPrice": 90, "perPerson": false },
+      { "code": "TEST-DEV-ADD-STAFF", "quantity": 1, "unitPrice": 120, "perPerson": false }
+    ]
+  }
+}

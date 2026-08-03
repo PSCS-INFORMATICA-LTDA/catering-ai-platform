@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local secret rotation status (no secrets, but operational)
+scripts/dev/.rotate-secret-status.json
+scripts/dev/.philippe-dev-temp-password.txt
+scripts/dev/*-temp-password.txt
+scripts/dev/.tmp-*
+scripts/dev/_audit-rls-out.json
+
+scripts/dev/.session-validate-status.json
+scripts/dev/_audit-rls-out.json
