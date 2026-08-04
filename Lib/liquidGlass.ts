@@ -17,3 +17,30 @@ export function glassField(required = false, className = ''): string {
     .filter(Boolean)
     .join(' ')
 }
+
+export function glassTabsNav(className = ''): string {
+  return ['liquid-glass-tabs-nav', className].filter(Boolean).join(' ')
+}
+
+export function glassTabLink(active = false, className = ''): string {
+  return [
+    'liquid-glass-tab-link',
+    active ? 'liquid-glass-tab-link--active' : '',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ')
+}
+
+export function glassBtn(
+  tone: 'primary' | 'secondary' | 'ghost' = 'secondary',
+  className = '',
+): string {
+  return [
+    'liquid-glass-btn',
+    `liquid-glass-btn--${tone}`,
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ')
+}

@@ -1,5 +1,6 @@
 'use client'
 
+import { glassBtn } from '@/Lib/liquidGlass'
 import { useTheme } from './ThemeProvider'
 
 export function ThemeToggle({ className = '' }: { className?: string }) {
@@ -9,7 +10,7 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
     <button
       type="button"
       onClick={toggleTheme}
-      className={`inline-flex items-center gap-2 rounded-xl border border-cdl-border bg-cdl-surface px-3 py-2 text-xs font-bold uppercase tracking-wider text-cdl-accent shadow-cdl transition-colors hover:bg-cdl-hover ${className}`}
+      className={glassBtn('secondary', className)}
       aria-label={
         theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'
       }

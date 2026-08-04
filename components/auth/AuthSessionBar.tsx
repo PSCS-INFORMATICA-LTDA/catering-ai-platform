@@ -3,8 +3,9 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { createClient } from '@/Lib/supabase/client'
 import { hasPermission } from '@/Lib/auth/permissions'
+import { glassBtn, glassTabLink } from '@/Lib/liquidGlass'
+import { createClient } from '@/Lib/supabase/client'
 import { resolveAuthLocale, tAuth } from '@/Lib/i18n/authUsers'
 
 type MeResponse = {
@@ -19,6 +20,7 @@ type MeResponse = {
 export default function AuthSessionBar() {
   const router = useRouter()
   const [me, setMe] = useState<MeResponse | null>(null)
+  const [loggingOut, setLoggingOut] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -34,11 +36,17 @@ export default function AuthSessionBar() {
   }, [])
 
   async function logout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => null)
-    router.replace('/login')
-    router.refresh()
+    if (loggingOut) return
+    setLoggingOut(true)
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+      await fetch('/api/auth/logout', { method: 'POST' }).catch(() => null)
+      router.replace('/login')
+      router.refresh()
+    } finally {
+      setLoggingOut(false)
+    }
   }
 
   if (!me) return null
@@ -70,18 +78,25 @@ export default function AuthSessionBar() {
           {me.displayName || me.email}
           {me.isPlatformAdmin ? ` · ${tAuth(locale, 'platformAdmin')}` : ''}
         </span>
-        <Link href="/profile" className="rounded-lg border border-cdl-border px-2 py-1">
+        <Link
+          href="/profile"
+          className={glassTabLink(false, 'liquid-glass-tab-link--plain')}
+        >
           {tAuth(locale, 'profile')}
         </Link>
         {canSeeUsers ? (
-          <Link href="/users" className="rounded-lg border border-cdl-border px-2 py-1">
+          <Link
+            href="/users"
+            className={glassTabLink(false, 'liquid-glass-tab-link--plain')}
+          >
             {tAuth(locale, 'users')}
           </Link>
         ) : null}
         <button
           type="button"
           onClick={() => void logout()}
-          className="rounded-lg border border-cdl-border px-2 py-1"
+          disabled={loggingOut}
+          className={glassBtn('secondary', 'liquid-glass-tab-link--plain')}
         >
           {tAuth(locale, 'logout')}
         </button>
