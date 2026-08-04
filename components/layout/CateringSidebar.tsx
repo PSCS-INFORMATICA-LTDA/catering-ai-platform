@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { FoodAiPlatformMark } from '@/components/brand/FoodAiPlatformMark'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { CATERING_NAV, isNavHrefActive } from '@/components/layout/navConfig'
 
@@ -40,8 +39,20 @@ export function CateringSidebar({
         {/* Desktop recolhido: só o botão para expandir (como Logistics/Cursor). */}
         {collapsed ? (
           <div className="hidden h-full flex-col items-center gap-3 py-3 lg:flex">
-            <Link href="/quotes" onClick={onClose} title="Food AI Platform">
-              <FoodAiPlatformMark compact />
+            <Link
+              href="/quotes"
+              onClick={onClose}
+              title="Catering AI Platform"
+              className="px-1"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/brand/catering-logo-dark.png"
+                alt="Catering AI Platform"
+                width={48}
+                height={48}
+                className="h-10 w-10 object-contain"
+              />
             </Link>
             <button
               type="button"
@@ -67,9 +78,16 @@ export function CateringSidebar({
               href="/quotes"
               className="min-w-0 flex-1"
               onClick={onClose}
-              title="Food AI Platform"
+              title="Catering AI Platform"
             >
-              <FoodAiPlatformMark />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/brand/catering-logo-dark.png"
+                alt="Catering AI Platform"
+                width={360}
+                height={210}
+                className="h-auto w-full max-w-[11rem] object-contain"
+              />
             </Link>
             <button
               type="button"
