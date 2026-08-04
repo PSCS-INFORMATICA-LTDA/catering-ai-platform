@@ -8,6 +8,8 @@ import TenantContextBar from '@/components/tenant/TenantContextBar'
 import { glassBtn, glassTabLink, glassTabsNav } from '@/Lib/liquidGlass'
 
 const NAV_LINKS = [
+  { href: '/agenda', label: 'Agenda' },
+  { href: '/teams', label: 'Equipes' },
   { href: '/quotes', label: 'Cotações' },
   { href: '/customers', label: 'Cadastros' },
   { href: '/packages', label: 'Pacotes' },
@@ -19,6 +21,12 @@ const NAV_LINKS = [
 ] as const
 
 function isNavActive(pathname: string, href: string) {
+  if (href === '/agenda') {
+    return pathname === '/agenda' || pathname.startsWith('/agenda/')
+  }
+  if (href === '/teams') {
+    return pathname === '/teams' || pathname.startsWith('/teams/')
+  }
   if (href === '/quotes') {
     return (
       pathname === '/quotes' ||

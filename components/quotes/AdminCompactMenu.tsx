@@ -12,6 +12,8 @@ import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 function getNavLinks(language: QuoteLanguage = 'pt') {
   const t = getQuoteStrings(language).nav
   return [
+    { href: '/agenda', label: 'Agenda' },
+    { href: '/teams', label: 'Equipes' },
     { href: '/quotes', label: t.quotes },
     { href: '/customers', label: t.customers },
     { href: '/packages', label: t.packages },
@@ -22,6 +24,12 @@ function getNavLinks(language: QuoteLanguage = 'pt') {
 }
 
 function isNavActive(pathname: string, href: string) {
+  if (href === '/agenda') {
+    return pathname === '/agenda' || pathname.startsWith('/agenda/')
+  }
+  if (href === '/teams') {
+    return pathname === '/teams' || pathname.startsWith('/teams/')
+  }
   if (href === '/quotes') {
     return (
       pathname === '/quotes' ||
