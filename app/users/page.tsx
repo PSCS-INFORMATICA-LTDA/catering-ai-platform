@@ -2,7 +2,6 @@
 
 import { FormEvent, Suspense, useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import AppMainNav from '@/components/AppMainNav'
 import { resolveAuthLocale, tAuth } from '@/Lib/i18n/authUsers'
 import { useAuthLocale } from '@/Lib/i18n/useAuthLocale'
 
@@ -206,9 +205,8 @@ function UsersPageInner() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
-      <AppMainNav />
-      <h1 className="mt-4 text-2xl font-bold">{tAuth(locale, 'users')}</h1>
+    <main className="mx-auto w-full max-w-5xl">
+      <h1 className="text-2xl font-bold">{tAuth(locale, 'users')}</h1>
 
       {isPlatformAdmin ? (
         <section className="mt-4 rounded-2xl border border-cdl-border bg-cdl-surface p-4">

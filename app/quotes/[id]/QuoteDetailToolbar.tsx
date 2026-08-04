@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import AppMainNav from '@/components/AppMainNav'
 import DeleteQuoteButton from '@/components/DeleteQuoteButton'
 import QuotePdfDownload from './QuotePdfDownload'
 
@@ -27,8 +26,6 @@ export default function QuoteDetailToolbar({
 
   return (
     <div className="no-print mb-8 flex flex-col gap-4">
-      <AppMainNav />
-
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <Link
         href="/quotes"

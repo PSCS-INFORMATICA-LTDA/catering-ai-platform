@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { useCallback, useMemo, useState } from 'react'
-import AppMainNav from '@/components/AppMainNav'
 import type { AgendaEvent, OperationalTeam } from '@/Lib/agenda/types'
 import { eventsToSegments } from '@/Lib/agenda/segments'
 import {
@@ -140,10 +139,7 @@ export default function AgendaDashboard({
     : null
 
   return (
-    <main className="min-h-screen bg-cdl-bg px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
-        <AppMainNav />
-
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-red-600 sm:text-4xl">
@@ -501,8 +497,7 @@ export default function AgendaDashboard({
             </div>
           </div>
         ) : null}
-      </div>
-    </main>
+    </div>
   )
 }
 

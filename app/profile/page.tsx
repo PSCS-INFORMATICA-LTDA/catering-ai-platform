@@ -1,7 +1,6 @@
 'use client'
 
 import { FormEvent, useEffect, useState } from 'react'
-import AppMainNav from '@/components/AppMainNav'
 import { resolveAuthLocale, tAuth } from '@/Lib/i18n/authUsers'
 import { useAuthLocale } from '@/Lib/i18n/useAuthLocale'
 
@@ -68,9 +67,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
-      <AppMainNav />
-      <h1 className="mt-4 text-2xl font-bold">{tAuth(locale, 'profile')}</h1>
+    <main className="mx-auto w-full max-w-3xl">
+      <h1 className="text-2xl font-bold">{tAuth(locale, 'profile')}</h1>
       <form
         onSubmit={onSubmit}
         className="mt-6 space-y-4 rounded-2xl border border-cdl-border bg-cdl-surface p-4 sm:p-6"

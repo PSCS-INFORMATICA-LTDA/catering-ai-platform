@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import AppMainNav from '@/components/AppMainNav'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,8 +10,6 @@ export default function QuoteRequestPage() {
   return (
     <main className="min-h-screen bg-cdl-bg px-4 py-8 text-cdl-fg sm:px-6 sm:py-10">
       <div className="mx-auto max-w-2xl space-y-6">
-        <AppMainNav />
-
         <header>
           <h1 className="text-2xl font-black text-cdl-title sm:text-3xl">
             Solicitar cotação

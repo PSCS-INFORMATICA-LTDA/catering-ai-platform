@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { QuoteListItem } from '@/Lib/fetchQuoteList'
-import AppMainNav from './AppMainNav'
 import CdlBrandLogo from './CdlBrandLogo'
 import QuoteCard from './QuoteCard'
 import QuoteFilters, {
@@ -186,10 +185,8 @@ export default function QuotesDashboard({
   }, [])
 
   return (
-    <main className="quotes-pscs min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 sm:py-10">
+    <div className="quotes-pscs overflow-x-hidden">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 sm:gap-6">
-        <AppMainNav />
-
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
           <div className="flex items-center gap-4">
             <CdlBrandLogo size="sm" className="!h-12 !w-12 opacity-90 sm:!h-14 sm:!w-14" />
@@ -270,6 +267,6 @@ export default function QuotesDashboard({
           </div>
         )}
       </div>
-    </main>
+    </div>
   )
 }

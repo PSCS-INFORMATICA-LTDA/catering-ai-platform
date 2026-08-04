@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import AppMainNav from '@/components/AppMainNav'
+import BuildVersionBadge from '@/components/BuildVersionBadge'
 
 type ActiveFilter = 'active' | 'all'
 
@@ -35,9 +35,8 @@ export default function BackofficeTableShell({
   children: ReactNode
 }) {
   return (
-    <main className="min-h-screen bg-cdl-bg px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <AppMainNav />
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+        <BuildVersionBadge className="hidden sm:block" />
 
         <div className="mb-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -87,7 +86,6 @@ export default function BackofficeTableShell({
         </div>
 
         {children}
-      </div>
-    </main>
+    </div>
   )
 }

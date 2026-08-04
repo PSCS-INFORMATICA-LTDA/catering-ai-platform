@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import AppMainNav from '@/components/AppMainNav'
 import AdditionalItemImageUploadPanel from '@/components/AdditionalItemImageUploadPanel'
 import PackageImageUploadPanel from '@/components/PackageImageUploadPanel'
 import { fetchCatalogItems } from '@/Lib/fetchCatalogItems'
@@ -20,10 +19,8 @@ export default async function CatalogImagesPage() {
   const catalogError = catalogRes.error?.message ?? null
 
   return (
-    <main className="min-h-screen bg-cdl-bg px-4 py-8 text-cdl-fg sm:px-6 sm:py-10">
+    <main className="text-cdl-fg">
       <div className="mx-auto max-w-2xl space-y-8">
-        <AppMainNav />
-
         <div>
           <h1 className="text-2xl font-black text-cdl-title">Imagens do catálogo</h1>
           <p className="mt-1 text-sm text-cdl-muted">
