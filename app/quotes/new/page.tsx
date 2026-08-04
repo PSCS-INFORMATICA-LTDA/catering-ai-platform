@@ -1,15 +1,13 @@
-import { getCdlCompanyId } from '../../../Lib/cdlCompany'
 import { fetchActiveCustomers } from '../../../Lib/fetchCustomers'
 import { fetchCatalogItems } from '../../../Lib/fetchCatalogItems'
+import { fetchPackages } from '../../../Lib/fetchPackages'
 import { loadPackageConfiguration } from '../../../Lib/packageConfiguration'
-import { buildPackagesListSelect } from '../../../Lib/packagesTableSchema'
 import { fetchSupabaseCommercialRules } from '../../../Lib/supabaseCommercialRules'
 import QuoteWizard, {
   type CatalogItem,
   type Customer,
   type Package,
 } from './QuoteWizard'
-import { supabase } from '../../../Lib/supabase'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -17,22 +15,10 @@ export const revalidate = 0
 export default async function NewQuotePage() {
   const fetchErrors: string[] = []
 
-  const companyId = getCdlCompanyId()
-
-  let packagesQuery = supabase
-    .from('packages')
-    .select(buildPackagesListSelect())
-    .eq('active', true)
-    .order('display_order', { ascending: true })
-
-  if (companyId?.trim()) {
-    packagesQuery = packagesQuery.eq('company_id', companyId)
-  }
-
   const [customersRes, packagesRes, catalogRes, commercialRules] =
     await Promise.all([
       fetchActiveCustomers(),
-      packagesQuery,
+      fetchPackages({ activeOnly: true }),
       fetchCatalogItems({
         activeOnly: true,
         usage: 'additional',
@@ -70,6 +56,9 @@ export default async function NewQuotePage() {
     fetchErrors.push(
       `package_option_group_items: ${optionQueryDebug.itemsError.message}`,
     )
+  }
+  if (!packagesRes.error && packages.length === 0) {
+    fetchErrors.push('Pacotes: nenhum pacote ativo encontrado para a empresa.')
   }
 
   const packageConfiguration = packageConfigurationRes.data ?? {

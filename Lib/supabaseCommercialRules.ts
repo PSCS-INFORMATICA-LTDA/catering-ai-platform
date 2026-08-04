@@ -13,7 +13,7 @@ import {
   SIDES_PRICE_PER_PERSON,
 } from './cdlCommercialRules'
 import { getActiveCompanyId } from '@/Lib/tenant/resolveTenant'
-import { supabase } from './supabase'
+import { getSupabaseServerClient } from './supabaseServer'
 
 export type CommercialRulesSnapshot = {
   mileageBaseLocation: string
@@ -195,6 +195,7 @@ function parseCommercialRulesRows(rows: RuleRow[]): CommercialRulesSnapshot {
 
 export async function fetchSupabaseCommercialRules(): Promise<CommercialRulesSnapshot> {
   const companyId = getActiveCompanyId()
+  const supabase = getSupabaseServerClient()
 
   for (const table of RULE_TABLE_CANDIDATES) {
     let query = supabase.from(table).select('*')
