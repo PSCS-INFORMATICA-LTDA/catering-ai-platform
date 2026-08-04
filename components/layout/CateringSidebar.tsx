@@ -12,6 +12,23 @@ type Props = {
   onToggleCollapsed: () => void
 }
 
+/** Ícone de painel lateral (estilo Cursor) — abre/fecha o menu. */
+function SidebarPanelIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      aria-hidden
+    >
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.25" />
+      <path d="M9.5 4.5v15" />
+    </svg>
+  )
+}
+
 export function CateringSidebar({
   collapsed,
   mobileOpen,
@@ -36,7 +53,7 @@ export function CateringSidebar({
         } ${collapsed ? 'lg:w-[3.75rem]' : 'w-[min(20.5rem,92vw)] lg:w-72'}`}
         aria-label="Menu principal"
       >
-        {/* Desktop recolhido: só o botão para expandir (como Logistics/Cursor). */}
+        {/* Desktop recolhido: logo + ícone de painel para expandir */}
         {collapsed ? (
           <div className="hidden h-full flex-col items-center gap-3 py-3 lg:flex">
             <Link
@@ -56,14 +73,17 @@ export function CateringSidebar({
             </Link>
             <button
               type="button"
-              className="catering-sidebar-expand-btn"
+              className="catering-sidebar-panel-btn"
               aria-label="Expandir menu"
               title="Expandir menu"
               onClick={onToggleCollapsed}
             >
-              »
+              <SidebarPanelIcon className="h-5 w-5" />
             </button>
-            <span className="mt-auto text-[0.55rem] text-white/35">PSCS</span>
+            <div className="mt-auto flex flex-col items-center gap-2 px-1 pb-1">
+              <ThemeToggle className="!min-h-10 !w-10 !px-0 justify-center [&>span:last-child]:sr-only" />
+              <span className="text-[0.55rem] text-white/35">PSCS</span>
+            </div>
           </div>
         ) : null}
 
@@ -91,13 +111,14 @@ export function CateringSidebar({
             </Link>
             <button
               type="button"
-              className="catering-sidebar-icon-btn hidden lg:inline-flex"
+              className="catering-sidebar-panel-btn hidden lg:inline-flex"
               aria-label="Recolher menu"
               title="Recolher menu"
               onClick={onToggleCollapsed}
             >
-              «
+              <SidebarPanelIcon className="h-5 w-5" />
             </button>
+            {/* Fechar só no mobile (drawer) — não aparece no desktop */}
             <button
               type="button"
               className="catering-sidebar-icon-btn lg:hidden"
@@ -106,10 +127,6 @@ export function CateringSidebar({
             >
               ✕
             </button>
-          </div>
-
-          <div className="border-b border-white/10 px-3 py-3">
-            <ThemeToggle className="w-full justify-center" />
           </div>
 
           <nav className="flex-1 overflow-y-auto overscroll-contain px-2 py-3 [-webkit-overflow-scrolling:touch]">
@@ -151,7 +168,8 @@ export function CateringSidebar({
             ))}
           </nav>
 
-          <footer className="border-t border-white/10 px-3 py-3">
+          <footer className="mt-auto space-y-2 border-t border-white/10 px-3 py-3">
+            <ThemeToggle className="w-full justify-center" />
             <p className="text-center text-[0.65rem] text-white/40">
               PSCS Informática
             </p>
