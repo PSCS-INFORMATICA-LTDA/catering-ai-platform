@@ -44,6 +44,7 @@ export const CATERING_NAV: NavGroup[] = [
   {
     label: 'Configurações',
     children: [
+      { href: '/settings/company', label: 'Empresa' },
       { href: '/users', label: 'Usuários e acessos' },
       { href: '/profile', label: 'Meu perfil' },
     ],

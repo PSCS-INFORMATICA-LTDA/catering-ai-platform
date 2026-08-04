@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { FoodAiPlatformMark } from '@/components/brand/FoodAiPlatformMark'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { CATERING_NAV, isNavHrefActive } from '@/components/layout/navConfig'
 
@@ -33,115 +34,111 @@ export function CateringSidebar({
       <aside
         className={`catering-sidebar-shell fixed inset-y-0 left-0 z-50 flex flex-col border-r border-white/10 text-white transition-[width,transform] duration-200 ease-out lg:static lg:z-auto lg:h-full lg:min-h-0 lg:translate-x-0 lg:self-stretch ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        } ${collapsed ? 'lg:w-[4.5rem]' : 'w-[min(20.5rem,92vw)] lg:w-72'}`}
+        } ${collapsed ? 'lg:w-[3.75rem]' : 'w-[min(20.5rem,92vw)] lg:w-72'}`}
         aria-label="Menu principal"
       >
-        <div className="flex items-center gap-2 border-b border-white/10 px-3 py-3">
-          {!collapsed ? (
+        {/* Desktop recolhido: só o botão para expandir (como Logistics/Cursor). */}
+        {collapsed ? (
+          <div className="hidden h-full flex-col items-center gap-3 py-3 lg:flex">
+            <Link href="/quotes" onClick={onClose} title="Food AI Platform">
+              <FoodAiPlatformMark compact />
+            </Link>
+            <button
+              type="button"
+              className="catering-sidebar-expand-btn"
+              aria-label="Expandir menu"
+              title="Expandir menu"
+              onClick={onToggleCollapsed}
+            >
+              »
+            </button>
+            <span className="mt-auto text-[0.55rem] text-white/35">PSCS</span>
+          </div>
+        ) : null}
+
+        {/* Expandido (desktop) + drawer mobile */}
+        <div
+          className={`flex h-full min-h-0 flex-col ${
+            collapsed ? 'lg:hidden' : ''
+          }`}
+        >
+          <div className="flex items-start gap-2 border-b border-white/10 px-3 py-3">
             <Link
               href="/quotes"
               className="min-w-0 flex-1"
               onClick={onClose}
-              title="Catering AI Platform"
+              title="Food AI Platform"
             >
-              {/* Logo clara no fundo escuro do menu (versão dark-theme). */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/brand/catering-logo-dark.png"
-                alt="Catering AI Platform"
-                width={360}
-                height={210}
-                className="h-auto w-full max-w-[11rem] object-contain"
-              />
+              <FoodAiPlatformMark />
             </Link>
-          ) : (
-            <Link
-              href="/quotes"
-              className="mx-auto text-xs font-black tracking-wider text-white/90"
+            <button
+              type="button"
+              className="catering-sidebar-icon-btn hidden lg:inline-flex"
+              aria-label="Recolher menu"
+              title="Recolher menu"
+              onClick={onToggleCollapsed}
+            >
+              «
+            </button>
+            <button
+              type="button"
+              className="catering-sidebar-icon-btn lg:hidden"
+              aria-label="Fechar menu"
               onClick={onClose}
             >
-              CAP
-            </Link>
-          )}
-          <button
-            type="button"
-            className="catering-sidebar-icon-btn hidden lg:inline-flex"
-            aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
-            title={collapsed ? 'Expandir menu' : 'Recolher menu'}
-            onClick={onToggleCollapsed}
-          >
-            {collapsed ? '»' : '«'}
-          </button>
-          <button
-            type="button"
-            className="catering-sidebar-icon-btn lg:hidden"
-            aria-label="Fechar menu"
-            onClick={onClose}
-          >
-            ✕
-          </button>
-        </div>
+              ✕
+            </button>
+          </div>
 
-        {!collapsed ? (
           <div className="border-b border-white/10 px-3 py-3">
             <ThemeToggle className="w-full justify-center" />
           </div>
-        ) : (
-          <div className="border-b border-white/10 px-2 py-3">
-            <ThemeToggle className="w-full !min-h-10 !px-0 justify-center [&>span:last-child]:hidden" />
-          </div>
-        )}
 
-        <nav className="flex-1 overflow-y-auto overscroll-contain px-2 py-3 [-webkit-overflow-scrolling:touch]">
-          {CATERING_NAV.map((group) => (
-            <div
-              key={group.label}
-              className="catering-sidebar-group"
-              aria-label={group.label}
-            >
-              {!collapsed ? (
+          <nav className="flex-1 overflow-y-auto overscroll-contain px-2 py-3 [-webkit-overflow-scrolling:touch]">
+            {CATERING_NAV.map((group) => (
+              <div
+                key={group.label}
+                className="catering-sidebar-group"
+                aria-label={group.label}
+              >
                 <p className="catering-sidebar-group-label">{group.label}</p>
-              ) : (
-                <p className="mb-1 truncate px-1 text-center text-[0.55rem] font-semibold uppercase tracking-wider text-white/35">
-                  {group.label.slice(0, 3)}
-                </p>
-              )}
-              {group.children.map((child) => {
-                if (child.soon) {
+                {group.children.map((child) => {
+                  if (child.soon) {
+                    return (
+                      <span
+                        key={`${group.label}-${child.label}`}
+                        className="catering-sidebar-nav-btn catering-sidebar-nav-btn--soon"
+                        title="Em breve"
+                      >
+                        {child.label}
+                      </span>
+                    )
+                  }
+                  const active = isNavHrefActive(pathname, child.href)
                   return (
-                    <span
-                      key={`${group.label}-${child.label}`}
-                      className="catering-sidebar-nav-btn catering-sidebar-nav-btn--soon"
-                      title="Em breve"
+                    <Link
+                      key={child.href}
+                      href={child.href}
+                      title={child.label}
+                      onClick={onClose}
+                      className={`catering-sidebar-nav-btn ${
+                        active ? 'catering-sidebar-nav-btn--active' : ''
+                      }`}
                     >
-                      {!collapsed ? child.label : '·'}
-                    </span>
+                      {child.label}
+                    </Link>
                   )
-                }
-                const active = isNavHrefActive(pathname, child.href)
-                return (
-                  <Link
-                    key={child.href}
-                    href={child.href}
-                    title={child.label}
-                    onClick={onClose}
-                    className={`catering-sidebar-nav-btn ${
-                      active ? 'catering-sidebar-nav-btn--active' : ''
-                    } ${collapsed ? 'justify-center px-2' : ''}`}
-                  >
-                    {collapsed ? child.label.slice(0, 1) : child.label}
-                  </Link>
-                )
-              })}
-            </div>
-          ))}
-        </nav>
+                })}
+              </div>
+            ))}
+          </nav>
 
-        <footer className="border-t border-white/10 px-3 py-3">
-          <p className="text-center text-[0.65rem] text-white/40">
-            {collapsed ? 'PSCS' : 'PSCS Informática'}
-          </p>
-        </footer>
+          <footer className="border-t border-white/10 px-3 py-3">
+            <p className="text-center text-[0.65rem] text-white/40">
+              PSCS Informática
+            </p>
+          </footer>
+        </div>
       </aside>
     </>
   )

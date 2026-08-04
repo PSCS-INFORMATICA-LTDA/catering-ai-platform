@@ -52,3 +52,5 @@ scripts/dev/_audit-rls-out.json
 
 .tmp-video-frames/
 
+.tmp-video-frames-2/
+

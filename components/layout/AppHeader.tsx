@@ -68,7 +68,10 @@ export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
         <p className="text-[0.65rem] font-bold uppercase tracking-wider text-cdl-muted">
           Empresa
         </p>
-        <p className="truncate text-sm font-bold text-cdl-title">{companyLabel}</p>
+        <p className="truncate text-sm font-bold text-cdl-title">
+          <span className="text-cdl-muted font-semibold">EMPRESA:</span>{' '}
+          <span className="text-red-600">{companyLabel}</span>
+        </p>
       </div>
 
       <div className="hidden min-w-0 text-right text-xs text-cdl-muted sm:block">
