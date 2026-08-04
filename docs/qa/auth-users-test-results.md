@@ -36,10 +36,31 @@
 - Self role change bloqueado (API + UI)
 - Sem senha/token/JWT nos logs dos scripts
 
-## Preview
+## Commit / Preview
 
-Substituído após commit/push — ver relatório final da entrega (URL do novo deployment).
+| Item | Valor |
+|------|--------|
+| Commit | `a7f34d5ebbc68eec3a3cbd9571747187fe14c291` |
+| Mensagem | `feat(auth): conclui QA, RBAC e gestão de usuários` |
+| Preview | https://catering-ai-platform-6yhxtgwir-pscs-informatica-ltda-s-projects.vercel.app |
+| Target | Preview · Ready |
+| Supabase | DEV (sem ref PROD no smoke) |
 
-## Status intermediário (antes do Preview novo)
+### Smoke Preview (anon / vercel curl)
 
-Testes locais obrigatórios: **PASS**. Seguir para commit/push/Preview.
+| Rota | Resultado |
+|------|-----------|
+| `/` | 200 |
+| `/login` | 200 |
+| `/auth/forgot-password` | 200 |
+| `/forgot-password` | 307 → `/auth/forgot-password` |
+| `/profile` `/users` `/quotes` | 307 → login |
+| `/api/quotes` `/api/users` | 401 |
+
+### Smoke Preview autenticado (scripts Node com cookie)
+
+Scripts `test-users-search-filters` / `test-domain-api-rbac` com `QA_BASE_URL=Preview` retornaram **401** (provável Deployment Protection / cookie SSR remoto). Validação autenticada no Preview: **browser por Philippe**. Local autenticado: **PASS**.
+
+## Status
+
+**PRONTO PARA VALIDAÇÃO DE PHILIPPE — AUTENTICAÇÃO E USUÁRIOS**
