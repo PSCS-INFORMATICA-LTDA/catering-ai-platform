@@ -154,7 +154,10 @@ export default function ProfilePage() {
         </fieldset>
         {error ? <p className="text-sm text-red-500">{error}</p> : null}
         {message ? <p className="text-sm text-emerald-500">{message}</p> : null}
-        <button type="submit" className="cdl-btn-primary">
+        <button
+          type="submit"
+          className="liquid-glass-btn liquid-glass-btn--primary"
+        >
           {tAuth(locale, 'save')}
         </button>
       </form>

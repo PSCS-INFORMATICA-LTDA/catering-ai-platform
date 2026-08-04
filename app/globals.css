@@ -836,12 +836,12 @@ body {
   color: #ffffff;
   background: linear-gradient(
     145deg,
-    rgba(249, 115, 22, 0.92) 0%,
-    rgba(234, 88, 12, 0.94) 100%
+    rgba(245, 158, 11, 0.92) 0%,
+    rgba(217, 119, 6, 0.94) 100%
   );
-  border-color: rgba(255, 200, 150, 0.55);
+  border-color: rgba(253, 230, 138, 0.55);
   box-shadow:
-    0 6px 18px rgba(234, 88, 12, 0.28),
+    0 6px 18px rgba(217, 119, 6, 0.28),
     inset 0 1px 0 rgba(255, 255, 255, 0.32);
 }
 
@@ -849,8 +849,8 @@ body {
   color: #ffffff;
   background: linear-gradient(
     145deg,
-    rgba(251, 146, 60, 0.95) 0%,
-    rgba(249, 115, 22, 0.96) 100%
+    rgba(251, 191, 36, 0.95) 0%,
+    rgba(245, 158, 11, 0.96) 100%
   );
 }
 
@@ -936,21 +936,21 @@ body {
   color: #ffffff;
   background: linear-gradient(
     145deg,
-    rgba(249, 115, 22, 0.9) 0%,
-    rgba(234, 88, 12, 0.94) 55%,
-    rgba(194, 65, 12, 0.92) 100%
+    rgba(245, 158, 11, 0.92) 0%,
+    rgba(217, 119, 6, 0.95) 55%,
+    rgba(180, 83, 9, 0.94) 100%
   );
-  border-color: rgba(255, 200, 150, 0.55);
+  border-color: rgba(253, 230, 138, 0.55);
 }
 
 .liquid-glass-btn--primary:hover:not(:disabled) {
   background: linear-gradient(
     145deg,
-    rgba(251, 146, 60, 0.94) 0%,
-    rgba(249, 115, 22, 0.96) 55%,
-    rgba(234, 88, 12, 0.94) 100%
+    rgba(251, 191, 36, 0.95) 0%,
+    rgba(245, 158, 11, 0.96) 55%,
+    rgba(217, 119, 6, 0.95) 100%
   );
-  border-color: rgba(255, 210, 170, 0.65);
+  border-color: rgba(254, 243, 199, 0.7);
 }
 
 .liquid-glass-btn--secondary {
@@ -1034,12 +1034,12 @@ body {
   color: #fff8e7;
   background: linear-gradient(
     145deg,
-    rgba(249, 115, 22, 0.75) 0%,
-    rgba(234, 88, 12, 0.62) 100%
+    rgba(245, 158, 11, 0.78) 0%,
+    rgba(217, 119, 6, 0.64) 100%
   );
-  border-color: rgba(255, 200, 150, 0.5);
+  border-color: rgba(253, 230, 138, 0.5);
   box-shadow:
-    0 6px 18px rgba(234, 88, 12, 0.35),
+    0 6px 18px rgba(217, 119, 6, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
@@ -1176,13 +1176,17 @@ body {
 }
 
 .catering-sidebar-nav-btn--active {
-  color: #fff8e7;
+  color: #fffbeb;
   background: linear-gradient(
     145deg,
-    rgba(249, 115, 22, 0.55) 0%,
-    rgba(234, 88, 12, 0.42) 100%
+    rgba(245, 158, 11, 0.58) 0%,
+    rgba(217, 119, 6, 0.44) 100%
   );
-  border-color: rgba(255, 200, 150, 0.55);
+  border-color: rgba(253, 230, 138, 0.55);
+  box-shadow:
+    inset 3px 0 0 0 rgba(245, 158, 11, 0.95),
+    0 4px 14px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .catering-sidebar-nav-btn--soon {
@@ -1206,15 +1210,26 @@ body {
   line-height: 1;
 }
 
+/* MENU do header: só mobile — liquid-glass-btn sobrescreve lg:hidden */
+.catering-header-menu-btn {
+  display: inline-flex;
+}
+
+@media (min-width: 1024px) {
+  .catering-header-menu-btn {
+    display: none !important;
+  }
+}
+
 .catering-sidebar-expand-btn,
 .catering-sidebar-panel-btn {
   display: inline-flex;
-  height: 1.85rem;
-  width: 1.85rem;
+  height: 1.65rem;
+  width: 1.65rem;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 0.65rem;
+  border-radius: 0.55rem;
   border: 1px solid rgba(255, 255, 255, 0.28);
   background: linear-gradient(
     145deg,

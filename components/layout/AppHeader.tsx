@@ -57,7 +57,7 @@ export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
     <header className="catering-app-header flex shrink-0 items-center gap-3 border-b border-cdl-border px-3 py-2.5 sm:px-4">
       <button
         type="button"
-        className={glassBtn('secondary', 'lg:hidden !min-h-10')}
+        className={glassBtn('secondary', 'catering-header-menu-btn !min-h-10')}
         aria-label="Abrir menu"
         onClick={onMenuClick}
       >

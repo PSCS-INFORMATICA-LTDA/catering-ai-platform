@@ -55,7 +55,7 @@ export function CateringSidebar({
       >
         {/* Desktop recolhido: logo + ícone de painel para expandir */}
         {collapsed ? (
-          <div className="hidden h-full flex-col items-center gap-3 py-3 lg:flex">
+          <div className="hidden h-full flex-col items-center gap-2 py-2.5 lg:flex">
             <Link
               href="/quotes"
               onClick={onClose}
@@ -66,9 +66,9 @@ export function CateringSidebar({
               <img
                 src="/brand/catering-logo-dark.png"
                 alt="Catering AI Platform"
-                width={48}
-                height={48}
-                className="h-10 w-10 object-contain"
+                width={40}
+                height={40}
+                className="h-8 w-8 object-contain"
               />
             </Link>
             <button
@@ -78,7 +78,7 @@ export function CateringSidebar({
               title="Expandir menu"
               onClick={onToggleCollapsed}
             >
-              <SidebarPanelIcon className="h-3.5 w-3.5" />
+              <SidebarPanelIcon className="h-3 w-3" />
             </button>
             <div className="mt-auto flex flex-col items-center gap-2 px-1 pb-1">
               <ThemeToggle className="catering-sidebar-theme-toggle catering-sidebar-theme-toggle--icon !px-0 justify-center [&>span:last-child]:sr-only" />
@@ -93,7 +93,7 @@ export function CateringSidebar({
             collapsed ? 'lg:hidden' : ''
           }`}
         >
-          <div className="flex items-start gap-2 border-b border-white/10 px-3 py-3">
+          <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2.5">
             <Link
               href="/quotes"
               className="min-w-0 flex-1"
@@ -106,9 +106,10 @@ export function CateringSidebar({
                 alt="Catering AI Platform"
                 width={360}
                 height={210}
-                className="h-auto w-full max-w-[11rem] object-contain"
+                className="h-9 w-auto max-w-[9.25rem] object-contain object-left"
               />
             </Link>
+            {/* Recolher: alinhado à barra do header, altura dos botões do menu */}
             <button
               type="button"
               className="catering-sidebar-panel-btn catering-sidebar-panel-btn--desktop"
@@ -116,9 +117,9 @@ export function CateringSidebar({
               title="Recolher menu"
               onClick={onToggleCollapsed}
             >
-              <SidebarPanelIcon className="h-3.5 w-3.5" />
+              <SidebarPanelIcon className="h-3 w-3" />
             </button>
-            {/* Fechar só no drawer mobile — CSS força display:none no desktop */}
+            {/* X só no drawer mobile */}
             <button
               type="button"
               className="catering-sidebar-close-btn"
