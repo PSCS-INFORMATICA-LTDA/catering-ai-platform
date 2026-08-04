@@ -50,7 +50,7 @@ export function CateringSidebar({
       <aside
         className={`catering-sidebar-shell fixed inset-y-0 left-0 z-50 flex flex-col border-r border-white/10 text-white transition-[width,transform] duration-200 ease-out lg:static lg:z-auto lg:h-full lg:min-h-0 lg:translate-x-0 lg:self-stretch ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        } ${collapsed ? 'lg:w-[3.75rem]' : 'w-[min(20.5rem,92vw)] lg:w-72'}`}
+        } ${collapsed ? 'lg:w-[3.75rem]' : 'w-[min(20.5rem,92vw)] lg:w-80'}`}
         aria-label="Menu principal"
       >
         {/* Desktop recolhido */}
@@ -93,10 +93,10 @@ export function CateringSidebar({
             collapsed ? 'lg:hidden' : ''
           }`}
         >
-          <div className="catering-sidebar-brand-row">
+          <div className="catering-sidebar-brand-zone">
             <Link
               href="/quotes"
-              className="min-w-0 flex-1"
+              className="catering-sidebar-brand-link"
               onClick={onClose}
               title="Catering AI Platform"
             >
@@ -104,12 +104,12 @@ export function CateringSidebar({
               <img
                 src="/brand/catering-logo-dark.png"
                 alt="Catering AI Platform"
-                width={280}
-                height={160}
+                width={196}
+                height={74}
                 className="catering-sidebar-brand-logo"
               />
             </Link>
-            {/* Só desktop: recolher — alinhado à barra, altura dos botões */}
+            {/* Desktop: janela na reta da barra de rolagem, tamanho dos botões do menu */}
             <button
               type="button"
               className="catering-sidebar-panel-btn catering-sidebar-panel-btn--desktop"
@@ -117,9 +117,9 @@ export function CateringSidebar({
               title="Recolher menu"
               onClick={onToggleCollapsed}
             >
-              <SidebarPanelIcon className="h-3 w-3" />
+              <SidebarPanelIcon className="h-4 w-4" />
             </button>
-            {/* Só mobile (padrão Logistics: display none no desktop) */}
+            {/* Só mobile */}
             <button
               type="button"
               className="catering-sidebar-close-btn"

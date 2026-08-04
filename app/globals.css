@@ -1195,22 +1195,36 @@ body {
   font-style: italic;
 }
 
-/* Header da sidebar: logo + janela alinhados à barra */
-.catering-sidebar-brand-row {
+/* Brand zone — proporção do Logistics (mark sm ~196×74, max 16.5rem) */
+.catering-sidebar-brand-zone {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.65rem 0.75rem;
-  min-height: 3.25rem;
+  justify-content: flex-start;
+  padding: 0.875rem 2.75rem 0.75rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  overflow: visible;
+}
+
+.catering-sidebar-brand-link {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  min-width: 0;
+  border-radius: 0.625rem;
+  transition: transform 0.18s ease;
+}
+
+.catering-sidebar-brand-link:hover {
+  transform: translateY(-1px);
 }
 
 .catering-sidebar-brand-logo {
   display: block;
-  height: 2.15rem;
-  width: auto;
-  max-width: 9rem;
+  width: 100%;
+  max-width: 16.5rem;
+  height: auto;
+  aspect-ratio: 196 / 74;
   object-fit: contain;
   object-position: left center;
 }
@@ -1264,12 +1278,12 @@ body {
 .catering-sidebar-expand-btn,
 .catering-sidebar-panel-btn {
   display: inline-flex;
-  height: 1.65rem;
-  width: 1.65rem;
+  height: 2.25rem;
+  width: 2.25rem;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 0.55rem;
+  border-radius: 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.28);
   background: linear-gradient(
     145deg,
@@ -1296,8 +1310,18 @@ body {
   );
 }
 
+/* Janela na reta da barra de rolagem (borda direita da sidebar) */
 .catering-sidebar-panel-btn--desktop {
   display: none;
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  z-index: 2;
+  transform: translateY(-50%);
+}
+
+.catering-sidebar-panel-btn--desktop:hover {
+  transform: translateY(calc(-50% - 1px));
 }
 
 @media (max-width: 1023px) {
@@ -1307,6 +1331,14 @@ body {
 
   .catering-sidebar-close-btn {
     display: inline-flex;
+    position: absolute;
+    top: 0.55rem;
+    right: 0.55rem;
+    z-index: 2;
+  }
+
+  .catering-sidebar-brand-zone {
+    padding-right: 3rem;
   }
 }
 
