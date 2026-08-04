@@ -20,13 +20,22 @@ export async function PATCH(request: Request) {
   let body: {
     displayName?: string
     preferredLanguage?: string
+    currentPassword?: string
     newPassword?: string
+    role?: unknown
+    company_id?: unknown
+    is_pscs_master?: unknown
   }
   try {
     body = (await request.json()) as typeof body
   } catch {
     return Response.json({ error: 'Invalid JSON' }, { status: 400 })
   }
+
+  // Ignore privilege-escalation fields from client payloads.
+  void body.role
+  void body.company_id
+  void body.is_pscs_master
 
   const admin = getSupabaseServerClient()
   if (session.appUser?.id) {
@@ -43,9 +52,27 @@ export async function PATCH(request: Request) {
     }
   }
 
-  if (body.newPassword && body.newPassword.length >= 8) {
-    const supabase = await createClient()
-    const { error } = await supabase.auth.updateUser({ password: body.newPassword })
+  if (body.newPassword) {
+    if (body.newPassword.length < 8) {
+      return Response.json({ error: 'Senha fraca (mín. 8)' }, { status: 400 })
+    }
+    if (!body.currentPassword) {
+      return Response.json({ error: 'Senha atual obrigatória' }, { status: 400 })
+    }
+    if (!session.email) {
+      return Response.json({ error: 'E-mail da sessão ausente' }, { status: 400 })
+    }
+
+    const verifier = await createClient()
+    const { error: reauthError } = await verifier.auth.signInWithPassword({
+      email: session.email,
+      password: body.currentPassword,
+    })
+    if (reauthError) {
+      return Response.json({ error: 'Senha atual inválida' }, { status: 400 })
+    }
+
+    const { error } = await verifier.auth.updateUser({ password: body.newPassword })
     if (error) return Response.json({ error: error.message }, { status: 400 })
     await writeAdminAudit({
       companyId: session.activeMembership?.company_id,

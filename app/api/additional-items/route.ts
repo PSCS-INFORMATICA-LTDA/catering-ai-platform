@@ -1,3 +1,4 @@
+import { rejectSpoofedCompanyId, requireApiPermission } from '@/Lib/auth/requireApi'
 import { getCdlCompanyId } from '@/Lib/cdlCompany'
 import { fetchCatalogItems } from '@/Lib/fetchCatalogItems'
 import { getCatalogItemSalePrice } from '@/Lib/getAdditionalItemPrice'
@@ -33,6 +34,9 @@ function itemMatchesSearch(
 }
 
 export async function GET(request: Request) {
+  const auth = await requireApiPermission('catalog.view')
+  if (!auth.ok) return auth.response
+
   const url = new URL(request.url)
   const query = url.searchParams.get('q')?.trim() ?? ''
   const activeFilter = url.searchParams.get('active')
@@ -88,6 +92,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireApiPermission('catalog.manage')
+  if (!auth.ok) return auth.response
+
   const companyId = getCdlCompanyId()
   if (!companyId?.trim()) {
     return Response.json({ error: 'company_id não configurado.' }, { status: 500 })
@@ -99,6 +106,9 @@ export async function POST(request: Request) {
   } catch {
     return Response.json({ error: 'Payload inválido.' }, { status: 400 })
   }
+
+  const spoof = rejectSpoofedCompanyId(auth.session, (body as { company_id?: string }).company_id)
+  if (spoof) return spoof
 
   if (!body.item_key?.toString().trim()) {
     return Response.json({ error: 'item_key é obrigatório.' }, { status: 400 })

@@ -3,18 +3,20 @@
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FormEvent, Suspense, useState } from 'react'
+import { safeInternalNext } from '@/Lib/auth/safeNext'
 import { createClient } from '@/Lib/supabase/client'
-import { tAuth } from '@/Lib/i18n/authUsers'
+import { resolveAuthLocale, tAuth, type AuthLocale } from '@/Lib/i18n/authUsers'
 
 function LoginForm() {
   const router = useRouter()
   const params = useSearchParams()
-  const next = params.get('next') || '/quotes'
+  const next = safeInternalNext(params.get('next'), '/quotes')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const locale = 'pt'
+  const [locale, setLocale] = useState<AuthLocale>('pt')
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -30,19 +32,39 @@ function LoginForm() {
       setError(tAuth(locale, 'invalidCredentials'))
       return
     }
-    router.replace(next.startsWith('/') ? next : '/quotes')
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('catering.auth.locale', locale)
+    }
+    router.replace(next)
     router.refresh()
   }
 
   return (
     <main className="mx-auto flex min-h-[80vh] w-full max-w-md flex-col justify-center px-4 py-10">
       <div className="rounded-2xl border border-cdl-border bg-cdl-surface p-6 shadow-sm sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cdl-muted">
-          {tAuth(locale, 'loginSubtitle')}
-        </p>
-        <h1 className="mt-2 text-2xl font-bold text-cdl-fg sm:text-3xl">
-          {tAuth(locale, 'loginTitle')}
-        </h1>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cdl-muted">
+              {tAuth(locale, 'loginSubtitle')}
+            </p>
+            <h1 className="mt-2 text-2xl font-bold text-cdl-fg sm:text-3xl">
+              {tAuth(locale, 'loginTitle')}
+            </h1>
+          </div>
+          <label className="text-xs text-cdl-muted">
+            <span className="sr-only">{tAuth(locale, 'language')}</span>
+            <select
+              value={locale}
+              onChange={(e) => setLocale(resolveAuthLocale(e.target.value))}
+              className="rounded-lg border border-cdl-border bg-cdl-bg px-2 py-1"
+              aria-label={tAuth(locale, 'language')}
+            >
+              <option value="pt">PT</option>
+              <option value="en">EN</option>
+              <option value="es">ES</option>
+            </select>
+          </label>
+        </div>
         <form className="mt-8 space-y-4" onSubmit={onSubmit}>
           <label className="block text-sm">
             <span className="mb-1 block text-cdl-muted">{tAuth(locale, 'email')}</span>
@@ -57,14 +79,25 @@ function LoginForm() {
           </label>
           <label className="block text-sm">
             <span className="mb-1 block text-cdl-muted">{tAuth(locale, 'password')}</span>
-            <input
-              type="password"
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-cdl-border bg-cdl-bg px-3 py-2.5 text-cdl-fg outline-none focus:border-[var(--brand-primary)]"
-            />
+            <div className="flex gap-2">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-xl border border-cdl-border bg-cdl-bg px-3 py-2.5 text-cdl-fg outline-none focus:border-[var(--brand-primary)]"
+              />
+              <button
+                type="button"
+                className="shrink-0 rounded-xl border border-cdl-border px-3 text-xs text-cdl-muted"
+                onClick={() => setShowPassword((v) => !v)}
+              >
+                {showPassword
+                  ? tAuth(locale, 'hidePassword')
+                  : tAuth(locale, 'showPassword')}
+              </button>
+            </div>
           </label>
           {error ? (
             <p className="text-sm text-red-500" role="alert">

@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { safeInternalNext } from '@/Lib/auth/safeNext'
 
 const PUBLIC_PREFIXES = [
   '/login',
@@ -9,7 +10,7 @@ const PUBLIC_PREFIXES = [
 ]
 
 function isPublicPath(pathname: string): boolean {
-  if (pathname === '/') return false
+  if (pathname === '/') return true
   return PUBLIC_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(p.endsWith('/') ? p : `${p}/`) || pathname.startsWith(p),
   )
@@ -17,6 +18,15 @@ function isPublicPath(pathname: string): boolean {
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
+
+  const pathname = request.nextUrl.pathname
+  // Public aliases expected by QA / UX (canonical pages live under /auth/*)
+  if (pathname === '/forgot-password') {
+    return NextResponse.redirect(new URL('/auth/forgot-password', request.url))
+  }
+  if (pathname === '/reset-password') {
+    return NextResponse.redirect(new URL('/auth/reset-password', request.url))
+  }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -43,7 +53,6 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const pathname = request.nextUrl.pathname
   const isApi = pathname.startsWith('/api/')
   const isPublic = isPublicPath(pathname)
 
@@ -59,8 +68,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && pathname === '/login') {
-    const next = request.nextUrl.searchParams.get('next')
-    const dest = next?.startsWith('/') ? next : '/quotes'
+    const dest = safeInternalNext(request.nextUrl.searchParams.get('next'), '/quotes')
     return NextResponse.redirect(new URL(dest, request.nextUrl.origin))
   }
 

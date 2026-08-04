@@ -3,25 +3,32 @@
 import { FormEvent, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/Lib/supabase/client'
-import { tAuth } from '@/Lib/i18n/authUsers'
+import { resolveAuthLocale, tAuth } from '@/Lib/i18n/authUsers'
+import { useAuthLocale } from '@/Lib/i18n/useAuthLocale'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
+  const { locale, setLocale } = useAuthLocale()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const locale = 'pt'
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
     if (password.length < 8) {
-      setError('Mínimo 8 caracteres')
+      setError(tAuth(locale, 'required'))
       return
     }
     if (password !== confirm) {
-      setError('Senhas não conferem')
+      setError(
+        locale === 'en'
+          ? 'Passwords do not match'
+          : locale === 'es'
+            ? 'Las contraseñas no coinciden'
+            : 'Senhas não conferem',
+      )
       return
     }
     setLoading(true)
@@ -38,7 +45,19 @@ export default function ResetPasswordPage() {
   return (
     <main className="mx-auto flex min-h-[80vh] w-full max-w-md flex-col justify-center px-4 py-10">
       <div className="rounded-2xl border border-cdl-border bg-cdl-surface p-6 sm:p-8">
-        <h1 className="text-2xl font-bold">{tAuth(locale, 'resetTitle')}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl font-bold">{tAuth(locale, 'resetTitle')}</h1>
+          <select
+            value={locale}
+            onChange={(e) => setLocale(resolveAuthLocale(e.target.value))}
+            className="rounded-lg border border-cdl-border bg-cdl-bg px-2 py-1 text-xs"
+            aria-label={tAuth(locale, 'language')}
+          >
+            <option value="pt">PT</option>
+            <option value="en">EN</option>
+            <option value="es">ES</option>
+          </select>
+        </div>
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <label className="block text-sm">
             <span className="mb-1 block text-cdl-muted">{tAuth(locale, 'newPassword')}</span>

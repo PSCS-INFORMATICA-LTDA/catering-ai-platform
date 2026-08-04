@@ -1,3 +1,4 @@
+import { requireApiPermission } from '@/Lib/auth/requireApi'
 import type { QuoteSaveInput } from '@/Lib/buildQuoteSavePayload'
 import { deactivateQuote } from '@/Lib/deactivateQuote'
 import { logSaveQuoteError } from '@/Lib/supabaseSaveError'
@@ -7,6 +8,9 @@ export async function DELETE(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const auth = await requireApiPermission('quotes.manage')
+  if (!auth.ok) return auth.response
+
   const { id } = await context.params
   const { data, error } = await deactivateQuote(id)
 
@@ -24,6 +28,9 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const auth = await requireApiPermission('quotes.manage')
+  if (!auth.ok) return auth.response
+
   const { id } = await context.params
   let body: QuoteSaveInput
 

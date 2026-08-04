@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/Lib/supabase/client'
-import { tAuth } from '@/Lib/i18n/authUsers'
+import { hasPermission } from '@/Lib/auth/permissions'
+import { resolveAuthLocale, tAuth } from '@/Lib/i18n/authUsers'
 
 type MeResponse = {
   email?: string | null
@@ -12,6 +13,7 @@ type MeResponse = {
   isPlatformAdmin?: boolean
   supportSession?: { reason: string } | null
   locale?: string
+  permissions?: string[]
 }
 
 export default function AuthSessionBar() {
@@ -40,7 +42,9 @@ export default function AuthSessionBar() {
   }
 
   if (!me) return null
-  const locale = me.locale ?? 'pt'
+  const locale = resolveAuthLocale(me.locale)
+  const canSeeUsers =
+    me.isPlatformAdmin || hasPermission(me.permissions, 'users.view')
 
   return (
     <div className="mb-3 space-y-2">
@@ -69,9 +73,11 @@ export default function AuthSessionBar() {
         <Link href="/profile" className="rounded-lg border border-cdl-border px-2 py-1">
           {tAuth(locale, 'profile')}
         </Link>
-        <Link href="/users" className="rounded-lg border border-cdl-border px-2 py-1">
-          {tAuth(locale, 'users')}
-        </Link>
+        {canSeeUsers ? (
+          <Link href="/users" className="rounded-lg border border-cdl-border px-2 py-1">
+            {tAuth(locale, 'users')}
+          </Link>
+        ) : null}
         <button
           type="button"
           onClick={() => void logout()}

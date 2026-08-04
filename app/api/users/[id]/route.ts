@@ -58,6 +58,15 @@ export async function PATCH(request: Request, { params }: Params) {
     body.status ??
     ((current.status as string) || (current.active ? 'active' : 'inactive'))
 
+  if (
+    current.user_id === session.userId &&
+    body.role &&
+    body.role !== current.role &&
+    !session.isPlatformAdmin
+  ) {
+    return Response.json({ error: 'self_role_change_blocked' }, { status: 409 })
+  }
+
   const wasPrivileged =
     current.role === 'owner' || current.role === 'admin'
   const willBePrivileged = nextRole === 'owner' || nextRole === 'admin'

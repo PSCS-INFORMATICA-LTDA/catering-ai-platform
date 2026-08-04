@@ -1,3 +1,4 @@
+import { requireApiPermission } from '@/Lib/auth/requireApi'
 import { getCdlCompanyId } from '@/Lib/cdlCompany'
 import {
   buildCustomersListSelect,
@@ -15,6 +16,9 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const auth = await requireApiPermission('customers.manage')
+  if (!auth.ok) return auth.response
+
   const { id } = await context.params
   const companyId = getCdlCompanyId()
 

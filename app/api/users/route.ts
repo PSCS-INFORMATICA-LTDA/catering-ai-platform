@@ -1,6 +1,10 @@
-import { canInviteUsers, canManageUsers, hasPermission } from '@/Lib/auth/permissions'
+import { canInviteUsers, canManageUsers } from '@/Lib/auth/permissions'
+import {
+  rejectSpoofedCompanyId,
+  requireApiPermission,
+  resolveAuthorizedCompanyId,
+} from '@/Lib/auth/requireApi'
 import { getAuthSession, writeAdminAudit } from '@/Lib/auth/session'
-import { getCdlCompanyId } from '@/Lib/cdlCompany'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import type { CompanyRole } from '@/Lib/tenant/types'
 
@@ -17,17 +21,41 @@ const ROLES: CompanyRole[] = [
   'viewer',
 ]
 
-export async function GET() {
-  const session = await getAuthSession()
-  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!hasPermission(session.permissions, 'users.view') && !session.isPlatformAdmin) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 })
-  }
+const MAX_PAGE_SIZE = 50
+const DEFAULT_PAGE_SIZE = 20
 
-  const companyId =
-    session.supportSession?.target_company_id ||
-    session.activeMembership?.company_id ||
-    getCdlCompanyId()
+function normalizeQuery(raw: string | null): string {
+  return (raw ?? '').trim().replace(/\s+/g, ' ').slice(0, 120)
+}
+
+export async function GET(request: Request) {
+  const auth = await requireApiPermission('users.view')
+  if (!auth.ok) return auth.response
+  const session = auth.session
+
+  const url = new URL(request.url)
+  const spoof = rejectSpoofedCompanyId(session, url.searchParams.get('company_id'))
+  if (spoof) return spoof
+
+  const companyId = resolveAuthorizedCompanyId(session)
+  const q = normalizeQuery(url.searchParams.get('q')).toLowerCase()
+  const roleFilter = (url.searchParams.get('role') ?? '').trim()
+  const statusFilter = (url.searchParams.get('status') ?? '').trim()
+  const page = Math.max(1, Number(url.searchParams.get('page') || 1) || 1)
+  const pageSize = Math.min(
+    MAX_PAGE_SIZE,
+    Math.max(
+      1,
+      Number(url.searchParams.get('pageSize') || DEFAULT_PAGE_SIZE) || DEFAULT_PAGE_SIZE,
+    ),
+  )
+
+  if (roleFilter && !ROLES.includes(roleFilter as CompanyRole)) {
+    return Response.json({ error: 'role inválido' }, { status: 400 })
+  }
+  if (statusFilter && !['active', 'inactive', 'suspended'].includes(statusFilter)) {
+    return Response.json({ error: 'status inválido' }, { status: 400 })
+  }
 
   const admin = getSupabaseServerClient()
   const { data, error } = await admin
@@ -42,60 +70,87 @@ export async function GET() {
   const { data: profiles } = await admin
     .from('app_users')
     .select('auth_user_id, email, display_name, full_name, active, is_pscs_master')
-    .in('auth_user_id', userIds.length ? userIds : ['00000000-0000-0000-0000-000000000000'])
+    .in(
+      'auth_user_id',
+      userIds.length ? userIds : ['00000000-0000-0000-0000-000000000000'],
+    )
 
   const byAuth = new Map(
     (profiles ?? []).map((p) => [p.auth_user_id as string, p]),
   )
 
+  let rows = (data ?? []).map((m) => {
+    const p = byAuth.get(m.user_id as string)
+    const status = (m.status as string) ?? (m.active ? 'active' : 'inactive')
+    return {
+      id: m.id as string,
+      userId: m.user_id as string,
+      role: m.role as string,
+      status,
+      active: Boolean(m.active),
+      email: (p?.email as string | null) ?? null,
+      name: ((p?.display_name || p?.full_name) as string | null) ?? null,
+      isPlatformAdmin: Boolean(p?.is_pscs_master),
+      createdAt: m.created_at as string,
+    }
+  })
+
+  if (roleFilter) rows = rows.filter((r) => r.role === roleFilter)
+  if (statusFilter) rows = rows.filter((r) => r.status === statusFilter)
+  if (q) {
+    rows = rows.filter((r) => {
+      const hay = `${r.name ?? ''} ${r.email ?? ''}`.toLowerCase()
+      return hay.includes(q)
+    })
+  }
+
+  const total = rows.length
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const safePage = Math.min(page, totalPages)
+  const start = (safePage - 1) * pageSize
+  const pageRows = rows.slice(start, start + pageSize)
+
   return Response.json({
     companyId,
     canManage: canManageUsers(session.permissions) || session.isPlatformAdmin,
     canInvite: canInviteUsers(session.permissions) || session.isPlatformAdmin,
-    data: (data ?? []).map((m) => {
-      const p = byAuth.get(m.user_id as string)
-      return {
-        id: m.id,
-        userId: m.user_id,
-        role: m.role,
-        status: m.status ?? (m.active ? 'active' : 'inactive'),
-        active: m.active,
-        email: p?.email ?? null,
-        name: p?.display_name || p?.full_name || null,
-        isPlatformAdmin: Boolean(p?.is_pscs_master),
-      }
-    }),
+    page: safePage,
+    pageSize,
+    total,
+    totalPages,
+    filters: { q, role: roleFilter || null, status: statusFilter || null },
+    data: pageRows,
   })
 }
 
 export async function POST(request: Request) {
   const session = await getAuthSession()
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!canInviteUsers(session.permissions) && !session.isPlatformAdmin) {
+  if (
+    !canInviteUsers(session.permissions) &&
+    !canManageUsers(session.permissions) &&
+    !session.isPlatformAdmin
+  ) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  let body: { email?: string; role?: string }
+  let body: { email?: string; role?: string; company_id?: string }
   try {
-    body = (await request.json()) as { email?: string; role?: string }
+    body = (await request.json()) as { email?: string; role?: string; company_id?: string }
   } catch {
     return Response.json({ error: 'Invalid JSON' }, { status: 400 })
   }
+
+  const spoof = rejectSpoofedCompanyId(session, body.company_id)
+  if (spoof) return spoof
 
   const email = body.email?.trim().toLowerCase()
   const role = (body.role?.trim() || 'operator') as CompanyRole
   if (!email || !ROLES.includes(role)) {
     return Response.json({ error: 'email/role inválidos' }, { status: 400 })
   }
-  if (role === 'owner' && !session.isPlatformAdmin) {
-    // company admin may invite admin but not invent platform concepts; owner allowed for company
-  }
 
-  const companyId =
-    session.supportSession?.target_company_id ||
-    session.activeMembership?.company_id ||
-    getCdlCompanyId()
-
+  const companyId = resolveAuthorizedCompanyId(session)
   const admin = getSupabaseServerClient()
   const { data: invite, error } = await admin
     .from('user_invites')
@@ -111,7 +166,6 @@ export async function POST(request: Request) {
 
   if (error) return Response.json({ error: error.message }, { status: 500 })
 
-  // Try Supabase invite (requires Auth email configured)
   const { error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { invited_company_id: companyId, invited_role: role },
   })
@@ -122,11 +176,8 @@ export async function POST(request: Request) {
     action: 'users.invite',
     entityType: 'user_invites',
     entityId: invite.id,
-    metadata: { email, role, authInviteError: inviteErr?.message ?? null },
+    metadata: { email, role, inviteError: inviteErr?.message ?? null },
   })
 
-  return Response.json({
-    data: invite,
-    authInvite: inviteErr ? { ok: false, message: inviteErr.message } : { ok: true },
-  })
+  return Response.json({ data: invite })
 }

@@ -1,3 +1,4 @@
+import { rejectSpoofedCompanyId, requireApiPermission } from '@/Lib/auth/requireApi'
 import { createQuote } from '@/Lib/createQuote'
 import type { QuoteSaveInput } from '@/Lib/buildQuoteSavePayload'
 import { fetchQuoteList } from '@/Lib/fetchQuoteList'
@@ -6,6 +7,9 @@ import { logSaveQuoteError } from '@/Lib/supabaseSaveError'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
+  const auth = await requireApiPermission('quotes.view')
+  if (!auth.ok) return auth.response
+
   const { data, error } = await fetchQuoteList()
 
   if (error) {
@@ -25,13 +29,19 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  let body: QuoteSaveInput
+  const auth = await requireApiPermission('quotes.manage')
+  if (!auth.ok) return auth.response
+
+  let body: QuoteSaveInput & { company_id?: string }
 
   try {
-    body = (await request.json()) as QuoteSaveInput
+    body = (await request.json()) as QuoteSaveInput & { company_id?: string }
   } catch {
     return Response.json({ error: 'Payload inválido.' }, { status: 400 })
   }
+
+  const spoof = rejectSpoofedCompanyId(auth.session, body.company_id)
+  if (spoof) return spoof
 
   if (!body.packageId) {
     return Response.json(
