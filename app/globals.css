@@ -836,12 +836,12 @@ body {
   color: #ffffff;
   background: linear-gradient(
     145deg,
-    rgba(226, 27, 27, 0.9) 0%,
-    rgba(180, 16, 16, 0.94) 100%
+    rgba(249, 115, 22, 0.92) 0%,
+    rgba(234, 88, 12, 0.94) 100%
   );
-  border-color: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 200, 150, 0.55);
   box-shadow:
-    0 6px 18px rgba(226, 27, 27, 0.28),
+    0 6px 18px rgba(234, 88, 12, 0.28),
     inset 0 1px 0 rgba(255, 255, 255, 0.32);
 }
 
@@ -849,8 +849,8 @@ body {
   color: #ffffff;
   background: linear-gradient(
     145deg,
-    rgba(236, 40, 40, 0.94) 0%,
-    rgba(200, 20, 20, 0.96) 100%
+    rgba(251, 146, 60, 0.95) 0%,
+    rgba(249, 115, 22, 0.96) 100%
   );
 }
 
@@ -936,20 +936,21 @@ body {
   color: #ffffff;
   background: linear-gradient(
     145deg,
-    rgba(226, 27, 27, 0.88) 0%,
-    rgba(180, 16, 16, 0.94) 55%,
-    rgba(140, 10, 10, 0.9) 100%
+    rgba(249, 115, 22, 0.9) 0%,
+    rgba(234, 88, 12, 0.94) 55%,
+    rgba(194, 65, 12, 0.92) 100%
   );
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 200, 150, 0.55);
 }
 
 .liquid-glass-btn--primary:hover:not(:disabled) {
   background: linear-gradient(
     145deg,
-    rgba(236, 40, 40, 0.92) 0%,
-    rgba(200, 20, 20, 0.96) 55%,
-    rgba(160, 12, 12, 0.92) 100%
+    rgba(251, 146, 60, 0.94) 0%,
+    rgba(249, 115, 22, 0.96) 55%,
+    rgba(234, 88, 12, 0.94) 100%
   );
+  border-color: rgba(255, 210, 170, 0.65);
 }
 
 .liquid-glass-btn--secondary {
@@ -1033,12 +1034,12 @@ body {
   color: #fff8e7;
   background: linear-gradient(
     145deg,
-    rgba(226, 27, 27, 0.72) 0%,
-    rgba(180, 16, 16, 0.6) 100%
+    rgba(249, 115, 22, 0.75) 0%,
+    rgba(234, 88, 12, 0.62) 100%
   );
-  border-color: rgba(255, 180, 190, 0.45);
+  border-color: rgba(255, 200, 150, 0.5);
   box-shadow:
-    0 6px 18px rgba(226, 27, 27, 0.35),
+    0 6px 18px rgba(234, 88, 12, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
@@ -1178,10 +1179,10 @@ body {
   color: #fff8e7;
   background: linear-gradient(
     145deg,
-    rgba(226, 27, 27, 0.55) 0%,
-    rgba(180, 16, 16, 0.42) 100%
+    rgba(249, 115, 22, 0.55) 0%,
+    rgba(234, 88, 12, 0.42) 100%
   );
-  border-color: rgba(255, 180, 190, 0.45);
+  border-color: rgba(255, 200, 150, 0.55);
 }
 
 .catering-sidebar-nav-btn--soon {
@@ -1190,7 +1191,8 @@ body {
   font-style: italic;
 }
 
-.catering-sidebar-icon-btn {
+.catering-sidebar-icon-btn,
+.catering-sidebar-close-btn {
   display: inline-flex;
   height: 2rem;
   width: 2rem;
@@ -1207,12 +1209,12 @@ body {
 .catering-sidebar-expand-btn,
 .catering-sidebar-panel-btn {
   display: inline-flex;
-  height: 2.5rem;
-  width: 2.5rem;
+  height: 1.85rem;
+  width: 1.85rem;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 0.875rem;
+  border-radius: 0.65rem;
   border: 1px solid rgba(255, 255, 255, 0.28);
   background: linear-gradient(
     145deg,
@@ -1221,7 +1223,7 @@ body {
   );
   color: #fff;
   box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.25),
+    0 3px 10px rgba(0, 0, 0, 0.22),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transition:
     transform 0.14s ease,
@@ -1237,5 +1239,66 @@ body {
     rgba(255, 255, 255, 0.2) 0%,
     rgba(255, 255, 255, 0.08) 100%
   );
+}
+
+/* Painel só no desktop; X só no drawer mobile */
+.catering-sidebar-panel-btn--desktop {
+  display: none !important;
+}
+
+@media (min-width: 1024px) {
+  .catering-sidebar-close-btn {
+    display: none !important;
+  }
+
+  .catering-sidebar-panel-btn--desktop {
+    display: inline-flex !important;
+  }
+}
+
+/* Tema no rodapé da sidebar: compacto, texto nítido (sidebar sempre escura) */
+.catering-sidebar-shell .catering-sidebar-theme-toggle.liquid-glass-btn {
+  min-height: 2rem;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 0.7rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #f8fafc !important;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.06) 100%
+  ) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  text-shadow: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.catering-sidebar-shell .catering-sidebar-theme-toggle.liquid-glass-btn::before {
+  opacity: 0.35;
+}
+
+.catering-sidebar-shell
+  .catering-sidebar-theme-toggle.liquid-glass-btn
+  > span {
+  color: inherit;
+  opacity: 1;
+  filter: none;
+  transform: none;
+}
+
+.catering-sidebar-shell
+  .catering-sidebar-theme-toggle--icon.liquid-glass-btn {
+  width: 2rem;
+  min-width: 2rem;
+  padding-left: 0;
+  padding-right: 0;
 }
 

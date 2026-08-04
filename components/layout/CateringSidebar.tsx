@@ -78,10 +78,10 @@ export function CateringSidebar({
               title="Expandir menu"
               onClick={onToggleCollapsed}
             >
-              <SidebarPanelIcon className="h-5 w-5" />
+              <SidebarPanelIcon className="h-3.5 w-3.5" />
             </button>
             <div className="mt-auto flex flex-col items-center gap-2 px-1 pb-1">
-              <ThemeToggle className="!min-h-10 !w-10 !px-0 justify-center [&>span:last-child]:sr-only" />
+              <ThemeToggle className="catering-sidebar-theme-toggle catering-sidebar-theme-toggle--icon !px-0 justify-center [&>span:last-child]:sr-only" />
               <span className="text-[0.55rem] text-white/35">PSCS</span>
             </div>
           </div>
@@ -111,17 +111,17 @@ export function CateringSidebar({
             </Link>
             <button
               type="button"
-              className="catering-sidebar-panel-btn hidden lg:inline-flex"
+              className="catering-sidebar-panel-btn catering-sidebar-panel-btn--desktop"
               aria-label="Recolher menu"
               title="Recolher menu"
               onClick={onToggleCollapsed}
             >
-              <SidebarPanelIcon className="h-5 w-5" />
+              <SidebarPanelIcon className="h-3.5 w-3.5" />
             </button>
-            {/* Fechar só no mobile (drawer) — não aparece no desktop */}
+            {/* Fechar só no drawer mobile — CSS força display:none no desktop */}
             <button
               type="button"
-              className="catering-sidebar-icon-btn lg:hidden"
+              className="catering-sidebar-close-btn"
               aria-label="Fechar menu"
               onClick={onClose}
             >
@@ -168,8 +168,8 @@ export function CateringSidebar({
             ))}
           </nav>
 
-          <footer className="mt-auto space-y-2 border-t border-white/10 px-3 py-3">
-            <ThemeToggle className="w-full justify-center" />
+          <footer className="mt-auto space-y-2 border-t border-white/10 px-3 py-2.5">
+            <ThemeToggle className="catering-sidebar-theme-toggle w-full justify-center" />
             <p className="text-center text-[0.65rem] text-white/40">
               PSCS Informática
             </p>
