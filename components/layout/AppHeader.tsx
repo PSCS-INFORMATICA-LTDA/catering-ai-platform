@@ -55,13 +55,18 @@ export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
 
   return (
     <header className="catering-app-header flex shrink-0 items-center gap-3 border-b border-cdl-border px-3 py-2.5 sm:px-4">
+      {/* Só mobile — no desktop o menu lateral já fica aberto (padrão Logistics). */}
       <button
         type="button"
-        className={glassBtn('secondary', 'catering-header-menu-btn !min-h-10')}
+        className="catering-header-menu-btn"
         aria-label="Abrir menu"
         onClick={onMenuClick}
       >
-        Menu
+        <span className="catering-header-menu-icon" aria-hidden>
+          <span />
+          <span />
+          <span />
+        </span>
       </button>
 
       <div className="min-w-0 flex-1">
@@ -70,7 +75,7 @@ export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
         </p>
         <p className="truncate text-sm font-bold text-cdl-title">
           <span className="text-cdl-muted font-semibold">EMPRESA:</span>{' '}
-          <span className="text-red-600">{companyLabel}</span>
+          <span className="text-amber-600">{companyLabel}</span>
         </p>
       </div>
 

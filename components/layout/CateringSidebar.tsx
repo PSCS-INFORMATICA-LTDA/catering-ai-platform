@@ -53,7 +53,7 @@ export function CateringSidebar({
         } ${collapsed ? 'lg:w-[3.75rem]' : 'w-[min(20.5rem,92vw)] lg:w-72'}`}
         aria-label="Menu principal"
       >
-        {/* Desktop recolhido: logo + ícone de painel para expandir */}
+        {/* Desktop recolhido */}
         {collapsed ? (
           <div className="hidden h-full flex-col items-center gap-2 py-2.5 lg:flex">
             <Link
@@ -66,8 +66,8 @@ export function CateringSidebar({
               <img
                 src="/brand/catering-logo-dark.png"
                 alt="Catering AI Platform"
-                width={40}
-                height={40}
+                width={36}
+                height={36}
                 className="h-8 w-8 object-contain"
               />
             </Link>
@@ -93,7 +93,7 @@ export function CateringSidebar({
             collapsed ? 'lg:hidden' : ''
           }`}
         >
-          <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2.5">
+          <div className="catering-sidebar-brand-row">
             <Link
               href="/quotes"
               className="min-w-0 flex-1"
@@ -104,12 +104,12 @@ export function CateringSidebar({
               <img
                 src="/brand/catering-logo-dark.png"
                 alt="Catering AI Platform"
-                width={360}
-                height={210}
-                className="h-9 w-auto max-w-[9.25rem] object-contain object-left"
+                width={280}
+                height={160}
+                className="catering-sidebar-brand-logo"
               />
             </Link>
-            {/* Recolher: alinhado à barra do header, altura dos botões do menu */}
+            {/* Só desktop: recolher — alinhado à barra, altura dos botões */}
             <button
               type="button"
               className="catering-sidebar-panel-btn catering-sidebar-panel-btn--desktop"
@@ -119,7 +119,7 @@ export function CateringSidebar({
             >
               <SidebarPanelIcon className="h-3 w-3" />
             </button>
-            {/* X só no drawer mobile */}
+            {/* Só mobile (padrão Logistics: display none no desktop) */}
             <button
               type="button"
               className="catering-sidebar-close-btn"
