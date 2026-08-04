@@ -2,7 +2,9 @@
 
 import { FormEvent, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AuthGlassShell } from '@/components/auth/AuthGlassShell'
 import { createClient } from '@/Lib/supabase/client'
+import { glassField } from '@/Lib/liquidGlass'
 import { resolveAuthLocale, tAuth } from '@/Lib/i18n/authUsers'
 import { useAuthLocale } from '@/Lib/i18n/useAuthLocale'
 
@@ -43,48 +45,53 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-[80vh] w-full max-w-md flex-col justify-center px-4 py-10">
-      <div className="rounded-2xl border border-cdl-border bg-cdl-surface p-6 sm:p-8">
-        <div className="flex items-start justify-between gap-3">
-          <h1 className="text-2xl font-bold">{tAuth(locale, 'resetTitle')}</h1>
-          <select
-            value={locale}
-            onChange={(e) => setLocale(resolveAuthLocale(e.target.value))}
-            className="rounded-lg border border-cdl-border bg-cdl-bg px-2 py-1 text-xs"
-            aria-label={tAuth(locale, 'language')}
-          >
-            <option value="pt">PT</option>
-            <option value="en">EN</option>
-            <option value="es">ES</option>
-          </select>
-        </div>
-        <form className="mt-6 space-y-4" onSubmit={onSubmit}>
-          <label className="block text-sm">
-            <span className="mb-1 block text-cdl-muted">{tAuth(locale, 'newPassword')}</span>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-cdl-border bg-cdl-bg px-3 py-2.5"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block text-cdl-muted">{tAuth(locale, 'confirmPassword')}</span>
-            <input
-              type="password"
-              required
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              className="w-full rounded-xl border border-cdl-border bg-cdl-bg px-3 py-2.5"
-            />
-          </label>
-          {error ? <p className="text-sm text-red-500">{error}</p> : null}
-          <button type="submit" disabled={loading} className="cdl-btn-primary w-full">
-            {tAuth(locale, 'save')}
-          </button>
-        </form>
-      </div>
-    </main>
+    <AuthGlassShell
+      toolbar={
+        <select
+          value={locale}
+          onChange={(e) => setLocale(resolveAuthLocale(e.target.value))}
+          className="auth-glass-lang"
+          aria-label={tAuth(locale, 'language')}
+        >
+          <option value="pt">PT</option>
+          <option value="en">EN</option>
+          <option value="es">ES</option>
+        </select>
+      }
+    >
+      <h1 className="text-xl font-bold text-cdl-fg sm:text-2xl">
+        {tAuth(locale, 'resetTitle')}
+      </h1>
+      <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+        <label className="block text-sm">
+          <span className="mb-1.5 block text-cdl-muted">{tAuth(locale, 'newPassword')}</span>
+          <input
+            type="password"
+            required
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={glassField(true)}
+          />
+        </label>
+        <label className="block text-sm">
+          <span className="mb-1.5 block text-cdl-muted">
+            {tAuth(locale, 'confirmPassword')}
+          </span>
+          <input
+            type="password"
+            required
+            autoComplete="new-password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            className={glassField(true)}
+          />
+        </label>
+        {error ? <p className="text-sm text-red-500">{error}</p> : null}
+        <button type="submit" disabled={loading} className="cdl-btn-primary w-full">
+          {tAuth(locale, 'save')}
+        </button>
+      </form>
+    </AuthGlassShell>
   )
 }
