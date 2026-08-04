@@ -48,7 +48,13 @@ export async function PATCH(request: Request) {
       patch.preferred_language = body.preferredLanguage.trim()
     }
     if (Object.keys(patch).length) {
-      await admin.from('app_users').update(patch).eq('id', session.appUser.id)
+      const { error: updateError } = await admin
+        .from('app_users')
+        .update(patch)
+        .eq('id', session.appUser.id)
+      if (updateError) {
+        return Response.json({ error: updateError.message }, { status: 400 })
+      }
     }
   }
 

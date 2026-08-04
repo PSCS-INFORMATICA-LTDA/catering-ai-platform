@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { resolveAuthLocale, type AuthLocale } from '@/Lib/i18n/authUsers'
 
 const STORAGE_KEY = 'catering.auth.locale'
@@ -17,14 +17,14 @@ export function useAuthLocale(initial?: string | null): {
     resolveAuthLocale(initial),
   )
 
-  function setLocale(next: AuthLocale) {
+  const setLocale = useCallback((next: AuthLocale) => {
     setLocaleState(next)
     try {
       window.localStorage.setItem(STORAGE_KEY, next)
     } catch {
       /* ignore */
     }
-  }
+  }, [])
 
   return { locale, setLocale }
 }

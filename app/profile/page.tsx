@@ -15,21 +15,41 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    let cancelled = false
     ;(async () => {
       const res = await fetch('/api/profile', { cache: 'no-store' })
-      if (!res.ok) return
+      if (!res.ok || cancelled) return
       const json = await res.json()
-      setDisplayName(json.appUser?.display_name || json.appUser?.full_name || '')
+      if (cancelled) return
+      setDisplayName(
+        (json.appUser?.display_name || json.appUser?.full_name || '').trim(),
+      )
       const lang = json.appUser?.preferred_language || 'pt'
       setLanguage(lang)
       setLocale(resolveAuthLocale(lang))
     })()
-  }, [setLocale])
+    return () => {
+      cancelled = true
+    }
+    // Carrega uma vez ao montar — não repor o nome a cada re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
     setMessage(null)
+    const nextName = displayName.trim()
+    if (!nextName) {
+      setError(
+        locale === 'en'
+          ? 'Display name is required'
+          : locale === 'es'
+            ? 'El nombre es obligatorio'
+            : 'Nome de exibição é obrigatório',
+      )
+      return
+    }
     if (newPassword && newPassword !== confirm) {
       setError(
         locale === 'en'
@@ -48,7 +68,7 @@ export default function ProfilePage() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        displayName,
+        displayName: nextName,
         preferredLanguage: language,
         currentPassword: currentPassword || undefined,
         newPassword: newPassword || undefined,
@@ -59,11 +79,20 @@ export default function ProfilePage() {
       setError(json.error || 'Erro')
       return
     }
+    setDisplayName(nextName)
     setCurrentPassword('')
     setNewPassword('')
     setConfirm('')
     setLocale(resolveAuthLocale(language))
-    setMessage(tAuth(locale, 'passwordUpdated'))
+    setMessage(
+      newPassword
+        ? tAuth(locale, 'passwordUpdated')
+        : locale === 'en'
+          ? 'Profile saved'
+          : locale === 'es'
+            ? 'Perfil guardado'
+            : 'Perfil salvo',
+    )
   }
 
   return (
