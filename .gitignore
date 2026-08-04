@@ -49,3 +49,6 @@ scripts/dev/_audit-rls-out.json
 
 scripts/dev/.session-validate-status.json
 scripts/dev/_audit-rls-out.json
+
+.tmp-video-frames/
+
