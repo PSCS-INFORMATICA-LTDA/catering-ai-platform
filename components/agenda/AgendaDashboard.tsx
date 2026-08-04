@@ -5,6 +5,11 @@ import { useCallback, useMemo, useState } from 'react'
 import type { AgendaEvent, OperationalTeam } from '@/Lib/agenda/types'
 import { eventsToSegments } from '@/Lib/agenda/segments'
 import {
+  TEAM_DAY_BUSY_MESSAGE,
+  availableTeamsForDate,
+  teamHasBookingOnDate,
+} from '@/Lib/agenda/teamAvailability'
+import {
   dayLabel,
   formatMinutes,
   shiftWeek,
@@ -138,6 +143,21 @@ export default function AgendaDashboard({
     ? teams.find((t) => t.id === selection.teamId)
     : null
 
+  const selectionDayBusy = Boolean(
+    selection &&
+      teamHasBookingOnDate(events, selection.teamId, selection.dayKey),
+  )
+
+  const teamsAvailableForForm = useMemo(
+    () => availableTeamsForDate(teams, events, form.event_date),
+    [teams, events, form.event_date],
+  )
+
+  const formTeamBusy =
+    Boolean(form.team_id) &&
+    Boolean(form.event_date) &&
+    teamHasBookingOnDate(events, form.team_id, form.event_date)
+
   return (
     <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -158,13 +178,18 @@ export default function AgendaDashboard({
               className={glassBtn('primary')}
               disabled={teams.length === 0}
               onClick={() => {
-                setForm(
-                  emptyForm(
-                    selection?.teamId || teams[0]?.id || '',
-                    selection?.dayKey || toDayKey(new Date()),
-                  ),
-                )
+                const day = selection?.dayKey || toDayKey(new Date())
+                const free = availableTeamsForDate(teams, events, day)
+                const preferred =
+                  selection?.teamId &&
+                  free.some((t) => t.id === selection.teamId)
+                    ? selection.teamId
+                    : free[0]?.id || ''
+                setForm(emptyForm(preferred, day))
                 setShowForm(true)
+                if (!preferred) {
+                  setError(TEAM_DAY_BUSY_MESSAGE)
+                }
               }}
             >
               Novo evento
@@ -246,17 +271,21 @@ export default function AgendaDashboard({
         <div className="flex flex-wrap gap-3 text-xs text-cdl-muted">
           <span className="inline-flex items-center gap-1.5">
             <span className="h-3 w-6 rounded border border-sky-300 bg-sky-100" />
-            Agendado
+            Agendado (dia fechado)
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="h-3 w-6 rounded border border-dashed border-slate-300 bg-slate-100" />
-            Concluído
+            Concluído (dia fechado)
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="h-3 w-6 rounded border border-emerald-200 bg-emerald-50" />
-            Livre
+            Livre — pode agendar
           </span>
         </div>
+        <p className="text-xs text-cdl-muted">
+          Uma equipe só pode ter um evento por data. Se sábado estiver fechado,
+          use domingo (se livre), dia útil ou feriado.
+        </p>
 
         <div className="schedule-day-board overflow-auto rounded-2xl border border-cdl-border bg-cdl-surface">
           <table className="min-w-[900px] w-full border-collapse text-sm">
@@ -387,16 +416,23 @@ export default function AgendaDashboard({
                 ))}
               </ul>
             )}
-            <button
-              type="button"
-              className={glassBtn('primary')}
-              onClick={() => {
-                setForm(emptyForm(selection.teamId, selection.dayKey))
-                setShowForm(true)
-              }}
-            >
-              Novo evento neste horário
-            </button>
+            {selectionDayBusy ? (
+              <p className="rounded-xl border border-amber-300/50 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+                Dia fechado para esta equipe. Escolha outra data livre (domingo,
+                dia útil ou feriado) ou outra equipe disponível.
+              </p>
+            ) : (
+              <button
+                type="button"
+                className={glassBtn('primary')}
+                onClick={() => {
+                  setForm(emptyForm(selection.teamId, selection.dayKey))
+                  setShowForm(true)
+                }}
+              >
+                Novo evento neste dia
+              </button>
+            )}
           </div>
         ) : null}
 
@@ -411,7 +447,10 @@ export default function AgendaDashboard({
                   value={form.team_id}
                   onChange={(e) => setForm((f) => ({ ...f, team_id: e.target.value }))}
                 >
-                  {teams.map((t) => (
+                  {teamsAvailableForForm.length === 0 ? (
+                    <option value="">Nenhuma equipe livre nesta data</option>
+                  ) : null}
+                  {teamsAvailableForForm.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name}
                     </option>
@@ -442,9 +481,17 @@ export default function AgendaDashboard({
                   type="date"
                   className={glassField(true)}
                   value={form.event_date}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, event_date: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    const nextDate = e.target.value
+                    setForm((f) => {
+                      const free = availableTeamsForDate(teams, events, nextDate)
+                      const keep =
+                        free.some((t) => t.id === f.team_id) && f.team_id
+                          ? f.team_id
+                          : free[0]?.id || ''
+                      return { ...f, event_date: nextDate, team_id: keep }
+                    })
+                  }}
                 />
               </label>
               <label className="text-sm">
@@ -478,11 +525,22 @@ export default function AgendaDashboard({
                 />
               </label>
             </div>
+            {formTeamBusy || teamsAvailableForForm.length === 0 ? (
+              <p className="text-sm text-amber-700 dark:text-amber-200">
+                {TEAM_DAY_BUSY_MESSAGE}
+              </p>
+            ) : null}
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 className={glassBtn('primary')}
-                disabled={saving || !form.title.trim() || !form.team_id}
+                disabled={
+                  saving ||
+                  !form.title.trim() ||
+                  !form.team_id ||
+                  formTeamBusy ||
+                  teamsAvailableForForm.length === 0
+                }
                 onClick={() => void createEvent()}
               >
                 {saving ? 'Salvando…' : 'Salvar evento'}

@@ -1,3 +1,4 @@
+import { TEAM_DAY_BUSY_MESSAGE } from '@/Lib/agenda/teamAvailability'
 import {
   rejectSpoofedCompanyId,
   requireApiPermission,
@@ -105,8 +106,29 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Equipe inválida ou inativa.' }, { status: 400 })
   }
 
+  const db = getSupabaseServerClient()
+  const { data: busy } = await db
+    .from('agenda_events')
+    .select('id, code')
+    .eq('company_id', companyId)
+    .eq('team_id', teamId)
+    .eq('event_date', eventDate)
+    .in('status', ['scheduled', 'completed'])
+    .limit(1)
+    .maybeSingle()
+
+  if (busy) {
+    return Response.json(
+      {
+        error: TEAM_DAY_BUSY_MESSAGE,
+        conflict: { eventId: busy.id, code: busy.code, event_date: eventDate },
+      },
+      { status: 409 },
+    )
+  }
+
   const code = await nextEventCode(companyId)
-  const { data, error } = await getSupabaseServerClient()
+  const { data, error } = await db
     .from('agenda_events')
     .insert({
       company_id: companyId,
@@ -130,6 +152,9 @@ export async function POST(request: Request) {
     .single()
 
   if (error) {
+    if (/uq_agenda_events_team_day_active|duplicate key/i.test(error.message)) {
+      return Response.json({ error: TEAM_DAY_BUSY_MESSAGE }, { status: 409 })
+    }
     return Response.json({ error: error.message }, { status: 500 })
   }
   return Response.json({ data }, { status: 201 })

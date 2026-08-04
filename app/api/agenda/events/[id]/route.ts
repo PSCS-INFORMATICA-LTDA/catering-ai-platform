@@ -1,3 +1,4 @@
+import { TEAM_DAY_BUSY_MESSAGE } from '@/Lib/agenda/teamAvailability'
 import {
   rejectSpoofedCompanyId,
   requireApiPermission,
@@ -65,7 +66,49 @@ export async function PATCH(request: Request, context: Ctx) {
         : null
   }
 
-  const { data, error } = await getSupabaseServerClient()
+  const db = getSupabaseServerClient()
+  const { data: current } = await db
+    .from('agenda_events')
+    .select('id, team_id, event_date, status')
+    .eq('id', id)
+    .eq('company_id', companyId)
+    .maybeSingle()
+
+  if (!current) {
+    return Response.json({ error: 'Evento não encontrado.' }, { status: 404 })
+  }
+
+  const nextTeamId =
+    typeof patch.team_id === 'string' ? patch.team_id : current.team_id
+  const nextDate =
+    typeof patch.event_date === 'string' ? patch.event_date : current.event_date
+  const nextStatus =
+    typeof patch.status === 'string' ? patch.status : current.status
+
+  if (nextStatus === 'scheduled' || nextStatus === 'completed') {
+    const { data: busy } = await db
+      .from('agenda_events')
+      .select('id, code')
+      .eq('company_id', companyId)
+      .eq('team_id', nextTeamId)
+      .eq('event_date', nextDate)
+      .in('status', ['scheduled', 'completed'])
+      .neq('id', id)
+      .limit(1)
+      .maybeSingle()
+
+    if (busy) {
+      return Response.json(
+        {
+          error: TEAM_DAY_BUSY_MESSAGE,
+          conflict: { eventId: busy.id, code: busy.code, event_date: nextDate },
+        },
+        { status: 409 },
+      )
+    }
+  }
+
+  const { data, error } = await db
     .from('agenda_events')
     .update(patch)
     .eq('id', id)
@@ -74,6 +117,9 @@ export async function PATCH(request: Request, context: Ctx) {
     .maybeSingle()
 
   if (error) {
+    if (/uq_agenda_events_team_day_active|duplicate key/i.test(error.message)) {
+      return Response.json({ error: TEAM_DAY_BUSY_MESSAGE }, { status: 409 })
+    }
     return Response.json({ error: error.message }, { status: 500 })
   }
   if (!data) {
