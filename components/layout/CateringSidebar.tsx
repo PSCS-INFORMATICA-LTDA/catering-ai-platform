@@ -104,8 +104,8 @@ export function CateringSidebar({
               <img
                 src="/brand/catering-logo-dark.png"
                 alt="Catering AI Platform"
-                width={196}
-                height={74}
+                width={220}
+                height={83}
                 className="catering-sidebar-brand-logo"
               />
             </Link>

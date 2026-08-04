@@ -1195,20 +1195,20 @@ body {
   font-style: italic;
 }
 
-/* Brand zone — proporção do Logistics (mark sm ~196×74, max 16.5rem) */
+/* Brand zone — logo centralizado (painel absoluto à direita) */
 .catering-sidebar-brand-zone {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  padding: 0.875rem 2.75rem 0.75rem 1.25rem;
+  justify-content: center;
+  padding: 1rem 2.75rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
   overflow: visible;
 }
 
 .catering-sidebar-brand-link {
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   width: 100%;
   min-width: 0;
   border-radius: 0.625rem;
@@ -1222,11 +1222,12 @@ body {
 .catering-sidebar-brand-logo {
   display: block;
   width: 100%;
-  max-width: 16.5rem;
+  max-width: 17.5rem;
   height: auto;
   aspect-ratio: 196 / 74;
   object-fit: contain;
-  object-position: left center;
+  object-position: center;
+  margin-inline: auto;
 }
 
 /* MENU + X: hidden no desktop (padrão Logistics — evita guerra com display:inline-flex) */
