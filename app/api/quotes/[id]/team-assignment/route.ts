@@ -10,6 +10,7 @@ import {
 } from '@/Lib/teamAssignment'
 import { hydrateTeamsWithContacts } from '@/Lib/teamContacts'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
+import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -491,6 +492,23 @@ export async function POST(request: Request, { params }: Params) {
     }
     saved = data
   }
+
+  const isSubstitution = Boolean(
+    existingForQuote && existingForQuote.team_id && existingForQuote.team_id !== teamId,
+  )
+  await writeOperationalAudit({
+    companyId,
+    actorUserId: auth.session.userId,
+    entityType: 'agenda_event',
+    entityId: saved.id,
+    action: isSubstitution ? 'team_assignment_substituted' : 'team_assignment_designated',
+    oldData: isSubstitution ? { team_id: existingForQuote?.team_id ?? null } : null,
+    newData: {
+      quote_id: id,
+      team_id: teamId,
+      presentation_time: presentationDb,
+    },
+  })
 
   return Response.json({
     data: {

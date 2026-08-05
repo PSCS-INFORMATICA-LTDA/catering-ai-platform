@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
+import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 
 export const QUOTE_VERSION_SNAPSHOT_SCHEMA_VERSION = 1
 
@@ -257,6 +258,19 @@ export async function createQuoteVersion(
       .eq('id', quoteId)
       .eq('company_id', companyId)
   }
+
+  await writeOperationalAudit({
+    companyId,
+    actorUserId: options.createdBy ?? null,
+    entityType: 'quote_version',
+    entityId: data.id,
+    action: options.markAccepted ? 'quote_version_accepted' : 'quote_version_created',
+    newData: {
+      quote_id: quoteId,
+      version_number: nextVersionNumber,
+      quote_total: data.quote_total,
+    },
+  })
 
   return { data: data as QuoteVersionRow, error: null }
 }

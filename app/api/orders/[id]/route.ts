@@ -111,14 +111,22 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   if (statusChanged) {
-    await db.from('service_order_status_history').insert({
-      company_id: companyId,
-      service_order_id: id,
-      from_status: order.status,
-      to_status: body.status,
-      reason: body.cancel_reason?.trim() ?? null,
-      changed_by: auth.session.userId,
-    })
+    const { error: historyError } = await db
+      .from('service_order_status_history')
+      .insert({
+        company_id: companyId,
+        service_order_id: id,
+        from_status: order.status,
+        to_status: body.status,
+        reason: body.cancel_reason?.trim() ?? null,
+        changed_by: auth.session.userId,
+      })
+    if (historyError) {
+      console.warn(
+        '[Orders] Falha ao gravar service_order_status_history:',
+        historyError.message,
+      )
+    }
 
     try {
       await db.from('audit_logs').insert({
