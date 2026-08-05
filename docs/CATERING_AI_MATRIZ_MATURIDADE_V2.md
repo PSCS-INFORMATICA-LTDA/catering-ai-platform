@@ -79,12 +79,12 @@
 - Multiempresa / membership (wired; licença/billing e troca de tenant ainda finas)  
 - Platform Admin / suporte impersonation  
 - Eventos (acoplados à cotação + agenda + OS; sem estoque)  
-- Traduções PT/EN/ES (domínio quotes/orders + conteúdo; chrome UI ainda majoritariamente PT)  
+- Traduções PT/EN/ES (domínio quotes/orders + conteúdo; chrome UI ainda majoritariamente PT) — chrome UI Quotes/Orders **IMPLEMENTADO EM DEV — HARDENING** (wiring PT/EN/ES completo via `useAuthLocaleFromMe`/`tQuotesOrders` + PDF por `quote.language`; demais módulos do app seguem PT)  
 - Imagens e Storage (pacotes/itens; foto grill “Em breve”)  
 - WhatsApp / SMS / e-mail (deep links e templates; sem API Business / SMTP)  
 - Segurança e RLS (inclui novas tabelas OS; revisão contínua)  
 - Portal do cliente (`/proposta` live; `/quote-request` stub)  
-- Auditoria (histórico de status OS + eventos sensíveis; UI audit completa pendente)  
+- Auditoria (histórico de status OS + eventos sensíveis; UI audit completa pendente) — cobertura de `audit_logs` para criação/aceite de versão, checklist (criar/concluir/reabrir/pular) e designação de equipe **IMPLEMENTADO EM DEV — HARDENING** via `Lib/orders/writeOperationalAudit.ts`; UI de consulta de audit ainda não existe  
 - Integrações (Google Calendar target sem sync completo)  
 
 ### NÃO TEM
@@ -99,6 +99,12 @@
 **Contagem V2 (rev.):** TEM ~20 · PARCIAL ~10 · NÃO TEM 6  
 
 **Delta desta entrega:** Cotações consolidadas em lista; `quote_versions`; aceite→conversão idempotente; `service_orders` + checklist/status; nav Ordens de Serviço. Dashboard/DRE/Financeiro permanecem fora de escopo.
+
+**Delta hardening (branch `chore/quotes-orders-hardening-i18n-tests-dev`, sobre `3b68eec`) — IMPLEMENTADO EM DEV — HARDENING (não VALIDADO):**
+- i18n PT/EN/ES completo (paridade estrutural + wiring) na feature Quotes/Orders: dashboards, detalhe de OS, painéis de conversão/compartilhamento/designação de equipe, proposta pública, PDF (chrome por `quote.language`) e labels de nav Agenda/Cotações/Ordens.
+- Auditoria operacional ampliada sem novas tabelas: `writeOperationalAudit` grava em `audit_logs` na criação/aceite de versão de cotação, criação/conclusão/reabertura/pulo de item de checklist e designação/substituição de equipe; conversão e mudança de status de OS já gravavam e seguem gravando.
+- 6 novos scripts de teste DEV (`test-quotes-orders-i18n`, `test-quote-versions-status`, `test-order-status-transitions`, `test-order-schedule-team`, `test-order-checklist`, `test-quotes-orders-audit-events`) incorporados a `test-quotes-orders-regression.mjs`; suíte completa + `verify:dev:functional` + `npm run build` — todos **PASS**.
+- Nenhuma migration criada; nenhuma mudança em `calculateQuoteTotals`/fórmula de total (2830) ou semântica de conversão; nenhum branch de validação/auth ou Produção tocado.
 
 ---
 
@@ -132,7 +138,7 @@
 | 24 | Integrações / Calendar | TEM UI | PARCIAL | Sync incompleto |
 | 25 | Licença / mensalidade | TEM | NÃO TEM | Baixa prioridade piloto |
 | 26 | Senha máster | TEM | NÃO TEM | **Não portar** |
-| 27 | Histórico exclusões / audit UI | TEM | PARCIAL | Soft-delete quotes; sem UI audit |
+| 27 | Histórico exclusões / audit UI | TEM | PARCIAL | Soft-delete quotes; `audit_logs` ampliado (versão/checklist/equipe) **IMPLEMENTADO EM DEV — HARDENING**; sem UI audit |
 | 28 | DRE (lançamentos/aprovações) | TEM | NÃO TEM | Nav “Em breve” — ledger genérico depois |
 | 29 | Financeiro AP / contas | TEM | NÃO TEM | Após Order + depósitos |
 | 30 | Contas DRE / sócios / participações | TEM | NÃO TEM | Avaliar só se CDL pedir |
@@ -141,7 +147,7 @@
 | 33 | PDF comercial | TEM | TEM | Quote PDF |
 | 34 | UX lista CRUD (desktop table) | TEM (`CrudPage`) | TEM (DEV) | Pessoas + Cotações + Ordens em lista |
 | 35 | Portal cliente self-service | PARCIAL | PARCIAL | Proposta live; request stub |
-| 36 | i18n PT/EN/ES | NÃO TEM (UI) | PARCIAL | Cotação + mensagens; UI PT |
+| 36 | i18n PT/EN/ES | NÃO TEM (UI) | PARCIAL | Cotação + mensagens; UI PT; feature Quotes/Orders **IMPLEMENTADO EM DEV — HARDENING** (PT/EN/ES completo), demais telas do app seguem PT |
 | 37 | Totais / % reserva na proposta | PARCIAL | PARCIAL | Comercial sim; AR não |
 
 ---
