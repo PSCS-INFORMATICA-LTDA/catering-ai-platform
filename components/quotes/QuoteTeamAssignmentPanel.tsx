@@ -19,6 +19,8 @@ import {
   normalizeWhatsAppPhone,
 } from '@/Lib/whatsapp'
 import { glassAction, glassBtn, glassField } from '@/Lib/liquidGlass'
+import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 type TeamRow = {
   id: string
@@ -116,6 +118,7 @@ export default function QuoteTeamAssignmentPanel({
   const canDesignate =
     proposalResponse === 'accepted' || quoteStatus === 'approved'
 
+  const locale = useAuthLocaleFromMe()
   const [data, setData] = useState<PanelData | null>(null)
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -135,7 +138,9 @@ export default function QuoteTeamAssignmentPanel({
         cache: 'no-store',
       })
       const json = (await res.json()) as { data?: PanelData; error?: string }
-      if (!res.ok) throw new Error(json.error ?? 'Falha ao carregar designação')
+      if (!res.ok) {
+        throw new Error(json.error ?? tQuotesOrders(locale, 'fetchOrdersError'))
+      }
       const next = json.data!
       setData(next)
       const preset =
@@ -146,11 +151,13 @@ export default function QuoteTeamAssignmentPanel({
       setPresentationTime(preset)
       setTeamId(next.designated_team_id || next.assignment?.team_id || '')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro')
+      setError(
+        e instanceof Error ? e.message : tQuotesOrders(locale, 'fetchOrdersError'),
+      )
     } finally {
       setLoading(false)
     }
-  }, [quoteId])
+  }, [quoteId, locale])
 
   useEffect(() => {
     if (canDesignate) void load()
@@ -204,14 +211,14 @@ export default function QuoteTeamAssignmentPanel({
 
   const responseLabel =
     data?.assignment?.team_assignment_response === 'accepted'
-      ? 'Equipe aceitou'
+      ? tQuotesOrders(locale, 'teamAccepted')
       : data?.assignment?.team_assignment_response === 'rejected'
-        ? 'Equipe recusou'
+        ? tQuotesOrders(locale, 'teamRejected')
         : data?.assignment?.team_assignment_sent_at
-          ? 'Aguardando aceite da equipe'
+          ? tQuotesOrders(locale, 'awaitingTeamAcceptance')
           : data?.assignment
-            ? 'Designada — ainda não enviada'
-            : 'Ainda não designada'
+            ? tQuotesOrders(locale, 'designatedNotSent')
+            : tQuotesOrders(locale, 'notDesignatedYet')
 
   const teamOptions = useMemo(() => {
     if (!data) return []
@@ -243,12 +250,16 @@ export default function QuoteTeamAssignmentPanel({
         data?: { assignment?: Assignment }
         error?: string
       }
-      if (!res.ok) throw new Error(json.error ?? 'Falha ao designar')
-      setHint('Equipe designada. Ajuste o WhatsApp e envie o link de aceite.')
+      if (!res.ok) {
+        throw new Error(json.error ?? tQuotesOrders(locale, 'designateError'))
+      }
+      setHint(tQuotesOrders(locale, 'designateSuccessHint'))
       await load()
       setWaOpen(true)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro')
+      setError(
+        e instanceof Error ? e.message : tQuotesOrders(locale, 'designateError'),
+      )
     } finally {
       setBusy(false)
     }
@@ -264,13 +275,17 @@ export default function QuoteTeamAssignmentPanel({
         body: JSON.stringify({ action: 'mark_sent' }),
       })
       const json = (await res.json()) as { error?: string }
-      if (!res.ok) throw new Error(json.error ?? 'Falha ao registrar envio')
+      if (!res.ok) {
+        throw new Error(json.error ?? tQuotesOrders(locale, 'registerSendError'))
+      }
       await load()
       if (options?.openWa !== false) setWaOpen(true)
-      setHint('Envio registrado. Compartilhe o link com a equipe.')
+      setHint(tQuotesOrders(locale, 'teamSentHint'))
       return true
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro')
+      setError(
+        e instanceof Error ? e.message : tQuotesOrders(locale, 'registerSendError'),
+      )
       return false
     } finally {
       setBusy(false)
@@ -284,11 +299,10 @@ export default function QuoteTeamAssignmentPanel({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-cdl-fg">
-            Designar equipe
+            {tQuotesOrders(locale, 'designateTeam')}
           </h2>
           <p className="mt-1 text-sm text-cdl-muted">
-            Após o aceite do cliente, informe o horário de apresentação no local
-            e designe a equipe (padrão Logistics).
+            {tQuotesOrders(locale, 'designateTeamSubtitle')}
           </p>
         </div>
         <span className="rounded-full border border-cdl-border bg-cdl-inset px-3 py-1 text-xs font-semibold uppercase tracking-wider text-cdl-muted">
@@ -297,20 +311,20 @@ export default function QuoteTeamAssignmentPanel({
       </div>
 
       {loading && !data ? (
-        <p className="text-sm text-cdl-muted">Carregando…</p>
+        <p className="text-sm text-cdl-muted">{tQuotesOrders(locale, 'loadingGeneric')}</p>
       ) : null}
 
       {data ? (
         <>
           <dl className="grid gap-2 text-sm sm:grid-cols-2">
             <div>
-              <dt className="text-cdl-muted">Data do evento</dt>
+              <dt className="text-cdl-muted">{tQuotesOrders(locale, 'eventDateFieldLabel')}</dt>
               <dd className="font-medium text-cdl-fg">
                 {formatDate(data.event_date)}
               </dd>
             </div>
             <div>
-              <dt className="text-cdl-muted">Horário do evento</dt>
+              <dt className="text-cdl-muted">{tQuotesOrders(locale, 'eventTimeFieldLabel')}</dt>
               <dd className="font-medium text-cdl-fg">
                 {formatTimeShort(data.start_time)} –{' '}
                 {formatTimeShort(data.end_time)}
@@ -318,7 +332,7 @@ export default function QuoteTeamAssignmentPanel({
             </div>
             {data.address ? (
               <div className="sm:col-span-2">
-                <dt className="text-cdl-muted">Local</dt>
+                <dt className="text-cdl-muted">{tQuotesOrders(locale, 'locationLabel')}</dt>
                 <dd className="font-medium text-cdl-fg">{data.address}</dd>
               </div>
             ) : null}
@@ -326,7 +340,7 @@ export default function QuoteTeamAssignmentPanel({
 
           <label className="block space-y-1">
             <span className="text-xs font-medium text-cdl-muted">
-              Horário de apresentação no local *
+              {tQuotesOrders(locale, 'presentationTimeLabel')}
             </span>
             <input
               type="time"
@@ -337,13 +351,15 @@ export default function QuoteTeamAssignmentPanel({
           </label>
 
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-cdl-muted">Equipe *</span>
+            <span className="text-xs font-medium text-cdl-muted">
+              {tQuotesOrders(locale, 'teamFieldLabel')}
+            </span>
             <select
               className={glassField()}
               value={teamId}
               onChange={(e) => setTeamId(e.target.value)}
             >
-              <option value="">Selecione…</option>
+              <option value="">{tQuotesOrders(locale, 'selectPlaceholder')}</option>
               {teamOptions.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
@@ -352,8 +368,7 @@ export default function QuoteTeamAssignmentPanel({
             </select>
             {teamOptions.length === 0 ? (
               <p className="text-xs text-amber-700 dark:text-amber-200">
-                Nenhuma equipe livre nesta data. Veja a Agenda ou escolha outro
-                dia.
+                {tQuotesOrders(locale, 'noTeamAvailable')}
               </p>
             ) : null}
           </label>
@@ -371,7 +386,9 @@ export default function QuoteTeamAssignmentPanel({
               disabled={busy || !teamId || !presentationTime}
               onClick={() => void designate()}
             >
-              {data.assignment ? 'Atualizar designação' : 'Designar e gerar link'}
+              {data.assignment
+                ? tQuotesOrders(locale, 'updateDesignation')
+                : tQuotesOrders(locale, 'designateAndGenerateLink')}
             </button>
             <button
               type="button"
@@ -379,7 +396,7 @@ export default function QuoteTeamAssignmentPanel({
               disabled={busy || !data.assignment}
               onClick={() => void ensureSent({ openWa: true })}
             >
-              WhatsApp da equipe
+              {tQuotesOrders(locale, 'teamWhatsAppButton')}
             </button>
           </div>
         </>
@@ -388,11 +405,11 @@ export default function QuoteTeamAssignmentPanel({
       {waOpen && data?.assignment ? (
         <div className="space-y-3 rounded-xl border border-emerald-300/40 bg-emerald-50/80 p-4 text-sm dark:border-emerald-500/30 dark:bg-emerald-500/10">
           <p className="font-semibold text-emerald-900 dark:text-emerald-100">
-            Enviar designação {data.assignment.code}
+            {tQuotesOrders(locale, 'sendDesignationTitle')} {data.assignment.code}
           </p>
           <label className="block space-y-1">
             <span className="text-xs font-medium text-cdl-muted">
-              Telefone da pessoa / líder
+              {tQuotesOrders(locale, 'phoneOfPersonOrLeader')}
             </span>
             <input
               className={glassField()}
@@ -415,7 +432,7 @@ export default function QuoteTeamAssignmentPanel({
             className={glassBtn('ghost')}
             onClick={() => setMessage(defaultMessage)}
           >
-            Restaurar texto padrão
+            {tQuotesOrders(locale, 'restoreDefaultText')}
           </button>
 
           <div className="flex w-full flex-col gap-2">
@@ -428,19 +445,19 @@ export default function QuoteTeamAssignmentPanel({
               title={
                 phoneOk
                   ? `WhatsApp · ${formatWhatsAppPhoneDisplay(phone)}`
-                  : 'Informe o telefone'
+                  : tQuotesOrders(locale, 'informPhoneHint')
               }
               onOpenRequested={() => {
                 if (teamId && phone.trim()) saveStoredPhone(teamId, phone.trim())
                 void ensureSent({ openWa: true })
               }}
               onInvalidPhone={() =>
-                setHint('Informe o telefone da pessoa vinculada à equipe.')
+                setHint(tQuotesOrders(locale, 'informPhoneHint'))
               }
             >
               <span className="inline-flex items-center gap-2">
                 <WhatsAppIcon className="h-5 w-5" />
-                Abrir WhatsApp Desktop
+                {tQuotesOrders(locale, 'openWhatsAppDesktop')}
               </span>
             </WhatsAppButton>
 
@@ -449,19 +466,17 @@ export default function QuoteTeamAssignmentPanel({
                 href={buildSmsShareHref(phone, message)!}
                 message={message}
                 className={`${glassAction('sky')} h-12 w-full justify-center`}
-                title="Enviar por SMS"
-                aria-label="Enviar por SMS"
+                title={tQuotesOrders(locale, 'sendBySms')}
+                aria-label={tQuotesOrders(locale, 'sendBySms')}
                 onOpen={() => {
                   if (teamId && phone.trim()) saveStoredPhone(teamId, phone.trim())
                   void ensureSent({ openWa: false })
                 }}
-                onDesktopHint={() =>
-                  setHint('Mensagem SMS copiada. No PC use Phone Link se disponível.')
-                }
+                onDesktopHint={() => setHint(tQuotesOrders(locale, 'smsCopiedHint'))}
               >
                 <span className="inline-flex items-center gap-2">
                   <SmsIcon className="h-5 w-5" />
-                  Enviar por SMS
+                  {tQuotesOrders(locale, 'sendBySms')}
                 </span>
               </SmsShareAnchor>
             ) : (
@@ -472,7 +487,7 @@ export default function QuoteTeamAssignmentPanel({
               >
                 <span className="inline-flex items-center gap-2">
                   <SmsIcon className="h-5 w-5" />
-                  Enviar por SMS
+                  {tQuotesOrders(locale, 'sendBySms')}
                 </span>
               </button>
             )}
@@ -493,7 +508,7 @@ export default function QuoteTeamAssignmentPanel({
                 >
                   <span className="inline-flex items-center gap-2">
                     <MailIcon className="h-5 w-5" />
-                    E-mail
+                    {tQuotesOrders(locale, 'emailLabel')}
                   </span>
                 </a>
               ) : null
@@ -504,17 +519,17 @@ export default function QuoteTeamAssignmentPanel({
               className={glassBtn('ghost')}
               onClick={() => setWaOpen(false)}
             >
-              Fechar
+              {tQuotesOrders(locale, 'closeLabel')}
             </button>
           </div>
 
           {phoneOk ? (
             <p className="text-xs text-cdl-muted">
-              Destino: {formatWhatsAppPhoneDisplay(phone)}
+              {tQuotesOrders(locale, 'destinationLabel')}: {formatWhatsAppPhoneDisplay(phone)}
             </p>
           ) : (
             <p className="text-xs text-amber-700 dark:text-amber-200">
-              Informe o telefone da pessoa da equipe (cadastro em Pessoas).
+              {tQuotesOrders(locale, 'informPhoneHint')}
             </p>
           )}
         </div>

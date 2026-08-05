@@ -19,6 +19,8 @@ import {
   normalizeWhatsAppPhone,
 } from '@/Lib/whatsapp'
 import { glassAction, glassBtn } from '@/Lib/liquidGlass'
+import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 type ProposalState = {
   proposal_token: string | null
@@ -75,6 +77,7 @@ export default function QuoteProposalSharePanel({
   language?: string | null
   initial?: Partial<ProposalState> | null
 }) {
+  const uiLocale = useAuthLocaleFromMe()
   const [state, setState] = useState<ProposalState>({
     proposal_token: initial?.proposal_token ?? null,
     proposal_sent_at: initial?.proposal_sent_at ?? null,
@@ -193,7 +196,9 @@ export default function QuoteProposalSharePanel({
           }
           error?: string
         }
-        if (!res.ok) throw new Error(json.error ?? 'Falha ao registrar envio')
+        if (!res.ok) {
+          throw new Error(json.error ?? tQuotesOrders(uiLocale, 'registerSendError'))
+        }
         const token = json.data?.token || json.data?.proposal_token || null
         setState((s) => ({
           ...s,
@@ -207,18 +212,20 @@ export default function QuoteProposalSharePanel({
         }))
         setHint(
           action === 'mark_sent'
-            ? 'Envio registrado. Use WhatsApp, SMS ou e-mail para compartilhar.'
-            : 'Pronto.',
+            ? tQuotesOrders(uiLocale, 'sendRegisteredHint')
+            : tQuotesOrders(uiLocale, 'readyHint'),
         )
         return token
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Erro')
+        setError(
+          e instanceof Error ? e.message : tQuotesOrders(uiLocale, 'registerSendError'),
+        )
         return null
       } finally {
         setBusy(false)
       }
     },
-    [quoteId],
+    [quoteId, uiLocale],
   )
 
   async function ensureReady() {
@@ -234,31 +241,31 @@ export default function QuoteProposalSharePanel({
     const url = buildPublicProposalUrl(token)
     try {
       await navigator.clipboard.writeText(url)
-      setHint('Link público copiado.')
+      setHint(tQuotesOrders(uiLocale, 'linkCopied'))
     } catch {
       copyWhatsAppMessageSync(url)
-      setHint('Link copiado.')
+      setHint(tQuotesOrders(uiLocale, 'linkCopiedFallback'))
     }
   }
 
   const responseLabel =
     state.proposal_response === 'accepted'
-      ? 'Cliente aceitou'
+      ? tQuotesOrders(uiLocale, 'customerAccepted')
       : state.proposal_response === 'rejected'
-        ? 'Cliente recusou'
+        ? tQuotesOrders(uiLocale, 'customerRejected')
         : state.proposal_sent_at
-          ? 'Aguardando aceite do cliente'
-          : 'Ainda não enviada'
+          ? tQuotesOrders(uiLocale, 'awaitingCustomerAcceptance')
+          : tQuotesOrders(uiLocale, 'notSentYet')
 
   return (
     <section className="no-print liquid-glass-card space-y-4 p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-cdl-fg">
-            Enviar cotação ao cliente
+            {tQuotesOrders(uiLocale, 'sendQuoteToCustomer')}
           </h2>
           <p className="mt-1 text-sm text-cdl-muted">
-            Botões personalizados (padrão Logistics). Idioma da cotação:{' '}
+            {tQuotesOrders(uiLocale, 'shareSubtitlePrefix')}{' '}
             {(language || 'pt').toUpperCase()}.
           </p>
         </div>
@@ -273,7 +280,9 @@ export default function QuoteProposalSharePanel({
         </p>
       ) : (
         <p className="text-sm text-cdl-muted">
-          Clique em <strong>Registrar envio</strong> para gerar o link público.
+          {tQuotesOrders(uiLocale, 'clickRegisterSendPrefix')}{' '}
+          <strong>{tQuotesOrders(uiLocale, 'registerSend')}</strong>{' '}
+          {tQuotesOrders(uiLocale, 'clickRegisterSendSuffix')}
         </p>
       )}
 
@@ -285,8 +294,8 @@ export default function QuoteProposalSharePanel({
           onClick={() => void markSent('mark_sent')}
         >
           {state.proposal_sent_at
-            ? 'Reenviar / atualizar envio'
-            : 'Registrar envio ao cliente'}
+            ? tQuotesOrders(uiLocale, 'resendUpdate')
+            : tQuotesOrders(uiLocale, 'registerSend')}
         </button>
         <button
           type="button"
@@ -294,14 +303,15 @@ export default function QuoteProposalSharePanel({
           disabled={busy}
           onClick={() => void copyLink()}
         >
-          Copiar link público
+          {tQuotesOrders(uiLocale, 'copyPublicLink')}
         </button>
       </div>
 
       {publicUrl ? (
         <label className="block space-y-1">
           <span className="text-xs font-medium text-cdl-muted">
-            Mensagem (editável) · {phoneOk ? phoneLabel : 'sem telefone'}
+            {tQuotesOrders(uiLocale, 'editableMessageLabel')} ·{' '}
+            {phoneOk ? phoneLabel : tQuotesOrders(uiLocale, 'noPhoneLabel')}
           </span>
           <textarea
             className="min-h-[10rem] w-full rounded-lg border border-cdl-border bg-cdl-surface p-3 text-xs text-cdl-fg"
@@ -313,7 +323,7 @@ export default function QuoteProposalSharePanel({
             className={glassBtn('ghost')}
             onClick={() => setMessage(defaultMessage)}
           >
-            Restaurar texto padrão
+            {tQuotesOrders(uiLocale, 'restoreDefaultText')}
           </button>
         </label>
       ) : null}
@@ -329,13 +339,13 @@ export default function QuoteProposalSharePanel({
           title={
             phoneOk
               ? `WhatsApp · ${phoneLabel}`
-              : 'Cadastre o telefone do cliente'
+              : tQuotesOrders(uiLocale, 'registerPhoneShort')
           }
           onOpenRequested={() => {
             void ensureReady()
           }}
           onInvalidPhone={() =>
-            setHint('Cadastre o telefone do cliente em Pessoas.')
+            setHint(tQuotesOrders(uiLocale, 'registerPhoneShort'))
           }
         />
 
@@ -349,11 +359,7 @@ export default function QuoteProposalSharePanel({
             onOpen={() => {
               void ensureReady()
             }}
-            onDesktopHint={() =>
-              setHint(
-                'Mensagem SMS copiada. No PC o app SMS pode abrir via Phone Link.',
-              )
-            }
+            onDesktopHint={() => setHint(tQuotesOrders(uiLocale, 'smsCopiedHint'))}
           >
             <SmsIcon className="h-5 w-5" />
           </SmsShareAnchor>
@@ -400,8 +406,7 @@ export default function QuoteProposalSharePanel({
 
       {!phoneOk ? (
         <p className="text-xs text-amber-700 dark:text-amber-200">
-          Cadastre o telefone do cliente em Pessoas para WhatsApp/SMS. O e-mail
-          usa o endereço do cadastro quando existir.
+          {tQuotesOrders(uiLocale, 'registerPhoneHint')}
         </p>
       ) : null}
 

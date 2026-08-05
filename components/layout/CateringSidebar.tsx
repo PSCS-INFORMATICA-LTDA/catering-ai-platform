@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { CATERING_NAV, isNavHrefActive } from '@/components/layout/navConfig'
+import { getNavLabel } from '@/Lib/i18n/quotesOrders'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 type Props = {
   collapsed: boolean
@@ -36,6 +38,7 @@ export function CateringSidebar({
   onToggleCollapsed,
 }: Props) {
   const pathname = usePathname() ?? ''
+  const locale = useAuthLocaleFromMe()
 
   return (
     <>
@@ -139,6 +142,7 @@ export function CateringSidebar({
               >
                 <p className="catering-sidebar-group-label">{group.label}</p>
                 {group.children.map((child) => {
+                  const label = getNavLabel(locale, child.href, child.label)
                   if (child.soon) {
                     return (
                       <span
@@ -146,7 +150,7 @@ export function CateringSidebar({
                         className="catering-sidebar-nav-btn catering-sidebar-nav-btn--soon"
                         title="Em breve"
                       >
-                        {child.label}
+                        {label}
                       </span>
                     )
                   }
@@ -155,13 +159,13 @@ export function CateringSidebar({
                     <Link
                       key={child.href}
                       href={child.href}
-                      title={child.label}
+                      title={label}
                       onClick={onClose}
                       className={`catering-sidebar-nav-btn ${
                         active ? 'catering-sidebar-nav-btn--active' : ''
                       }`}
                     >
-                      {child.label}
+                      {label}
                     </Link>
                   )
                 })}

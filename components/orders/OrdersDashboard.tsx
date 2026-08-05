@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { orderStatusLabel } from '@/Lib/i18n/quotesOrders'
+import { orderStatusLabel, tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import type { ServiceOrderListItem } from '@/Lib/orders/fetchServiceOrderList'
 import { SERVICE_ORDER_STATUSES } from '@/Lib/orders/statusMachine'
 
@@ -41,6 +42,7 @@ export default function OrdersDashboard({
 }: {
   initialOrders: ServiceOrderListItem[]
 }) {
+  const locale = useAuthLocaleFromMe()
   const [orders, setOrders] = useState<ServiceOrderListItem[]>(initialOrders)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
@@ -61,14 +63,16 @@ export default function OrdersDashboard({
           data?: ServiceOrderListItem[]
           error?: string
         }
-        if (!response.ok) throw new Error(result.error ?? 'Falha ao buscar ordens.')
+        if (!response.ok) {
+          throw new Error(result.error ?? tQuotesOrders(locale, 'fetchOrdersError'))
+        }
         if (!cancelled) setOrders(result.data ?? [])
       } catch (refreshError) {
         if (!cancelled) {
           setError(
             refreshError instanceof Error
               ? refreshError.message
-              : 'Falha ao buscar ordens.',
+              : tQuotesOrders(locale, 'fetchOrdersError'),
           )
         }
       } finally {
@@ -79,7 +83,7 @@ export default function OrdersDashboard({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [locale])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -100,10 +104,10 @@ export default function OrdersDashboard({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-[var(--brand-primary)] sm:text-3xl">
-            Ordens de Serviço
+            {tQuotesOrders(locale, 'ordersTitle')}
           </h1>
           <p className="text-xs font-semibold uppercase tracking-wider text-[var(--brand-primary-2)]/80">
-            {filtered.length} ordem(ns) de serviço
+            {filtered.length} {tQuotesOrders(locale, 'ordersCountLabel')}
           </p>
         </div>
       </div>
@@ -112,29 +116,29 @@ export default function OrdersDashboard({
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1.5">
             <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">
-              Buscar
+              {tQuotesOrders(locale, 'search')}
             </span>
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Número, cotação, cliente ou cidade"
+              placeholder={tQuotesOrders(locale, 'searchOrdersPlaceholder')}
               className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 outline-none focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100"
             />
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">
-              Status
+              {tQuotesOrders(locale, 'filterStatus')}
             </span>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 outline-none focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100"
             >
-              <option value="all">Todos os status</option>
+              <option value="all">{tQuotesOrders(locale, 'allStatuses')}</option>
               {SERVICE_ORDER_STATUSES.map((status) => (
                 <option key={status} value={status}>
-                  {orderStatusLabel(status)}
+                  {orderStatusLabel(status, locale)}
                 </option>
               ))}
             </select>
@@ -145,17 +149,19 @@ export default function OrdersDashboard({
 
       {filtered.length === 0 ? (
         <div className="pscs-panel p-8 text-center text-[var(--brand-text-muted)]">
-          {loading ? 'Buscando ordens de serviço…' : 'Nenhuma ordem de serviço encontrada.'}
+          {loading
+            ? tQuotesOrders(locale, 'loadingOrders')
+            : tQuotesOrders(locale, 'emptyOrders')}
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
           <div className="hidden border-b border-neutral-100 bg-neutral-50 px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500 lg:grid lg:grid-cols-[8rem_minmax(0,1.4fr)_7rem_8rem_7rem_auto] lg:gap-3">
-            <span>Número OS</span>
-            <span>Cliente / evento</span>
-            <span>Data</span>
-            <span>Status</span>
-            <span className="text-right">Total</span>
-            <span className="text-right">Ações</span>
+            <span>{tQuotesOrders(locale, 'orderNumber')}</span>
+            <span>{tQuotesOrders(locale, 'tableCustomerEvent')}</span>
+            <span>{tQuotesOrders(locale, 'tableDate')}</span>
+            <span>{tQuotesOrders(locale, 'status')}</span>
+            <span className="text-right">{tQuotesOrders(locale, 'total')}</span>
+            <span className="text-right">{tQuotesOrders(locale, 'actions')}</span>
           </div>
           <ul>
             {filtered.map((order) => (
@@ -173,7 +179,9 @@ export default function OrdersDashboard({
                     </p>
                     <p className="truncate text-xs text-neutral-500">
                       {[order.city, order.state].filter(Boolean).join(', ') || '—'}
-                      {order.quote_number ? ` · Cotação ${order.quote_number}` : ''}
+                      {order.quote_number
+                        ? ` · ${tQuotesOrders(locale, 'linkedQuote')} ${order.quote_number}`
+                        : ''}
                     </p>
                   </div>
                   <p className="text-sm text-neutral-700">{formatDate(order.event_date)}</p>
@@ -184,7 +192,7 @@ export default function OrdersDashboard({
                         'border-cdl-border bg-cdl-inset text-cdl-text-secondary'
                       }`}
                     >
-                      {orderStatusLabel(order.status)}
+                      {orderStatusLabel(order.status, locale)}
                     </span>
                   </div>
                   <p className="text-right text-sm font-black text-neutral-900">
@@ -195,7 +203,7 @@ export default function OrdersDashboard({
                       href={`/orders/${order.id}`}
                       className="inline-flex min-h-[36px] items-center justify-center rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-neutral-800 transition hover:border-neutral-300"
                     >
-                      Ver
+                      {tQuotesOrders(locale, 'view')}
                     </Link>
                   </div>
                 </div>

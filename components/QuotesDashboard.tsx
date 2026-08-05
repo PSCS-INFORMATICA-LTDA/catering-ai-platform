@@ -7,6 +7,8 @@ import DeleteQuoteButton from '@/components/DeleteQuoteButton'
 import QuoteStatusBadge from '@/components/QuoteStatusBadge'
 import type { QuoteListItem } from '@/Lib/fetchQuoteList'
 import { glassBtn } from '@/Lib/liquidGlass'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
+import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
 
 type StatusFilter = 'all' | string
 type AcceptanceFilter = 'all' | 'pending' | 'accepted' | 'rejected'
@@ -43,10 +45,13 @@ function formatDate(value: string | null | undefined) {
   })
 }
 
-function acceptanceLabel(value: string | null | undefined) {
-  if (value === 'accepted') return 'Aceita'
-  if (value === 'rejected') return 'Recusada'
-  return 'Pendente'
+function acceptanceLabel(
+  value: string | null | undefined,
+  locale: Parameters<typeof tQuotesOrders>[0],
+) {
+  if (value === 'accepted') return tQuotesOrders(locale, 'acceptanceAccepted')
+  if (value === 'rejected') return tQuotesOrders(locale, 'acceptanceRejected')
+  return tQuotesOrders(locale, 'acceptancePending')
 }
 
 function acceptanceClassName(value: string | null | undefined) {
@@ -69,7 +74,10 @@ function buildQuery(filters: QuotesFilters) {
   return params
 }
 
-async function fetchQuotesFromApi(filters: QuotesFilters): Promise<QuoteListItem[]> {
+async function fetchQuotesFromApi(
+  filters: QuotesFilters,
+  locale: Parameters<typeof tQuotesOrders>[0],
+): Promise<QuoteListItem[]> {
   const params = buildQuery(filters)
   const response = await fetch(`/api/quotes?${params.toString()}`, {
     cache: 'no-store',
@@ -81,7 +89,7 @@ async function fetchQuotesFromApi(filters: QuotesFilters): Promise<QuoteListItem
   }
 
   if (!response.ok) {
-    throw new Error(result.error ?? 'Não foi possível buscar cotações.')
+    throw new Error(result.error ?? tQuotesOrders(locale, 'fetchQuotesError'))
   }
 
   return result.data ?? []
@@ -99,6 +107,7 @@ export default function QuotesDashboard({
   canConvert?: boolean
 }) {
   const router = useRouter()
+  const locale = useAuthLocaleFromMe()
   const [quotes, setQuotes] = useState<QuoteListItem[]>(initialQuotes)
   const [filters, setFilters] = useState<QuotesFilters>(EMPTY_FILTERS)
   const [loading, setLoading] = useState(false)
@@ -119,19 +128,19 @@ export default function QuotesDashboard({
       setLoading(true)
       setError(null)
       try {
-        const next = await fetchQuotesFromApi(nextFilters)
+        const next = await fetchQuotesFromApi(nextFilters, locale)
         setQuotes(next)
       } catch (refreshError) {
         setError(
           refreshError instanceof Error
             ? refreshError.message
-            : 'Não foi possível buscar cotações.',
+            : tQuotesOrders(locale, 'fetchQuotesError'),
         )
       } finally {
         setLoading(false)
       }
     },
-    [],
+    [locale],
   )
 
   useEffect(() => {
@@ -147,11 +156,7 @@ export default function QuotesDashboard({
 
   async function handleConvert(quote: QuoteListItem) {
     if (!isConvertEligible(quote)) return
-    if (
-      !window.confirm(
-        `Converter a cotação ${quote.quote_number} em Ordem de Serviço? Esta ação é registrada.`,
-      )
-    ) {
+    if (!window.confirm(tQuotesOrders(locale, 'convertConfirm'))) {
       return
     }
     setConvertingId(quote.id)
@@ -166,10 +171,10 @@ export default function QuotesDashboard({
         error?: string
       }
       if (!response.ok) {
-        throw new Error(result.error ?? 'Não foi possível converter a cotação.')
+        throw new Error(result.error ?? tQuotesOrders(locale, 'fetchQuotesError'))
       }
       setConvertHint(
-        `Ordem de Serviço ${result.data?.service_order_number ?? ''} criada.`,
+        `${tQuotesOrders(locale, 'orderNumber')} ${result.data?.service_order_number ?? ''} — ${tQuotesOrders(locale, 'convertSuccess')}`,
       )
       await refreshQuotes(filters)
       if (result.data?.id) {
@@ -179,7 +184,7 @@ export default function QuotesDashboard({
       setError(
         convertError instanceof Error
           ? convertError.message
-          : 'Não foi possível converter a cotação.',
+          : tQuotesOrders(locale, 'fetchQuotesError'),
       )
     } finally {
       setConvertingId(null)
@@ -194,23 +199,23 @@ export default function QuotesDashboard({
           href={`/quotes/${quote.id}`}
           className="inline-flex min-h-[36px] items-center justify-center rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-neutral-800 transition hover:border-neutral-300"
         >
-          Ver
+          {tQuotesOrders(locale, 'view')}
         </Link>
         <Link
           href={`/quotes/${quote.id}/edit?step=churrasqueira`}
           className="inline-flex min-h-[36px] items-center justify-center rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-neutral-800 transition hover:border-neutral-300"
         >
-          Editar
+          {tQuotesOrders(locale, 'edit')}
         </Link>
         <Link
           href={`/quotes/${quote.id}?pdf=1`}
           className="inline-flex min-h-[36px] items-center justify-center rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-neutral-800 transition hover:border-neutral-300"
         >
-          PDF
+          {tQuotesOrders(locale, 'pdf')}
         </Link>
         {canConvert && quote.converted_service_order_id ? (
           <span className="inline-flex min-h-[36px] items-center justify-center rounded-lg border border-cdl-success-border bg-cdl-success-soft px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-cdl-success">
-            Convertida
+            {tQuotesOrders(locale, 'converted')}
           </span>
         ) : canConvert && eligible ? (
           <button
@@ -219,7 +224,9 @@ export default function QuotesDashboard({
             disabled={convertingId === quote.id}
             className={`${glassBtn('primary')} min-h-[36px] px-2.5 py-1.5 text-xs`}
           >
-            {convertingId === quote.id ? 'Convertendo…' : 'Converter em OS'}
+            {convertingId === quote.id
+              ? tQuotesOrders(locale, 'converting')
+              : tQuotesOrders(locale, 'convert')}
           </button>
         ) : null}
         <DeleteQuoteButton
@@ -238,17 +245,17 @@ export default function QuotesDashboard({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-[var(--brand-primary)] sm:text-3xl">
-            Cotações
+            {tQuotesOrders(locale, 'quotesTitle')}
           </h1>
           <p className="text-xs font-semibold uppercase tracking-wider text-[var(--brand-primary-2)]/80">
-            {quotes.length} cotação(ões)
+            {quotes.length} {tQuotesOrders(locale, 'quotesCountLabel')}
           </p>
         </div>
         <Link
           href="/quotes/new"
           className="pscs-btn-primary inline-flex min-h-[44px] items-center justify-center rounded-xl px-5 py-3 text-sm font-bold"
         >
-          Nova cotação
+          {tQuotesOrders(locale, 'newQuote')}
         </Link>
       </div>
 
@@ -256,19 +263,19 @@ export default function QuotesDashboard({
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="flex flex-col gap-1.5">
             <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">
-              Buscar
+              {tQuotesOrders(locale, 'search')}
             </span>
             <input
               type="search"
               value={filters.q}
               onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
-              placeholder="Número, cliente ou cidade"
+              placeholder={tQuotesOrders(locale, 'searchQuotesPlaceholder')}
               className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 outline-none focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100"
             />
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">
-              Status
+              {tQuotesOrders(locale, 'filterStatus')}
             </span>
             <select
               value={filters.status}
@@ -277,7 +284,7 @@ export default function QuotesDashboard({
               }
               className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 outline-none focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100"
             >
-              <option value="all">Todos os status</option>
+              <option value="all">{tQuotesOrders(locale, 'allStatuses')}</option>
               {availableStatuses.map((status) => (
                 <option key={status} value={status}>
                   {status}
@@ -287,7 +294,7 @@ export default function QuotesDashboard({
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">
-              Aceite
+              {tQuotesOrders(locale, 'filterAcceptance')}
             </span>
             <select
               value={filters.acceptance}
@@ -299,15 +306,15 @@ export default function QuotesDashboard({
               }
               className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 outline-none focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100"
             >
-              <option value="all">Todos</option>
-              <option value="pending">Pendente</option>
-              <option value="accepted">Aceita</option>
-              <option value="rejected">Recusada</option>
+              <option value="all">{tQuotesOrders(locale, 'allAcceptance')}</option>
+              <option value="pending">{tQuotesOrders(locale, 'acceptancePending')}</option>
+              <option value="accepted">{tQuotesOrders(locale, 'acceptanceAccepted')}</option>
+              <option value="rejected">{tQuotesOrders(locale, 'acceptanceRejected')}</option>
             </select>
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">
-              Ordem de Serviço
+              {tQuotesOrders(locale, 'filterHasOrder')}
             </span>
             <select
               value={filters.hasOrder}
@@ -316,9 +323,9 @@ export default function QuotesDashboard({
               }
               className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 outline-none focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100"
             >
-              <option value="all">Todas</option>
-              <option value="yes">Com OS</option>
-              <option value="no">Sem OS</option>
+              <option value="all">{tQuotesOrders(locale, 'hasOrderAny')}</option>
+              <option value="yes">{tQuotesOrders(locale, 'hasOrderYes')}</option>
+              <option value="no">{tQuotesOrders(locale, 'hasOrderNo')}</option>
             </select>
           </label>
         </div>
@@ -328,7 +335,7 @@ export default function QuotesDashboard({
             onClick={() => setFilters(EMPTY_FILTERS)}
             className="mt-3 text-xs font-bold uppercase tracking-wider text-[var(--brand-primary-2)] hover:underline"
           >
-            Limpar filtros
+            {tQuotesOrders(locale, 'clearFilters')}
           </button>
         ) : null}
         {error ? <p className="mt-3 text-sm text-cdl-action">{error}</p> : null}
@@ -339,18 +346,20 @@ export default function QuotesDashboard({
 
       {quotes.length === 0 ? (
         <div className="pscs-panel p-8 text-center text-[var(--brand-text-muted)]">
-          {loading ? 'Buscando cotações…' : 'Nenhuma cotação encontrada com os filtros atuais.'}
+          {loading
+            ? tQuotesOrders(locale, 'loadingQuotes')
+            : tQuotesOrders(locale, 'noQuotesFiltered')}
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
           <div className="hidden border-b border-neutral-100 bg-neutral-50 px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500 lg:grid lg:grid-cols-[7rem_minmax(0,1.4fr)_7rem_7rem_7rem_7rem_auto] lg:gap-3">
-            <span>Número</span>
-            <span>Cliente / evento</span>
-            <span>Data</span>
-            <span>Status</span>
-            <span>Aceite</span>
-            <span className="text-right">Total</span>
-            <span className="text-right">Ações</span>
+            <span>{tQuotesOrders(locale, 'tableNumber')}</span>
+            <span>{tQuotesOrders(locale, 'tableCustomerEvent')}</span>
+            <span>{tQuotesOrders(locale, 'tableDate')}</span>
+            <span>{tQuotesOrders(locale, 'status')}</span>
+            <span>{tQuotesOrders(locale, 'filterAcceptance')}</span>
+            <span className="text-right">{tQuotesOrders(locale, 'total')}</span>
+            <span className="text-right">{tQuotesOrders(locale, 'actions')}</span>
           </div>
           <ul>
             {quotes.map((quote) => (
@@ -379,7 +388,7 @@ export default function QuotesDashboard({
                     <span
                       className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wider ${acceptanceClassName(quote.proposal_response)}`}
                     >
-                      {acceptanceLabel(quote.proposal_response)}
+                      {acceptanceLabel(quote.proposal_response, locale)}
                     </span>
                   </div>
                   <p className="text-right text-sm font-black text-neutral-900 lg:text-left lg:text-right">

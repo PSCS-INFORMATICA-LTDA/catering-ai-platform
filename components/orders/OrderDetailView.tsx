@@ -2,7 +2,12 @@
 
 import Link from 'next/link'
 import { useCallback, useState } from 'react'
-import { checklistCategoryLabel, orderStatusLabel } from '@/Lib/i18n/quotesOrders'
+import {
+  checklistCategoryLabel,
+  orderStatusLabel,
+  tQuotesOrders,
+} from '@/Lib/i18n/quotesOrders'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import { glassBtn, glassField } from '@/Lib/liquidGlass'
 import type { ServiceOrderDetail } from '@/Lib/orders/fetchServiceOrderDetail'
 import {
@@ -48,6 +53,7 @@ export default function OrderDetailView({
   initialOrder: ServiceOrderDetail
   canManage: boolean
 }) {
+  const locale = useAuthLocaleFromMe()
   const [order, setOrder] = useState(initialOrder)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -65,7 +71,7 @@ export default function OrderDetailView({
   async function handleStatusChange() {
     if (!nextStatus) return
     if (serviceOrderStatusRequiresReason(nextStatus) && !cancelReason.trim()) {
-      setError('Informe o motivo do cancelamento.')
+      setError(tQuotesOrders(locale, 'cancelReasonRequired'))
       return
     }
     setBusy(true)
@@ -84,14 +90,18 @@ export default function OrderDetailView({
         data?: ServiceOrderDetail
         error?: string
       }
-      if (!response.ok) throw new Error(result.error ?? 'Falha ao atualizar status.')
-      setHint('Status atualizado.')
+      if (!response.ok) {
+        throw new Error(result.error ?? tQuotesOrders(locale, 'updateStatusError'))
+      }
+      setHint(tQuotesOrders(locale, 'statusUpdatedHint'))
       setNextStatus('')
       setCancelReason('')
       await refresh()
     } catch (statusError) {
       setError(
-        statusError instanceof Error ? statusError.message : 'Falha ao atualizar status.',
+        statusError instanceof Error
+          ? statusError.message
+          : tQuotesOrders(locale, 'updateStatusError'),
       )
     } finally {
       setBusy(false)
@@ -108,13 +118,15 @@ export default function OrderDetailView({
         body: JSON.stringify({ item_id: itemId, status }),
       })
       const result = (await response.json()) as { error?: string }
-      if (!response.ok) throw new Error(result.error ?? 'Falha ao atualizar item.')
+      if (!response.ok) {
+        throw new Error(result.error ?? tQuotesOrders(locale, 'checklistUpdateError'))
+      }
       await refresh()
     } catch (checklistError) {
       setError(
         checklistError instanceof Error
           ? checklistError.message
-          : 'Falha ao atualizar item.',
+          : tQuotesOrders(locale, 'checklistUpdateError'),
       )
     } finally {
       setBusy(false)
@@ -133,11 +145,17 @@ export default function OrderDetailView({
         body: JSON.stringify({ title }),
       })
       const result = (await response.json()) as { error?: string }
-      if (!response.ok) throw new Error(result.error ?? 'Falha ao adicionar item.')
+      if (!response.ok) {
+        throw new Error(result.error ?? tQuotesOrders(locale, 'checklistAddError'))
+      }
       setNewChecklistTitle('')
       await refresh()
     } catch (addError) {
-      setError(addError instanceof Error ? addError.message : 'Falha ao adicionar item.')
+      setError(
+        addError instanceof Error
+          ? addError.message
+          : tQuotesOrders(locale, 'checklistAddError'),
+      )
     } finally {
       setBusy(false)
     }
@@ -153,37 +171,41 @@ export default function OrderDetailView({
             href="/orders"
             className="text-xs font-bold uppercase tracking-wider text-[var(--brand-primary-2)] hover:underline"
           >
-            ← Ordens de Serviço
+            ← {tQuotesOrders(locale, 'ordersTitle')}
           </Link>
           <h1 className="mt-1 text-2xl font-black tracking-tight text-[var(--brand-primary)] sm:text-3xl">
             {order.service_order_number}
           </h1>
           <p className="text-sm text-neutral-500">
             {order.customer_name}
-            {order.quote_number ? ` · Cotação ${order.quote_number}` : ''}
+            {order.quote_number
+              ? ` · ${tQuotesOrders(locale, 'linkedQuote')} ${order.quote_number}`
+              : ''}
           </p>
         </div>
         <span className="inline-flex items-center rounded-full border border-cdl-accent-border bg-cdl-accent/15 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-cdl-brand">
-          {orderStatusLabel(order.status)}
+          {orderStatusLabel(order.status, locale)}
         </span>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <section className="liquid-glass-card space-y-3 p-5 lg:col-span-2">
-          <h2 className="text-lg font-bold text-cdl-fg">Evento</h2>
+          <h2 className="text-lg font-bold text-cdl-fg">
+            {tQuotesOrders(locale, 'eventSection')}
+          </h2>
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
             <div>
-              <dt className="text-cdl-muted">Data</dt>
+              <dt className="text-cdl-muted">{tQuotesOrders(locale, 'docDateLabel')}</dt>
               <dd className="font-medium text-cdl-fg">{formatDate(order.event_date)}</dd>
             </div>
             <div>
-              <dt className="text-cdl-muted">Horário</dt>
+              <dt className="text-cdl-muted">{tQuotesOrders(locale, 'timeLabel')}</dt>
               <dd className="font-medium text-cdl-fg">
                 {formatTime(order.start_time)} – {formatTime(order.end_time)}
               </dd>
             </div>
             <div className="sm:col-span-2">
-              <dt className="text-cdl-muted">Local</dt>
+              <dt className="text-cdl-muted">{tQuotesOrders(locale, 'locationLabel')}</dt>
               <dd className="font-medium text-cdl-fg">
                 {[order.venue_name, order.address_line, order.city, order.state]
                   .filter(Boolean)
@@ -191,16 +213,20 @@ export default function OrderDetailView({
               </dd>
             </div>
             <div>
-              <dt className="text-cdl-muted">Convidados</dt>
+              <dt className="text-cdl-muted">{tQuotesOrders(locale, 'guestCount')}</dt>
               <dd className="font-medium text-cdl-fg">
                 {order.billable_guest_count ?? order.physical_guest_count ?? '—'}
               </dd>
             </div>
             {order.agenda_event ? (
               <div>
-                <dt className="text-cdl-muted">Equipe designada</dt>
+                <dt className="text-cdl-muted">
+                  {tQuotesOrders(locale, 'teamDesignatedField')}
+                </dt>
                 <dd className="font-medium text-cdl-fg">
-                  {order.agenda_event.team_id ? 'Ver na Agenda' : '—'}
+                  {order.agenda_event.team_id
+                    ? tQuotesOrders(locale, 'viewInAgenda')
+                    : '—'}
                 </dd>
               </div>
             ) : null}
@@ -208,30 +234,32 @@ export default function OrderDetailView({
         </section>
 
         <section className="liquid-glass-card space-y-2 p-5">
-          <h2 className="text-lg font-bold text-cdl-fg">Financeiro</h2>
+          <h2 className="text-lg font-bold text-cdl-fg">
+            {tQuotesOrders(locale, 'financialSection')}
+          </h2>
           <dl className="space-y-1.5 text-sm">
             <div className="flex justify-between">
-              <dt className="text-cdl-muted">Pacote</dt>
+              <dt className="text-cdl-muted">{tQuotesOrders(locale, 'packageLabel')}</dt>
               <dd className="font-medium text-cdl-fg">{formatMoney(order.package_total)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-cdl-muted">Adicionais</dt>
+              <dt className="text-cdl-muted">{tQuotesOrders(locale, 'additionalsLabel')}</dt>
               <dd className="font-medium text-cdl-fg">
                 {formatMoney(order.additional_total)}
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-cdl-muted">Milhagem</dt>
+              <dt className="text-cdl-muted">{tQuotesOrders(locale, 'mileageLabel')}</dt>
               <dd className="font-medium text-cdl-fg">{formatMoney(order.mileage_fee)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-cdl-muted">Reserva</dt>
+              <dt className="text-cdl-muted">{tQuotesOrders(locale, 'reservationLabel')}</dt>
               <dd className="font-medium text-cdl-fg">
                 {formatMoney(order.reservation_amount)}
               </dd>
             </div>
             <div className="flex justify-between border-t border-cdl-border pt-1.5 text-base font-black">
-              <dt>Total</dt>
+              <dt>{tQuotesOrders(locale, 'total')}</dt>
               <dd>{formatMoney(order.service_order_total)}</dd>
             </div>
           </dl>
@@ -240,20 +268,24 @@ export default function OrderDetailView({
 
       {canManage ? (
         <section className="liquid-glass-card space-y-3 p-5">
-          <h2 className="text-lg font-bold text-cdl-fg">Alterar status</h2>
+          <h2 className="text-lg font-bold text-cdl-fg">
+            {tQuotesOrders(locale, 'statusChangeSection')}
+          </h2>
           <div className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-cdl-muted">Novo status</span>
+              <span className="text-xs font-medium text-cdl-muted">
+                {tQuotesOrders(locale, 'newStatusLabel')}
+              </span>
               <select
                 className={glassField()}
                 value={nextStatus}
                 onChange={(e) => setNextStatus(e.target.value)}
                 disabled={availableTransitions.length === 0}
               >
-                <option value="">Selecione…</option>
+                <option value="">{tQuotesOrders(locale, 'selectPlaceholder')}</option>
                 {availableTransitions.map((status) => (
                   <option key={status} value={status}>
-                    {orderStatusLabel(status)}
+                    {orderStatusLabel(status, locale)}
                   </option>
                 ))}
               </select>
@@ -261,13 +293,13 @@ export default function OrderDetailView({
             {serviceOrderStatusRequiresReason(nextStatus) ? (
               <label className="flex flex-1 flex-col gap-1.5">
                 <span className="text-xs font-medium text-cdl-muted">
-                  Motivo do cancelamento *
+                  {tQuotesOrders(locale, 'cancelReasonLabel')}
                 </span>
                 <input
                   className={glassField()}
                   value={cancelReason}
                   onChange={(e) => setCancelReason(e.target.value)}
-                  placeholder="Motivo"
+                  placeholder={tQuotesOrders(locale, 'cancelReasonPlaceholder')}
                 />
               </label>
             ) : null}
@@ -277,16 +309,22 @@ export default function OrderDetailView({
               disabled={busy || !nextStatus}
               onClick={() => void handleStatusChange()}
             >
-              {busy ? 'Atualizando…' : 'Atualizar status'}
+              {busy
+                ? tQuotesOrders(locale, 'updating')
+                : tQuotesOrders(locale, 'updateStatusAction')}
             </button>
           </div>
         </section>
       ) : null}
 
       <section className="liquid-glass-card space-y-3 p-5">
-        <h2 className="text-lg font-bold text-cdl-fg">Checklist</h2>
+        <h2 className="text-lg font-bold text-cdl-fg">
+          {tQuotesOrders(locale, 'checklist')}
+        </h2>
         {order.checklist.length === 0 ? (
-          <p className="text-sm text-cdl-muted">Nenhum item de checklist.</p>
+          <p className="text-sm text-cdl-muted">
+            {tQuotesOrders(locale, 'checklistEmpty')}
+          </p>
         ) : (
           <ul className="space-y-2">
             {order.checklist.map((item) => (
@@ -301,8 +339,10 @@ export default function OrderDetailView({
                     {item.title}
                   </p>
                   <p className="text-xs text-cdl-muted">
-                    {checklistCategoryLabel(item.category)}
-                    {item.is_required ? ' · obrigatório' : ''}
+                    {checklistCategoryLabel(item.category, locale)}
+                    {item.is_required
+                      ? ` · ${tQuotesOrders(locale, 'requiredSuffix')}`
+                      : ''}
                   </p>
                 </div>
                 {canManage ? (
@@ -314,7 +354,7 @@ export default function OrderDetailView({
                         disabled={busy}
                         onClick={() => void handleChecklistToggle(item.id, 'done')}
                       >
-                        Concluir
+                        {tQuotesOrders(locale, 'markDone')}
                       </button>
                     ) : (
                       <button
@@ -323,7 +363,7 @@ export default function OrderDetailView({
                         disabled={busy}
                         onClick={() => void handleChecklistToggle(item.id, 'pending')}
                       >
-                        Reabrir
+                        {tQuotesOrders(locale, 'markPending')}
                       </button>
                     )}
                   </div>
@@ -338,7 +378,7 @@ export default function OrderDetailView({
               className={glassField()}
               value={newChecklistTitle}
               onChange={(e) => setNewChecklistTitle(e.target.value)}
-              placeholder="Novo item de checklist"
+              placeholder={tQuotesOrders(locale, 'newChecklistItemPlaceholder')}
             />
             <button
               type="button"
@@ -346,7 +386,7 @@ export default function OrderDetailView({
               disabled={busy || !newChecklistTitle.trim()}
               onClick={() => void handleAddChecklistItem()}
             >
-              Adicionar
+              {tQuotesOrders(locale, 'addAction')}
             </button>
           </div>
         ) : null}
@@ -354,13 +394,17 @@ export default function OrderDetailView({
 
       {order.status_history.length > 0 ? (
         <section className="liquid-glass-card space-y-2 p-5">
-          <h2 className="text-lg font-bold text-cdl-fg">Histórico de status</h2>
+          <h2 className="text-lg font-bold text-cdl-fg">
+            {tQuotesOrders(locale, 'statusHistorySection')}
+          </h2>
           <ul className="space-y-1.5 text-sm">
             {order.status_history.map((entry) => (
               <li key={entry.id} className="flex items-center justify-between gap-2">
                 <span className="text-cdl-fg">
-                  {entry.from_status ? `${orderStatusLabel(entry.from_status)} → ` : ''}
-                  {orderStatusLabel(entry.to_status)}
+                  {entry.from_status
+                    ? `${orderStatusLabel(entry.from_status, locale)} → `
+                    : ''}
+                  {orderStatusLabel(entry.to_status, locale)}
                   {entry.reason ? ` (${entry.reason})` : ''}
                 </span>
                 <span className="text-xs text-cdl-muted">

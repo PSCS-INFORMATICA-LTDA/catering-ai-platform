@@ -43,6 +43,7 @@ import GuestBreakdownPanel from '@/components/GuestBreakdownPanel'
 import QuoteFlashBanner from '@/components/QuoteFlashBanner'
 import { Suspense } from 'react'
 import QuoteDebugPanel from './QuoteDebugPanel'
+import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
 
 function ProposalSection({
   title,
@@ -173,6 +174,7 @@ export default function QuoteDetailView({
   canConvert?: boolean
 }) {
   const lang = quote.language ?? 'pt'
+  const t = (key: Parameters<typeof tQuotesOrders>[1]) => tQuotesOrders(lang, key)
   const packageName = getPackageName(quote)
   const additionalItems = quote.additional_items ?? []
   const groupedAdditionals = groupAdditionalsByCategory(additionalItems, lang)
@@ -194,19 +196,19 @@ export default function QuoteDetailView({
   )
 
   const pricingLines = [
-    { label: 'Pacote', value: formatMoneyOrDash(snapshot.packageTotal) },
+    { label: t('packageLabel'), value: formatMoneyOrDash(snapshot.packageTotal) },
     {
-      label: 'Adicionais',
+      label: t('additionalsLabel'),
       value: formatMoneyOrDash(snapshot.additionalTotal),
     },
-    { label: 'Milhagem', value: formatMoneyOrDash(snapshot.mileageFee) },
-    { label: 'Desconto', value: formatCurrency(discount), accent: true },
+    { label: t('mileageLabel'), value: formatMoneyOrDash(snapshot.mileageFee) },
+    { label: t('docDiscountLine'), value: formatCurrency(discount), accent: true },
     {
-      label: 'Reserva',
+      label: t('reservationLabel'),
       value: formatMoneyOrDash(snapshot.reservationAmount),
     },
     {
-      label: 'Saldo a pagar',
+      label: t('docBalanceDueLine'),
       value: formatMoneyOrDash(snapshot.balanceDue),
       highlight: true,
     },
@@ -309,17 +311,17 @@ export default function QuoteDetailView({
           </div>
           <div className="quote-proposal-hero-meta">
             <div className="quote-proposal-meta-card">
-              <span className="quote-proposal-label">Cotação</span>
+              <span className="quote-proposal-label">{t('docQuoteNumberLabel')}</span>
               <p className="quote-proposal-meta-value">{quoteNumber}</p>
             </div>
             <div className="quote-proposal-meta-card">
-              <span className="quote-proposal-label">Data do evento</span>
+              <span className="quote-proposal-label">{t('docEventDateLabel')}</span>
               <p className="quote-proposal-meta-value">
                 {formatDate(quote.event_date)}
               </p>
             </div>
             <div className="quote-proposal-meta-card">
-              <span className="quote-proposal-label">Horário</span>
+              <span className="quote-proposal-label">{t('docTimeLabel')}</span>
               <p className="quote-proposal-meta-value">{eventTimeLabel}</p>
             </div>
             {quote.quote_status && (
@@ -351,7 +353,7 @@ export default function QuoteDetailView({
         />
 
         <div className="quote-proposal-grid-2">
-          <ProposalSection title="Pacote CDL">
+          <ProposalSection title={t('docPackageSection')}>
             <QuoteReviewPackageCdlSection
               packageName={packageName ?? null}
               packageImageUrl={packageImageUrl}
@@ -363,7 +365,7 @@ export default function QuoteDetailView({
             />
           </ProposalSection>
 
-          <ProposalSection title="Convidados e cobrança">
+          <ProposalSection title={t('docGuestsSection')}>
             <GuestBreakdownPanel
               guestCounts={guestCounts}
               totals={{
@@ -374,24 +376,24 @@ export default function QuoteDetailView({
             />
           </ProposalSection>
 
-          <ProposalSection title="Evento">
+          <ProposalSection title={t('docEventSection')}>
             <p className="quote-proposal-event-name">
               {displayValue(quote.event_name ?? customerDisplayName)}
             </p>
             <div className="quote-proposal-event-list">
               <EventRow
                 icon={<IconCalendar />}
-                label="Data"
+                label={t('docDateLabel')}
                 value={formatDate(quote.event_date)}
               />
               <EventRow
                 icon={<IconClock />}
-                label="Horário"
+                label={t('docTimeLabel')}
                 value={`${formatTime(quote.start_time)} – ${formatTime(quote.end_time)}`}
               />
               <EventRow
                 icon={<IconLocation />}
-                label="Local"
+                label={t('docLocation')}
                 value={eventLocation || '—'}
               />
             </div>
@@ -399,14 +401,14 @@ export default function QuoteDetailView({
         </div>
 
         <div className="quote-proposal-grid-2">
-          <ProposalSection title="Churrasqueira">
+          <ProposalSection title={t('docGrillSection')}>
             <div className="quote-proposal-info-grid">
               <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">Cliente tem churrasqueira?</span>
+                <span className="quote-proposal-label">{t('docHasGrill')}</span>
                 <p className="quote-proposal-value">{formatBool(quote.has_grill)}</p>
               </div>
               <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">Foto da churrasqueira</span>
+                <span className="quote-proposal-label">{t('docGrillPhoto')}</span>
                 <p className="quote-proposal-value">
                   {getGrillPhotoDetailLabel({
                     hasGrill: quote.has_grill,
@@ -417,13 +419,13 @@ export default function QuoteDetailView({
                 </p>
               </div>
               <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">Necessário alugar churrasqueira?</span>
+                <span className="quote-proposal-label">{t('docGrillRentalRequired')}</span>
                 <p className="quote-proposal-value">
                   {formatBool(quote.grill_rental_required)}
                 </p>
               </div>
               <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">Quantidade para aluguel</span>
+                <span className="quote-proposal-label">{t('docGrillRentalQty')}</span>
                 <p className="quote-proposal-value">
                   {quote.grill_rental_required
                     ? displayValue(quote.grill_rental_qty)
@@ -432,39 +434,39 @@ export default function QuoteDetailView({
               </div>
               {quote.grill_notes && (
                 <div className="quote-proposal-info-cell quote-proposal-info-cell--wide">
-                  <span className="quote-proposal-label">Observações</span>
+                  <span className="quote-proposal-label">{t('docGrillNotes')}</span>
                   <p className="quote-proposal-value">{quote.grill_notes}</p>
                 </div>
               )}
             </div>
           </ProposalSection>
 
-          <ProposalSection title="Time">
+          <ProposalSection title={t('docTeamSection')}>
             <div className="quote-proposal-team-grid">
               <TeamCard
                 icon={<IconChef />}
-                label="Churrasqueiros"
+                label={t('docGrillMasters')}
                 value={quote.grill_masters_qty}
               />
               <TeamCard
                 icon={<IconTeam />}
-                label="Assistentes"
+                label={t('docAssistants')}
                 value={quote.assistants_qty}
               />
             </div>
           </ProposalSection>
         </div>
 
-        <ProposalSection title="Milhagem" className="quote-proposal-section--compact">
+        <ProposalSection title={t('docMileageSection')} className="quote-proposal-section--compact">
           <div className="quote-proposal-mileage-grid">
             <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">Local base</span>
+              <span className="quote-proposal-label">{t('docMileageBase')}</span>
               <p className="quote-proposal-value">
                 {displayValue(snapshot.mileageBaseLocation)}
               </p>
             </div>
             <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">Distância</span>
+              <span className="quote-proposal-label">{t('docMileageDistance')}</span>
               <p className="quote-proposal-value">
                 {snapshot.mileageDistance != null
                   ? `${snapshot.mileageDistance} mi`
@@ -472,7 +474,7 @@ export default function QuoteDetailView({
               </p>
             </div>
             <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">Milhas inclusas</span>
+              <span className="quote-proposal-label">{t('docMileageIncluded')}</span>
               <p className="quote-proposal-value">
                 {snapshot.mileageFreeLimit != null
                   ? `${snapshot.mileageFreeLimit} mi`
@@ -480,13 +482,13 @@ export default function QuoteDetailView({
               </p>
             </div>
             <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">Milhas cobradas</span>
+              <span className="quote-proposal-label">{t('docMileageCharged')}</span>
               <p className="quote-proposal-value">
                 {chargedMiles != null ? `${chargedMiles} mi` : '—'}
               </p>
             </div>
             <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">Taxa</span>
+              <span className="quote-proposal-label">{t('docMileageRate')}</span>
               <p className="quote-proposal-value">
                 {snapshot.mileageRate != null
                   ? `${formatCurrency(snapshot.mileageRate)}/mi`
@@ -494,7 +496,7 @@ export default function QuoteDetailView({
               </p>
             </div>
             <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">Taxa de milhagem</span>
+              <span className="quote-proposal-label">{t('docMileageFeeLabel')}</span>
               <p className="quote-proposal-value">
                 {formatMoneyOrDash(snapshot.mileageFee)}
               </p>
@@ -502,9 +504,9 @@ export default function QuoteDetailView({
           </div>
         </ProposalSection>
 
-        <ProposalSection title="Adicionais selecionados">
+        <ProposalSection title={t('docAdditionalsSection')}>
           {groupedAdditionals.length === 0 ? (
-            <p className="quote-proposal-muted">Nenhum adicional selecionado.</p>
+            <p className="quote-proposal-muted">{t('docNoAdditionalsSelected')}</p>
           ) : (
             <div className="quote-proposal-additionals">
               {groupedAdditionals.map(({ category, items }) => (
@@ -533,13 +535,13 @@ export default function QuoteDetailView({
                             </h4>
                             <div className="quote-proposal-additional-metrics">
                               <div>
-                                <span className="quote-proposal-label">Qtd.</span>
+                                <span className="quote-proposal-label">{t('docQtyLabel')}</span>
                                 <p className="quote-proposal-additional-metric">
                                   {displayValue(item.quantity)}
                                 </p>
                               </div>
                               <div>
-                                <span className="quote-proposal-label">Unit.</span>
+                                <span className="quote-proposal-label">{t('docUnitPriceLabel')}</span>
                                 <p className="quote-proposal-additional-metric">
                                   {formatCurrency(item.unit_price)}
                                 </p>
@@ -563,7 +565,7 @@ export default function QuoteDetailView({
         </ProposalSection>
 
         <section className="quote-proposal-pricing quote-print-section quote-print-keep">
-          <h2 className="quote-proposal-section-title">Resumo financeiro</h2>
+          <h2 className="quote-proposal-section-title">{t('docFinancialSection')}</h2>
           <div className="quote-proposal-pricing-card">
             <div className="quote-proposal-pricing-lines">
               {pricingLines.map((line) => (
@@ -579,7 +581,7 @@ export default function QuoteDetailView({
               ))}
             </div>
             <div className="quote-print-total-box quote-proposal-total-box">
-              <span className="quote-proposal-total-label">Total da cotação</span>
+              <span className="quote-proposal-total-label">{t('docQuoteTotalLine')}</span>
               <span className="quote-print-total-value quote-proposal-total-value">
                 {formatMoneyOrDash(snapshot.quoteTotal)}
               </span>
@@ -587,7 +589,8 @@ export default function QuoteDetailView({
             <div className="quote-proposal-reservation-note">
               <p>{RESERVATION_PAYMENT_TEXT}</p>
               <p>
-                Reserva: {RESERVATION_PERCENTAGE}% · Saldo: {BALANCE_PERCENTAGE}%
+                {t('reservationLabel')}: {RESERVATION_PERCENTAGE}% ·{' '}
+                {t('docBalanceDueLine')}: {BALANCE_PERCENTAGE}%
               </p>
             </div>
           </div>
