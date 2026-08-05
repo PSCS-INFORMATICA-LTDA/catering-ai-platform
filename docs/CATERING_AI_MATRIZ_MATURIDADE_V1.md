@@ -1,8 +1,10 @@
 # Catering AI Platform — Matriz de Maturidade V1
 
+> **Supersedida.** A matriz oficial vigente é [`CATERING_AI_MATRIZ_MATURIDADE_V2.md`](./CATERING_AI_MATRIZ_MATURIDADE_V2.md) (2026-08-05). Este V1 permanece apenas como histórico — vários status (Auth, Agenda, Usuários, etc.) estão desatualizados.
+
 **Produto:** Catering AI Platform — BBQ AT HOME / CDL
 **Tipo de documento:** Diagnóstico técnico consolidado (somente leitura)
-**Versão:** V1
+**Versão:** V1 (histórico)
 **Base:** Auditoria de código e separação de ambientes concluída nesta conversa
 **Escopo:** Registro oficial do que TEM / PARCIAL / NÃO TEM — sem plano de implementação executável neste arquivo
 
