@@ -1,6 +1,8 @@
 import { fetchQuoteDetail } from '../../../Lib/fetchQuoteDetail'
 import QuoteDetailView from './QuoteDetailView'
 import type { QuoteDetail } from './quoteDetailTypes'
+import { getAuthSession } from '@/Lib/auth/session'
+import { hasPermission } from '@/Lib/auth/permissions'
 
 export default async function QuoteDetailPage({
   params,
@@ -9,7 +11,10 @@ export default async function QuoteDetailPage({
 }) {
   const { id } = await params
 
-  const { data, error } = await fetchQuoteDetail(id)
+  const [{ data, error }, session] = await Promise.all([
+    fetchQuoteDetail(id),
+    getAuthSession(),
+  ])
 
   if (error) {
     return (
@@ -24,5 +29,9 @@ export default async function QuoteDetailPage({
     )
   }
 
-  return <QuoteDetailView quote={data as QuoteDetail} />
+  const canConvert = Boolean(
+    session?.isPlatformAdmin || hasPermission(session?.permissions, 'quotes.convert'),
+  )
+
+  return <QuoteDetailView quote={data as QuoteDetail} canConvert={canConvert} />
 }

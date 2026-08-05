@@ -44,3 +44,21 @@ export function glassBtn(
     .filter(Boolean)
     .join(' ')
 }
+
+/** Ações de compartilhamento (WhatsApp / SMS / e-mail) — padrão Logistics. */
+export type GlassActionTone = 'neutral' | 'green' | 'sky' | 'brand'
+
+export function glassAction(
+  tone: GlassActionTone = 'neutral',
+  compact = false,
+  className = '',
+): string {
+  return [
+    'liquid-glass-action',
+    `liquid-glass-action--${tone}`,
+    compact ? 'liquid-glass-action--compact' : '',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ')
+}

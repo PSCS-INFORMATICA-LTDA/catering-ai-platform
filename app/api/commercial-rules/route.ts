@@ -16,12 +16,16 @@ import {
   getFallbackCommercialRules,
   type CommercialRulesSnapshot,
 } from '@/Lib/supabaseCommercialRules'
-import { supabase } from '@/Lib/supabase'
+import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 const RULE_TABLE = 'commercial_rules'
+
+function db() {
+  return getSupabaseServerClient()
+}
 
 function buildTextRules() {
   return {
@@ -38,14 +42,16 @@ function buildTextRules() {
 }
 
 async function tableExists(): Promise<boolean> {
-  const { error } = await supabase.from(RULE_TABLE).select('id').limit(1)
+  const { error } = await db().from(RULE_TABLE).select('id').limit(1)
   return !error
 }
 
 async function fetchRuleRows(activeOnly: boolean): Promise<CommercialRuleRow[]> {
-  let query = supabase
+  const companyId = getCdlCompanyId()
+  let query = db()
     .from(RULE_TABLE)
     .select(buildCommercialRulesListSelect())
+    .or(`company_id.eq.${companyId},company_id.is.null`)
     .order('rule_key', { ascending: true })
 
   if (activeOnly) {
@@ -53,7 +59,10 @@ async function fetchRuleRows(activeOnly: boolean): Promise<CommercialRuleRow[]> 
   }
 
   const { data, error } = await query
-  if (error) return []
+  if (error) {
+    console.error('[commercial-rules] fetchRuleRows:', error.message)
+    return []
+  }
   return (data ?? []).map((row) => {
     const typed = row as unknown as Record<string, unknown>
     return {
@@ -137,7 +146,7 @@ export async function POST(request: Request) {
     updated_at: now,
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await db()
     .from(RULE_TABLE)
     .insert(insertPayload)
     .select(buildCommercialRulesListSelect())
@@ -187,7 +196,7 @@ export async function PATCH(request: Request) {
     updatePayload.active = body.active
   }
   if (body.rule_value) {
-    const existing = await supabase
+    const existing = await db()
       .from(RULE_TABLE)
       .select('rule_value')
       .eq('id', body.id)
@@ -205,7 +214,7 @@ export async function PATCH(request: Request) {
     }
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await db()
     .from(RULE_TABLE)
     .update(updatePayload)
     .eq('id', body.id)

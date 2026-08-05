@@ -985,6 +985,145 @@ body {
   border-color: rgba(148, 163, 184, 0.4);
 }
 
+/* Ações de compartilhamento (padrão Logistics) */
+.liquid-glass-action {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border-radius: 0.875rem;
+  padding: 0.4375rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25;
+  text-decoration: none;
+  cursor: pointer;
+  backdrop-filter: blur(14px) saturate(155%);
+  -webkit-backdrop-filter: blur(14px) saturate(155%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 4px 14px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  transition:
+    transform 0.14s ease,
+    box-shadow 0.14s ease,
+    background 0.14s ease,
+    border-color 0.14s ease,
+    color 0.14s ease;
+}
+
+.liquid-glass-action::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.38) 0%,
+    transparent 52%
+  );
+  pointer-events: none;
+}
+
+.liquid-glass-action > * {
+  position: relative;
+  z-index: 1;
+}
+
+.liquid-glass-action:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 8px 18px rgba(15, 23, 42, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.liquid-glass-action:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.liquid-glass-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.liquid-glass-action--compact {
+  padding: 0.4375rem 0.625rem;
+}
+
+.liquid-glass-action--neutral {
+  color: #334155;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.72) 0%,
+    rgba(241, 245, 249, 0.52) 100%
+  );
+}
+
+.liquid-glass-action--brand {
+  color: #8a0013;
+  background: linear-gradient(
+    145deg,
+    rgba(208, 0, 31, 0.14) 0%,
+    rgba(255, 255, 255, 0.55) 100%
+  );
+  border-color: rgba(208, 0, 31, 0.28);
+}
+
+/* Verde padrão WhatsApp (marca #25D366) */
+.liquid-glass-action--green {
+  color: #ffffff;
+  font-weight: 600;
+  background: linear-gradient(
+    145deg,
+    #25d366 0%,
+    #20bd5a 48%,
+    #1da851 100%
+  );
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow:
+    0 6px 18px rgba(37, 211, 102, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+}
+
+.liquid-glass-action--green:hover:not(:disabled) {
+  color: #ffffff;
+  background: linear-gradient(
+    145deg,
+    #2fe476 0%,
+    #25d366 48%,
+    #20bd5a 100%
+  );
+}
+
+.liquid-glass-action--sky {
+  color: #ffffff;
+  font-weight: 600;
+  background: linear-gradient(
+    145deg,
+    rgba(14, 165, 233, 0.9) 0%,
+    rgba(2, 132, 199, 0.94) 48%,
+    rgba(3, 105, 161, 0.96) 100%
+  );
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow:
+    0 6px 18px rgba(2, 132, 199, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.liquid-glass-action--sky:hover:not(:disabled) {
+  color: #ffffff;
+  background: linear-gradient(
+    145deg,
+    rgba(56, 189, 248, 0.95) 0%,
+    rgba(14, 165, 233, 0.96) 48%,
+    rgba(2, 132, 199, 0.97) 100%
+  );
+}
+
 .liquid-glass-menu-panel {
   border-radius: 1rem;
   background: linear-gradient(

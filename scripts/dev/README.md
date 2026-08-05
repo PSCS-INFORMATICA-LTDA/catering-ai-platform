@@ -62,6 +62,41 @@ node scripts/dev/cleanup-catering-functional-validation.mjs --confirm-dev-cleanu
 
 Remove apenas IDs do fixture. Não apaga a empresa principal CDL (default da app).
 
+## Seed demo — equipes + agenda (fins de semana)
+
+```bash
+node scripts/dev/seed-agenda-teams-demo.mjs --apply
+```
+
+Cria 4 equipes (Ricardo, Filipe, Caio, Maicon) com cores e 2 membros cada,
+mais 8 eventos (sábado/domingo 08–09/08/2026) no DEV.
+
+## Copiar catálogo + regras comerciais CDL de PROD → DEV
+
+Script principal (recomendado para teste fiel de cotação/billing):
+
+`sync-cdl-commercial-prod-to-dev.mjs`
+
+- **PROD** (`.env.local.PROD-BACKUP`): somente leitura
+- **DEV** (`.env.local`): upsert
+- Copia: `commercial_rules`, `payment_rules`, `staff_rules`, `quote_text_templates`,
+  pacotes, categorias, catálogo, opções, preços, empresa/branch
+- Copia imagens para o storage DEV
+- **Não** copia clientes, cotações, eventos nem PII
+- PROD nunca é escrito
+
+```bash
+node scripts/dev/sync-cdl-commercial-prod-to-dev.mjs           # dry-run
+node scripts/dev/sync-cdl-commercial-prod-to-dev.mjs --apply   # grava no DEV (+ imagens)
+```
+
+Scripts auxiliares:
+
+```bash
+node scripts/dev/sync-cdl-packages-prod-to-dev.mjs --apply          # só catálogo/pacotes
+node scripts/dev/sync-cdl-package-images-prod-to-dev.mjs --apply   # só imagens
+```
+
 ## Outros helpers (interativos)
 
 - `set-catering-dev-env.ps1` — `.env.local` + Vercel Dev/Preview

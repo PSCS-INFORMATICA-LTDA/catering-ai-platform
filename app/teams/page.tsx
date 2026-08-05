@@ -2,6 +2,7 @@ import TeamsDashboard from '@/components/teams/TeamsDashboard'
 import type { OperationalTeam } from '@/Lib/agenda/types'
 import { getAuthSession } from '@/Lib/auth/session'
 import { resolveAuthorizedCompanyId } from '@/Lib/auth/requireApi'
+import { hydrateTeamsWithContacts } from '@/Lib/teamContacts'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { redirect } from 'next/navigation'
 
@@ -27,13 +28,14 @@ export default async function TeamsPage() {
         <pre className="mt-4 rounded-3xl bg-cdl-surface p-4 text-sm text-red-400">
           {error.message}
         </pre>
-        <p className="mt-4 text-sm text-cdl-muted">
-          Se a migration ainda não foi aplicada no DEV, rode
-          `20260804120000_agenda_teams_events.sql`.
-        </p>
       </main>
     )
   }
 
-  return <TeamsDashboard initialTeams={(data ?? []) as OperationalTeam[]} />
+  const teams = await hydrateTeamsWithContacts(
+    (data ?? []) as OperationalTeam[],
+    companyId,
+  )
+
+  return <TeamsDashboard initialTeams={teams} />
 }

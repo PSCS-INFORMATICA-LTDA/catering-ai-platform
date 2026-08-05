@@ -10,7 +10,17 @@
     "lint": "eslint",
     "seed:dev:functional:dry": "node scripts/dev/seed-catering-functional-validation.mjs --dry-run",
     "seed:dev:functional": "node scripts/dev/seed-catering-functional-validation.mjs --apply",
-    "verify:dev:functional": "node scripts/dev/verify-catering-functional-validation.mjs"
+    "verify:dev:functional": "node scripts/dev/verify-catering-functional-validation.mjs",
+    "sync:dev:packages:dry": "node scripts/dev/sync-cdl-packages-prod-to-dev.mjs",
+    "sync:dev:packages": "node scripts/dev/sync-cdl-packages-prod-to-dev.mjs --apply",
+    "sync:dev:package-images": "node scripts/dev/sync-cdl-package-images-prod-to-dev.mjs --apply",
+    "sync:dev:commercial:dry": "node scripts/dev/sync-cdl-commercial-prod-to-dev.mjs",
+    "sync:dev:commercial": "node scripts/dev/sync-cdl-commercial-prod-to-dev.mjs --apply",
+    "seed:dev:agenda-teams": "node scripts/dev/seed-agenda-teams-demo.mjs --apply",
+    "test:dev:quotes-orders:preflight": "node scripts/dev/preflight-quotes-orders.mjs",
+    "test:dev:quotes-orders:conversion": "node scripts/dev/test-quote-to-order-conversion.mjs",
+    "test:dev:quotes-orders:snapshot-total": "node scripts/dev/test-order-snapshot-total.mjs",
+    "test:dev:quotes-orders:list-filters": "node scripts/dev/test-quotes-list-filters.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",

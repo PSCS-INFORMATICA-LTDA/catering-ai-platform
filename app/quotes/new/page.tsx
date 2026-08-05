@@ -2,6 +2,10 @@ import { fetchActiveCustomers } from '../../../Lib/fetchCustomers'
 import { fetchCatalogItems } from '../../../Lib/fetchCatalogItems'
 import { fetchPackages } from '../../../Lib/fetchPackages'
 import { loadPackageConfiguration } from '../../../Lib/packageConfiguration'
+import {
+  createInitialWizardState,
+  type WizardState,
+} from '../../../Lib/quoteWizardTypes'
 import { fetchSupabaseCommercialRules } from '../../../Lib/supabaseCommercialRules'
 import QuoteWizard, {
   type CatalogItem,
@@ -12,7 +16,56 @@ import QuoteWizard, {
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-export default async function NewQuotePage() {
+function parseNonNegInt(raw: string | undefined, fallback = 0): number {
+  if (raw == null || raw === '') return fallback
+  const n = Number(raw)
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : fallback
+}
+
+function buildPrefillState(
+  commercialRules: Awaited<ReturnType<typeof fetchSupabaseCommercialRules>>,
+  sp: Record<string, string | string[] | undefined>,
+): { state: WizardState; step: number } {
+  const get = (key: string) => {
+    const v = sp[key]
+    return Array.isArray(v) ? v[0] : v
+  }
+
+  const base = createInitialWizardState(commercialRules)
+  const eventDate = (get('event_date') || '').trim()
+  const startTime = (get('start_time') || '').trim().slice(0, 5)
+  const endTime = (get('end_time') || '').trim().slice(0, 5)
+  const eventName = (get('event_name') || '').trim()
+  const fromAgenda = (get('from') || '') === 'agenda'
+
+  const state: WizardState = {
+    ...base,
+    eventDate: eventDate || base.eventDate,
+    startTime: startTime || base.startTime,
+    endTime: endTime || base.endTime,
+    eventName: eventName || base.eventName,
+    adultCount: parseNonNegInt(get('adults'), base.adultCount),
+    childrenUnder3Count: parseNonNegInt(
+      get('children_under_3'),
+      base.childrenUnder3Count,
+    ),
+    children4To12Count: parseNonNegInt(
+      get('children_4_to_12'),
+      base.children4To12Count,
+    ),
+  }
+
+  // Agenda → cotação: começa no cliente; data/horário já vêm preenchidos no passo Evento.
+  const step = fromAgenda || eventDate ? 0 : 0
+  return { state, step }
+}
+
+export default async function NewQuotePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const sp = await searchParams
   const fetchErrors: string[] = []
 
   const [customersRes, packagesRes, catalogRes, commercialRules] =
@@ -70,6 +123,10 @@ export default async function NewQuotePage() {
 
   const customers = (customersRes.data ?? []) as Customer[]
   const catalogItems = (catalogRes.data ?? []) as unknown as CatalogItem[]
+  const { state: initialState, step: initialStep } = buildPrefillState(
+    commercialRules,
+    sp,
+  )
 
   return (
     <QuoteWizard
@@ -83,6 +140,8 @@ export default async function NewQuotePage() {
       packageSideItems={packageConfiguration.packageSideItems}
       commercialRules={commercialRules}
       fetchErrors={fetchErrors}
+      initialState={initialState}
+      initialStep={initialStep}
     />
   )
 }

@@ -2,7 +2,13 @@ import AgendaDashboard from '@/components/agenda/AgendaDashboard'
 import type { AgendaEvent, OperationalTeam } from '@/Lib/agenda/types'
 import { resolveAuthorizedCompanyId } from '@/Lib/auth/requireApi'
 import { getAuthSession } from '@/Lib/auth/session'
-import { startOfWeekMonday, toDayKey, weekDayKeys } from '@/Lib/agenda/week'
+import {
+  startOfWeekMondayFromDayKey,
+  todayDayKey,
+  toDayKey,
+  weekDayKeys,
+} from '@/Lib/agenda/week'
+import { hydrateTeamsWithContacts } from '@/Lib/teamContacts'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { redirect } from 'next/navigation'
 
@@ -14,7 +20,8 @@ export default async function AgendaPage() {
   if (!session) redirect('/login?next=/agenda')
 
   const companyId = resolveAuthorizedCompanyId(session)
-  const weekStart = startOfWeekMonday(new Date())
+  const todayKey = todayDayKey()
+  const weekStart = startOfWeekMondayFromDayKey(todayKey)
   const keys = weekDayKeys(weekStart)
   const db = getSupabaseServerClient()
 
@@ -51,9 +58,14 @@ export default async function AgendaPage() {
     )
   }
 
+  const teams = await hydrateTeamsWithContacts(
+    (teamsRes.data ?? []) as OperationalTeam[],
+    companyId,
+  )
+
   return (
     <AgendaDashboard
-      initialTeams={(teamsRes.data ?? []) as OperationalTeam[]}
+      initialTeams={teams}
       initialEvents={(eventsRes.data ?? []) as AgendaEvent[]}
       initialWeekStart={toDayKey(weekStart)}
     />

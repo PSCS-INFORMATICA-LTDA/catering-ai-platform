@@ -2,11 +2,15 @@ import { rejectSpoofedCompanyId, requireApiPermission } from '@/Lib/auth/require
 import { createQuote } from '@/Lib/createQuote'
 import type { QuoteSaveInput } from '@/Lib/buildQuoteSavePayload'
 import { fetchQuoteList } from '@/Lib/fetchQuoteList'
+import {
+  applyQuoteListFilters,
+  parseQuoteListFiltersFromSearchParams,
+} from '@/Lib/quotes/listFilters'
 import { logSaveQuoteError } from '@/Lib/supabaseSaveError'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(request: Request) {
   const auth = await requireApiPermission('quotes.view')
   if (!auth.ok) return auth.response
 
@@ -22,8 +26,31 @@ export async function GET() {
     )
   }
 
+  const url = new URL(request.url)
+  const hasFilterParams = [
+    'q',
+    'status',
+    'has_acceptance',
+    'has_order',
+    'date_from',
+    'date_to',
+    'page',
+    'pageSize',
+    'sort',
+  ].some((key) => url.searchParams.has(key))
+
+  if (!hasFilterParams) {
+    return Response.json(
+      { data: data ?? [] },
+      { headers: { 'Cache-Control': 'no-store, max-age=0' } },
+    )
+  }
+
+  const filters = parseQuoteListFiltersFromSearchParams(url.searchParams)
+  const { items, total, page, pageSize } = applyQuoteListFilters(data ?? [], filters)
+
   return Response.json(
-    { data: data ?? [] },
+    { data: items, total, page, pageSize },
     { headers: { 'Cache-Control': 'no-store, max-age=0' } },
   )
 }

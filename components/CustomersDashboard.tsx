@@ -1,15 +1,12 @@
 'use client'
 
-import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import BackofficeTableShell from '@/components/BackofficeTableShell'
 import {
   BackofficeBtnDanger,
   BackofficeBtnPrimary,
   BackofficeBtnSecondary,
-  BackofficeCardGrid,
   BackofficeEmptyState,
-  BackofficeEntityCard,
   BackofficeField,
   BackofficeFormCard,
   BackofficeInput,
@@ -18,19 +15,27 @@ import {
 } from '@/components/backoffice/BackofficeCardPrimitives'
 import { getCustomerDisplayName } from '@/Lib/getCustomerDisplayName'
 import type { CustomersUpdatePayload } from '@/Lib/customersTableSchema'
+import { glassField } from '@/Lib/liquidGlass'
 import {
   dedupeCustomersList,
   filterCustomersBySearch,
+  personRoleLabels,
   sortCustomersByRecency,
   type CustomerSearchRecord,
 } from '@/Lib/searchCustomers'
 
 type CustomerRow = CustomerSearchRecord & { id: string }
 type ActiveFilter = 'active' | 'all'
+type RoleFilter = 'all' | 'customer' | 'supplier' | 'team'
 
 type CustomerForm = CustomersUpdatePayload & {
   phone: string
   ab_name?: string | null
+  is_customer?: boolean | null
+  is_supplier?: boolean | null
+  is_team?: boolean | null
+  preferred_language?: string | null
+  address_line?: string | null
 }
 
 const EMPTY_FORM: CustomerForm = {
@@ -40,10 +45,22 @@ const EMPTY_FORM: CustomerForm = {
   contact_name: '',
   company_name: '',
   email: '',
+  address_line: '',
   city: '',
   state: '',
+  postal_code: '',
+  preferred_language: 'pt',
+  is_customer: true,
+  is_supplier: false,
+  is_team: false,
   source: '',
   active: true,
+}
+
+function langLabel(code: string | null | undefined) {
+  if (code === 'en') return 'English'
+  if (code === 'es') return 'Español'
+  return 'Português'
 }
 
 async function fetchCustomersFromApi(
@@ -83,34 +100,34 @@ function CustomerEditFields({
 }) {
   return (
     <>
-      <BackofficeField label="AB number">
+      <BackofficeField label="Nº AB">
         <BackofficeInput value={abNumber ?? 'auto'} onChange={() => {}} disabled />
       </BackofficeField>
-      <BackofficeField label="ab_name">
+      <BackofficeField label="Nome de exibição">
         <BackofficeInput
           value={draft.ab_name ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, ab_name: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="full_name">
+      <BackofficeField label="Nome completo">
         <BackofficeInput
           value={draft.full_name ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, full_name: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="contact_name">
+      <BackofficeField label="Contato">
         <BackofficeInput
           value={draft.contact_name ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, contact_name: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="company_name">
+      <BackofficeField label="Empresa">
         <BackofficeInput
           value={draft.company_name ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, company_name: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Telefone">
+      <BackofficeField label="Telefone *">
         <BackofficeInput
           value={draft.phone ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, phone: v }))}
@@ -120,6 +137,12 @@ function CustomerEditFields({
         <BackofficeInput
           value={draft.email ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, email: v }))}
+        />
+      </BackofficeField>
+      <BackofficeField label="Endereço" className="sm:col-span-2">
+        <BackofficeInput
+          value={draft.address_line ?? ''}
+          onChange={(v) => setDraft((c) => ({ ...c, address_line: v }))}
         />
       </BackofficeField>
       <BackofficeField label="Cidade">
@@ -133,6 +156,63 @@ function CustomerEditFields({
           value={draft.state ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, state: v }))}
         />
+      </BackofficeField>
+      <BackofficeField label="CEP / ZIP">
+        <BackofficeInput
+          value={draft.postal_code ?? ''}
+          onChange={(v) => setDraft((c) => ({ ...c, postal_code: v }))}
+        />
+      </BackofficeField>
+      <BackofficeField label="Idioma (WhatsApp / mensagens)">
+        <select
+          className={glassField()}
+          value={draft.preferred_language ?? 'pt'}
+          onChange={(e) =>
+            setDraft((c) => ({ ...c, preferred_language: e.target.value }))
+          }
+        >
+          <option value="pt">Português</option>
+          <option value="en">English</option>
+          <option value="es">Español</option>
+        </select>
+      </BackofficeField>
+      <BackofficeField label="Papéis" className="sm:col-span-2">
+        <div className="flex flex-wrap gap-4 rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm text-neutral-800">
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={Boolean(draft.is_customer)}
+              onChange={(e) =>
+                setDraft((c) => ({ ...c, is_customer: e.target.checked }))
+              }
+            />
+            Cliente
+          </label>
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={Boolean(draft.is_supplier)}
+              onChange={(e) =>
+                setDraft((c) => ({ ...c, is_supplier: e.target.checked }))
+              }
+            />
+            Fornecedor
+          </label>
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={Boolean(draft.is_team)}
+              onChange={(e) =>
+                setDraft((c) => ({ ...c, is_team: e.target.checked }))
+              }
+            />
+            Equipe
+          </label>
+        </div>
+        <p className="mt-1 text-xs text-neutral-500">
+          Cadastro único: a mesma pessoa pode ser cliente, fornecedor e/ou
+          contato de equipe.
+        </p>
       </BackofficeField>
       <BackofficeField label="Origem">
         <BackofficeInput
@@ -154,19 +234,28 @@ export default function CustomersDashboard({
   )
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('active')
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | 'new' | null>(null)
+  const [analyzingId, setAnalyzingId] = useState<string | null>(null)
   const [draft, setDraft] = useState<CustomerForm>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [openQuoteCounts, setOpenQuoteCounts] = useState<Record<string, number>>(
     {},
   )
 
-  const filteredCustomers = useMemo(
-    () => filterCustomersBySearch(customers, search),
-    [customers, search],
-  )
+  const filteredCustomers = useMemo(() => {
+    let list = filterCustomersBySearch(customers, search)
+    if (roleFilter === 'customer') {
+      list = list.filter((p) => p.is_customer !== false)
+    } else if (roleFilter === 'supplier') {
+      list = list.filter((p) => Boolean(p.is_supplier))
+    } else if (roleFilter === 'team') {
+      list = list.filter((p) => Boolean(p.is_team))
+    }
+    return list
+  }, [customers, search, roleFilter])
 
   const refreshCustomers = useCallback(async () => {
     setLoading(true)
@@ -192,11 +281,13 @@ export default function CustomersDashboard({
   }, [activeFilter])
 
   function startNew() {
+    setAnalyzingId(null)
     setEditingId('new')
     setDraft({ ...EMPTY_FORM })
   }
 
   function startEdit(customer: CustomerRow) {
+    setAnalyzingId(null)
     setEditingId(customer.id)
     setDraft({
       phone: customer.phone ?? '',
@@ -205,11 +296,22 @@ export default function CustomersDashboard({
       contact_name: customer.contact_name ?? '',
       company_name: customer.company_name ?? '',
       email: customer.email ?? '',
+      address_line: customer.address_line ?? '',
       city: customer.city ?? '',
       state: customer.state ?? '',
+      postal_code: customer.postal_code ?? '',
+      preferred_language: customer.preferred_language ?? 'pt',
+      is_customer: customer.is_customer !== false,
+      is_supplier: Boolean(customer.is_supplier),
+      is_team: Boolean(customer.is_team),
       source: customer.source ?? '',
-      active: true,
+      active: customer.active !== false,
     })
+  }
+
+  function toggleAnalyze(customerId: string) {
+    setEditingId(null)
+    setAnalyzingId((current) => (current === customerId ? null : customerId))
   }
 
   function cancelEdit() {
@@ -291,88 +393,135 @@ export default function CustomersDashboard({
     })
   }
 
-  function renderCustomerCard(customer: CustomerRow) {
+  function renderPersonRow(customer: CustomerRow) {
     const isEditing = editingId === customer.id
+    const isAnalyzing = analyzingId === customer.id
     const displayName = getCustomerDisplayName(customer)
     const openCount = openQuoteCounts[customer.id] ?? 0
     const location = [customer.city, customer.state].filter(Boolean).join(', ')
+    const roles = personRoleLabels(customer)
 
     if (isEditing) {
       return (
-        <BackofficeFormCard
-          key={customer.id}
-          title={`Editar cadastro · ${displayName}`}
-          actions={
-            <>
-              <BackofficeBtnPrimary
-                onClick={() => void saveRow()}
-                disabled={saving}
-              >
-                {saving ? 'Salvando…' : 'Salvar'}
-              </BackofficeBtnPrimary>
-              <BackofficeBtnSecondary onClick={cancelEdit}>Cancelar</BackofficeBtnSecondary>
-            </>
-          }
-        >
-          <CustomerEditFields
-            draft={draft}
-            setDraft={setDraft}
-            abNumber={customer.ab_number}
-          />
-        </BackofficeFormCard>
+        <li key={customer.id} className="border-b border-neutral-100 last:border-b-0">
+          <BackofficeFormCard
+            title={`Editar cadastro · ${displayName}`}
+            actions={
+              <>
+                <BackofficeBtnPrimary
+                  onClick={() => void saveRow()}
+                  disabled={saving}
+                >
+                  {saving ? 'Salvando…' : 'Salvar'}
+                </BackofficeBtnPrimary>
+                <BackofficeBtnSecondary onClick={cancelEdit}>
+                  Cancelar
+                </BackofficeBtnSecondary>
+              </>
+            }
+          >
+            <CustomerEditFields
+              draft={draft}
+              setDraft={setDraft}
+              abNumber={customer.ab_number}
+            />
+          </BackofficeFormCard>
+        </li>
       )
     }
 
     return (
-      <BackofficeEntityCard
-        key={customer.id}
-        actions={
-          <>
+      <li key={customer.id} className="border-b border-neutral-100 last:border-b-0">
+        <div className="grid gap-3 px-4 py-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(9rem,0.9fr)_minmax(0,1.2fr)_auto] sm:items-center sm:gap-4">
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="truncate text-sm font-bold uppercase tracking-wide text-neutral-900">
+                {displayName}
+              </h3>
+              <BackofficeOpenQuoteBadge count={openCount} />
+            </div>
+            {customer.ab_number ? (
+              <p className="text-xs text-neutral-500">AB {customer.ab_number}</p>
+            ) : null}
+          </div>
+
+          <div className="min-w-0">
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 sm:hidden">
+              Papel
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {roles.map((role) => (
+                <span
+                  key={role}
+                  className="rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-700"
+                >
+                  {role}
+                </span>
+              ))}
+              {roles.length > 1 ? (
+                <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-800">
+                  Múltiplos
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="min-w-0 text-sm text-neutral-600">
+            <p className="truncate font-medium text-neutral-800">
+              {customer.phone || '—'}
+            </p>
+            <p className="truncate">{customer.email || '—'}</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             <BackofficeBtnSecondary onClick={() => startEdit(customer)}>
               Editar
             </BackofficeBtnSecondary>
-            <Link
-              href="/quotes/new"
-              className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-bold text-neutral-800 shadow-sm transition hover:border-neutral-300 hover:bg-neutral-50"
-            >
-              Nova cotação
-            </Link>
-            <Link
-              href="/quotes"
-              className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-bold text-neutral-800 shadow-sm transition hover:border-neutral-300 hover:bg-neutral-50"
-            >
-              Ver cotações
-            </Link>
+            <BackofficeBtnSecondary onClick={() => toggleAnalyze(customer.id)}>
+              {isAnalyzing ? 'Fechar' : 'Analisar'}
+            </BackofficeBtnSecondary>
             <BackofficeBtnDanger onClick={() => void handleDeactivate(customer)}>
               Excluir
             </BackofficeBtnDanger>
-          </>
-        }
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <BackofficeOpenQuoteBadge count={openCount} />
+          </div>
         </div>
-        <h3 className="text-xl font-bold uppercase leading-snug text-neutral-900">
-          {displayName}
-        </h3>
-        {customer.contact_name ? (
-          <BackofficeMetaRow label="Contato" value={customer.contact_name} />
+
+        {isAnalyzing ? (
+          <div className="grid gap-2 border-t border-neutral-100 bg-neutral-50/70 px-4 py-4 sm:grid-cols-2 lg:grid-cols-3">
+            <BackofficeMetaRow label="Papéis" value={roles.join(', ')} />
+            {customer.contact_name ? (
+              <BackofficeMetaRow label="Contato" value={customer.contact_name} />
+            ) : null}
+            <BackofficeMetaRow label="Telefone" value={customer.phone ?? '—'} />
+            <BackofficeMetaRow label="E-mail" value={customer.email ?? '—'} />
+            <BackofficeMetaRow
+              label="Endereço"
+              value={customer.address_line || location || '—'}
+            />
+            <BackofficeMetaRow
+              label="Idioma"
+              value={langLabel(customer.preferred_language)}
+            />
+            <BackofficeMetaRow label="Local" value={location || '—'} />
+            {customer.ab_number ? (
+              <BackofficeMetaRow label="AB" value={customer.ab_number} />
+            ) : null}
+            {customer.company_name ? (
+              <BackofficeMetaRow label="Empresa" value={customer.company_name} />
+            ) : null}
+            {customer.source ? (
+              <BackofficeMetaRow label="Origem" value={customer.source} />
+            ) : null}
+          </div>
         ) : null}
-        <BackofficeMetaRow label="Telefone" value={customer.phone ?? '—'} />
-        <BackofficeMetaRow label="E-mail" value={customer.email ?? '—'} />
-        <BackofficeMetaRow label="Local" value={location || '—'} />
-        <BackofficeMetaRow label="Origem" value={customer.source ?? '—'} />
-        {customer.ab_number ? (
-          <BackofficeMetaRow label="AB" value={customer.ab_number} />
-        ) : null}
-      </BackofficeEntityCard>
+      </li>
     )
   }
 
   return (
     <BackofficeTableShell
-      title="Cadastros"
-      subtitle="Clientes e contatos da operação · Catering AI"
+      title="Pessoas"
+      subtitle="Cadastro único (Address Book): cliente, fornecedor e equipe — o que muda é a flag de papel."
       search={search}
       onSearchChange={setSearch}
       searchPlaceholder="Nome, telefone, e-mail ou AB number"
@@ -383,32 +532,31 @@ export default function CustomersDashboard({
       error={error}
       actions={
         <>
+          <select
+            className="min-h-[44px] rounded-xl border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-800"
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
+            aria-label="Filtrar por papel"
+          >
+            <option value="all">Todos os papéis</option>
+            <option value="customer">Clientes</option>
+            <option value="supplier">Fornecedores</option>
+            <option value="team">Equipe</option>
+          </select>
           <button
             type="button"
             onClick={startNew}
             className="cdl-btn-primary inline-flex min-h-[44px] items-center justify-center rounded-xl px-5 py-3 text-sm font-bold"
           >
-            Novo cadastro
+            Nova pessoa
           </button>
-          <Link
-            href="/quotes/new"
-            className="cdl-btn-primary inline-flex min-h-[44px] items-center justify-center rounded-xl px-5 py-3 text-sm font-bold"
-          >
-            Nova cotação
-          </Link>
-          <Link
-            href="/quotes"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-bold text-neutral-800 shadow-sm"
-          >
-            Cotações
-          </Link>
         </>
       }
     >
-      <BackofficeCardGrid>
+      <div className="space-y-4">
         {editingId === 'new' ? (
           <BackofficeFormCard
-            title="Novo cadastro"
+            title="Nova pessoa"
             actions={
               <>
                 <BackofficeBtnPrimary
@@ -428,11 +576,22 @@ export default function CustomersDashboard({
         ) : null}
 
         {filteredCustomers.length === 0 && editingId !== 'new' ? (
-          <BackofficeEmptyState loading={loading} message="Nenhum cliente encontrado." />
+          <BackofficeEmptyState
+            loading={loading}
+            message="Nenhuma pessoa encontrada."
+          />
         ) : (
-          filteredCustomers.map((customer) => renderCustomerCard(customer))
+          <ul className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+            <li className="hidden border-b border-neutral-100 bg-neutral-50 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-neutral-500 sm:grid sm:grid-cols-[minmax(0,1.4fr)_minmax(9rem,0.9fr)_minmax(0,1.2fr)_auto] sm:gap-4">
+              <span>Pessoa</span>
+              <span>Papel</span>
+              <span>Contato</span>
+              <span className="text-right">Ações</span>
+            </li>
+            {filteredCustomers.map((customer) => renderPersonRow(customer))}
+          </ul>
         )}
-      </BackofficeCardGrid>
+      </div>
     </BackofficeTableShell>
   )
 }

@@ -1,0 +1,414 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { MailIcon, SmsIcon } from '@/components/icons/ShareIcons'
+import SmsShareAnchor from '@/components/share/SmsShareAnchor'
+import WhatsAppButton from '@/components/share/WhatsAppButton'
+import {
+  buildMailtoHref,
+  buildQuoteProposalEmailBody,
+  buildQuoteProposalEmailSubject,
+  buildQuoteProposalShareText,
+  buildPublicProposalUrl,
+  resolveClientProposalShareUrl,
+} from '@/Lib/quoteProposal'
+import { buildSmsShareHref } from '@/Lib/smsShare'
+import {
+  copyWhatsAppMessageSync,
+  formatWhatsAppPhoneDisplay,
+  normalizeWhatsAppPhone,
+} from '@/Lib/whatsapp'
+import { glassAction, glassBtn } from '@/Lib/liquidGlass'
+
+type ProposalState = {
+  proposal_token: string | null
+  proposal_sent_at: string | null
+  proposal_response: string
+  quote_status: string | null
+}
+
+const SHARE_ICON =
+  'inline-flex h-10 w-10 shrink-0 items-center justify-center p-0'
+
+export default function QuoteProposalSharePanel({
+  quoteId,
+  quoteNumber,
+  customerName,
+  customerPhone,
+  customerEmail,
+  eventDate,
+  startTime,
+  endTime,
+  packageLabel,
+  quoteTotal,
+  reservationAmount,
+  currencyCode,
+  companyName,
+  adultCount,
+  childrenUnder3Count,
+  children4To12Count,
+  addressLine,
+  city,
+  addressState,
+  language = 'pt',
+  initial,
+}: {
+  quoteId: string
+  quoteNumber: string
+  customerName?: string | null
+  customerPhone?: string | null
+  customerEmail?: string | null
+  eventDate?: string | null
+  startTime?: string | null
+  endTime?: string | null
+  packageLabel?: string | null
+  quoteTotal?: number | null
+  reservationAmount?: number | null
+  currencyCode?: string | null
+  companyName?: string | null
+  adultCount?: number | null
+  childrenUnder3Count?: number | null
+  children4To12Count?: number | null
+  addressLine?: string | null
+  city?: string | null
+  addressState?: string | null
+  language?: string | null
+  initial?: Partial<ProposalState> | null
+}) {
+  const [state, setState] = useState<ProposalState>({
+    proposal_token: initial?.proposal_token ?? null,
+    proposal_sent_at: initial?.proposal_sent_at ?? null,
+    proposal_response: initial?.proposal_response ?? 'pending',
+    quote_status: initial?.quote_status ?? null,
+  })
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [hint, setHint] = useState<string | null>(null)
+
+  const publicUrl = useMemo(
+    () => resolveClientProposalShareUrl(state.proposal_token),
+    [state.proposal_token],
+  )
+
+  const defaultMessage = useMemo(() => {
+    if (!publicUrl) return ''
+    return buildQuoteProposalShareText({
+      quoteNumber,
+      customerName,
+      eventDate,
+      startTime,
+      endTime,
+      packageLabel,
+      quoteTotal,
+      reservationAmount,
+      currencyCode,
+      proposalUrl: publicUrl,
+      companyName,
+      adultCount,
+      childrenUnder3Count,
+      children4To12Count,
+      addressLine,
+      city,
+      state: addressState,
+      language,
+    })
+  }, [
+    publicUrl,
+    quoteNumber,
+    customerName,
+    eventDate,
+    startTime,
+    endTime,
+    packageLabel,
+    quoteTotal,
+    reservationAmount,
+    currencyCode,
+    companyName,
+    adultCount,
+    childrenUnder3Count,
+    children4To12Count,
+    addressLine,
+    city,
+    addressState,
+    language,
+  ])
+
+  const [message, setMessage] = useState(defaultMessage)
+
+  useEffect(() => {
+    setMessage(defaultMessage)
+  }, [defaultMessage])
+
+  const phoneOk = Boolean(normalizeWhatsAppPhone(customerPhone))
+  const phoneLabel = formatWhatsAppPhoneDisplay(customerPhone)
+  const smsHref = buildSmsShareHref(customerPhone, message)
+  const mailHref = buildMailtoHref({
+    email: customerEmail,
+    subject: buildQuoteProposalEmailSubject({
+      quoteNumber,
+      proposalUrl: publicUrl || '',
+      language,
+    }),
+    body:
+      message ||
+      buildQuoteProposalEmailBody({
+        quoteNumber,
+        customerName,
+        eventDate,
+        startTime,
+        endTime,
+        packageLabel,
+        quoteTotal,
+        reservationAmount,
+        currencyCode,
+        proposalUrl: publicUrl || buildPublicProposalUrl('…'),
+        companyName,
+        adultCount,
+        childrenUnder3Count,
+        children4To12Count,
+        addressLine,
+        city,
+        state: addressState,
+        language,
+      }),
+  })
+
+  const markSent = useCallback(
+    async (action: 'mark_sent' | 'follow_up' | 'ensure_token' = 'mark_sent') => {
+      setBusy(true)
+      setError(null)
+      try {
+        const res = await fetch(`/api/quotes/${quoteId}/proposal`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action }),
+        })
+        const json = (await res.json()) as {
+          data?: {
+            token?: string
+            proposal_token?: string
+            proposal_sent_at?: string | null
+            proposal_response?: string
+            quote_status?: string | null
+          }
+          error?: string
+        }
+        if (!res.ok) throw new Error(json.error ?? 'Falha ao registrar envio')
+        const token = json.data?.token || json.data?.proposal_token || null
+        setState((s) => ({
+          ...s,
+          proposal_token: token,
+          proposal_sent_at:
+            json.data?.proposal_sent_at ??
+            s.proposal_sent_at ??
+            new Date().toISOString(),
+          proposal_response: json.data?.proposal_response ?? s.proposal_response,
+          quote_status: json.data?.quote_status ?? s.quote_status,
+        }))
+        setHint(
+          action === 'mark_sent'
+            ? 'Envio registrado. Use WhatsApp, SMS ou e-mail para compartilhar.'
+            : 'Pronto.',
+        )
+        return token
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Erro')
+        return null
+      } finally {
+        setBusy(false)
+      }
+    },
+    [quoteId],
+  )
+
+  async function ensureReady() {
+    if (state.proposal_token && state.proposal_sent_at) {
+      return state.proposal_token
+    }
+    return markSent('mark_sent')
+  }
+
+  async function copyLink() {
+    const token = await ensureReady()
+    if (!token) return
+    const url = buildPublicProposalUrl(token)
+    try {
+      await navigator.clipboard.writeText(url)
+      setHint('Link público copiado.')
+    } catch {
+      copyWhatsAppMessageSync(url)
+      setHint('Link copiado.')
+    }
+  }
+
+  const responseLabel =
+    state.proposal_response === 'accepted'
+      ? 'Cliente aceitou'
+      : state.proposal_response === 'rejected'
+        ? 'Cliente recusou'
+        : state.proposal_sent_at
+          ? 'Aguardando aceite do cliente'
+          : 'Ainda não enviada'
+
+  return (
+    <section className="no-print liquid-glass-card space-y-4 p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-cdl-fg">
+            Enviar cotação ao cliente
+          </h2>
+          <p className="mt-1 text-sm text-cdl-muted">
+            Botões personalizados (padrão Logistics). Idioma da cotação:{' '}
+            {(language || 'pt').toUpperCase()}.
+          </p>
+        </div>
+        <span className="rounded-full border border-cdl-border bg-cdl-inset px-3 py-1 text-xs font-semibold uppercase tracking-wider text-cdl-muted">
+          {responseLabel}
+        </span>
+      </div>
+
+      {publicUrl ? (
+        <p className="break-all rounded-xl border border-cdl-border bg-cdl-inset px-3 py-2 text-xs text-cdl-fg">
+          {publicUrl}
+        </p>
+      ) : (
+        <p className="text-sm text-cdl-muted">
+          Clique em <strong>Registrar envio</strong> para gerar o link público.
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          className={glassBtn('primary')}
+          disabled={busy}
+          onClick={() => void markSent('mark_sent')}
+        >
+          {state.proposal_sent_at
+            ? 'Reenviar / atualizar envio'
+            : 'Registrar envio ao cliente'}
+        </button>
+        <button
+          type="button"
+          className={glassBtn('secondary')}
+          disabled={busy}
+          onClick={() => void copyLink()}
+        >
+          Copiar link público
+        </button>
+      </div>
+
+      {publicUrl ? (
+        <label className="block space-y-1">
+          <span className="text-xs font-medium text-cdl-muted">
+            Mensagem (editável) · {phoneOk ? phoneLabel : 'sem telefone'}
+          </span>
+          <textarea
+            className="min-h-[10rem] w-full rounded-lg border border-cdl-border bg-cdl-surface p-3 text-xs text-cdl-fg"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+          <button
+            type="button"
+            className={glassBtn('ghost')}
+            onClick={() => setMessage(defaultMessage)}
+          >
+            Restaurar texto padrão
+          </button>
+        </label>
+      ) : null}
+
+      <div className="proposal-toolbar flex flex-wrap items-center gap-2">
+        <WhatsAppButton
+          phone={customerPhone}
+          message={message}
+          editable
+          onMessageChange={setMessage}
+          disabled={busy || !publicUrl}
+          className={SHARE_ICON}
+          title={
+            phoneOk
+              ? `WhatsApp · ${phoneLabel}`
+              : 'Cadastre o telefone do cliente'
+          }
+          onOpenRequested={() => {
+            void ensureReady()
+          }}
+          onInvalidPhone={() =>
+            setHint('Cadastre o telefone do cliente em Pessoas.')
+          }
+        />
+
+        {smsHref ? (
+          <SmsShareAnchor
+            href={smsHref}
+            message={message}
+            className={`${glassAction('sky', true)} ${SHARE_ICON}`}
+            title={phoneOk ? `SMS · ${phoneLabel}` : 'SMS'}
+            aria-label="Enviar por SMS"
+            onOpen={() => {
+              void ensureReady()
+            }}
+            onDesktopHint={() =>
+              setHint(
+                'Mensagem SMS copiada. No PC o app SMS pode abrir via Phone Link.',
+              )
+            }
+          >
+            <SmsIcon className="h-5 w-5" />
+          </SmsShareAnchor>
+        ) : (
+          <button
+            type="button"
+            disabled
+            className={`${glassAction('sky', true)} ${SHARE_ICON} opacity-50`}
+            title="Cadastre o telefone do cliente"
+            aria-label="SMS indisponível"
+          >
+            <SmsIcon className="h-5 w-5" />
+          </button>
+        )}
+
+        {mailHref ? (
+          <a
+            href={mailHref}
+            className={`${glassAction('sky', true)} ${SHARE_ICON}`}
+            title={
+              customerEmail
+                ? `E-mail · ${customerEmail}`
+                : 'E-mail (escolha o destinatário no app)'
+            }
+            aria-label="Enviar por e-mail"
+            onClick={() => {
+              void ensureReady()
+            }}
+          >
+            <MailIcon className="h-5 w-5" />
+          </a>
+        ) : (
+          <button
+            type="button"
+            disabled
+            className={`${glassAction('sky', true)} ${SHARE_ICON} opacity-50`}
+            title="E-mail indisponível"
+            aria-label="E-mail indisponível"
+          >
+            <MailIcon className="h-5 w-5" />
+          </button>
+        )}
+      </div>
+
+      {!phoneOk ? (
+        <p className="text-xs text-amber-700 dark:text-amber-200">
+          Cadastre o telefone do cliente em Pessoas para WhatsApp/SMS. O e-mail
+          usa o endereço do cadastro quando existir.
+        </p>
+      ) : null}
+
+      {hint ? (
+        <p className="text-sm text-emerald-700 dark:text-emerald-200">{hint}</p>
+      ) : null}
+      {error ? <p className="text-sm text-red-500">{error}</p> : null}
+    </section>
+  )
+}

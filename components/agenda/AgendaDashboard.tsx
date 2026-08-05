@@ -4,44 +4,23 @@ import Link from 'next/link'
 import { useCallback, useMemo, useState } from 'react'
 import type { AgendaEvent, OperationalTeam } from '@/Lib/agenda/types'
 import { eventsToSegments } from '@/Lib/agenda/segments'
+import { teamHasBookingOnDate } from '@/Lib/agenda/teamAvailability'
 import {
-  TEAM_DAY_BUSY_MESSAGE,
-  availableTeamsForDate,
-  teamHasBookingOnDate,
-} from '@/Lib/agenda/teamAvailability'
-import {
+  buildAgendaQuoteHref,
   dayLabel,
+  dayLabelParts,
   formatMinutes,
+  formatWeekRangeLabel,
   shiftWeek,
-  startOfWeekMonday,
-  toDayKey,
+  todayDayKey,
+  visibleWeekDayKeys,
   weekDayKeys,
 } from '@/Lib/agenda/week'
 import { glassBtn, glassField, glassTabLink } from '@/Lib/liquidGlass'
+import TeamAvailabilitySharePanel from '@/components/agenda/TeamAvailabilitySharePanel'
+import { buildPublicTeamAssignmentUrl } from '@/Lib/teamAssignment'
 
 type Selection = { teamId: string; dayKey: string } | null
-
-type FormState = {
-  team_id: string
-  title: string
-  client_name: string
-  event_date: string
-  start_time: string
-  end_time: string
-  notes: string
-}
-
-function emptyForm(teamId = '', dayKey = ''): FormState {
-  return {
-    team_id: teamId,
-    title: '',
-    client_name: '',
-    event_date: dayKey || toDayKey(new Date()),
-    start_time: '10:00',
-    end_time: '14:00',
-    notes: '',
-  }
-}
 
 export default function AgendaDashboard({
   initialTeams,
@@ -54,16 +33,18 @@ export default function AgendaDashboard({
 }) {
   const [teams] = useState(initialTeams)
   const [events, setEvents] = useState(initialEvents)
-  const [weekStart, setWeekStart] = useState(() => parseDay(initialWeekStart))
+  /** Âncora da semana (qualquer dia), como no Logistics — weekDayKeys normaliza p/ segunda. */
+  const [weekAnchor, setWeekAnchor] = useState(() => parseDay(initialWeekStart))
   const [teamFilter, setTeamFilter] = useState('')
   const [selection, setSelection] = useState<Selection>(null)
-  const [form, setForm] = useState<FormState>(emptyForm())
-  const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const weekKeys = useMemo(() => weekDayKeys(weekStart), [weekStart])
+  const todayKey = todayDayKey()
+  const weekKeys = useMemo(
+    () => visibleWeekDayKeys(weekAnchor, todayKey),
+    [weekAnchor, todayKey],
+  )
   const segments = useMemo(() => eventsToSegments(events), [events])
 
   const visibleTeams = useMemo(() => {
@@ -72,11 +53,11 @@ export default function AgendaDashboard({
   }, [teams, teamFilter])
 
   const reload = useCallback(
-    async (nextWeek: Date) => {
+    async (nextAnchor: Date) => {
       setLoading(true)
       setError(null)
       try {
-        const keys = weekDayKeys(nextWeek)
+        const keys = weekDayKeys(nextAnchor)
         const params = new URLSearchParams({
           from: keys[0]!,
           to: keys[6]!,
@@ -86,7 +67,7 @@ export default function AgendaDashboard({
         const json = (await res.json()) as { data?: AgendaEvent[]; error?: string }
         if (!res.ok) throw new Error(json.error ?? 'Falha ao carregar agenda')
         setEvents(json.data ?? [])
-        setWeekStart(nextWeek)
+        setWeekAnchor(nextAnchor)
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Erro')
       } finally {
@@ -95,27 +76,6 @@ export default function AgendaDashboard({
     },
     [teamFilter],
   )
-
-  async function createEvent() {
-    setSaving(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/agenda/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
-      const json = (await res.json()) as { error?: string }
-      if (!res.ok) throw new Error(json.error ?? 'Falha ao criar evento')
-      setShowForm(false)
-      setForm(emptyForm())
-      await reload(weekStart)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro')
-    } finally {
-      setSaving(false)
-    }
-  }
 
   async function markStatus(id: string, status: 'completed' | 'cancelled' | 'scheduled') {
     setError(null)
@@ -129,7 +89,7 @@ export default function AgendaDashboard({
       setError(json.error ?? 'Falha ao atualizar')
       return
     }
-    await reload(weekStart)
+    await reload(weekAnchor)
   }
 
   const selectedSegs = useMemo(() => {
@@ -148,15 +108,11 @@ export default function AgendaDashboard({
       teamHasBookingOnDate(events, selection.teamId, selection.dayKey),
   )
 
-  const teamsAvailableForForm = useMemo(
-    () => availableTeamsForDate(teams, events, form.event_date),
-    [teams, events, form.event_date],
-  )
-
-  const formTeamBusy =
-    Boolean(form.team_id) &&
-    Boolean(form.event_date) &&
-    teamHasBookingOnDate(events, form.team_id, form.event_date)
+  const newQuoteHref = buildAgendaQuoteHref({
+    eventDate: selection?.dayKey || todayDayKey(),
+    startTime: '10:00',
+    endTime: '14:00',
+  })
 
   return (
     <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
@@ -167,34 +123,26 @@ export default function AgendaDashboard({
             </h1>
             <p className="mt-1 text-sm text-neutral-500">
               Quadro semanal por equipe — análogo à Agenda da Frota do Logistics.
+              Eventos entram aqui após cotação aprovada e sinal (reserva).
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href="/teams" className={glassBtn('secondary')}>
               Gerenciar equipes
             </Link>
-            <button
-              type="button"
-              className={glassBtn('primary')}
-              disabled={teams.length === 0}
-              onClick={() => {
-                const day = selection?.dayKey || toDayKey(new Date())
-                const free = availableTeamsForDate(teams, events, day)
-                const preferred =
-                  selection?.teamId &&
-                  free.some((t) => t.id === selection.teamId)
-                    ? selection.teamId
-                    : free[0]?.id || ''
-                setForm(emptyForm(preferred, day))
-                setShowForm(true)
-                if (!preferred) {
-                  setError(TEAM_DAY_BUSY_MESSAGE)
-                }
-              }}
-            >
-              Novo evento
-            </button>
+            <Link href={newQuoteHref} className={glassBtn('primary')}>
+              Nova cotação
+            </Link>
           </div>
+        </div>
+
+        <div className="liquid-glass-card px-4 py-3 text-sm text-cdl-muted">
+          Não crie evento “na mão” na agenda. Use{' '}
+          <Link href="/quotes/new" className="font-medium underline">
+            Nova cotação
+          </Link>
+          : cliente → evento (adultos/crianças) → pacote → adicionais → resumo.
+          Com aprovação do cliente e pagamento do sinal (30%), a data fecha aqui.
         </div>
 
         {teams.length === 0 ? (
@@ -211,23 +159,26 @@ export default function AgendaDashboard({
           <button
             type="button"
             className={glassTabLink(false)}
-            onClick={() => void reload(shiftWeek(weekStart, -1))}
+            onClick={() => void reload(shiftWeek(weekAnchor, -1))}
           >
-            ← Semana
+            ← Semana anterior
           </button>
           <button
             type="button"
             className={glassTabLink(false)}
-            onClick={() => void reload(startOfWeekMonday(new Date()))}
+            onClick={() => {
+              setSelection(null)
+              void reload(parseDay(todayDayKey()))
+            }}
           >
             Hoje
           </button>
           <button
             type="button"
             className={glassTabLink(false)}
-            onClick={() => void reload(shiftWeek(weekStart, 1))}
+            onClick={() => void reload(shiftWeek(weekAnchor, 1))}
           >
-            Semana →
+            Próxima semana →
           </button>
           <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-wider text-cdl-muted">
             Equipe
@@ -237,7 +188,7 @@ export default function AgendaDashboard({
               onChange={(e) => {
                 setTeamFilter(e.target.value)
                 void (async () => {
-                  const next = weekStart
+                  const next = weekAnchor
                   const keys = weekDayKeys(next)
                   const params = new URLSearchParams({
                     from: keys[0]!,
@@ -260,8 +211,8 @@ export default function AgendaDashboard({
               ))}
             </select>
           </label>
-          <span className="text-sm text-cdl-muted">
-            {dayLabel(weekKeys[0]!)} — {dayLabel(weekKeys[6]!)}
+          <span className="text-sm font-medium capitalize text-cdl-muted">
+            {formatWeekRangeLabel(weekAnchor, todayKey)}
             {loading ? ' · atualizando…' : ''}
           </span>
         </div>
@@ -294,14 +245,29 @@ export default function AgendaDashboard({
                 <th className="sticky left-0 z-20 min-w-[10rem] border-b border-r border-cdl-border bg-cdl-surface px-3 py-3 text-left text-xs font-bold uppercase tracking-wider text-cdl-muted">
                   Equipe
                 </th>
-                {weekKeys.map((key) => (
-                  <th
-                    key={key}
-                    className="min-w-[7.5rem] border-b border-cdl-border px-2 py-3 text-center text-xs font-bold uppercase tracking-wider text-cdl-muted"
-                  >
-                    {dayLabel(key)}
-                  </th>
-                ))}
+                {weekKeys.map((key) => {
+                  const { weekday, date } = dayLabelParts(key)
+                  const isToday = key === todayKey
+                  return (
+                    <th
+                      key={key}
+                      className={`min-w-[7.5rem] border-b border-cdl-border px-2 py-3 text-center text-xs font-bold tracking-wider ${
+                        isToday
+                          ? 'bg-sky-500/10 text-sky-800 dark:text-sky-200'
+                          : 'uppercase text-cdl-muted'
+                      }`}
+                    >
+                      <span className="block capitalize">{weekday}</span>
+                      <span
+                        className={`block text-[0.7rem] font-normal ${
+                          isToday ? 'text-sky-700 dark:text-sky-300' : 'text-cdl-muted'
+                        }`}
+                      >
+                        {date}
+                      </span>
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
             <tbody>
@@ -322,19 +288,30 @@ export default function AgendaDashboard({
                       .sort((a, b) => a.startMin - b.startMin)
                     const selected =
                       selection?.teamId === team.id && selection.dayKey === dayKey
+                    const isToday = dayKey === todayKey
                     return (
                       <td
                         key={dayKey}
                         className={`border-b border-cdl-border p-1.5 align-top ${
-                          selected ? 'bg-sky-500/10 ring-2 ring-inset ring-sky-400/50' : ''
+                          selected
+                            ? 'bg-sky-500/10 ring-2 ring-inset ring-sky-400/50'
+                            : isToday
+                              ? 'bg-sky-500/5'
+                              : ''
                         }`}
                       >
-                        <button
-                          type="button"
-                          className="flex min-h-[4.5rem] w-full flex-col gap-1 rounded-lg p-1 text-left hover:bg-cdl-hover"
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          className="flex min-h-[4.5rem] w-full cursor-pointer flex-col gap-1 rounded-lg p-1 text-left hover:bg-cdl-hover"
                           onClick={() => {
                             setSelection({ teamId: team.id, dayKey })
-                            setForm(emptyForm(team.id, dayKey))
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              setSelection({ teamId: team.id, dayKey })
+                            }
                           }}
                         >
                           {cellSegs.length === 0 ? (
@@ -342,24 +319,49 @@ export default function AgendaDashboard({
                               Livre o dia
                             </span>
                           ) : (
-                            cellSegs.map((seg) => (
-                              <span
-                                key={seg.eventId}
-                                className={`block rounded-md border px-1.5 py-1 text-[0.68rem] leading-tight ${
-                                  seg.isHistorical
-                                    ? 'border-dashed border-slate-300 bg-slate-100 text-slate-600'
-                                    : 'border-sky-300 bg-sky-100 text-sky-900'
-                                }`}
-                                title={seg.title}
-                              >
-                                <span className="block font-semibold tabular-nums">
-                                  {formatMinutes(seg.startMin)}–{formatMinutes(seg.endMin)}
+                            cellSegs.map((seg) =>
+                              seg.quoteId ? (
+                                <Link
+                                  key={seg.eventId}
+                                  href={`/quotes/${seg.quoteId}`}
+                                  className={`block rounded-md border px-1.5 py-1 text-[0.68rem] leading-tight underline-offset-2 hover:underline ${
+                                    seg.isHistorical
+                                      ? 'border-dashed border-slate-300 bg-slate-100 text-slate-600'
+                                      : 'border-sky-300 bg-sky-100 text-sky-900'
+                                  }`}
+                                  title={`${seg.title} — abrir cotação`}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <span className="block font-semibold tabular-nums">
+                                    {formatMinutes(seg.startMin)}–
+                                    {formatMinutes(seg.endMin)}
+                                  </span>
+                                  <span className="block truncate font-medium">
+                                    {seg.code}
+                                  </span>
+                                </Link>
+                              ) : (
+                                <span
+                                  key={seg.eventId}
+                                  className={`block rounded-md border px-1.5 py-1 text-[0.68rem] leading-tight ${
+                                    seg.isHistorical
+                                      ? 'border-dashed border-slate-300 bg-slate-100 text-slate-600'
+                                      : 'border-sky-300 bg-sky-100 text-sky-900'
+                                  }`}
+                                  title={seg.title}
+                                >
+                                  <span className="block font-semibold tabular-nums">
+                                    {formatMinutes(seg.startMin)}–
+                                    {formatMinutes(seg.endMin)}
+                                  </span>
+                                  <span className="block truncate font-medium">
+                                    {seg.code}
+                                  </span>
                                 </span>
-                                <span className="block truncate font-medium">{seg.code}</span>
-                              </span>
-                            ))
+                              ),
+                            )
                           )}
-                        </button>
+                        </div>
                       </td>
                     )
                   })}
@@ -381,18 +383,61 @@ export default function AgendaDashboard({
                 {selectedSegs.map((seg) => (
                   <li
                     key={seg.eventId}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-cdl-border bg-cdl-inset px-3 py-2 text-sm"
+                    className="flex flex-col gap-2 rounded-xl border border-cdl-border bg-cdl-inset px-3 py-2 text-sm"
                   >
-                    <div>
-                      <strong className="tabular-nums">
-                        {formatMinutes(seg.startMin)}–{formatMinutes(seg.endMin)}
-                      </strong>{' '}
-                      · {seg.code} · {seg.title}
-                      {seg.clientName ? (
-                        <span className="text-cdl-muted"> · {seg.clientName}</span>
-                      ) : null}
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      {seg.quoteId ? (
+                        <Link
+                          href={`/quotes/${seg.quoteId}`}
+                          className="font-medium text-cdl-fg underline-offset-2 hover:underline"
+                        >
+                          <strong className="tabular-nums">
+                            {formatMinutes(seg.startMin)}–{formatMinutes(seg.endMin)}
+                          </strong>{' '}
+                          · {seg.code} · {seg.title}
+                          {seg.clientName ? (
+                            <span className="text-cdl-muted"> · {seg.clientName}</span>
+                          ) : null}
+                        </Link>
+                      ) : (
+                        <>
+                          <strong className="tabular-nums">
+                            {formatMinutes(seg.startMin)}–{formatMinutes(seg.endMin)}
+                          </strong>{' '}
+                          · {seg.code} · {seg.title}
+                          {seg.clientName ? (
+                            <span className="text-cdl-muted"> · {seg.clientName}</span>
+                          ) : null}
+                        </>
+                      )}
+                      <p className="mt-0.5 text-xs text-cdl-muted">
+                        {seg.quoteId
+                          ? 'Clique para abrir a cotação (pacote, convidados, adicionais e total).'
+                          : 'Sem cotação vinculada — use Nova cotação (fluxo completo).'}
+                      </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      {seg.quoteId ? (
+                        <Link
+                          href={`/quotes/${seg.quoteId}`}
+                          className={glassBtn('primary', 'liquid-glass-tab-link--plain')}
+                        >
+                          Ver cotação
+                        </Link>
+                      ) : (
+                        <Link
+                          href={buildAgendaQuoteHref({
+                            eventDate: selection.dayKey,
+                            startTime: formatMinutes(seg.startMin),
+                            endTime: formatMinutes(seg.endMin),
+                            eventName: seg.title,
+                          })}
+                          className={glassBtn('primary', 'liquid-glass-tab-link--plain')}
+                        >
+                          Criar cotação
+                        </Link>
+                      )}
                       {seg.status === 'scheduled' ? (
                         <>
                           <button
@@ -412,6 +457,33 @@ export default function AgendaDashboard({
                         </>
                       ) : null}
                     </div>
+                    </div>
+                    {seg.status === 'scheduled' ? (
+                      <TeamAvailabilitySharePanel
+                        teamId={selectedTeam.id}
+                        teamName={selectedTeam.name}
+                        teamNotes={selectedTeam.notes}
+                        eventCode={seg.code}
+                        eventTitle={seg.title}
+                        clientName={seg.clientName}
+                        eventDate={selection.dayKey}
+                        startTime={formatMinutes(seg.startMin)}
+                        endTime={formatMinutes(seg.endMin)}
+                        presentationTime={seg.presentationTime}
+                        quoteId={seg.quoteId}
+                        language={
+                          selectedTeam.contact?.preferred_language ||
+                          selectedTeam.preferred_language ||
+                          'pt'
+                        }
+                        defaultPhone={selectedTeam.contact?.phone ?? null}
+                        confirmUrl={
+                          seg.assignmentToken
+                            ? buildPublicTeamAssignmentUrl(seg.assignmentToken)
+                            : null
+                        }
+                      />
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -422,137 +494,17 @@ export default function AgendaDashboard({
                 dia útil ou feriado) ou outra equipe disponível.
               </p>
             ) : (
-              <button
-                type="button"
+              <Link
+                href={buildAgendaQuoteHref({
+                  eventDate: selection.dayKey,
+                  startTime: '10:00',
+                  endTime: '14:00',
+                })}
                 className={glassBtn('primary')}
-                onClick={() => {
-                  setForm(emptyForm(selection.teamId, selection.dayKey))
-                  setShowForm(true)
-                }}
               >
-                Novo evento neste dia
-              </button>
+                Nova cotação nesta data
+              </Link>
             )}
-          </div>
-        ) : null}
-
-        {showForm ? (
-          <div className="liquid-glass-card space-y-4 p-5">
-            <h2 className="text-lg font-bold">Novo evento</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <label className="text-sm">
-                <span className="mb-1 block text-cdl-muted">Equipe</span>
-                <select
-                  className={glassField(true)}
-                  value={form.team_id}
-                  onChange={(e) => setForm((f) => ({ ...f, team_id: e.target.value }))}
-                >
-                  {teamsAvailableForForm.length === 0 ? (
-                    <option value="">Nenhuma equipe livre nesta data</option>
-                  ) : null}
-                  {teamsAvailableForForm.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block text-cdl-muted">Título</span>
-                <input
-                  className={glassField(true)}
-                  value={form.title}
-                  onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block text-cdl-muted">Cliente</span>
-                <input
-                  className={glassField(false)}
-                  value={form.client_name}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, client_name: e.target.value }))
-                  }
-                />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block text-cdl-muted">Data</span>
-                <input
-                  type="date"
-                  className={glassField(true)}
-                  value={form.event_date}
-                  onChange={(e) => {
-                    const nextDate = e.target.value
-                    setForm((f) => {
-                      const free = availableTeamsForDate(teams, events, nextDate)
-                      const keep =
-                        free.some((t) => t.id === f.team_id) && f.team_id
-                          ? f.team_id
-                          : free[0]?.id || ''
-                      return { ...f, event_date: nextDate, team_id: keep }
-                    })
-                  }}
-                />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block text-cdl-muted">Início</span>
-                <input
-                  type="time"
-                  className={glassField(true)}
-                  value={form.start_time}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, start_time: e.target.value }))
-                  }
-                />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block text-cdl-muted">Fim</span>
-                <input
-                  type="time"
-                  className={glassField(true)}
-                  value={form.end_time}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, end_time: e.target.value }))
-                  }
-                />
-              </label>
-              <label className="text-sm sm:col-span-2 lg:col-span-3">
-                <span className="mb-1 block text-cdl-muted">Notas</span>
-                <input
-                  className={glassField(false)}
-                  value={form.notes}
-                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                />
-              </label>
-            </div>
-            {formTeamBusy || teamsAvailableForForm.length === 0 ? (
-              <p className="text-sm text-amber-700 dark:text-amber-200">
-                {TEAM_DAY_BUSY_MESSAGE}
-              </p>
-            ) : null}
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className={glassBtn('primary')}
-                disabled={
-                  saving ||
-                  !form.title.trim() ||
-                  !form.team_id ||
-                  formTeamBusy ||
-                  teamsAvailableForForm.length === 0
-                }
-                onClick={() => void createEvent()}
-              >
-                {saving ? 'Salvando…' : 'Salvar evento'}
-              </button>
-              <button
-                type="button"
-                className={glassBtn('secondary')}
-                onClick={() => setShowForm(false)}
-              >
-                Fechar
-              </button>
-            </div>
           </div>
         ) : null}
     </div>

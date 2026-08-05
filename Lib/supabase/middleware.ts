@@ -7,6 +7,9 @@ const PUBLIC_PREFIXES = [
   '/auth/',
   '/customer-quote',
   '/quote-request',
+  '/proposta/',
+  '/designacao-equipe/',
+  '/api/public/',
 ]
 
 function isPublicPath(pathname: string): boolean {

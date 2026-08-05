@@ -35,6 +35,9 @@ import {
   getChargedMilesFromSnapshot,
   readQuoteSnapshot,
 } from '../../../Lib/readQuoteSnapshot'
+import QuoteProposalSharePanel from '@/components/quotes/QuoteProposalSharePanel'
+import QuoteTeamAssignmentPanel from '@/components/quotes/QuoteTeamAssignmentPanel'
+import QuoteConvertPanel from '@/components/quotes/QuoteConvertPanel'
 import QuoteDetailToolbar from './QuoteDetailToolbar'
 import GuestBreakdownPanel from '@/components/GuestBreakdownPanel'
 import QuoteFlashBanner from '@/components/QuoteFlashBanner'
@@ -162,7 +165,13 @@ function IconTeam() {
   )
 }
 
-export default function QuoteDetailView({ quote }: { quote: QuoteDetail }) {
+export default function QuoteDetailView({
+  quote,
+  canConvert = false,
+}: {
+  quote: QuoteDetail
+  canConvert?: boolean
+}) {
   const lang = quote.language ?? 'pt'
   const packageName = getPackageName(quote)
   const additionalItems = quote.additional_items ?? []
@@ -219,6 +228,50 @@ export default function QuoteDetailView({ quote }: { quote: QuoteDetail }) {
             eventDate={quote.event_date}
             editHref={`/quotes/${quote.id}/edit?step=churrasqueira`}
           />
+          <div className="mt-4">
+            <QuoteProposalSharePanel
+              quoteId={quote.id}
+              quoteNumber={quoteNumber}
+              customerName={customerDisplayName}
+              customerPhone={quote.phone}
+              customerEmail={quote.email}
+              eventDate={quote.event_date}
+              startTime={quote.start_time}
+              endTime={quote.end_time}
+              packageLabel={
+                getPackageName(quote) || quote.package_key || null
+              }
+              quoteTotal={quote.quote_total}
+              reservationAmount={quote.reservation_amount}
+              currencyCode={quote.currency_code ?? 'USD'}
+              companyName="BBQ At Home"
+              adultCount={quote.adult_count}
+              childrenUnder3Count={quote.children_under_3_count}
+              children4To12Count={quote.children_4_to_12_count}
+              addressLine={quote.address_line}
+              city={quote.city}
+              addressState={quote.state}
+              language={quote.language ?? 'pt'}
+              initial={{
+                proposal_token: quote.proposal_token ?? null,
+                proposal_sent_at: quote.proposal_sent_at ?? null,
+                proposal_response: quote.proposal_response ?? 'pending',
+                quote_status: quote.quote_status ?? null,
+              }}
+            />
+            <QuoteTeamAssignmentPanel
+              quoteId={quote.id}
+              proposalResponse={quote.proposal_response}
+              quoteStatus={quote.quote_status}
+            />
+            <QuoteConvertPanel
+              quoteId={quote.id}
+              quoteNumber={quote.quote_number}
+              proposalResponse={quote.proposal_response}
+              convertedServiceOrderId={quote.converted_service_order_id}
+              canConvert={canConvert}
+            />
+          </div>
           <Suspense fallback={null}>
             <QuoteFlashBanner />
           </Suspense>

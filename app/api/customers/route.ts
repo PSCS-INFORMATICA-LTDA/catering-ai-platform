@@ -45,11 +45,21 @@ export async function GET(request: Request) {
     )
   }
 
+  const role = url.searchParams.get('role')?.trim().toLowerCase() ?? ''
+
   let result = dedupeCustomersList(data)
+  if (role === 'customer') {
+    result = result.filter((row) => row.is_customer !== false)
+  } else if (role === 'supplier') {
+    result = result.filter((row) => Boolean(row.is_supplier))
+  } else if (role === 'team') {
+    result = result.filter((row) => Boolean(row.is_team))
+  }
+
   if (query) {
     result = dedupeCustomersList(
       sortCustomersByRecency(
-        data.filter((customer) => customerMatchesSearch(customer, query)),
+        result.filter((customer) => customerMatchesSearch(customer, query)),
       ),
     )
   }

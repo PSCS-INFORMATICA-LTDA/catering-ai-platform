@@ -43,6 +43,8 @@ export type QuoteListItem = {
   grill_rental_required: boolean
   mileage_fee: number | null
   mileage_distance: number | null
+  proposal_response: string | null
+  converted_service_order_id: string | null
 }
 
 type QuoteRow = {
@@ -62,6 +64,8 @@ type QuoteRow = {
   additional_total: number | null
   mileage_fee: number | null
   mileage_distance: number | null
+  proposal_response: string | null
+  converted_service_order_id: string | null
 }
 
 type ListViewRow = {
@@ -103,7 +107,7 @@ type GrillViewRow = {
 
 /** Colunas base de `quotes` — sem filtro por source ou quote_status. */
 const QUOTE_LIST_SELECT =
-  'id, quote_number, quote_total, quote_status, created_at, customer_id, event_id, package_id, active, reservation_amount, balance_due, physical_guest_count, billable_guest_count, additional_total, mileage_fee, mileage_distance'
+  'id, quote_number, quote_total, quote_status, created_at, customer_id, event_id, package_id, active, reservation_amount, balance_due, physical_guest_count, billable_guest_count, additional_total, mileage_fee, mileage_distance, proposal_response, converted_service_order_id'
 
 function resolveCustomerDisplayName(
   customer: CustomerRow | undefined,
@@ -328,6 +332,8 @@ export async function fetchQuoteList() {
       grill_rental_required: grill.grill_rental_required,
       mileage_fee: row.mileage_fee,
       mileage_distance: row.mileage_distance,
+      proposal_response: row.proposal_response ?? null,
+      converted_service_order_id: row.converted_service_order_id ?? null,
     } satisfies QuoteListItem
   })
 

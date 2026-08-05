@@ -87,6 +87,18 @@ export type QuoteDetail = {
   reservation_percentage?: number | null
   balance_due?: number | null
   quote_total?: number | null
+  currency_code?: string | null
+  proposal_token?: string | null
+  proposal_sent_at?: string | null
+  proposal_response?: string | null
+  proposal_accepted_at?: string | null
+  proposal_rejected_at?: string | null
+  proposal_follow_up_count?: number | null
+  proposal_last_follow_up_at?: string | null
+  team_presentation_time?: string | null
+  designated_team_id?: string | null
+  accepted_version_id?: string | null
+  converted_service_order_id?: string | null
   additional_items?: QuoteAdditionalItem[] | null
   package_selections?: Array<{
     option_group_id: string

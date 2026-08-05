@@ -3,10 +3,17 @@ import {
   requireApiPermission,
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
+import { hydrateTeamsWithContacts } from '@/Lib/teamContacts'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+
+function normalizeLang(value: unknown): 'pt' | 'en' | 'es' {
+  const lang =
+    typeof value === 'string' ? value.trim().toLowerCase() : 'pt'
+  return lang === 'en' || lang === 'es' ? lang : 'pt'
+}
 
 export async function GET(request: Request) {
   const auth = await requireApiPermission('teams.view')
@@ -28,8 +35,10 @@ export async function GET(request: Request) {
   if (error) {
     return Response.json({ error: error.message }, { status: 500 })
   }
+
+  const hydrated = await hydrateTeamsWithContacts(data ?? [], companyId)
   return Response.json(
-    { data: data ?? [] },
+    { data: hydrated },
     { headers: { 'Cache-Control': 'no-store' } },
   )
 }
@@ -43,6 +52,8 @@ export async function POST(request: Request) {
     name?: string
     color?: string
     notes?: string | null
+    preferred_language?: string
+    contact_person_id?: string | null
     active?: boolean
     company_id?: string
   }
@@ -60,6 +71,37 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Nome da equipe é obrigatório.' }, { status: 400 })
   }
 
+  const contactPersonId =
+    typeof body.contact_person_id === 'string' && body.contact_person_id.trim()
+      ? body.contact_person_id.trim()
+      : null
+
+  let preferredLanguage = normalizeLang(body.preferred_language)
+
+  if (contactPersonId) {
+    const { data: person } = await getSupabaseServerClient()
+      .from('customers')
+      .select('id, preferred_language, is_team')
+      .eq('id', contactPersonId)
+      .eq('company_id', companyId)
+      .maybeSingle()
+    if (!person) {
+      return Response.json(
+        { error: 'Pessoa de contato inválida para esta empresa.' },
+        { status: 400 },
+      )
+    }
+    preferredLanguage = normalizeLang(
+      person.preferred_language ?? preferredLanguage,
+    )
+    if (!person.is_team) {
+      await getSupabaseServerClient()
+        .from('customers')
+        .update({ is_team: true, updated_at: new Date().toISOString() })
+        .eq('id', person.id)
+    }
+  }
+
   const { data, error } = await getSupabaseServerClient()
     .from('operational_teams')
     .insert({
@@ -73,6 +115,8 @@ export async function POST(request: Request) {
         typeof body.notes === 'string' && body.notes.trim()
           ? body.notes.trim()
           : null,
+      preferred_language: preferredLanguage,
+      contact_person_id: contactPersonId,
       active: body.active !== false,
     })
     .select('*')
@@ -81,5 +125,7 @@ export async function POST(request: Request) {
   if (error) {
     return Response.json({ error: error.message }, { status: 500 })
   }
-  return Response.json({ data }, { status: 201 })
+
+  const [hydrated] = await hydrateTeamsWithContacts([data], companyId)
+  return Response.json({ data: hydrated }, { status: 201 })
 }

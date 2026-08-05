@@ -4,7 +4,6 @@ import { AuthenticatedShell } from "../components/layout/AuthenticatedShell";
 import { TenantProvider } from "../components/tenant/TenantProvider";
 import { ThemeProvider } from "../components/ThemeProvider";
 import { ThemeScript } from "../components/ThemeScript";
-import FloatingWhatsAppButton from "@/components/FloatingWhatsAppButton";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -42,7 +41,6 @@ export default function RootLayout({
         <ThemeProvider>
           <TenantProvider>
             <AuthenticatedShell>{children}</AuthenticatedShell>
-            <FloatingWhatsAppButton />
           </TenantProvider>
         </ThemeProvider>
       </body>

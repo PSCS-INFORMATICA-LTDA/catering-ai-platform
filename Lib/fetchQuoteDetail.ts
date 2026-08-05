@@ -47,11 +47,16 @@ function normalizeQuoteDetailRow(
 const OFFICIAL_GUEST_COLUMNS =
   'adult_count, children_under_3_count, children_4_to_12_count, physical_guest_count, billable_guest_count'
 
+const PROPOSAL_COLUMNS =
+  'proposal_token, proposal_sent_at, proposal_response, proposal_accepted_at, proposal_rejected_at, proposal_follow_up_count, proposal_last_follow_up_at'
+
+const ORDER_COLUMNS = 'accepted_version_id, converted_service_order_id'
+
 export async function fetchQuoteDetail(id: string) {
   const companyId = getActiveCompanyId()
   const supabase = getSupabaseServerClient()
 
-  const [viewRes, guestRes] = await Promise.all([
+  const [viewRes, guestRes, proposalRes, orderRes] = await Promise.all([
     supabase
       .from('quote_detail_view')
       .select('*')
@@ -61,6 +66,18 @@ export async function fetchQuoteDetail(id: string) {
     supabase
       .from('quotes')
       .select(OFFICIAL_GUEST_COLUMNS)
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .maybeSingle(),
+    supabase
+      .from('quotes')
+      .select(PROPOSAL_COLUMNS)
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .maybeSingle(),
+    supabase
+      .from('quotes')
+      .select(ORDER_COLUMNS)
       .eq('id', id)
       .eq('company_id', companyId)
       .maybeSingle(),
@@ -77,9 +94,25 @@ export async function fetchQuoteDetail(id: string) {
     )
   }
 
+  if (proposalRes.error && !/proposal_token|column/i.test(proposalRes.error.message)) {
+    console.error(
+      `[CDL Quote] Failed to load proposal fields for quote ${id}:`,
+      proposalRes.error.message,
+    )
+  }
+
+  if (orderRes.error && !/column/i.test(orderRes.error.message)) {
+    console.error(
+      `[CDL Quote] Failed to load order-conversion fields for quote ${id}:`,
+      orderRes.error.message,
+    )
+  }
+
   const quote = normalizeQuoteDetailRow({
     ...(viewRes.data as Record<string, unknown>),
     ...(guestRes.data ?? {}),
+    ...(proposalRes.data && !proposalRes.error ? proposalRes.data : {}),
+    ...(orderRes.data && !orderRes.error ? orderRes.data : {}),
   })
 
   const packageCatalog = await fetchQuoteLinkedPackageCatalog({
