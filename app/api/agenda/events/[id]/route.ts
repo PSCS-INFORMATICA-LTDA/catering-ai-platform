@@ -1,3 +1,4 @@
+import { findTeamTimeConflict } from '@/Lib/agenda/scheduleConflicts'
 import { TEAM_DAY_BUSY_MESSAGE } from '@/Lib/agenda/teamAvailability'
 import {
   rejectSpoofedCompanyId,
@@ -69,7 +70,7 @@ export async function PATCH(request: Request, context: Ctx) {
   const db = getSupabaseServerClient()
   const { data: current } = await db
     .from('agenda_events')
-    .select('id, team_id, event_date, status')
+    .select('id, team_id, event_date, start_time, end_time, status')
     .eq('id', id)
     .eq('company_id', companyId)
     .maybeSingle()
@@ -84,24 +85,47 @@ export async function PATCH(request: Request, context: Ctx) {
     typeof patch.event_date === 'string' ? patch.event_date : current.event_date
   const nextStatus =
     typeof patch.status === 'string' ? patch.status : current.status
+  const nextStart =
+    typeof patch.start_time === 'string' ? patch.start_time : current.start_time
+  const nextEnd =
+    typeof patch.end_time === 'string' ? patch.end_time : current.end_time
 
   if (nextStatus === 'scheduled' || nextStatus === 'completed') {
-    const { data: busy } = await db
+    const { data: sameDay } = await db
       .from('agenda_events')
-      .select('id, code')
+      .select('id, team_id, event_date, start_time, end_time, status')
       .eq('company_id', companyId)
       .eq('team_id', nextTeamId)
       .eq('event_date', nextDate)
       .in('status', ['scheduled', 'completed'])
       .neq('id', id)
-      .limit(1)
-      .maybeSingle()
 
-    if (busy) {
+    const conflict = findTeamTimeConflict(
+      (sameDay ?? []).map((e) => ({
+        id: e.id,
+        team_id: e.team_id,
+        event_date: e.event_date,
+        start_time: e.start_time,
+        end_time: e.end_time,
+        status: e.status,
+      })),
+      nextTeamId,
+      nextDate,
+      String(nextStart),
+      String(nextEnd),
+      id,
+    )
+
+    if (conflict) {
       return Response.json(
         {
           error: TEAM_DAY_BUSY_MESSAGE,
-          conflict: { eventId: busy.id, code: busy.code, event_date: nextDate },
+          conflict: {
+            eventId: conflict.id,
+            event_date: nextDate,
+            start_time: conflict.start_time,
+            end_time: conflict.end_time,
+          },
         },
         { status: 409 },
       )
@@ -117,9 +141,6 @@ export async function PATCH(request: Request, context: Ctx) {
     .maybeSingle()
 
   if (error) {
-    if (/uq_agenda_events_team_day_active|duplicate key/i.test(error.message)) {
-      return Response.json({ error: TEAM_DAY_BUSY_MESSAGE }, { status: 409 })
-    }
     return Response.json({ error: error.message }, { status: 500 })
   }
   if (!data) {

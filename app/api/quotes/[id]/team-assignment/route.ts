@@ -1,3 +1,4 @@
+import { findTeamTimeConflict } from '@/Lib/agenda/scheduleConflicts'
 import { TEAM_DAY_BUSY_MESSAGE } from '@/Lib/agenda/teamAvailability'
 import {
   requireApiPermission,
@@ -375,21 +376,49 @@ export async function POST(request: Request, { params }: Params) {
     .limit(1)
     .maybeSingle()
 
-  const { data: busy } = await db
+  const presentationDb = normalizeTimeForDb(presentationRaw)
+  const startDb =
+    String(event.start_time).length === 5
+      ? `${event.start_time}:00`
+      : String(event.start_time).slice(0, 8)
+  const endDb =
+    String(event.end_time).length === 5
+      ? `${event.end_time}:00`
+      : String(event.end_time).slice(0, 8)
+
+  const { data: sameDay } = await db
     .from('agenda_events')
-    .select('id, code')
+    .select('id, code, team_id, event_date, start_time, end_time, status')
     .eq('company_id', companyId)
     .eq('team_id', teamId)
     .eq('event_date', event.event_date)
     .in('status', ['scheduled', 'completed'])
-    .limit(1)
-    .maybeSingle()
 
-  if (busy && (!existingForQuote || busy.id !== existingForQuote.id)) {
+  const busy = findTeamTimeConflict(
+    (sameDay ?? []).map((e) => ({
+      id: e.id,
+      team_id: e.team_id,
+      event_date: e.event_date,
+      start_time: e.start_time,
+      end_time: e.end_time,
+      status: e.status,
+    })),
+    teamId,
+    event.event_date,
+    startDb,
+    endDb,
+    existingForQuote?.id ?? null,
+  )
+
+  if (busy) {
     return Response.json(
       {
         error: TEAM_DAY_BUSY_MESSAGE,
-        conflict: { eventId: busy.id, code: busy.code },
+        conflict: {
+          eventId: busy.id,
+          start_time: busy.start_time,
+          end_time: busy.end_time,
+        },
       },
       { status: 409 },
     )
@@ -409,16 +438,6 @@ export async function POST(request: Request, { params }: Params) {
       customer?.company_name ||
       null
   }
-
-  const presentationDb = normalizeTimeForDb(presentationRaw)
-  const startDb =
-    String(event.start_time).length === 5
-      ? `${event.start_time}:00`
-      : String(event.start_time).slice(0, 8)
-  const endDb =
-    String(event.end_time).length === 5
-      ? `${event.end_time}:00`
-      : String(event.end_time).slice(0, 8)
 
   const title =
     event.event_name?.trim() ||

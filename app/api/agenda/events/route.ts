@@ -1,3 +1,4 @@
+import { findTeamTimeConflict } from '@/Lib/agenda/scheduleConflicts'
 import { TEAM_DAY_BUSY_MESSAGE } from '@/Lib/agenda/teamAvailability'
 import {
   rejectSpoofedCompanyId,
@@ -107,21 +108,42 @@ export async function POST(request: Request) {
   }
 
   const db = getSupabaseServerClient()
-  const { data: busy } = await db
+  const startNorm = startTime.length === 5 ? `${startTime}:00` : startTime
+  const endNorm = endTime.length === 5 ? `${endTime}:00` : endTime
+
+  const { data: sameDay } = await db
     .from('agenda_events')
-    .select('id, code')
+    .select('id, code, team_id, event_date, start_time, end_time, status')
     .eq('company_id', companyId)
     .eq('team_id', teamId)
     .eq('event_date', eventDate)
     .in('status', ['scheduled', 'completed'])
-    .limit(1)
-    .maybeSingle()
 
-  if (busy) {
+  const conflict = findTeamTimeConflict(
+    (sameDay ?? []).map((e) => ({
+      id: e.id,
+      team_id: e.team_id,
+      event_date: e.event_date,
+      start_time: e.start_time,
+      end_time: e.end_time,
+      status: e.status,
+    })),
+    teamId,
+    eventDate,
+    startNorm,
+    endNorm,
+  )
+
+  if (conflict) {
     return Response.json(
       {
         error: TEAM_DAY_BUSY_MESSAGE,
-        conflict: { eventId: busy.id, code: busy.code, event_date: eventDate },
+        conflict: {
+          eventId: conflict.id,
+          event_date: eventDate,
+          start_time: conflict.start_time,
+          end_time: conflict.end_time,
+        },
       },
       { status: 409 },
     )
@@ -140,8 +162,8 @@ export async function POST(request: Request) {
           ? body.client_name.trim()
           : null,
       event_date: eventDate,
-      start_time: startTime.length === 5 ? `${startTime}:00` : startTime,
-      end_time: endTime.length === 5 ? `${endTime}:00` : endTime,
+      start_time: startNorm,
+      end_time: endNorm,
       status: body.status === 'completed' ? 'completed' : 'scheduled',
       notes:
         typeof body.notes === 'string' && body.notes.trim()
@@ -152,9 +174,6 @@ export async function POST(request: Request) {
     .single()
 
   if (error) {
-    if (/uq_agenda_events_team_day_active|duplicate key/i.test(error.message)) {
-      return Response.json({ error: TEAM_DAY_BUSY_MESSAGE }, { status: 409 })
-    }
     return Response.json({ error: error.message }, { status: 500 })
   }
   return Response.json({ data }, { status: 201 })

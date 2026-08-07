@@ -14,6 +14,7 @@ import {
   nextServiceOrderStatuses,
   serviceOrderStatusRequiresReason,
 } from '@/Lib/orders/statusMachine'
+import OrderTeamConfirmationsPanel from '@/components/orders/OrderTeamConfirmationsPanel'
 import SupplierGarnishSharePanel from '@/components/orders/SupplierGarnishSharePanel'
 
 function formatMoney(value: number | null | undefined) {
@@ -284,6 +285,8 @@ export default function OrderDetailView({
           language={locale}
         />
       ) : null}
+
+      <OrderTeamConfirmationsPanel orderId={order.id} canManage={canManage} />
 
       {canManage ? (
         <section className="liquid-glass-card space-y-3 p-5">
