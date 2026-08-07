@@ -53,7 +53,8 @@
     "test:dev:team-scale-designation": "node scripts/dev/test-team-scale-designation.mjs",
     "seed:dev:schedule-turnaround:dry": "node scripts/dev/seed-schedule-turnaround-rule.mjs",
     "seed:dev:schedule-turnaround": "node scripts/dev/seed-schedule-turnaround-rule.mjs --apply",
-    "test:dev:person-schedule-conflicts": "node scripts/dev/test-person-schedule-conflicts.mjs"
+    "test:dev:person-schedule-conflicts": "node scripts/dev/test-person-schedule-conflicts.mjs",
+    "qa:dev:schedule-turnaround": "node scripts/dev/run-schedule-turnaround-qa.mjs --apply"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
