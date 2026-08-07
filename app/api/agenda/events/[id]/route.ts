@@ -1,5 +1,6 @@
+import { loadScheduleTurnaroundConfig } from '@/Lib/agenda/loadScheduleTurnaroundConfig'
+import { logScheduleConflictAudit } from '@/Lib/agenda/logScheduleConflictAudit'
 import { findTeamTimeConflict } from '@/Lib/agenda/scheduleConflicts'
-import { TEAM_DAY_BUSY_MESSAGE } from '@/Lib/agenda/teamAvailability'
 import {
   rejectSpoofedCompanyId,
   requireApiPermission,
@@ -91,17 +92,25 @@ export async function PATCH(request: Request, context: Ctx) {
     typeof patch.end_time === 'string' ? patch.end_time : current.end_time
 
   if (nextStatus === 'scheduled' || nextStatus === 'completed') {
-    const { data: sameDay } = await db
+    const { config } = await loadScheduleTurnaroundConfig(companyId)
+    const day = new Date(`${nextDate}T12:00:00`)
+    const prevDay = new Date(day)
+    prevDay.setDate(prevDay.getDate() - 1)
+    const nextDay = new Date(day)
+    nextDay.setDate(nextDay.getDate() + 1)
+
+    const { data: nearby } = await db
       .from('agenda_events')
       .select('id, team_id, event_date, start_time, end_time, status')
       .eq('company_id', companyId)
       .eq('team_id', nextTeamId)
-      .eq('event_date', nextDate)
+      .gte('event_date', prevDay.toISOString().slice(0, 10))
+      .lte('event_date', nextDay.toISOString().slice(0, 10))
       .in('status', ['scheduled', 'completed'])
       .neq('id', id)
 
     const conflict = findTeamTimeConflict(
-      (sameDay ?? []).map((e) => ({
+      (nearby ?? []).map((e) => ({
         id: e.id,
         team_id: e.team_id,
         event_date: e.event_date,
@@ -114,17 +123,36 @@ export async function PATCH(request: Request, context: Ctx) {
       String(nextStart),
       String(nextEnd),
       id,
+      config,
     )
 
     if (conflict) {
+      await logScheduleConflictAudit({
+        companyId,
+        actorUserId: auth.session.userId,
+        entityId: id,
+        teamId: nextTeamId,
+        proposedEventId: id,
+        conflictingEventId: conflict.event.id,
+        result: conflict.result,
+        minGapMinutes: conflict.result.minGapMinutes,
+        baseRadiusMiles: config.base_radius_miles,
+      })
       return Response.json(
         {
-          error: TEAM_DAY_BUSY_MESSAGE,
+          error: conflict.result.messagePt,
           conflict: {
-            eventId: conflict.id,
-            event_date: nextDate,
-            start_time: conflict.start_time,
-            end_time: conflict.end_time,
+            code: conflict.result.code,
+            eventId: conflict.event.id,
+            event_date: conflict.event.event_date,
+            start_time: conflict.event.start_time,
+            end_time: conflict.event.end_time,
+            blocked_until: conflict.result.blockedUntil,
+            next_available_start: conflict.result.nextAvailableStart,
+            min_gap_minutes: conflict.result.minGapMinutes,
+            message_pt: conflict.result.messagePt,
+            message_en: conflict.result.messageEn,
+            message_es: conflict.result.messageEs,
           },
         },
         { status: 409 },

@@ -287,9 +287,30 @@ export default function QuoteTeamAssignmentPanel({
       const json = (await res.json()) as {
         data?: { assignment?: Assignment }
         error?: string
+        conflict?: {
+          code?: string
+          blocked_until?: string | null
+          next_available_start?: string | null
+          message_pt?: string
+          message_en?: string
+          message_es?: string
+        }
       }
       if (!res.ok) {
-        throw new Error(json.error ?? tQuotesOrders(locale, 'designateError'))
+        const msgByLocale =
+          locale === 'en'
+            ? json.conflict?.message_en
+            : locale === 'es'
+              ? json.conflict?.message_es
+              : json.conflict?.message_pt
+        const next = json.conflict?.next_available_start
+        const base =
+          msgByLocale || json.error || tQuotesOrders(locale, 'designateError')
+        throw new Error(
+          next
+            ? `${base} ${locale === 'en' ? 'Next available:' : locale === 'es' ? 'Próximo horario:' : 'Próximo horário disponível:'} ${next}`
+            : base,
+        )
       }
       setHint(tQuotesOrders(locale, 'designateSuccessHint'))
       await load()

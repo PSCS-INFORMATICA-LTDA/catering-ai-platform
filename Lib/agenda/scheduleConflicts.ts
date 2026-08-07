@@ -1,8 +1,9 @@
 import {
-  intervalsOverlap,
-  PERSON_TIME_OVERLAP_MESSAGE,
-  TEAM_TIME_OVERLAP_MESSAGE,
-} from '@/Lib/agenda/timeOverlap'
+  canScheduleNextEvent,
+  type ScheduleConflictResult,
+  type ScheduleTurnaroundConfig,
+  DEFAULT_SCHEDULE_TURNAROUND_CONFIG,
+} from '@/Lib/agenda/scheduleTurnaround'
 
 export type ScheduleEventLike = {
   id: string
@@ -11,6 +12,7 @@ export type ScheduleEventLike = {
   start_time: string
   end_time: string
   status: string
+  distance_miles?: number | null
 }
 
 export type MemberAssignmentLike = {
@@ -18,6 +20,17 @@ export type MemberAssignmentLike = {
   team_id: string
   agenda_event_id: string
   status: string
+}
+
+export type TeamScheduleConflict = {
+  event: ScheduleEventLike
+  result: ScheduleConflictResult
+}
+
+export type PersonScheduleConflict = {
+  personId: string
+  event: ScheduleEventLike
+  result: ScheduleConflictResult
 }
 
 function statusBlocksSchedule(status: string): boolean {
@@ -28,7 +41,9 @@ function confirmationBlocksPerson(status: string): boolean {
   return status === 'pending' || status === 'confirmed'
 }
 
-/** Conflito de equipe no mesmo dia com overlap de horário [start,end). */
+/**
+ * Conflito de equipe: overlap OU janela operacional (turnaround).
+ */
 export function findTeamTimeConflict(
   events: ScheduleEventLike[],
   teamId: string,
@@ -36,22 +51,30 @@ export function findTeamTimeConflict(
   startTime: string,
   endTime: string,
   excludeEventId?: string | null,
-): ScheduleEventLike | null {
+  config: ScheduleTurnaroundConfig = DEFAULT_SCHEDULE_TURNAROUND_CONFIG,
+  distanceMiles?: number | null,
+): TeamScheduleConflict | null {
+  const next = {
+    event_date: eventDate,
+    start_time: startTime,
+    end_time: endTime,
+    distance_miles: distanceMiles ?? null,
+  }
+
   for (const e of events) {
     if (e.team_id !== teamId) continue
-    if (e.event_date !== eventDate) continue
     if (!statusBlocksSchedule(e.status)) continue
     if (excludeEventId && e.id === excludeEventId) continue
-    if (intervalsOverlap(startTime, endTime, e.start_time, e.end_time)) {
-      return e
+    const result = canScheduleNextEvent(e, next, config, { scope: 'team' })
+    if (result) {
+      return { event: e, result }
     }
   }
   return null
 }
 
 /**
- * Conflito de pessoa: mesma pessoa em eventos distintos com overlap.
- * `personEventMap`: person_id → lista de eventos em que está escalada (pending/confirmed).
+ * Conflito de pessoa: overlap OU janela operacional entre escalas.
  */
 export function findPersonTimeConflict(params: {
   personIds: string[]
@@ -59,11 +82,12 @@ export function findPersonTimeConflict(params: {
   startTime: string
   endTime: string
   excludeEventId?: string | null
-  /** Eventos já carregados (id → event) */
   eventsById: Map<string, ScheduleEventLike>
-  /** Confirmações ativas (pending/confirmed) */
   confirmations: MemberAssignmentLike[]
-}): { personId: string; conflictingEvent: ScheduleEventLike } | null {
+  config?: ScheduleTurnaroundConfig
+  personNames?: Map<string, string>
+  distanceMiles?: number | null
+}): PersonScheduleConflict | null {
   const {
     personIds,
     eventDate,
@@ -72,7 +96,17 @@ export function findPersonTimeConflict(params: {
     excludeEventId,
     eventsById,
     confirmations,
+    config = DEFAULT_SCHEDULE_TURNAROUND_CONFIG,
+    personNames,
+    distanceMiles,
   } = params
+
+  const next = {
+    event_date: eventDate,
+    start_time: startTime,
+    end_time: endTime,
+    distance_miles: distanceMiles ?? null,
+  }
 
   for (const personId of personIds) {
     for (const conf of confirmations) {
@@ -81,16 +115,23 @@ export function findPersonTimeConflict(params: {
       if (excludeEventId && conf.agenda_event_id === excludeEventId) continue
       const other = eventsById.get(conf.agenda_event_id)
       if (!other) continue
-      if (other.event_date !== eventDate) continue
       if (!statusBlocksSchedule(other.status)) continue
-      if (
-        intervalsOverlap(startTime, endTime, other.start_time, other.end_time)
-      ) {
-        return { personId, conflictingEvent: other }
+      const result = canScheduleNextEvent(other, next, config, {
+        scope: 'person',
+        personName: personNames?.get(personId) ?? null,
+      })
+      if (result) {
+        return { personId, event: other, result }
       }
     }
   }
   return null
 }
 
-export { TEAM_TIME_OVERLAP_MESSAGE, PERSON_TIME_OVERLAP_MESSAGE }
+/** Mensagens legadas — preferir result.messagePt do motor. */
+export const TEAM_TIME_OVERLAP_MESSAGE =
+  'Equipe com janela operacional insuficiente entre eventos.'
+export const PERSON_TIME_OVERLAP_MESSAGE =
+  'Integrante com janela operacional insuficiente entre eventos.'
+
+export type { ScheduleConflictResult, ScheduleTurnaroundConfig }

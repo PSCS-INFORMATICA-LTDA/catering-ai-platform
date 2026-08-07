@@ -1,5 +1,6 @@
+import { loadScheduleTurnaroundConfig } from '@/Lib/agenda/loadScheduleTurnaroundConfig'
+import { logScheduleConflictAudit } from '@/Lib/agenda/logScheduleConflictAudit'
 import { findTeamTimeConflict } from '@/Lib/agenda/scheduleConflicts'
-import { TEAM_DAY_BUSY_MESSAGE } from '@/Lib/agenda/teamAvailability'
 import {
   requireApiPermission,
   resolveAuthorizedCompanyId,
@@ -386,16 +387,24 @@ export async function POST(request: Request, { params }: Params) {
       ? `${event.end_time}:00`
       : String(event.end_time).slice(0, 8)
 
-  const { data: sameDay } = await db
+  const { config } = await loadScheduleTurnaroundConfig(companyId)
+  const day = new Date(`${event.event_date}T12:00:00`)
+  const prevDay = new Date(day)
+  prevDay.setDate(prevDay.getDate() - 1)
+  const nextDay = new Date(day)
+  nextDay.setDate(nextDay.getDate() + 1)
+
+  const { data: nearby } = await db
     .from('agenda_events')
     .select('id, code, team_id, event_date, start_time, end_time, status')
     .eq('company_id', companyId)
     .eq('team_id', teamId)
-    .eq('event_date', event.event_date)
+    .gte('event_date', prevDay.toISOString().slice(0, 10))
+    .lte('event_date', nextDay.toISOString().slice(0, 10))
     .in('status', ['scheduled', 'completed'])
 
   const busy = findTeamTimeConflict(
-    (sameDay ?? []).map((e) => ({
+    (nearby ?? []).map((e) => ({
       id: e.id,
       team_id: e.team_id,
       event_date: e.event_date,
@@ -408,16 +417,35 @@ export async function POST(request: Request, { params }: Params) {
     startDb,
     endDb,
     existingForQuote?.id ?? null,
+    config,
   )
 
   if (busy) {
+    await logScheduleConflictAudit({
+      companyId,
+      actorUserId: auth.session.userId,
+      entityId: busy.event.id,
+      teamId,
+      conflictingEventId: busy.event.id,
+      proposedEventId: existingForQuote?.id ?? null,
+      result: busy.result,
+      minGapMinutes: busy.result.minGapMinutes,
+      baseRadiusMiles: config.base_radius_miles,
+    })
     return Response.json(
       {
-        error: TEAM_DAY_BUSY_MESSAGE,
+        error: busy.result.messagePt,
         conflict: {
-          eventId: busy.id,
-          start_time: busy.start_time,
-          end_time: busy.end_time,
+          code: busy.result.code,
+          eventId: busy.event.id,
+          start_time: busy.event.start_time,
+          end_time: busy.event.end_time,
+          blocked_until: busy.result.blockedUntil,
+          next_available_start: busy.result.nextAvailableStart,
+          min_gap_minutes: busy.result.minGapMinutes,
+          message_pt: busy.result.messagePt,
+          message_en: busy.result.messageEn,
+          message_es: busy.result.messageEs,
         },
       },
       { status: 409 },
@@ -525,8 +553,14 @@ export async function POST(request: Request, { params }: Params) {
       .single()
 
     if (error) {
-      if (/uq_agenda_events_team_day_active|duplicate key/i.test(error.message)) {
-        return Response.json({ error: TEAM_DAY_BUSY_MESSAGE }, { status: 409 })
+      if (/duplicate key/i.test(error.message)) {
+        return Response.json(
+          {
+            error:
+              'Conflito ao gravar evento na agenda. Verifique equipe e horários.',
+          },
+          { status: 409 },
+        )
       }
       return Response.json({ error: error.message }, { status: 500 })
     }

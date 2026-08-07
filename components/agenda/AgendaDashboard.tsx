@@ -172,9 +172,17 @@ export default function AgendaDashboard({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     })
-    const json = (await res.json()) as { error?: string }
+    const json = (await res.json()) as {
+      error?: string
+      conflict?: {
+        next_available_start?: string | null
+        message_pt?: string
+      }
+    }
     if (!res.ok) {
-      setError(json.error ?? 'Falha ao atualizar')
+      const base = json.conflict?.message_pt || json.error || 'Falha ao atualizar'
+      const next = json.conflict?.next_available_start
+      setError(next ? `${base} Próximo horário disponível: ${next}` : base)
       return
     }
     if (rangeMode === 'custom') {

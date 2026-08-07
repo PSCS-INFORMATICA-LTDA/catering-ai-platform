@@ -1,7 +1,6 @@
-import {
-  findPersonTimeConflict,
-  PERSON_TIME_OVERLAP_MESSAGE,
-} from '@/Lib/agenda/scheduleConflicts'
+import { loadScheduleTurnaroundConfig } from '@/Lib/agenda/loadScheduleTurnaroundConfig'
+import { logScheduleConflictAudit } from '@/Lib/agenda/logScheduleConflictAudit'
+import { findPersonTimeConflict } from '@/Lib/agenda/scheduleConflicts'
 import {
   rejectSpoofedCompanyId,
   requireApiPermission,
@@ -188,6 +187,8 @@ export async function POST(request: Request, context: Ctx) {
     for (const e of otherEvents ?? []) eventsById.set(e.id, e)
   }
 
+  const { config: turnaroundConfig } =
+    await loadScheduleTurnaroundConfig(companyId)
   const personConflict = findPersonTimeConflict({
     personIds,
     eventDate: evt.event_date,
@@ -196,14 +197,34 @@ export async function POST(request: Request, context: Ctx) {
     excludeEventId: evt.id,
     eventsById,
     confirmations: otherConfs ?? [],
+    config: turnaroundConfig,
   })
   if (personConflict) {
+    await logScheduleConflictAudit({
+      companyId,
+      actorUserId: auth.session.userId,
+      entityId: evt.id,
+      teamId: evt.team_id,
+      personId: personConflict.personId,
+      proposedEventId: evt.id,
+      conflictingEventId: personConflict.event.id,
+      result: personConflict.result,
+      minGapMinutes: personConflict.result.minGapMinutes,
+      baseRadiusMiles: turnaroundConfig.base_radius_miles,
+    })
     return Response.json(
       {
-        error: PERSON_TIME_OVERLAP_MESSAGE,
+        error: personConflict.result.messagePt,
         conflict: {
+          code: personConflict.result.code,
           person_id: personConflict.personId,
-          event_id: personConflict.conflictingEvent.id,
+          event_id: personConflict.event.id,
+          blocked_until: personConflict.result.blockedUntil,
+          next_available_start: personConflict.result.nextAvailableStart,
+          min_gap_minutes: personConflict.result.minGapMinutes,
+          message_pt: personConflict.result.messagePt,
+          message_en: personConflict.result.messageEn,
+          message_es: personConflict.result.messageEs,
         },
       },
       { status: 409 },

@@ -34,6 +34,7 @@ export type OperationalAuditAction =
   | 'team_member_confirmed'
   | 'team_member_declined'
   | 'team_member_substituted'
+  | 'schedule_conflict_detected'
 
 export async function writeOperationalAudit(input: {
   companyId: string

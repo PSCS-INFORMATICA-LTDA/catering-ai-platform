@@ -1,7 +1,9 @@
 /**
- * Conflito de horários — intervalo semiaberto [start, end).
- * 10:00–14:00 e 14:00–18:00 → sem overlap.
- * 10:00–14:00 e 13:00–18:00 → conflito.
+ * Overlap puro [start, end) — utilitário de intervalos.
+ *
+ * Para escala operacional (equipe/pessoa), usar
+ * Lib/agenda/scheduleTurnaround.ts (janela + overlap).
+ * Adjacente 10–14 / 14–18 NÃO é permitido com turnaround CDL (120 min).
  */
 
 export type Timeable = {

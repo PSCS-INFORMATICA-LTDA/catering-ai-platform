@@ -3,16 +3,16 @@ import {
   findTeamTimeConflict,
   TEAM_TIME_OVERLAP_MESSAGE,
 } from '@/Lib/agenda/scheduleConflicts'
+import {
+  DEFAULT_SCHEDULE_TURNAROUND_CONFIG,
+  type ScheduleTurnaroundConfig,
+} from '@/Lib/agenda/scheduleTurnaround'
 
-/** Eventos que ocupam a equipe (conflito por overlap de horário). */
+/** Eventos que ocupam a equipe (conflito por overlap + janela operacional). */
 export function statusBlocksTeamDay(status: AgendaEventStatus | string): boolean {
   return status === 'scheduled' || status === 'completed'
 }
 
-/**
- * @deprecated Preferir findTeamTimeConflict — multi-evento no mesmo dia é permitido
- * sem overlap de horário.
- */
 export function teamHasBookingOnDate(
   events: Pick<
     AgendaEvent,
@@ -23,33 +23,34 @@ export function teamHasBookingOnDate(
   excludeEventId?: string | null,
   startTime?: string | null,
   endTime?: string | null,
+  config: ScheduleTurnaroundConfig = DEFAULT_SCHEDULE_TURNAROUND_CONFIG,
 ): boolean {
-  if (startTime && endTime) {
-    return Boolean(
-      findTeamTimeConflict(
-        events.map((e) => ({
-          id: e.id,
-          team_id: e.team_id,
-          event_date: e.event_date,
-          start_time: e.start_time,
-          end_time: e.end_time,
-          status: e.status,
-        })),
-        teamId,
-        dayKey,
-        startTime,
-        endTime,
-        excludeEventId,
-      ),
+  if (!startTime || !endTime) {
+    return events.some(
+      (e) =>
+        e.team_id === teamId &&
+        e.event_date === dayKey &&
+        statusBlocksTeamDay(e.status) &&
+        (!excludeEventId || e.id !== excludeEventId),
     )
   }
-  // Sem horário: qualquer evento ativo no dia (compatibilidade limitada).
-  return events.some(
-    (e) =>
-      e.team_id === teamId &&
-      e.event_date === dayKey &&
-      statusBlocksTeamDay(e.status) &&
-      (!excludeEventId || e.id !== excludeEventId),
+  return Boolean(
+    findTeamTimeConflict(
+      events.map((e) => ({
+        id: e.id,
+        team_id: e.team_id,
+        event_date: e.event_date,
+        start_time: e.start_time,
+        end_time: e.end_time,
+        status: e.status,
+      })),
+      teamId,
+      dayKey,
+      startTime,
+      endTime,
+      excludeEventId,
+      config,
+    ),
   )
 }
 
@@ -63,33 +64,21 @@ export function availableTeamsForDate(
   excludeEventId?: string | null,
   startTime?: string | null,
   endTime?: string | null,
+  config: ScheduleTurnaroundConfig = DEFAULT_SCHEDULE_TURNAROUND_CONFIG,
 ): OperationalTeam[] {
   if (!dayKey) return teams
-  if (startTime && endTime) {
-    const mapped = events.map((e) => ({
-      id: e.id,
-      team_id: e.team_id,
-      event_date: e.event_date,
-      start_time: e.start_time,
-      end_time: e.end_time,
-      status: e.status,
-    }))
-    return teams.filter(
-      (t) =>
-        !findTeamTimeConflict(
-          mapped,
-          t.id,
-          dayKey,
-          startTime,
-          endTime,
-          excludeEventId,
-        ),
-    )
-  }
   return teams.filter(
-    (t) => !teamHasBookingOnDate(events, t.id, dayKey, excludeEventId),
+    (t) =>
+      !teamHasBookingOnDate(
+        events,
+        t.id,
+        dayKey,
+        excludeEventId,
+        startTime,
+        endTime,
+        config,
+      ),
   )
 }
 
-/** Mensagem canônica de conflito por horário (substitui dia fechado). */
 export const TEAM_DAY_BUSY_MESSAGE = TEAM_TIME_OVERLAP_MESSAGE
