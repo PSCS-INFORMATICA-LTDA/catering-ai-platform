@@ -1,35 +1,28 @@
 /** Link público + mensagens de envio da cotação (padrão Logistics). */
 
 import {
+  resolveCanonicalAppUrl,
+  getCanonicalAppUrl,
+} from '@/Lib/canonicalAppUrl'
+import {
   buildClientQuoteWhatsAppText,
   buildQuoteProposalEmailSubjectLocalized,
 } from '@/Lib/whatsappMessageTemplates'
 
-const DEFAULT_PUBLIC_APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, '') ||
-  'https://catering-ai-platform.vercel.app'
-
+/**
+ * Origem pública para links (proposta, WhatsApp, e-mail).
+ * Prefere NEXT_PUBLIC_APP_URL canônico (HML: https://h.cateringai.app).
+ * Fallback técnico (*.vercel.app) NÃO é URL oficial.
+ */
 export function getPublicAppOrigin(): string {
-  // No browser: prefer env (produção / Preview Vercel).
-  if (typeof window === 'undefined') {
-    return (
-      process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, '') ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-      DEFAULT_PUBLIC_APP_URL
-    )
-  }
-
-  const origin = window.location.origin.replace(/\/$/, '')
-  // Localhost não deve ir para o cliente — usa URL pública configurada.
-  if (/localhost|127\.0\.0\.1/i.test(origin)) {
-    return (
-      process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, '') ||
-      DEFAULT_PUBLIC_APP_URL
-    )
-  }
-  // Preview / produção: link do próprio host (como o operador está testando).
-  return origin
+  const resolved = resolveCanonicalAppUrl()
+  if (resolved.origin) return resolved.origin
+  // Último recurso técnico interno — nunca tratar como canônico.
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  throw new Error('CANONICAL ENVIRONMENTS: BLOCKED_DOMAIN_NOT_CONFIGURED')
 }
+
+export { getCanonicalAppUrl }
 
 export function buildPublicProposalUrl(token: string, origin?: string): string {
   const base = (origin ?? getPublicAppOrigin()).replace(/\/$/, '')

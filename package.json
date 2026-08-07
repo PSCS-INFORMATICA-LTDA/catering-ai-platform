@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "catering-ai-platform",
   "version": "0.1.0",
   "private": true,
@@ -8,6 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "verify:env:canonical": "node scripts/verify-canonical-environments.mjs --mode=local",
+    "verify:env:homologation": "node scripts/verify-canonical-environments.mjs --mode=homologation",
+    "verify:env:production": "node scripts/verify-canonical-environments.mjs --mode=production",
     "seed:dev:functional:dry": "node scripts/dev/seed-catering-functional-validation.mjs --dry-run",
     "seed:dev:functional": "node scripts/dev/seed-catering-functional-validation.mjs --apply",
     "verify:dev:functional": "node scripts/dev/verify-catering-functional-validation.mjs",
@@ -43,3 +46,4 @@
     "typescript": "^5"
   }
 }
+
