@@ -42,7 +42,11 @@
     "verify:dev:supplier-garnish": "node scripts/dev/seed-supplier-garnish-order.mjs --verify",
     "test:dev:supplier-garnish-message": "node --experimental-strip-types scripts/dev/test-supplier-garnish-message.mjs",
     "seed:dev:supplier-garnish-kit-rule:dry": "node --experimental-strip-types scripts/dev/seed-supplier-garnish-kit-rule.mjs",
-    "seed:dev:supplier-garnish-kit-rule": "node --experimental-strip-types scripts/dev/seed-supplier-garnish-kit-rule.mjs --apply"
+    "seed:dev:supplier-garnish-kit-rule": "node --experimental-strip-types scripts/dev/seed-supplier-garnish-kit-rule.mjs --apply",
+    "test:dev:person-operational-roles": "node scripts/dev/test-person-operational-roles.mjs",
+    "test:dev:team-person-membership": "node scripts/dev/test-team-person-membership.mjs",
+    "test:dev:schedule-multiple-events": "node scripts/dev/test-schedule-multiple-events.mjs",
+    "test:dev:team-confirmation": "node scripts/dev/test-team-confirmation.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",

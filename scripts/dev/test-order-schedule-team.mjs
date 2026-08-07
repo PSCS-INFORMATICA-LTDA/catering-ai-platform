@@ -1,20 +1,12 @@
 /**
- * Teste — vínculo cotação/OS/agenda (agenda_events) e conflito de equipe/dia
+ * Teste — vínculo cotação/OS/agenda (agenda_events) e conflito por horário
  *
- * Espelha (sem import TS) Lib/agenda/teamAvailability.ts e valida o índice
- * único `uq_agenda_events_team_day_active` (equipe não pode ter dois eventos
- * scheduled/completed na mesma data — cancelado libera a data).
+ * Multi-evento no mesmo dia é permitido se [start,end) não se sobrepõe.
+ * O índice `uq_agenda_events_team_day_active` foi removido (migration
+ * 20260807160000). Conflito de overlap é validado na aplicação.
  *
- * Cria seus próprios fixtures de teste (equipes + cotações `TEST-DEV-*`),
- * idempotente entre execuções.
- *
- * Pré-requisito: `npm run seed:dev:functional` (fixture customerMain/eventMain/companyMain).
- *
- * Uso:
- *   node scripts/dev/test-order-schedule-team.mjs
- *
- * Project Ref obrigatório: yasprgtlqclwsjcshtls
- * PROD proibido: eapwtirhevxrqinytans
+ * Pré-requisito: `npm run seed:dev:functional`
+ * Project Ref: yasprgtlqclwsjcshtls — PROD proibido.
  */
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
@@ -63,25 +55,61 @@ function fail(msg) {
   process.exit(1)
 }
 
-/** Espelho de Lib/agenda/teamAvailability.ts */
+/** Espelho de overlap [start,end) + disponibilidade */
 function statusBlocksTeamDay(status) {
   return status === 'scheduled' || status === 'completed'
 }
-function teamHasBookingOnDate(events, teamId, dayKey, excludeEventId) {
-  return events.some(
-    (e) =>
-      e.team_id === teamId &&
-      e.event_date === dayKey &&
-      statusBlocksTeamDay(e.status) &&
-      (!excludeEventId || e.id !== excludeEventId),
+function timeToMinutes(value) {
+  const [h, m] = String(value).slice(0, 5).split(':').map(Number)
+  return h * 60 + m
+}
+function intervalsOverlap(aStart, aEnd, bStart, bEnd) {
+  return (
+    timeToMinutes(aStart) < timeToMinutes(bEnd) &&
+    timeToMinutes(aEnd) > timeToMinutes(bStart)
   )
 }
-function availableTeamsForDate(teams, events, dayKey, excludeEventId) {
+function teamHasBookingOnDate(
+  events,
+  teamId,
+  dayKey,
+  excludeEventId,
+  startTime,
+  endTime,
+) {
+  return events.some((e) => {
+    if (e.team_id !== teamId || e.event_date !== dayKey) return false
+    if (!statusBlocksTeamDay(e.status)) return false
+    if (excludeEventId && e.id === excludeEventId) return false
+    if (startTime && endTime && e.start_time && e.end_time) {
+      return intervalsOverlap(startTime, endTime, e.start_time, e.end_time)
+    }
+    return true
+  })
+}
+function availableTeamsForDate(
+  teams,
+  events,
+  dayKey,
+  excludeEventId,
+  startTime,
+  endTime,
+) {
   if (!dayKey) return teams
-  return teams.filter((t) => !teamHasBookingOnDate(events, t.id, dayKey, excludeEventId))
+  return teams.filter(
+    (t) =>
+      !teamHasBookingOnDate(
+        events,
+        t.id,
+        dayKey,
+        excludeEventId,
+        startTime,
+        endTime,
+      ),
+  )
 }
 const TEAM_DAY_BUSY_MESSAGE =
-  'Esta equipe já tem evento nesta data (dia fechado). Escolha outro dia livre (ex.: domingo, dia útil ou feriado) ou outra equipe disponível.'
+  'Esta equipe já tem evento com horário sobreposto neste dia. Ajuste o intervalo ou escolha outra equipe.'
 
 async function main() {
   const fx = JSON.parse(readFileSync(FIXTURE_PATH, 'utf8'))
@@ -98,19 +126,46 @@ async function main() {
   if (statusBlocksTeamDay('cancelled')) fail("'cancelled' não deveria bloquear o dia")
 
   const mockEvents = [
-    { id: 'e1', team_id: 'ta', event_date: '2027-01-01', status: 'scheduled' },
-    { id: 'e2', team_id: 'tb', event_date: '2027-01-01', status: 'cancelled' },
+    {
+      id: 'e1',
+      team_id: 'ta',
+      event_date: '2027-01-01',
+      status: 'scheduled',
+      start_time: '10:00:00',
+      end_time: '14:00:00',
+    },
+    {
+      id: 'e2',
+      team_id: 'tb',
+      event_date: '2027-01-01',
+      status: 'cancelled',
+      start_time: '10:00:00',
+      end_time: '14:00:00',
+    },
   ]
-  if (!teamHasBookingOnDate(mockEvents, 'ta', '2027-01-01')) fail('ta deveria estar ocupada em 2027-01-01')
-  if (teamHasBookingOnDate(mockEvents, 'tb', '2027-01-01')) fail('tb (cancelado) não deveria estar ocupada')
-  if (teamHasBookingOnDate(mockEvents, 'ta', '2027-01-01', 'e1')) fail('excludeEventId deveria liberar o próprio evento')
+  if (!teamHasBookingOnDate(mockEvents, 'ta', '2027-01-01', null, '13:00', '15:00')) {
+    fail('ta deveria conflitar com overlap 13–15')
+  }
+  if (teamHasBookingOnDate(mockEvents, 'ta', '2027-01-01', null, '14:00', '18:00')) {
+    fail('ta adjacente 14–18 não deveria conflitar')
+  }
+  if (teamHasBookingOnDate(mockEvents, 'tb', '2027-01-01', null, '10:00', '14:00')) {
+    fail('tb (cancelado) não deveria estar ocupada')
+  }
 
   const mockTeams = [{ id: 'ta' }, { id: 'tb' }, { id: 'tc' }]
-  const available = availableTeamsForDate(mockTeams, mockEvents, '2027-01-01')
-  if (available.length !== 2 || available.some((t) => t.id === 'ta')) {
-    fail(`availableTeamsForDate deveria excluir 'ta' e manter tb/tc, obtido: ${JSON.stringify(available)}`)
+  const available = availableTeamsForDate(
+    mockTeams,
+    mockEvents,
+    '2027-01-01',
+    null,
+    '14:00',
+    '18:00',
+  )
+  if (available.length !== 3) {
+    fail(`com slot adjacente todas as equipes livres, obtido: ${JSON.stringify(available)}`)
   }
-  console.log('  OK funções de disponibilidade espelhadas corretamente')
+  console.log('  OK funções de disponibilidade (overlap) espelhadas corretamente')
 
   console.log('\n--- 2) Integração: setup equipes + cotações de teste ---')
   const client = createClient(url, service, {
@@ -184,27 +239,40 @@ async function main() {
   if (agendaEvent1.team_id !== TEAM_A_ID) fail('agenda_events.team_id não vinculado corretamente')
   console.log(`  OK agenda_events id=${agendaEvent1.id} quote_id=${agendaEvent1.quote_id} team_id=${agendaEvent1.team_id}`)
 
-  console.log('\n--- 4) Conflito: mesma equipe (A), mesma data, status scheduled → deve falhar ---')
+  console.log('\n--- 4) Multi-evento: mesma equipe (A), mesma data, horários sem overlap → permitido ---')
   {
-    const { error } = await client
+    const { data: adj, error } = await client
       .from('agenda_events')
       .insert({
         company_id: companyId,
         team_id: TEAM_A_ID,
         code: CODE_2,
-        title: 'TEST-DEV Evento 2 (conflito)',
+        title: 'TEST-DEV Evento 2 (adjacente)',
         event_date: TEST_DATE,
-        start_time: '15:00:00',
+        start_time: '14:00:00',
         end_time: '18:00:00',
         status: 'scheduled',
         quote_id: QUOTE_2_ID,
       })
       .select('*')
       .single()
-    if (!error) fail('esperado conflito de equipe/dia (uq_agenda_events_team_day_active), mas insert teve sucesso')
-    const mapsToBusyMessage = /uq_agenda_events_team_day_active|duplicate key/i.test(error.message)
-    if (!mapsToBusyMessage) fail(`erro não corresponde ao padrão esperado de conflito: ${error.message}`)
-    console.log(`  OK conflito detectado e mapeável para TEAM_DAY_BUSY_MESSAGE: "${TEAM_DAY_BUSY_MESSAGE.slice(0, 40)}..."`)
+    if (error) fail(`insert adjacente deveria passar após remover day-lock: ${error.message}`)
+    if (
+      teamHasBookingOnDate(
+        [agendaEvent1, adj],
+        TEAM_A_ID,
+        TEST_DATE,
+        null,
+        '13:00:00',
+        '15:00:00',
+      )
+    ) {
+      console.log(`  OK overlap helper detecta conflito (${TEAM_DAY_BUSY_MESSAGE.slice(0, 48)}...)`)
+    } else {
+      fail('helper deveria detectar overlap 13–15 com 10–14 e 14–18')
+    }
+    // remove adjacente para não atrapalhar passos seguintes que reusam CODE_2 liberação
+    await client.from('agenda_events').delete().eq('id', adj.id)
   }
 
   console.log('\n--- 5) Equipe B pode assumir a mesma data (equipes diferentes) ---')
