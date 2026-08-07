@@ -1,3 +1,4 @@
+import { isOperationalRoleKey } from '@/Lib/agenda/operationalRoles'
 import { loadScheduleTurnaroundConfig } from '@/Lib/agenda/loadScheduleTurnaroundConfig'
 import { logScheduleConflictAudit } from '@/Lib/agenda/logScheduleConflictAudit'
 import { findPersonTimeConflict } from '@/Lib/agenda/scheduleConflicts'
@@ -6,6 +7,7 @@ import {
   requireApiPermission,
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
+import { getCustomerDisplayName } from '@/Lib/getCustomerDisplayName'
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import {
@@ -20,6 +22,26 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 type Ctx = { params: Promise<{ id: string }> }
+
+type PersonRow = {
+  id: string
+  full_name?: string | null
+  ab_name?: string | null
+  phone?: string | null
+  preferred_language?: string | null
+  is_team?: boolean | null
+  active?: boolean | null
+}
+
+type SelectedMember = {
+  person_id: string
+  role_key: string
+}
+
+function asPerson(raw: unknown): PersonRow | null {
+  if (!raw) return null
+  return (Array.isArray(raw) ? raw[0] : raw) as PersonRow
+}
 
 export async function GET(_request: Request, context: Ctx) {
   const auth = await requireApiPermission('orders.view')
@@ -41,13 +63,23 @@ export async function GET(_request: Request, context: Ctx) {
 
   const { data: evt } = await db
     .from('agenda_events')
-    .select('id, team_id, event_date, start_time, end_time, title, client_name, status')
+    .select(
+      'id, team_id, event_date, start_time, end_time, title, client_name, status',
+    )
     .eq('company_id', companyId)
     .eq('service_order_id', orderId)
     .maybeSingle()
 
   if (!evt) {
-    return Response.json({ data: { event: null, members: [], confirmations: [], summary: null } })
+    return Response.json({
+      data: {
+        event: null,
+        members: [],
+        confirmations: [],
+        summary: null,
+        candidates: [],
+      },
+    })
   }
 
   const { data: members } = await db
@@ -76,12 +108,73 @@ export async function GET(_request: Request, context: Ctx) {
     cancelled: list.filter((c) => c.status === 'cancelled').length,
   }
 
+  const { data: roleRows } = await db
+    .from('customer_operational_roles')
+    .select('person_id, role_key')
+    .eq('company_id', companyId)
+    .eq('active', true)
+
+  const { data: teamPeople } = await db
+    .from('customers')
+    .select('id, full_name, ab_name, phone, preferred_language, is_team, active')
+    .eq('company_id', companyId)
+    .eq('active', true)
+
+  const rolesByPerson = new Map<string, string[]>()
+  for (const row of roleRows ?? []) {
+    if (!isOperationalRoleKey(row.role_key)) continue
+    const cur = rolesByPerson.get(row.person_id) ?? []
+    if (!cur.includes(row.role_key)) cur.push(row.role_key)
+    rolesByPerson.set(row.person_id, cur)
+  }
+  for (const m of members ?? []) {
+    if (!isOperationalRoleKey(m.role_key)) continue
+    const cur = rolesByPerson.get(m.person_id) ?? []
+    if (!cur.includes(m.role_key)) cur.push(m.role_key)
+    rolesByPerson.set(m.person_id, cur)
+  }
+
+  const memberPersonIds = new Set((members ?? []).map((m) => m.person_id))
+  const peopleById = new Map<string, PersonRow>()
+  for (const p of teamPeople ?? []) {
+    if (
+      p.is_team ||
+      rolesByPerson.has(p.id) ||
+      memberPersonIds.has(p.id)
+    ) {
+      peopleById.set(p.id, p)
+    }
+  }
+  for (const m of members ?? []) {
+    const person = asPerson(m.customers)
+    if (person?.id) peopleById.set(person.id, person)
+  }
+
+  const candidates = [...peopleById.values()]
+    .filter((p) => p.active !== false)
+    .map((p) => ({
+      id: p.id,
+      full_name: p.full_name ?? null,
+      ab_name: p.ab_name ?? null,
+      phone: p.phone?.trim() || null,
+      preferred_language: p.preferred_language ?? null,
+      display_name: getCustomerDisplayName(p),
+      role_keys: rolesByPerson.get(p.id) ?? [],
+    }))
+    .sort((a, b) => a.display_name.localeCompare(b.display_name, 'pt'))
+
   return Response.json({
-    data: { event: evt, members: members ?? [], confirmations: list, summary },
+    data: {
+      event: evt,
+      members: members ?? [],
+      confirmations: list,
+      summary,
+      candidates,
+    },
   })
 }
 
-/** Gera/reenvia confirmações individuais para membros ativos da equipe. */
+/** Gera/reenvia confirmações para a escala selecionada (ou equipe padrão). */
 export async function POST(request: Request, context: Ctx) {
   const auth = await requireApiPermission('orders.manage')
   if (!auth.ok) return auth.response
@@ -89,7 +182,11 @@ export async function POST(request: Request, context: Ctx) {
   const { id: orderId } = await context.params
   const companyId = resolveAuthorizedCompanyId(auth.session)
 
-  let body: { company_id?: string; action?: string } = {}
+  let body: {
+    company_id?: string
+    action?: string
+    members?: SelectedMember[]
+  } = {}
   try {
     body = await request.json()
   } catch {
@@ -138,7 +235,7 @@ export async function POST(request: Request, context: Ctx) {
     .eq('id', companyId)
     .maybeSingle()
 
-  const { data: members } = await db
+  const { data: defaultMembers } = await db
     .from('operational_team_members')
     .select(
       'person_id, role_key, customers:person_id(id, full_name, ab_name, phone, preferred_language)',
@@ -147,15 +244,67 @@ export async function POST(request: Request, context: Ctx) {
     .eq('team_id', evt.team_id)
     .eq('active', true)
 
-  if (!members?.length) {
+  const requested = Array.isArray(body.members) ? body.members : null
+  let selected: SelectedMember[] = []
+
+  if (requested?.length) {
+    const seenPeople = new Set<string>()
+    for (const row of requested) {
+      const personId = String(row?.person_id || '').trim()
+      const roleKey = String(row?.role_key || '').trim()
+      if (!personId || !isOperationalRoleKey(roleKey)) {
+        return Response.json(
+          { error: 'Seleção inválida: informe person_id e role_key válidos.' },
+          { status: 400 },
+        )
+      }
+      if (seenPeople.has(personId)) {
+        return Response.json(
+          { error: 'A mesma pessoa não pode ocupar dois slots na escala.' },
+          { status: 400 },
+        )
+      }
+      seenPeople.add(personId)
+      selected.push({ person_id: personId, role_key: roleKey })
+    }
+  } else {
+    selected = (defaultMembers ?? []).map((m) => ({
+      person_id: m.person_id,
+      role_key: m.role_key,
+    }))
+  }
+
+  if (!selected.length) {
     return Response.json(
-      { error: 'Equipe sem integrantes ativos. Adicione Pessoas à equipe.' },
+      {
+        error:
+          'Selecione os integrantes da escala (churrasqueiro, ajudantes, líder).',
+      },
       { status: 400 },
     )
   }
 
-  // Conflito de pessoa com outros eventos
-  const personIds = [...new Set(members.map((m) => m.person_id))]
+  const personIds = selected.map((m) => m.person_id)
+  const { data: peopleRows, error: peopleErr } = await db
+    .from('customers')
+    .select('id, full_name, ab_name, phone, preferred_language, active')
+    .eq('company_id', companyId)
+    .in('id', personIds)
+
+  if (peopleErr) {
+    return Response.json({ error: peopleErr.message }, { status: 500 })
+  }
+
+  const personById = new Map((peopleRows ?? []).map((p) => [p.id, p]))
+  for (const id of personIds) {
+    if (!personById.has(id) || personById.get(id)?.active === false) {
+      return Response.json(
+        { error: 'Pessoa selecionada inválida ou inativa.' },
+        { status: 400 },
+      )
+    }
+  }
+
   const { data: otherConfs } = await db
     .from('agenda_event_member_confirmations')
     .select('person_id, team_id, agenda_event_id, status')
@@ -248,28 +397,42 @@ export async function POST(request: Request, context: Ctx) {
     }
   }
 
+  const selectedSet = new Set(personIds)
+  const { data: activeOnEvent } = await db
+    .from('agenda_event_member_confirmations')
+    .select('id, person_id, status')
+    .eq('company_id', companyId)
+    .eq('agenda_event_id', evt.id)
+    .eq('status', 'pending')
+
+  for (const row of activeOnEvent ?? []) {
+    if (!selectedSet.has(row.person_id)) {
+      await db
+        .from('agenda_event_member_confirmations')
+        .update({
+          status: 'cancelled',
+          token_revoked_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          notes: 'Substituído na escala do evento',
+        })
+        .eq('id', row.id)
+    }
+  }
+
   const shares: Array<{
     person_id: string
     role_key: string
     phone: string | null
+    person_name: string
     whatsappText: string
     confirmUrl: string
     confirmation_id: string
   }> = []
 
-  for (const member of members) {
-    const rawPerson = member.customers as unknown
-    const person = (
-      Array.isArray(rawPerson) ? rawPerson[0] : rawPerson
-    ) as {
-      id: string
-      full_name?: string
-      ab_name?: string
-      phone?: string | null
-      preferred_language?: string | null
-    } | null
+  for (const member of selected) {
+    const person = personById.get(member.person_id) ?? null
+    const personName = getCustomerDisplayName(person)
 
-    // Já confirmado neste evento → não recriar (índice uq_agenda_member_conf_active_person)
     const { data: existingActive } = await db
       .from('agenda_event_member_confirmations')
       .select('id, status')
@@ -283,7 +446,6 @@ export async function POST(request: Request, context: Ctx) {
       continue
     }
 
-    // Cancela pending anterior da mesma pessoa neste evento (reenvio)
     if (existingActive?.status === 'pending') {
       await db
         .from('agenda_event_member_confirmations')
@@ -329,6 +491,7 @@ export async function POST(request: Request, context: Ctx) {
 
     const whatsappText = buildTeamMemberConfirmationWhatsAppText({
       companyName: company?.trade_name || company?.company_name,
+      personName,
       eventDate: evt.event_date,
       startTime: evt.start_time,
       endTime: evt.end_time,
@@ -344,6 +507,7 @@ export async function POST(request: Request, context: Ctx) {
       person_id: member.person_id,
       role_key: member.role_key,
       phone: person?.phone?.trim() || null,
+      person_name: personName,
       whatsappText,
       confirmUrl,
       confirmation_id: row.id,
@@ -359,6 +523,7 @@ export async function POST(request: Request, context: Ctx) {
     newData: {
       agenda_event_id: evt.id,
       count: shares.length,
+      members: selected,
     },
   })
 

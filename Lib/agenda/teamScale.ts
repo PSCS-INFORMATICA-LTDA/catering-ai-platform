@@ -125,6 +125,41 @@ export function evaluateTeamScale(
   }
 }
 
+/** Slot de escala para seleção na OS (churrasqueiro, ajudante 1/2, líder…). */
+export type TeamScaleSlotDef = {
+  slotKey: string
+  role_key: OperationalRoleKey
+  label: string
+  index: number
+}
+
+/** Monta slots a partir dos requisitos (ordem: churrasqueiro → ajudantes → líder). */
+export function buildTeamScaleSlots(
+  requirements: TeamScaleRequirements = DEFAULT_TEAM_SCALE_REQUIREMENTS,
+  locale: 'pt' | 'en' | 'es' = 'pt',
+): TeamScaleSlotDef[] {
+  const order: OperationalRoleKey[] = [
+    'grill_master',
+    'assistant',
+    'team_leader',
+    'preparation',
+  ]
+  const slots: TeamScaleSlotDef[] = []
+  for (const role of order) {
+    const need = requirements[role] ?? 0
+    for (let i = 0; i < need; i++) {
+      const base = operationalRoleLabel(role, locale)
+      slots.push({
+        slotKey: `${role}:${i}`,
+        role_key: role,
+        label: need > 1 ? `${base} ${i + 1}` : base,
+        index: i,
+      })
+    }
+  }
+  return slots
+}
+
 /**
  * Simula designação passo a passo (útil em testes/seed).
  * Retorna a lista após cada adição e a avaliação.

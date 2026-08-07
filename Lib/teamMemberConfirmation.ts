@@ -24,8 +24,16 @@ export function defaultConfirmationExpiryIso(days = 14): string {
   return d.toISOString()
 }
 
+function firstName(name: string | null | undefined): string | null {
+  if (!name?.trim()) return null
+  return name.trim().split(/\s+/)[0] || null
+}
+
+const SECTION = '──────────────'
+
 export type TeamMemberConfirmWhatsAppInput = {
   companyName?: string | null
+  personName?: string | null
   eventDate: string
   startTime: string
   endTime: string
@@ -46,11 +54,18 @@ export function buildTeamMemberConfirmationWhatsAppText(
   const loc = input.location?.trim() || '—'
   const start = input.startTime.slice(0, 5)
   const end = input.endTime.slice(0, 5)
+  const hello = firstName(input.personName)
 
   if (locale === 'en') {
     return [
+      hello ? `Hi, ${hello},` : 'Hi,',
+      '',
+      'How are you?',
+      '',
       `*EVENT CONFIRMATION* — ${brand}`,
-      '──────────────',
+      '',
+      SECTION,
+      '',
       `*Date:* ${input.eventDate}`,
       `*Time:* ${start}–${end}`,
       `*Event:* ${input.eventTitle}`,
@@ -58,15 +73,21 @@ export function buildTeamMemberConfirmationWhatsAppText(
       `*Team:* ${input.teamName}`,
       `*Role:* ${role}`,
       '',
-      'Confirm your participation:',
+      'Please confirm your participation:',
       input.confirmUrl,
     ].join('\n')
   }
 
   if (locale === 'es') {
     return [
+      hello ? `Hola, ${hello},` : 'Hola,',
+      '',
+      '¿Todo bien?',
+      '',
       `*CONFIRMACIÓN DE EVENTO* — ${brand}`,
-      '──────────────',
+      '',
+      SECTION,
+      '',
       `*Fecha:* ${input.eventDate}`,
       `*Horario:* ${start}–${end}`,
       `*Evento:* ${input.eventTitle}`,
@@ -80,8 +101,14 @@ export function buildTeamMemberConfirmationWhatsAppText(
   }
 
   return [
+    hello ? `Olá, ${hello},` : 'Olá,',
+    '',
+    'Tudo bem?',
+    '',
     `*CONFIRMAÇÃO DE EVENTO* — ${brand}`,
-    '──────────────',
+    '',
+    SECTION,
+    '',
     `*Data:* ${input.eventDate}`,
     `*Horário:* ${start}–${end}`,
     `*Evento:* ${input.eventTitle}`,

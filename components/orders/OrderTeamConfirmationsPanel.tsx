@@ -1,8 +1,17 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { operationalRoleLabel } from '@/Lib/agenda/operationalRoles'
-import { evaluateTeamScale } from '@/Lib/agenda/teamScale'
+import {
+  isOperationalRoleKey,
+  operationalRoleLabel,
+  type OperationalRoleKey,
+} from '@/Lib/agenda/operationalRoles'
+import {
+  buildTeamScaleSlots,
+  evaluateTeamScale,
+  type TeamScaleSlotDef,
+} from '@/Lib/agenda/teamScale'
+import { getCustomerDisplayName } from '@/Lib/getCustomerDisplayName'
 import { glassAction, glassBtn, glassField } from '@/Lib/liquidGlass'
 import { buildMailtoHref } from '@/Lib/quoteProposal'
 import { buildSmsShareHref } from '@/Lib/smsShare'
@@ -25,6 +34,7 @@ type Share = {
   person_id: string
   role_key: string
   phone: string | null
+  person_name?: string
   whatsappText: string
   confirmUrl: string
   confirmation_id: string
@@ -46,12 +56,25 @@ type Member = {
     | null
 }
 
+type Candidate = {
+  id: string
+  full_name?: string | null
+  ab_name?: string | null
+  phone?: string | null
+  display_name: string
+  role_keys: string[]
+}
+
+type SlotState = TeamScaleSlotDef & { person_id: string }
+
 const SHARE_ICON = 'h-11 w-11 shrink-0 !p-0'
 
 function memberName(m: Member): string {
   const raw = m.customers
   const person = Array.isArray(raw) ? raw[0] : raw
-  return person?.ab_name || person?.full_name || `${m.person_id.slice(0, 8)}…`
+  return getCustomerDisplayName(person, {
+    emptyLabel: `${m.person_id.slice(0, 8)}…`,
+  })
 }
 
 function activeConfirmation(
@@ -67,6 +90,30 @@ function activeConfirmation(
   )
 }
 
+function defaultSlotsFromMembers(members: Member[]): SlotState[] {
+  const defs = buildTeamScaleSlots()
+  const used = new Set<string>()
+  const byRole = new Map<OperationalRoleKey, string[]>()
+  for (const m of members) {
+    if (!isOperationalRoleKey(m.role_key)) continue
+    const list = byRole.get(m.role_key) ?? []
+    list.push(m.person_id)
+    byRole.set(m.role_key, list)
+  }
+  return defs.map((def) => {
+    const pool = byRole.get(def.role_key) ?? []
+    let person_id = ''
+    for (const id of pool) {
+      if (!used.has(id)) {
+        person_id = id
+        used.add(id)
+        break
+      }
+    }
+    return { ...def, person_id }
+  })
+}
+
 export default function OrderTeamConfirmationsPanel({
   orderId,
   canManage,
@@ -77,11 +124,13 @@ export default function OrderTeamConfirmationsPanel({
   const [summary, setSummary] = useState<Summary | null>(null)
   const [confirmations, setConfirmations] = useState<Confirmation[]>([])
   const [members, setMembers] = useState<Member[]>([])
+  const [candidates, setCandidates] = useState<Candidate[]>([])
+  const [slots, setSlots] = useState<SlotState[]>([])
   const [shares, setShares] = useState<Share[]>([])
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [phones, setPhones] = useState<Record<string, string>>({})
   const [previewOpen, setPreviewOpen] = useState(false)
-  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
+  const [selectedSlotKey, setSelectedSlotKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [hint, setHint] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -96,6 +145,7 @@ export default function OrderTeamConfirmationsPanel({
         summary?: Summary | null
         confirmations?: Confirmation[]
         members?: Member[]
+        candidates?: Candidate[]
         event?: { id: string } | null
       }
       error?: string
@@ -105,9 +155,15 @@ export default function OrderTeamConfirmationsPanel({
       return
     }
     const memberList = json.data?.members ?? []
+    const candidateList = json.data?.candidates ?? []
     setSummary(json.data?.summary ?? null)
     setConfirmations(json.data?.confirmations ?? [])
     setMembers(memberList)
+    setCandidates(candidateList)
+    setSlots((prev) => {
+      if (prev.length && prev.some((s) => s.person_id)) return prev
+      return defaultSlotsFromMembers(memberList)
+    })
 
     const scale = evaluateTeamScale(
       memberList.map((m) => ({
@@ -139,7 +195,7 @@ export default function OrderTeamConfirmationsPanel({
       )
     } else if ((json.data.summary?.declined ?? 0) > 0) setAlert('INTEGRANTE RECUSOU')
     else if (!allMembersHaveActive)
-      setAlert('EQUIPE FECHADA — preparar confirmações aos integrantes')
+      setAlert('EQUIPE FECHADA — selecione a escala e prepare as confirmações')
     else if ((json.data.summary?.pending ?? 0) > 0) setAlert('AGUARDANDO CONFIRMAÇÕES')
     else if (allConfirmed) setAlert('EQUIPE CONFIRMADA')
     else setAlert(null)
@@ -149,7 +205,66 @@ export default function OrderTeamConfirmationsPanel({
     void refresh()
   }, [refresh])
 
+  const candidateById = useMemo(() => {
+    const map = new Map<string, Candidate>()
+    for (const c of candidates) map.set(c.id, c)
+    return map
+  }, [candidates])
+
+  function optionsForSlot(slot: SlotState): Candidate[] {
+    const taken = new Set(
+      slots.filter((s) => s.slotKey !== slot.slotKey && s.person_id).map((s) => s.person_id),
+    )
+    const preferred = candidates.filter(
+      (c) =>
+        !taken.has(c.id) &&
+        (c.role_keys.includes(slot.role_key) || c.role_keys.length === 0),
+    )
+    const fallback = candidates.filter((c) => !taken.has(c.id))
+    const list = preferred.length ? preferred : fallback
+    const selected = slot.person_id ? candidateById.get(slot.person_id) : null
+    if (selected && !list.some((c) => c.id === selected.id)) {
+      return [selected, ...list]
+    }
+    return list
+  }
+
+  function updateSlotPerson(slotKey: string, personId: string) {
+    setSlots((prev) =>
+      prev.map((s) => (s.slotKey === slotKey ? { ...s, person_id: personId } : s)),
+    )
+    setSelectedSlotKey(slotKey)
+    if (personId) {
+      const cand = candidateById.get(personId)
+      setPhones((prev) => ({
+        ...prev,
+        [personId]: prev[personId] ?? cand?.phone?.trim() ?? '',
+      }))
+    }
+    setHint(
+      'Escala alterada — clique em “Preparar confirmações WhatsApp” para gerar a mensagem desta pessoa.',
+    )
+  }
+
   async function prepareConfirmations() {
+    const selectedMembers = slots
+      .filter((s) => s.person_id)
+      .map((s) => ({ person_id: s.person_id, role_key: s.role_key }))
+
+    if (!selectedMembers.length) {
+      setError('Selecione pelo menos um integrante na lista da escala.')
+      return
+    }
+
+    const dup = new Set<string>()
+    for (const m of selectedMembers) {
+      if (dup.has(m.person_id)) {
+        setError('A mesma pessoa não pode ocupar dois slots.')
+        return
+      }
+      dup.add(m.person_id)
+    }
+
     setBusy(true)
     setError(null)
     setHint(null)
@@ -157,7 +272,7 @@ export default function OrderTeamConfirmationsPanel({
       const res = await fetch(`/api/orders/${orderId}/team-confirmations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ members: selectedMembers }),
       })
       const json = (await res.json()) as {
         data?: { shares?: Share[] }
@@ -171,22 +286,26 @@ export default function OrderTeamConfirmationsPanel({
         const base =
           json.conflict?.message_pt || json.error || 'Falha ao preparar escala'
         const next = json.conflict?.next_available_start
-        setError(
-          next ? `${base} Próximo horário disponível: ${next}` : base,
-        )
+        setError(next ? `${base} Próximo horário disponível: ${next}` : base)
         return
       }
       const nextShares = json.data?.shares ?? []
       setShares(nextShares)
       const nextDrafts: Record<string, string> = {}
-      const nextPhones: Record<string, string> = {}
+      const nextPhones: Record<string, string> = { ...phones }
       for (const s of nextShares) {
         nextDrafts[s.person_id] = s.whatsappText
-        nextPhones[s.person_id] = s.phone?.trim() || ''
+        nextPhones[s.person_id] =
+          nextPhones[s.person_id]?.trim() || s.phone?.trim() || ''
       }
       setDrafts(nextDrafts)
       setPhones(nextPhones)
-      setSelectedPersonId(nextShares[0]?.person_id ?? null)
+
+      const focus =
+        slots.find((s) => s.slotKey === selectedSlotKey && s.person_id) ||
+        slots.find((s) => s.person_id) ||
+        null
+      setSelectedSlotKey(focus?.slotKey ?? null)
       setPreviewOpen(true)
       await refresh()
       window.setTimeout(() => {
@@ -199,19 +318,27 @@ export default function OrderTeamConfirmationsPanel({
     }
   }
 
-  const selectedShare = useMemo(
-    () => shares.find((s) => s.person_id === selectedPersonId) ?? shares[0] ?? null,
-    [shares, selectedPersonId],
-  )
+  const selectedSlot =
+    slots.find((s) => s.slotKey === selectedSlotKey) ||
+    slots.find((s) => s.person_id) ||
+    null
 
-  const selectedMember = useMemo(
-    () =>
-      members.find((m) => m.person_id === selectedShare?.person_id) ?? null,
-    [members, selectedShare],
-  )
+  const selectedShare = useMemo(() => {
+    if (!selectedSlot?.person_id) return null
+    return (
+      shares.find((s) => s.person_id === selectedSlot.person_id) ?? null
+    )
+  }, [shares, selectedSlot])
 
-  const selectedPhone = selectedShare
-    ? phones[selectedShare.person_id] ?? selectedShare.phone ?? ''
+  const selectedCandidate = selectedSlot?.person_id
+    ? candidateById.get(selectedSlot.person_id) ?? null
+    : null
+
+  const selectedPhone = selectedSlot?.person_id
+    ? phones[selectedSlot.person_id] ??
+      selectedShare?.phone ??
+      selectedCandidate?.phone ??
+      ''
     : ''
   const selectedMessage = selectedShare
     ? drafts[selectedShare.person_id] ?? selectedShare.whatsappText
@@ -252,6 +379,51 @@ export default function OrderTeamConfirmationsPanel({
         </p>
       ) : null}
 
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-cdl-fg">
+          Escala deste evento — escolha churrasqueiro e ajudantes na lista
+        </p>
+        <p className="text-xs text-cdl-muted">
+          Se alguém estiver indisponível, troque pela lista. A mensagem e o
+          WhatsApp usam a pessoa selecionada.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {slots.map((slot) => {
+            const options = optionsForSlot(slot)
+            const active = slot.slotKey === selectedSlot?.slotKey
+            return (
+              <label
+                key={slot.slotKey}
+                className={`block space-y-1 rounded-lg border px-3 py-2 ${
+                  active
+                    ? 'border-emerald-400/60 bg-emerald-50/70 dark:border-emerald-500/40 dark:bg-emerald-500/10'
+                    : 'border-cdl-border bg-cdl-surface/60'
+                }`}
+              >
+                <span className="text-xs font-semibold uppercase tracking-wide text-cdl-muted">
+                  {slot.label}
+                </span>
+                <select
+                  className={glassField()}
+                  value={slot.person_id}
+                  disabled={!canManage}
+                  onChange={(e) => updateSlotPerson(slot.slotKey, e.target.value)}
+                  onFocus={() => setSelectedSlotKey(slot.slotKey)}
+                >
+                  <option value="">Selecionar…</option>
+                  {options.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.display_name}
+                      {c.phone ? ` · ${c.phone}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )
+          })}
+        </div>
+      </div>
+
       <ul className="space-y-1 text-sm">
         {members.map((m) => {
           const conf = activeConfirmation(confirmations, m.person_id)
@@ -262,6 +434,7 @@ export default function OrderTeamConfirmationsPanel({
             >
               <span>
                 {operationalRoleLabel(m.role_key, 'pt')} · {memberName(m)}
+                <span className="text-cdl-muted"> (equipe base)</span>
               </span>
               <span className="font-medium">{conf?.status || 'na escala'}</span>
             </li>
@@ -269,7 +442,7 @@ export default function OrderTeamConfirmationsPanel({
         })}
       </ul>
 
-      {previewOpen && selectedShare ? (
+      {previewOpen && selectedSlot ? (
         <div
           id="team-confirmation-preview"
           className="space-y-3 rounded-xl border border-emerald-300/40 bg-emerald-50/80 p-4 text-sm dark:border-emerald-500/30 dark:bg-emerald-500/10"
@@ -278,34 +451,43 @@ export default function OrderTeamConfirmationsPanel({
             Prévia da confirmação — revise a mensagem antes de abrir o WhatsApp
           </p>
           <p className="text-xs text-cdl-muted">
-            Selecione o integrante, edite o texto e use o botão verde do
-            WhatsApp (não abre sozinho).
+            Selecione o slot, escolha a pessoa na lista, prepare a prévia e use o
+            botão verde do WhatsApp.
           </p>
 
           <div className="flex flex-wrap gap-2">
-            {shares.map((s) => {
-              const m = members.find((x) => x.person_id === s.person_id)
-              const active = s.person_id === selectedShare.person_id
-              return (
-                <button
-                  key={s.confirmation_id || s.person_id}
-                  type="button"
-                  className={
-                    active ? glassBtn('primary') : glassBtn('secondary')
-                  }
-                  onClick={() => setSelectedPersonId(s.person_id)}
-                >
-                  {operationalRoleLabel(s.role_key, 'pt')}
-                  {m ? ` · ${memberName(m)}` : ''}
-                </button>
-              )
-            })}
+            {slots
+              .filter((s) => s.person_id)
+              .map((s) => {
+                const cand = candidateById.get(s.person_id)
+                const active = s.slotKey === selectedSlot.slotKey
+                return (
+                  <button
+                    key={s.slotKey}
+                    type="button"
+                    className={
+                      active ? glassBtn('primary') : glassBtn('secondary')
+                    }
+                    onClick={() => setSelectedSlotKey(s.slotKey)}
+                  >
+                    {s.label}
+                    {cand ? ` · ${cand.display_name}` : ''}
+                  </button>
+                )
+              })}
           </div>
 
           <p className="text-sm font-medium text-cdl-fg">
-            {operationalRoleLabel(selectedShare.role_key, 'pt')}
-            {selectedMember ? ` · ${memberName(selectedMember)}` : ''}
+            {selectedSlot.label}
+            {selectedCandidate ? ` · ${selectedCandidate.display_name}` : ''}
           </p>
+
+          {!selectedShare ? (
+            <p className="text-xs text-amber-800 dark:text-amber-100">
+              Clique em “Preparar confirmações WhatsApp” para gerar a mensagem
+              com saudação desta pessoa.
+            </p>
+          ) : null}
 
           <label className="block space-y-1">
             <span className="text-xs font-medium text-cdl-muted">
@@ -316,39 +498,44 @@ export default function OrderTeamConfirmationsPanel({
               type="tel"
               placeholder="+1 407 …"
               value={selectedPhone}
-              onChange={(e) =>
+              disabled={!selectedSlot.person_id}
+              onChange={(e) => {
+                if (!selectedSlot.person_id) return
                 setPhones((prev) => ({
                   ...prev,
-                  [selectedShare.person_id]: e.target.value,
+                  [selectedSlot.person_id]: e.target.value,
                 }))
-              }
+              }}
             />
           </label>
 
-          {/* Toolbar acima da mensagem — visível sem rolar (padrão designação) */}
           <div className="proposal-toolbar flex flex-wrap items-center gap-2">
             <WhatsAppButton
               phone={selectedPhone}
               message={selectedMessage}
               editable
-              onMessageChange={(value) =>
+              disabled={!selectedShare}
+              onMessageChange={(value) => {
+                if (!selectedShare) return
                 setDrafts((prev) => ({
                   ...prev,
                   [selectedShare.person_id]: value,
                 }))
-              }
+              }}
               className={SHARE_ICON}
               title={
-                phoneOk
-                  ? `WhatsApp · ${formatWhatsAppPhoneDisplay(selectedPhone)}`
-                  : 'Informe um telefone válido com DDI.'
+                !selectedShare
+                  ? 'Prepare a prévia antes de enviar.'
+                  : phoneOk
+                    ? `WhatsApp · ${formatWhatsAppPhoneDisplay(selectedPhone)}`
+                    : 'Informe um telefone válido com DDI.'
               }
               onInvalidPhone={() =>
                 setHint('Informe um telefone válido com DDI.')
               }
             />
 
-            {buildSmsShareHref(selectedPhone, selectedMessage) ? (
+            {selectedShare && buildSmsShareHref(selectedPhone, selectedMessage) ? (
               <SmsShareAnchor
                 href={buildSmsShareHref(selectedPhone, selectedMessage)!}
                 message={selectedMessage}
@@ -376,11 +563,13 @@ export default function OrderTeamConfirmationsPanel({
             )}
 
             {(() => {
-              const mailHref = buildMailtoHref({
-                email: null,
-                subject: `Confirmação de escala — ${operationalRoleLabel(selectedShare.role_key, 'pt')}`,
-                body: selectedMessage,
-              })
+              const mailHref =
+                selectedShare &&
+                buildMailtoHref({
+                  email: null,
+                  subject: `Confirmação de escala — ${selectedSlot.label}`,
+                  body: selectedMessage,
+                })
               return mailHref ? (
                 <a
                   href={mailHref}
@@ -406,12 +595,14 @@ export default function OrderTeamConfirmationsPanel({
             <button
               type="button"
               className={glassBtn('ghost')}
-              onClick={() =>
+              disabled={!selectedShare}
+              onClick={() => {
+                if (!selectedShare) return
                 setDrafts((prev) => ({
                   ...prev,
                   [selectedShare.person_id]: selectedShare.whatsappText,
                 }))
-              }
+              }}
             >
               Restaurar texto padrão
             </button>
@@ -424,34 +615,39 @@ export default function OrderTeamConfirmationsPanel({
             </button>
           </div>
 
-          {phoneOk ? (
-            <p className="text-xs text-cdl-muted">
-              Destino: {formatWhatsAppPhoneDisplay(selectedPhone)} — clique no
-              ícone verde do WhatsApp para abrir o painel de envio.
-            </p>
-          ) : (
-            <p className="text-xs text-amber-700 dark:text-amber-200">
-              Informe um telefone válido com DDI para liberar o envio.
-            </p>
-          )}
+          {selectedShare ? (
+            phoneOk ? (
+              <p className="text-xs text-cdl-muted">
+                Destino: {formatWhatsAppPhoneDisplay(selectedPhone)} — clique no
+                ícone verde do WhatsApp para abrir o painel de envio.
+              </p>
+            ) : (
+              <p className="text-xs text-amber-700 dark:text-amber-200">
+                Informe um telefone válido com DDI para liberar o envio.
+              </p>
+            )
+          ) : null}
 
           <label className="block space-y-1">
             <span className="text-xs font-medium text-cdl-muted">
               Mensagem (editável)
             </span>
             <textarea
-              className="min-h-[10rem] w-full rounded-lg border border-cdl-border bg-cdl-surface p-3 text-xs text-cdl-fg"
+              className="min-h-[14rem] w-full whitespace-pre-wrap rounded-lg border border-cdl-border bg-cdl-surface p-3 font-sans text-sm leading-relaxed text-cdl-fg"
               value={selectedMessage}
-              onChange={(e) =>
+              disabled={!selectedShare}
+              onChange={(e) => {
+                if (!selectedShare) return
                 setDrafts((prev) => ({
                   ...prev,
                   [selectedShare.person_id]: e.target.value,
                 }))
-              }
+              }}
+              placeholder="Selecione a pessoa e prepare a prévia para gerar a mensagem com saudação."
             />
           </label>
 
-          {selectedShare.confirmUrl ? (
+          {selectedShare?.confirmUrl ? (
             <p className="break-all text-xs text-cdl-muted">
               Link de confirmação: {selectedShare.confirmUrl}
             </p>
