@@ -46,7 +46,11 @@
     "test:dev:person-operational-roles": "node scripts/dev/test-person-operational-roles.mjs",
     "test:dev:team-person-membership": "node scripts/dev/test-team-person-membership.mjs",
     "test:dev:schedule-multiple-events": "node scripts/dev/test-schedule-multiple-events.mjs",
-    "test:dev:team-confirmation": "node scripts/dev/test-team-confirmation.mjs"
+    "test:dev:team-confirmation": "node scripts/dev/test-team-confirmation.mjs",
+    "seed:dev:team-scale:dry": "node scripts/dev/seed-team-scale-demo.mjs",
+    "seed:dev:team-scale": "node scripts/dev/seed-team-scale-demo.mjs --apply",
+    "verify:dev:team-scale": "node scripts/dev/seed-team-scale-demo.mjs --verify",
+    "test:dev:team-scale-designation": "node scripts/dev/test-team-scale-designation.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",

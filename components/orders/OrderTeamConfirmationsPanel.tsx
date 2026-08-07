@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { operationalRoleLabel } from '@/Lib/agenda/operationalRoles'
+import { evaluateTeamScale } from '@/Lib/agenda/teamScale'
 import { glassBtn } from '@/Lib/liquidGlass'
 
 type Summary = {
@@ -27,6 +28,15 @@ type Confirmation = {
   status: string
 }
 
+type Member = {
+  person_id: string
+  role_key: string
+  customers?:
+    | { full_name?: string | null; ab_name?: string | null }
+    | Array<{ full_name?: string | null; ab_name?: string | null }>
+    | null
+}
+
 export default function OrderTeamConfirmationsPanel({
   orderId,
   canManage,
@@ -36,6 +46,7 @@ export default function OrderTeamConfirmationsPanel({
 }) {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [confirmations, setConfirmations] = useState<Confirmation[]>([])
+  const [members, setMembers] = useState<Member[]>([])
   const [shares, setShares] = useState<Share[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -49,6 +60,7 @@ export default function OrderTeamConfirmationsPanel({
       data?: {
         summary?: Summary | null
         confirmations?: Confirmation[]
+        members?: Member[]
         event?: { id: string } | null
       }
       error?: string
@@ -57,11 +69,29 @@ export default function OrderTeamConfirmationsPanel({
       setError(json.error || 'Falha ao carregar escala')
       return
     }
+    const memberList = json.data?.members ?? []
     setSummary(json.data?.summary ?? null)
     setConfirmations(json.data?.confirmations ?? [])
+    setMembers(memberList)
+
+    const scale = evaluateTeamScale(
+      memberList.map((m) => ({
+        person_id: m.person_id,
+        role_key: m.role_key,
+        active: true,
+      })),
+    )
+
     if (!json.data?.event) setAlert('SEM EQUIPE')
-    else if (!(json.data.confirmations ?? []).length) setAlert('EQUIPE INCOMPLETA')
-    else if ((json.data.summary?.declined ?? 0) > 0) setAlert('INTEGRANTE RECUSOU')
+    else if (!scale.closed) {
+      setAlert(
+        scale.nextRoleLabel
+          ? `EQUIPE INCOMPLETA — designar: ${scale.nextRoleLabel}`
+          : 'EQUIPE INCOMPLETA',
+      )
+    } else if ((json.data.summary?.declined ?? 0) > 0) setAlert('INTEGRANTE RECUSOU')
+    else if ((json.data.confirmations ?? []).length === 0)
+      setAlert('EQUIPE FECHADA — enviar confirmações')
     else if ((json.data.summary?.pending ?? 0) > 0) setAlert('AGUARDANDO CONFIRMAÇÕES')
     else if ((json.data.summary?.confirmed ?? 0) > 0) setAlert('EQUIPE CONFIRMADA')
     else setAlert(null)
@@ -123,14 +153,24 @@ export default function OrderTeamConfirmationsPanel({
       ) : null}
 
       <ul className="space-y-1 text-sm">
-        {confirmations.map((c) => (
-          <li key={c.id} className="flex justify-between gap-2 border-b border-black/5 py-1">
-            <span>
-              {operationalRoleLabel(c.role_key, 'pt')} · {c.person_id.slice(0, 8)}…
-            </span>
-            <span className="font-medium">{c.status}</span>
-          </li>
-        ))}
+        {members.map((m) => {
+          const raw = m.customers
+          const person = Array.isArray(raw) ? raw[0] : raw
+          const name =
+            person?.ab_name || person?.full_name || `${m.person_id.slice(0, 8)}…`
+          const conf = confirmations.find((c) => c.person_id === m.person_id)
+          return (
+            <li
+              key={`${m.person_id}-${m.role_key}`}
+              className="flex justify-between gap-2 border-b border-black/5 py-1"
+            >
+              <span>
+                {operationalRoleLabel(m.role_key, 'pt')} · {name}
+              </span>
+              <span className="font-medium">{conf?.status || 'na escala'}</span>
+            </li>
+          )
+        })}
       </ul>
 
       {shares.length ? (

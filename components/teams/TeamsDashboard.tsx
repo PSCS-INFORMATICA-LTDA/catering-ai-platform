@@ -19,6 +19,7 @@ import type { OperationalTeam } from '@/Lib/agenda/types'
 import { getCustomerDisplayName } from '@/Lib/getCustomerDisplayName'
 import { glassField } from '@/Lib/liquidGlass'
 import type { CustomerSearchRecord } from '@/Lib/searchCustomers'
+import TeamMembersPanel from '@/components/teams/TeamMembersPanel'
 
 type PersonOption = CustomerSearchRecord & { id: string }
 
@@ -437,6 +438,7 @@ export default function TeamsDashboard({
                   )}
                 />
                 <BackofficeMetaRow label="Notas" value={team.notes || '—'} />
+                <TeamMembersPanel teamId={team.id} />
               </BackofficeEntityCard>
             )
           })}
