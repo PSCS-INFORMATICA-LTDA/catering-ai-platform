@@ -28,12 +28,8 @@ export const MIN_ORDER_DEC_JAN = 900
 export const HOLIDAY_SURCHARGE_PERCENT = 100
 export const HOLIDAY_MIN_ORDER = 2000
 
-export const HOLIDAY_DATES = [
-  { month: 12, day: 24, label: '24 de dezembro' },
-  { month: 12, day: 25, label: '25 de dezembro' },
-  { month: 12, day: 31, label: '31 de dezembro' },
-  { month: 1, day: 1, label: '1 de janeiro' },
-] as const
+/** Datas clássicas CDL (subset). Acréscimo 100% cobre todos os feriados federais EUA — ver Lib/usHolidays.ts. */
+export { HOLIDAY_DATES, CDL_EXTRA_SURCHARGE_DATES } from './usHolidays'
 
 export const CHILD_FREE_AGE_MAX = 3
 export const CHILD_HALF_AGE_MAX = 12
@@ -55,7 +51,7 @@ export const PACKAGE_COMMON_ITEMS = [
 
 export const SIDES_ITEMS = [
   'Arroz branco',
-  'Feijão tropeiro',
+  'Feijão preto',
   'Vinagrete',
   'Farofa',
   'Mandioca',
@@ -249,16 +245,14 @@ export const RESERVATION_PAYMENT_TEXT =
 
 export const CANCELLATION_POLICY_SUMMARY = [
   'Cancelamentos e reagendamentos seguem as condições acordadas no momento da reserva.',
-  'Em 24, 25 e 31 de dezembro e 1 de janeiro não há reembolso nem reagendamento.',
-  'Eventos nessas datas de feriado têm acréscimo de 100% e pedido mínimo de $2.000.',
+  'Em 24, 25 e 31 de dezembro e 1º de janeiro não há reembolso nem reagendamento.',
+  `Eventos em feriados federais dos EUA e datas comemorativas (24, 25 e 31 de dezembro e 1º de janeiro) têm acréscimo de ${HOLIDAY_SURCHARGE_PERCENT}% e pedido mínimo de $${HOLIDAY_MIN_ORDER}.`,
 ] as const
 
 export const IMPORTANT_RULES = {
   minimumOrder: [
     `Segunda a quinta-feira: pedido mínimo de $${MIN_ORDER_WEEKDAY}.`,
-    `Sexta a domingo e feriados: pedido mínimo de $${MIN_ORDER_WEEKEND}.`,
-    `Dezembro e janeiro: pedido mínimo de $${MIN_ORDER_DEC_JAN}.`,
-    `Feriados (24, 25 e 31/dez e 1/jan): acréscimo de ${HOLIDAY_SURCHARGE_PERCENT}% e mínimo de $${HOLIDAY_MIN_ORDER}. Sem reembolso ou reagendamento.`,
+    `Sexta a domingo: pedido mínimo de $${MIN_ORDER_WEEKEND}.`,
   ],
   mileage: [
     `Base de cálculo: ${MILEAGE_BASE_LOCATION}.`,
@@ -276,10 +270,11 @@ export const IMPORTANT_RULES = {
   latePayment: [
     `Multa por atraso no pagamento: $${LATE_PAYMENT_FEE_PER_DAY} por dia.`,
   ],
+  /** Adicional de datas comemorativas / feriados EUA. */
   decemberJanuary: [
-    `Dezembro e janeiro: pedido mínimo de $${MIN_ORDER_DEC_JAN}.`,
-    `Feriados (24, 25 e 31/dez e 1/jan): acréscimo de ${HOLIDAY_SURCHARGE_PERCENT}%, mínimo de $${HOLIDAY_MIN_ORDER}.`,
-    'Sem reembolso ou reagendamento nessas datas.',
+    `Dezembro e janeiro (fora de feriado): pedido mínimo de $${MIN_ORDER_DEC_JAN}.`,
+    `Acréscimo de ${HOLIDAY_SURCHARGE_PERCENT}% e pedido mínimo de $${HOLIDAY_MIN_ORDER} em: 24, 25 e 31 de dezembro, 1º de janeiro, e demais feriados federais dos EUA (MLK, Presidents’ Day, Memorial Day, Juneteenth, Independence Day / 4 de julho, Labor Day, Columbus Day, Veterans Day, Thanksgiving e Christmas).`,
+    'Em 24, 25 e 31 de dezembro e 1º de janeiro não há reembolso nem reagendamento.',
   ],
 } as const
 
@@ -342,6 +337,10 @@ export const CUSTOMER_QUOTE_SECTIONS = [
       ...IMPORTANT_RULES.foodPolicy,
       ...IMPORTANT_RULES.latePayment,
     ],
+  },
+  {
+    title: 'Adicional de datas comemorativas',
+    body: [...IMPORTANT_RULES.decemberJanuary],
   },
   {
     title: 'Política de cancelamento',

@@ -5,9 +5,10 @@ import CatalogImageFrame from '@/components/CatalogImageFrame'
 import CdlBrandLogo from '@/components/CdlBrandLogo'
 import QuoteReviewPackageCdlSection from '@/components/quote-review/QuoteReviewPackageCdlSection'
 import {
+  CdlCancellationPolicySection,
   CdlImportantRulesPanel,
-  CdlPdfPoliciesSection,
 } from '@/components/CdlImportantRulesPanel'
+import QuoteCommercialAdjustmentNotice from '@/components/quote-review/QuoteCommercialAdjustmentNotice'
 import GuestBreakdownPanel from '@/components/GuestBreakdownPanel'
 import {
   BALANCE_PERCENTAGE,
@@ -118,15 +119,53 @@ export default function QuoteReviewLayout({
   )
   const discount = data.discount ?? 0
 
+  const holidaySurcharge = Number(data.holidaySurchargeAmount ?? 0)
+  const minimumAdjustment = Number(data.minimumOrderAdjustment ?? 0)
+  const grillRentalTotal = Number(data.grillRentalTotal ?? 0)
+  const grillRentalQty = Number(data.grillRentalQty ?? 0)
+
   const pricingLines = [
     { label: 'Pacote', value: formatMoneyOrDash(data.packageTotal) },
     {
       label: 'Adicionais',
       value: formatMoneyOrDash(data.additionalTotal),
     },
-    { label: 'Milhagem', value: formatMoneyOrDash(data.mileageFee) },
+    {
+      label:
+        (chargedMiles ?? 0) > 0
+          ? `Milhagem (${chargedMiles} mi cobradas além de ${Number(data.mileageFreeLimit ?? 20)} mi cortesia)`
+          : 'Milhagem',
+      value: formatMoneyOrDash(data.mileageFee),
+    },
+    ...(grillRentalTotal > 0
+      ? [
+          {
+            label:
+              grillRentalQty > 1
+                ? `Aluguel de churrasqueira (${grillRentalQty}×)`
+                : 'Aluguel de churrasqueira',
+            value: formatCurrency(grillRentalTotal),
+          },
+        ]
+      : []),
+    ...(holidaySurcharge > 0
+      ? [
+          {
+            label: 'Adicional de feriado / data comemorativa (100%)',
+            value: formatCurrency(holidaySurcharge),
+          },
+        ]
+      : []),
+    ...(minimumAdjustment > 0
+      ? [
+          {
+            label: `Pedido mínimo aplicado (mín. ${formatCurrency(data.minimumOrderAmount ?? 0)})`,
+            value: formatCurrency(minimumAdjustment),
+          },
+        ]
+      : []),
     ...(discount > 0
-      ? [{ label: 'Desconto', value: formatCurrency(discount), accent: true }]
+      ? [{ label: 'Desconto', value: formatCurrency(discount), discount: true }]
       : []),
     {
       label: 'Reserva',
@@ -205,10 +244,35 @@ export default function QuoteReviewLayout({
           packageTotal={data.packageTotal}
           additionalTotal={data.additionalTotal}
           mileageFee={data.mileageFee}
+          chargedMiles={chargedMiles}
+          mileageFreeLimit={data.mileageFreeLimit}
+          grillRentalTotal={grillRentalTotal}
+          holidaySurchargeAmount={holidaySurcharge}
+          minimumOrderAdjustment={minimumAdjustment}
+          discountAmount={discount}
           reservationAmount={data.reservationAmount}
           quoteTotal={data.quoteTotal}
           additionalsCount={data.additionals.length}
           grillRentalRequired={data.grillRentalRequired}
+          afterClient={
+            <>
+              <QuoteCommercialAdjustmentNotice
+                baseSubtotal={
+                  Number(data.packageTotal ?? 0) +
+                  Number(data.additionalTotal ?? 0) +
+                  Number(data.mileageFee ?? 0)
+                }
+                holidaySurchargeAmount={holidaySurcharge}
+                minimumOrderAdjustment={minimumAdjustment}
+                minimumOrderAmount={Number(data.minimumOrderAmount ?? 0)}
+                quoteTotal={data.quoteTotal}
+              />
+              <CdlImportantRulesPanel
+                variant="summary"
+                showReservationText
+              />
+            </>
+          }
         />
 
         <div className="quote-proposal-grid-2">
@@ -218,6 +282,12 @@ export default function QuoteReviewLayout({
               packageImageUrl={data.packageImageUrl}
               packageSummary={data.packageSummary}
               packageSelections={data.packageSelections}
+              additionalItems={(data.additionals ?? [])
+                .filter((item) => Number(item.totalPrice ?? 0) > 0)
+                .map((item) => ({
+                  label: item.label,
+                  amount: Number(item.totalPrice ?? 0),
+                }))}
               physicalGuestCount={data.physicalGuestCount}
               billableGuestCount={data.billableGuestCount}
               packageTotal={data.packageTotal}
@@ -438,7 +508,11 @@ export default function QuoteReviewLayout({
                     'highlight' in line && line.highlight
                       ? ' quote-proposal-pricing-row--highlight'
                       : ''
-                  }${'accent' in line && line.accent ? ' quote-proposal-pricing-row--accent' : ''}`}
+                  }${
+                    'discount' in line && line.discount
+                      ? ' quote-proposal-pricing-row--discount'
+                      : ''
+                  }`}
                 >
                   <span>{line.label}</span>
                   <span>{line.value}</span>
@@ -456,15 +530,27 @@ export default function QuoteReviewLayout({
               <p>
                 Reserva: {RESERVATION_PERCENTAGE}% · Saldo: {BALANCE_PERCENTAGE}%
               </p>
+              {minimumAdjustment > 0 ? (
+                <p className="mt-2 font-medium text-cdl-action">
+                  Pedido mínimo aplicado: o total foi elevado para atingir o
+                  mínimo comercial da data do evento.
+                </p>
+              ) : null}
+              {holidaySurcharge > 0 ? (
+                <p className="mt-2 font-medium text-cdl-action">
+                  Adicional de feriado / data comemorativa: acréscimo de 100%
+                  aplicado sobre o subtotal (pacote + adicionais + milhagem) —
+                  feriados federais dos EUA e datas 24, 25 e 31/dez e 1º de
+                  janeiro.
+                </p>
+              ) : null}
             </div>
           </div>
         </section>
 
-        {rulesVariant === 'pdf' ? (
-          <CdlPdfPoliciesSection />
-        ) : (
-          <CdlImportantRulesPanel variant="summary" showReservationText />
-        )}
+        <CdlCancellationPolicySection
+          variant={rulesVariant === 'pdf' ? 'pdf' : 'summary'}
+        />
 
         {afterBody}
 

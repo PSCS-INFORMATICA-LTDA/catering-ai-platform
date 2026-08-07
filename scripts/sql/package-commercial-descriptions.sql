@@ -46,8 +46,8 @@ WHERE trim(coalesce(package_key, '')) ILIKE '%PERS%';
 -- Guarnições — com (+)
 UPDATE public.packages
 SET
-  garnish_description_pt = 'Arroz branco • Feijão tropeiro • Vinagrete • Farofa • Mandioca',
-  sides_description_pt = 'Arroz branco • Feijão tropeiro • Vinagrete • Farofa • Mandioca'
+  garnish_description_pt = 'Arroz branco • Feijão preto • Vinagrete • Farofa • Mandioca',
+  sides_description_pt = 'Arroz branco • Feijão preto • Vinagrete • Farofa • Mandioca'
 WHERE trim(coalesce(package_key, '')) LIKE '%+';
 
 -- Guarnições — sem

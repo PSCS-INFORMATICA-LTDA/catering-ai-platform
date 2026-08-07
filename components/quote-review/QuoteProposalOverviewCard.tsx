@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { formatMoneyOrDash } from '@/Lib/readQuoteSnapshot'
 import { formatDate } from '@/app/quotes/[id]/quoteDetailTypes'
 import type { QuoteReviewPackageSummary } from './quoteReviewPackageSummary'
@@ -9,6 +10,7 @@ export type QuoteFinancialLine = {
   value: string
   emphasis?: boolean
   subtle?: boolean
+  discount?: boolean
 }
 
 export function buildQuoteFinancialLines(input: {
@@ -16,6 +18,12 @@ export function buildQuoteFinancialLines(input: {
   packageTotal: number | null
   additionalTotal: number | null
   mileageFee: number | null
+  chargedMiles?: number | null
+  mileageFreeLimit?: number | null
+  grillRentalTotal?: number | null
+  holidaySurchargeAmount?: number | null
+  minimumOrderAdjustment?: number | null
+  discountAmount?: number | null
   reservationAmount?: number | null
   quoteTotal: number | null
 }): QuoteFinancialLine[] {
@@ -50,9 +58,43 @@ export function buildQuoteFinancialLines(input: {
   }
 
   if ((input.mileageFee ?? 0) > 0) {
+    const charged = Number(input.chargedMiles ?? 0)
+    const free = Number(input.mileageFreeLimit ?? 20)
     lines.push({
-      label: 'Milhagem',
+      label:
+        charged > 0
+          ? `Milhagem (${charged} mi cobradas além de ${free} mi cortesia)`
+          : 'Milhagem',
       value: formatMoneyOrDash(input.mileageFee),
+    })
+  }
+
+  if ((input.grillRentalTotal ?? 0) > 0) {
+    lines.push({
+      label: 'Aluguel de churrasqueira',
+      value: formatMoneyOrDash(input.grillRentalTotal),
+    })
+  }
+
+  if ((input.holidaySurchargeAmount ?? 0) > 0) {
+    lines.push({
+      label: 'Adicional de feriado / data comemorativa (100%)',
+      value: formatMoneyOrDash(input.holidaySurchargeAmount),
+    })
+  }
+
+  if ((input.minimumOrderAdjustment ?? 0) > 0.009) {
+    lines.push({
+      label: 'Ajuste para pedido mínimo',
+      value: formatMoneyOrDash(input.minimumOrderAdjustment),
+    })
+  }
+
+  if ((input.discountAmount ?? 0) > 0) {
+    lines.push({
+      label: 'Desconto',
+      value: formatMoneyOrDash(input.discountAmount),
+      discount: true,
     })
   }
 
@@ -84,10 +126,17 @@ export default function QuoteProposalOverviewCard({
   packageTotal,
   additionalTotal,
   mileageFee,
+  chargedMiles = null,
+  mileageFreeLimit = null,
+  grillRentalTotal = null,
+  holidaySurchargeAmount = null,
+  minimumOrderAdjustment = null,
+  discountAmount = null,
   reservationAmount = null,
   quoteTotal,
   additionalsCount = 0,
   grillRentalRequired = false,
+  afterClient,
 }: {
   customerName: string
   eventDate: string | null
@@ -99,10 +148,18 @@ export default function QuoteProposalOverviewCard({
   packageTotal: number | null
   additionalTotal: number | null
   mileageFee: number | null
+  chargedMiles?: number | null
+  mileageFreeLimit?: number | null
+  grillRentalTotal?: number | null
+  holidaySurchargeAmount?: number | null
+  minimumOrderAdjustment?: number | null
+  discountAmount?: number | null
   reservationAmount?: number | null
   quoteTotal: number | null
   additionalsCount?: number
   grillRentalRequired?: boolean | null
+  /** Conteúdo logo após o nome do cliente (ex.: regras comerciais). */
+  afterClient?: ReactNode
 }) {
   const cityState = [city, state].filter(Boolean).join(', ')
   const streetLine = [addressLine, zipCode].filter(Boolean).join(' · ')
@@ -111,6 +168,12 @@ export default function QuoteProposalOverviewCard({
     packageTotal,
     additionalTotal,
     mileageFee,
+    chargedMiles,
+    mileageFreeLimit,
+    grillRentalTotal,
+    holidaySurchargeAmount,
+    minimumOrderAdjustment,
+    discountAmount,
     reservationAmount,
     quoteTotal,
   })
@@ -127,6 +190,12 @@ export default function QuoteProposalOverviewCard({
           <p className="quote-proposal-value">{formatDate(eventDate)}</p>
         </div>
       </div>
+
+      {afterClient ? (
+        <div className="quote-proposal-overview-after-client mt-5 space-y-4">
+          {afterClient}
+        </div>
+      ) : null}
 
       <div className="quote-proposal-overview-location">
         <span className="quote-proposal-label">Local</span>
@@ -168,7 +237,9 @@ export default function QuoteProposalOverviewCard({
               key={line.label}
               className={`quote-proposal-finance-row${
                 line.emphasis ? ' quote-proposal-finance-row--total' : ''
-              }${line.subtle ? ' quote-proposal-finance-row--subtle' : ''}`}
+              }${line.subtle ? ' quote-proposal-finance-row--subtle' : ''}${
+                line.discount ? ' quote-proposal-finance-row--discount' : ''
+              }`}
             >
               <span>{line.label}</span>
               <span>{line.value}</span>

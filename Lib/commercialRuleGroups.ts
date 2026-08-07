@@ -8,7 +8,7 @@ export function getCommercialRuleCategory(ruleKey: string): string {
   if (key.startsWith('holiday_')) return 'Feriados'
   if (key.includes('policy')) return 'Políticas'
   if (key.includes('deposit') || key.includes('reservation')) return 'Reserva'
-  if (key.includes('sides')) return 'Guarnições'
+  if (key.includes('sides') || key.includes('garnish')) return 'Guarnições'
   return 'Geral'
 }
 

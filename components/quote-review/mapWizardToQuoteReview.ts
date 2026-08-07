@@ -187,6 +187,7 @@ export function mapWizardToQuoteReview(
       : 'Não se aplica',
     grillRentalRequired: state.grillRentalRequired,
     grillRentalQty: state.grillRentalRequired ? state.grillRentalQty : null,
+    grillRentalTotal: quoteTotals.grillRentalTotal,
     grillNotes: state.grillNotes.trim() || null,
     mileageBaseLocation:
       state.baseLocation.trim() || commercialRules.mileageBaseLocation,
@@ -195,6 +196,10 @@ export function mapWizardToQuoteReview(
     mileageRate: state.rate ?? commercialRules.mileageRate,
     mileageFee: quoteTotals.mileageFee,
     additionalTotal: quoteTotals.additionalTotal,
+    holidaySurchargeAmount: quoteTotals.holidaySurchargeAmount,
+    minimumOrderAdjustment: quoteTotals.minimumOrderAdjustment,
+    minimumOrderApplied: quoteTotals.minimumOrderApplied,
+    minimumOrderAmount: quoteTotals.minimumOrderAmount,
     reservationPercentage: state.reservationPercentage,
     reservationAmount: quoteTotals.reservationAmount,
     balanceDue: quoteTotals.balanceDue,

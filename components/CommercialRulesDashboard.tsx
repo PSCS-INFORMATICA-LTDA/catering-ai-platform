@@ -319,6 +319,7 @@ export default function CommercialRulesDashboard({
           <option value="text">text</option>
           <option value="number">number</option>
           <option value="long_text">long_text</option>
+          <option value="json">json</option>
           <option value="boolean">boolean</option>
         </select>
       </div>

@@ -2,6 +2,7 @@
 
 .quote-proposal {
   --proposal-red: #d62828;
+  --proposal-green: #15803d;
   --proposal-gold: #f4b400;
   --proposal-dark: #111111;
   --proposal-light: #faf7f2;
@@ -264,13 +265,21 @@
   justify-content: space-between;
   gap: 1rem;
   font-size: 0.9rem;
-  color: #404040;
+  color: var(--proposal-dark);
 }
 
-.quote-proposal-finance-row span:last-child {
+.quote-proposal-finance-row > span:first-child {
+  color: var(--proposal-dark);
+}
+
+.quote-proposal-finance-row > span:last-child {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--proposal-dark);
+}
+
+.quote-proposal-finance-row--discount > span:last-child {
+  color: var(--proposal-green);
 }
 
 .quote-proposal-finance-row--total {
@@ -281,7 +290,11 @@
   font-weight: 800;
 }
 
-.quote-proposal-finance-row--total span:last-child {
+.quote-proposal-finance-row--total > span:first-child {
+  color: var(--proposal-dark);
+}
+
+.quote-proposal-finance-row--total > span:last-child {
   color: var(--proposal-red);
   font-size: 1.1rem;
 }
@@ -683,22 +696,34 @@
   border-radius: 0.55rem;
   font-size: 0.92rem;
   font-weight: 600;
+  color: var(--proposal-dark);
   background: var(--proposal-light);
   border: 1px solid transparent;
 }
 
-.quote-proposal-pricing-row span:last-child {
+/* Labels à esquerda sempre pretos (pedido Philippe / CDL). */
+.quote-proposal-pricing-row > span:first-child {
+  color: var(--proposal-dark);
+}
+
+.quote-proposal-pricing-row > span:last-child {
   font-weight: 700;
   color: var(--proposal-dark);
 }
 
-.quote-proposal-pricing-row--accent span:last-child {
-  color: var(--proposal-red);
+/* Desconto em verde; demais valores pretos; total no box em vermelho. */
+.quote-proposal-pricing-row--discount > span:last-child {
+  color: var(--proposal-green);
 }
 
 .quote-proposal-pricing-row--highlight {
   border-color: rgba(244, 180, 0, 0.45);
   background: rgba(244, 180, 0, 0.08);
+}
+
+.quote-proposal-pricing-row--highlight > span:first-child,
+.quote-proposal-pricing-row--highlight > span:last-child {
+  color: var(--proposal-dark);
 }
 
 .quote-proposal-total-box {

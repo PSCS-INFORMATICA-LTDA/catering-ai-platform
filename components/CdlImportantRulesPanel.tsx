@@ -107,7 +107,7 @@ export function CdlImportantRulesPanel({
           variant={variant}
         />
         <RulesBlock
-          title="Dezembro / janeiro e feriados"
+          title="Adicional de feriado / data comemorativa"
           items={IMPORTANT_RULES.decemberJanuary}
           variant={variant}
         />
@@ -116,29 +116,53 @@ export function CdlImportantRulesPanel({
   )
 }
 
+export function CdlCancellationPolicySection({
+  variant = 'pdf',
+}: {
+  variant?: RulesVariant
+}) {
+  const items = [
+    'Cancelamentos e reagendamentos seguem as condições acordadas no momento da reserva.',
+    'Em 24, 25 e 31 de dezembro e 1º de janeiro não há reembolso nem reagendamento.',
+    'Eventos em feriados federais dos EUA e datas comemorativas (24, 25 e 31 de dezembro e 1º de janeiro) têm acréscimo de 100% e pedido mínimo de $2.000.',
+  ] as const
+
+  if (variant === 'summary') {
+    return (
+      <section className="rounded-2xl border border-cdl-border bg-cdl-surface p-7 shadow-cdl sm:p-9">
+        <h2 className="cdl-section-title-lg">Política de cancelamento</h2>
+        <ul className="mt-4 space-y-2 text-sm text-cdl-text-secondary">
+          {items.map((item) => (
+            <li key={item} className="flex gap-2">
+              <span className="text-cdl-title" aria-hidden>
+                •
+              </span>
+              <span>{emphasizeRuleText(item)}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  return (
+    <section className="quote-proposal-rules quote-print-section quote-print-keep">
+      <h2 className="quote-proposal-section-title">Política de cancelamento</h2>
+      <ul className="quote-proposal-rules-list">
+        {items.map((item) => (
+          <li key={item}>{emphasizeRuleText(item)}</li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/** Regras + cancelamento (legado / PDF completo). Preferir regras no topo da cotação. */
 export function CdlPdfPoliciesSection() {
   return (
     <>
       <CdlImportantRulesPanel variant="pdf" />
-      <section className="quote-proposal-rules quote-print-section quote-print-keep">
-        <h2 className="quote-proposal-section-title">
-          Política de cancelamento
-        </h2>
-        <ul className="quote-proposal-rules-list">
-          <li>
-            Cancelamentos e reagendamentos seguem as condições acordadas no
-            momento da reserva.
-          </li>
-          <li>
-            Em 24, 25 e 31 de dezembro e 1 de janeiro não há reembolso nem
-            reagendamento.
-          </li>
-          <li>
-            Eventos nessas datas de feriado têm acréscimo de 100% e pedido
-            mínimo de $2.000.
-          </li>
-        </ul>
-      </section>
+      <CdlCancellationPolicySection variant="pdf" />
     </>
   )
 }

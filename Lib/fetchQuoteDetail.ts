@@ -5,8 +5,13 @@ import {
   CATALOG_ITEMS_TABLE,
 } from '@/Lib/catalogItemsTableSchema'
 import { fetchQuoteLinkedPackageCatalog } from '@/Lib/fetchQuoteLinkedPackageCatalog'
+import { fetchPackageOptionGroups, fetchQuotePackageSelections } from '@/Lib/fetchPackageOptionGroups'
 import type { CustomerNameSource } from '@/Lib/getCustomerDisplayName'
 import type { CatalogItemListItem } from '@/Lib/itemCatalog'
+import {
+  buildPackageSelectionLabels,
+  packageSelectionsFromRows,
+} from '@/Lib/packageOptionGroups'
 import { getActiveCompanyId } from '@/Lib/tenant/resolveTenant'
 import { getSupabaseServerClient } from './supabaseServer'
 
@@ -52,11 +57,16 @@ const PROPOSAL_COLUMNS =
 
 const ORDER_COLUMNS = 'accepted_version_id, converted_service_order_id'
 
+/** Colunas comerciais que a quote_detail_view pode não expor ainda. */
+const COMMERCIAL_COLUMNS =
+  'holiday_surcharge_amount, minimum_order_amount, minimum_order_applied, reservation_confirmed_at, reservation_confirmed_by, package_total, additional_total, grill_rental_total, grill_rental_required, grill_rental_qty, discount_amount, mileage_base_location, mileage_distance, mileage_free_limit, mileage_rate, mileage_fee, quote_total, reservation_amount, balance_due, reservation_percentage'
+
 export async function fetchQuoteDetail(id: string) {
   const companyId = getActiveCompanyId()
   const supabase = getSupabaseServerClient()
 
-  const [viewRes, guestRes, proposalRes, orderRes] = await Promise.all([
+  const [viewRes, guestRes, proposalRes, orderRes, commercialRes] =
+    await Promise.all([
     supabase
       .from('quote_detail_view')
       .select('*')
@@ -78,6 +88,12 @@ export async function fetchQuoteDetail(id: string) {
     supabase
       .from('quotes')
       .select(ORDER_COLUMNS)
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .maybeSingle(),
+    supabase
+      .from('quotes')
+      .select(COMMERCIAL_COLUMNS)
       .eq('id', id)
       .eq('company_id', companyId)
       .maybeSingle(),
@@ -108,11 +124,24 @@ export async function fetchQuoteDetail(id: string) {
     )
   }
 
+  if (
+    commercialRes.error &&
+    !/column|holiday_surcharge|minimum_order|reservation_confirmed/i.test(
+      commercialRes.error.message,
+    )
+  ) {
+    console.error(
+      `[CDL Quote] Failed to load commercial fields for quote ${id}:`,
+      commercialRes.error.message,
+    )
+  }
+
   const quote = normalizeQuoteDetailRow({
     ...(viewRes.data as Record<string, unknown>),
     ...(guestRes.data ?? {}),
     ...(proposalRes.data && !proposalRes.error ? proposalRes.data : {}),
     ...(orderRes.data && !orderRes.error ? orderRes.data : {}),
+    ...(commercialRes.data && !commercialRes.error ? commercialRes.data : {}),
   })
 
   const packageCatalog = await fetchQuoteLinkedPackageCatalog({
@@ -172,6 +201,36 @@ export async function fetchQuoteDetail(id: string) {
           additional_items: enrichQuoteAdditionalsFromCatalog(
             additionalItems as QuoteAdditionalItem[],
             catalogRes.data as unknown as CatalogItemListItem[],
+          ),
+        }
+      }
+    }
+  }
+
+  const packageId = data.package_id?.trim() || null
+  const selectionsRes = await fetchQuotePackageSelections(id)
+  if (!selectionsRes.error && (selectionsRes.data?.length ?? 0) > 0) {
+    const selectionRows = selectionsRes.data ?? []
+    data = {
+      ...data,
+      package_selections: selectionRows.map((row) => ({
+        option_group_id: row.option_group_id,
+        option_item_id: row.option_item_id,
+        package_id: row.package_id,
+      })),
+    }
+
+    if (packageId) {
+      const groupsRes = await fetchPackageOptionGroups({ packageId })
+      if (!groupsRes.error && groupsRes.data?.length) {
+        const lang =
+          data.language === 'en' || data.language === 'es' ? data.language : 'pt'
+        data = {
+          ...data,
+          package_selection_labels: buildPackageSelectionLabels(
+            packageSelectionsFromRows(selectionRows),
+            groupsRes.data,
+            lang,
           ),
         }
       }

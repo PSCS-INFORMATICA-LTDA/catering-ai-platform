@@ -55,6 +55,7 @@ const colors = {
   light: '#FAF7F2',
   white: '#FFFFFF',
   accent: '#D62828',
+  green: '#15803D',
 }
 
 const styles = StyleSheet.create({
@@ -378,13 +379,23 @@ const styles = StyleSheet.create({
   pricingRowHighlight: {
     fontFamily: 'Helvetica-Bold',
   },
-  pricingRowAccent: {
-    color: colors.accent,
+  pricingRowLabel: {
+    color: colors.dark,
+  },
+  pricingRowValue: {
+    color: colors.dark,
+    fontFamily: 'Helvetica-Bold',
+  },
+  pricingRowDiscountValue: {
+    color: colors.green,
+    fontFamily: 'Helvetica-Bold',
   },
   totalBox: {
     marginTop: 10,
-    backgroundColor: colors.dark,
+    backgroundColor: colors.white,
     borderRadius: 6,
+    borderWidth: 2,
+    borderColor: colors.accent,
     padding: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -392,14 +403,15 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 8,
-    color: '#BBBBBB',
+    color: colors.dark,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
+    fontFamily: 'Helvetica-Bold',
   },
   totalValue: {
     fontSize: 16,
     fontFamily: 'Helvetica-Bold',
-    color: colors.gold,
+    color: colors.accent,
   },
   reservationNote: {
     marginTop: 8,
@@ -567,6 +579,28 @@ export function QuotePdfDocument({
   const mileageBase = displayValue(snapshot.mileageBaseLocation)
   const t = (key: Parameters<typeof tQuotesOrders>[1]) => tQuotesOrders(lang, key)
 
+  const holidaySurcharge = Number(quote.holiday_surcharge_amount ?? 0)
+  const grillRentalQty = Number(quote.grill_rental_qty ?? 0)
+  const grillRentalStored = Number(quote.grill_rental_total ?? 0)
+  const grillRentalTotal =
+    grillRentalStored > 0
+      ? grillRentalStored
+      : quote.grill_rental_required
+        ? Math.round(Math.max(0, grillRentalQty) * 100 * 100) / 100
+        : 0
+  const minimumAdjustment = quote.minimum_order_applied
+    ? Math.max(
+        0,
+        Number(snapshot.quoteTotal ?? 0) -
+          Number(snapshot.packageTotal ?? 0) -
+          Number(snapshot.additionalTotal ?? 0) -
+          Number(snapshot.mileageFee ?? 0) -
+          grillRentalTotal -
+          holidaySurcharge,
+      )
+    : 0
+  const minimumOrderAmount = Number(quote.minimum_order_amount ?? 0)
+
   const pricingLines = [
     { label: t('packageLabel'), value: formatMoneyOrDash(snapshot.packageTotal) },
     {
@@ -574,7 +608,41 @@ export function QuotePdfDocument({
       value: formatMoneyOrDash(snapshot.additionalTotal),
     },
     { label: t('mileageLabel'), value: formatMoneyOrDash(snapshot.mileageFee) },
-    { label: t('docDiscountLine'), value: formatCurrency(discount), accent: true },
+    ...(grillRentalTotal > 0
+      ? [
+          {
+            label:
+              grillRentalQty > 1
+                ? t('docGrillRentalLineQty').replace(
+                    '{qty}',
+                    String(grillRentalQty),
+                  )
+                : t('docGrillRentalLine'),
+            value: formatCurrency(grillRentalTotal),
+          },
+        ]
+      : []),
+    ...(holidaySurcharge > 0
+      ? [
+          {
+            label: t('docHolidaySurchargeLine'),
+            value: formatCurrency(holidaySurcharge),
+          },
+        ]
+      : []),
+    ...(minimumAdjustment > 0.009
+      ? [
+          {
+            label: `${t('docMinOrderAppliedLine')} (mín. ${formatCurrency(minimumOrderAmount)})`,
+            value: formatCurrency(minimumAdjustment),
+          },
+        ]
+      : []),
+    {
+      label: t('docDiscountLine'),
+      value: formatCurrency(discount),
+      discount: discount > 0,
+    },
     {
       label: t('reservationLabel'),
       value: formatMoneyOrDash(snapshot.reservationAmount),
@@ -821,11 +889,18 @@ export function QuotePdfDocument({
                 style={[
                   styles.pricingRow,
                   ...(line.highlight ? [styles.pricingRowHighlight] : []),
-                  ...(line.accent ? [styles.pricingRowAccent] : []),
                 ]}
               >
-                <Text>{line.label}</Text>
-                <Text>{line.value}</Text>
+                <Text style={styles.pricingRowLabel}>{line.label}</Text>
+                <Text
+                  style={
+                    'discount' in line && line.discount
+                      ? styles.pricingRowDiscountValue
+                      : styles.pricingRowValue
+                  }
+                >
+                  {line.value}
+                </Text>
               </View>
             ))}
             <View style={styles.totalBox}>

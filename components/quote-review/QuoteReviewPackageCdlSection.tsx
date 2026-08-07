@@ -60,6 +60,7 @@ export default function QuoteReviewPackageCdlSection({
   packageImageUrl,
   packageSummary,
   packageSelections = [],
+  additionalItems = [],
   physicalGuestCount,
   billableGuestCount,
   packageTotal,
@@ -69,6 +70,7 @@ export default function QuoteReviewPackageCdlSection({
   packageImageUrl?: string | null
   packageSummary?: QuoteReviewPackageSummary | null
   packageSelections?: PackageSelectionLabel[]
+  additionalItems?: Array<{ label: string; amount: number }>
   physicalGuestCount: number | null
   billableGuestCount: number | null
   packageTotal: number | null
@@ -76,6 +78,15 @@ export default function QuoteReviewPackageCdlSection({
 }) {
   const itemsText = packageSummary?.packageItemsDescription?.trim() || '—'
   const garnishText = packageSummary?.garnishDescription?.trim() || 'Não inclusas'
+  const additionalsText =
+    additionalItems.length > 0
+      ? additionalItems
+          .map(
+            (item) =>
+              `${item.label} (${formatCurrency(item.amount)})`,
+          )
+          .join(' · ')
+      : 'Nenhum'
 
   const chargedPeople = packageSummary?.chargedPeople ?? billableGuestCount
   const baseUnit = packageSummary?.packageUnitPrice ?? packageUnitPrice
@@ -119,6 +130,7 @@ export default function QuoteReviewPackageCdlSection({
       ) : null}
       <PackageDetailLine label="Itens do pacote:" value={itemsText} />
       <PackageDetailLine label="Guarnições:" value={garnishText} />
+      <PackageDetailLine label="Itens adicionais:" value={additionalsText} />
       <div className="quote-proposal-highlight-grid">
         <PackageValueCard
           label="Convidados físicos"

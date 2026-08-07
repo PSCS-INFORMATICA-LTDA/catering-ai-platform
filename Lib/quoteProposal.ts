@@ -62,6 +62,40 @@ export type QuoteProposalShareInput = {
   city?: string | null
   state?: string | null
   language?: string | null
+  packageTotal?: number | null
+  additionalTotal?: number | null
+  packageHasGarnish?: boolean | null
+  garnishIncludedTotal?: number | null
+  garnishDescription?: string | null
+  packageItemsDescription?: string | null
+  packageUnitPrice?: number | null
+  packageSelectionLines?: Array<{
+    groupTitle: string
+    itemLabel: string
+  }> | null
+  additionalLines?: Array<{
+    label: string
+    amount: number
+    isGarnish?: boolean
+  }> | null
+  mileageFee?: number | null
+  chargedMiles?: number | null
+  mileageFreeLimit?: number | null
+  grillRentalTotal?: number | null
+  grillRentalQty?: number | null
+  discountAmount?: number | null
+  baseSubtotal?: number | null
+  holidaySurchargeAmount?: number | null
+  minimumOrderAdjustment?: number | null
+  minimumOrderAmount?: number | null
+  commercialReason?:
+    | 'weekday'
+    | 'weekend'
+    | 'dec_jan'
+    | 'cdl_holiday'
+    | 'us_holiday'
+    | 'none'
+    | null
 }
 
 /** Texto WhatsApp / SMS — estilo Logistics (editável no painel). */

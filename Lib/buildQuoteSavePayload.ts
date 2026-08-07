@@ -216,6 +216,9 @@ export function buildQuoteSavePayload(
         existing.package_price_per_person ?? existing.package_unit_price,
       package_total: existing.package_total,
       additional_total: existing.additional_total,
+      grill_rental_total:
+        (existing as { grill_rental_total?: number | null }).grill_rental_total ??
+        0,
       mileage_free_limit: existing.mileage_free_limit,
       mileage_rate: existing.mileage_rate,
       mileage_fee: existing.mileage_fee,
@@ -223,6 +226,16 @@ export function buildQuoteSavePayload(
       reservation_percentage: existing.reservation_percentage,
       balance_due: existing.balance_due,
       quote_total: existing.quote_total,
+      minimum_order_amount:
+        (existing as { minimum_order_amount?: number | null })
+          .minimum_order_amount ?? 0,
+      minimum_order_applied: Boolean(
+        (existing as { minimum_order_applied?: boolean | null })
+          .minimum_order_applied,
+      ),
+      holiday_surcharge_amount:
+        (existing as { holiday_surcharge_amount?: number | null })
+          .holiday_surcharge_amount ?? 0,
     }
   }
 
@@ -235,10 +248,13 @@ export function buildQuoteSavePayload(
       perPerson: line.perPerson,
     })),
     mileageDistance: input.distance,
+    grillRentalRequired: input.grillRentalRequired,
+    grillRentalQty: input.grillRentalQty,
     pricing: input.pricing,
     reservationPercentage: input.reservationPercentage,
     reservationAmountOverride: input.reservationAmount,
     useCustomReservation: false,
+    eventDate: input.eventDate,
   })
 
   const quoteLanguage = (['pt', 'en', 'es'].includes(String(input.language ?? 'pt'))
@@ -272,6 +288,7 @@ export function buildQuoteSavePayload(
     package_price_per_person: draftSnapshot.packageUnitPrice,
     package_total: draftSnapshot.packageTotal,
     additional_total: draftSnapshot.additionalTotal,
+    grill_rental_total: draftSnapshot.grillRentalTotal,
     mileage_free_limit: draftSnapshot.mileageFreeLimit,
     mileage_rate: draftSnapshot.mileageRate,
     mileage_fee: draftSnapshot.mileageFee,
@@ -279,6 +296,9 @@ export function buildQuoteSavePayload(
     reservation_percentage: draftSnapshot.reservationPercentage,
     balance_due: draftSnapshot.balanceDue,
     quote_total: draftSnapshot.quoteTotal,
+    minimum_order_amount: draftSnapshot.minimumOrderAmount,
+    minimum_order_applied: draftSnapshot.minimumOrderApplied,
+    holiday_surcharge_amount: draftSnapshot.holidaySurchargeAmount,
   }
 }
 

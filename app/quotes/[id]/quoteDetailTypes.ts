@@ -71,6 +71,7 @@ export type QuoteDetail = {
   grill_photo_media_id?: string | null
   grill_rental_required?: boolean | null
   grill_rental_qty?: number | null
+  grill_rental_total?: number | null
   grill_notes?: string | null
   grill_masters_qty?: number | null
   assistants_qty?: number | null
@@ -87,6 +88,11 @@ export type QuoteDetail = {
   reservation_percentage?: number | null
   balance_due?: number | null
   quote_total?: number | null
+  minimum_order_amount?: number | null
+  minimum_order_applied?: boolean | null
+  holiday_surcharge_amount?: number | null
+  reservation_confirmed_at?: string | null
+  reservation_confirmed_by?: string | null
   currency_code?: string | null
   proposal_token?: string | null
   proposal_sent_at?: string | null
@@ -104,6 +110,13 @@ export type QuoteDetail = {
     option_group_id: string
     option_item_id: string
     package_id?: string | null
+  }> | null
+  /** Labels resolvidos das escolhas inclusas (não persistido). */
+  package_selection_labels?: Array<{
+    groupId: string
+    groupTitle: string
+    itemId: string
+    itemLabel: string
   }> | null
   /** Pacote(s) carregados do Supabase para revisão pública (não persistido). */
   packageCatalogPackages?: QuoteDetailPackageCatalogRow[] | null
