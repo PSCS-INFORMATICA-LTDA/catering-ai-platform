@@ -54,7 +54,8 @@
     "seed:dev:schedule-turnaround:dry": "node scripts/dev/seed-schedule-turnaround-rule.mjs",
     "seed:dev:schedule-turnaround": "node scripts/dev/seed-schedule-turnaround-rule.mjs --apply",
     "test:dev:person-schedule-conflicts": "node scripts/dev/test-person-schedule-conflicts.mjs",
-    "qa:dev:schedule-turnaround": "node scripts/dev/run-schedule-turnaround-qa.mjs --apply"
+    "qa:dev:schedule-turnaround": "node scripts/dev/run-schedule-turnaround-qa.mjs --apply",
+    "fix:dev:turn-orders": "node scripts/dev/fix-turn-orders-for-designation.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
