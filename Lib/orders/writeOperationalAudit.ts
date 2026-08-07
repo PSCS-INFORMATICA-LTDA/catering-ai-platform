@@ -26,6 +26,7 @@ export type OperationalAuditAction =
   | 'team_assignment_designated'
   | 'team_assignment_substituted'
   | 'team_assignment_sent'
+  | 'reservation_confirmed'
 
 export async function writeOperationalAudit(input: {
   companyId: string

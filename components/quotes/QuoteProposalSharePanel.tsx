@@ -53,6 +53,26 @@ export default function QuoteProposalSharePanel({
   city,
   addressState,
   language = 'pt',
+  packageTotal,
+  additionalTotal,
+  packageHasGarnish,
+  garnishIncludedTotal,
+  garnishDescription,
+  packageItemsDescription,
+  packageUnitPrice,
+  packageSelectionLines,
+  additionalLines,
+  mileageFee,
+  chargedMiles,
+  mileageFreeLimit,
+  grillRentalTotal,
+  grillRentalQty,
+  discountAmount,
+  baseSubtotal,
+  holidaySurchargeAmount,
+  minimumOrderAdjustment,
+  minimumOrderAmount,
+  commercialReason,
   initial,
 }: {
   quoteId: string
@@ -75,6 +95,40 @@ export default function QuoteProposalSharePanel({
   city?: string | null
   addressState?: string | null
   language?: string | null
+  packageTotal?: number | null
+  additionalTotal?: number | null
+  packageHasGarnish?: boolean | null
+  garnishIncludedTotal?: number | null
+  garnishDescription?: string | null
+  packageItemsDescription?: string | null
+  packageUnitPrice?: number | null
+  packageSelectionLines?: Array<{
+    groupTitle: string
+    itemLabel: string
+  }> | null
+  additionalLines?: Array<{
+    label: string
+    amount: number
+    isGarnish?: boolean
+  }> | null
+  mileageFee?: number | null
+  chargedMiles?: number | null
+  mileageFreeLimit?: number | null
+  grillRentalTotal?: number | null
+  grillRentalQty?: number | null
+  discountAmount?: number | null
+  baseSubtotal?: number | null
+  holidaySurchargeAmount?: number | null
+  minimumOrderAdjustment?: number | null
+  minimumOrderAmount?: number | null
+  commercialReason?:
+    | 'weekday'
+    | 'weekend'
+    | 'dec_jan'
+    | 'cdl_holiday'
+    | 'us_holiday'
+    | 'none'
+    | null
   initial?: Partial<ProposalState> | null
 }) {
   const uiLocale = useAuthLocaleFromMe()
@@ -114,6 +168,26 @@ export default function QuoteProposalSharePanel({
       city,
       state: addressState,
       language,
+      packageTotal,
+      additionalTotal,
+      packageHasGarnish,
+      garnishIncludedTotal,
+      garnishDescription,
+      packageItemsDescription,
+      packageUnitPrice,
+      packageSelectionLines,
+      additionalLines,
+      mileageFee,
+      chargedMiles,
+      mileageFreeLimit,
+      grillRentalTotal,
+      grillRentalQty,
+      discountAmount,
+      baseSubtotal,
+      holidaySurchargeAmount,
+      minimumOrderAdjustment,
+      minimumOrderAmount,
+      commercialReason,
     })
   }, [
     publicUrl,
@@ -134,6 +208,26 @@ export default function QuoteProposalSharePanel({
     city,
     addressState,
     language,
+    packageTotal,
+    additionalTotal,
+    packageHasGarnish,
+    garnishIncludedTotal,
+    garnishDescription,
+    packageItemsDescription,
+    packageUnitPrice,
+    packageSelectionLines,
+    additionalLines,
+    mileageFee,
+    chargedMiles,
+    mileageFreeLimit,
+    grillRentalTotal,
+    grillRentalQty,
+    discountAmount,
+    baseSubtotal,
+    holidaySurchargeAmount,
+    minimumOrderAdjustment,
+    minimumOrderAmount,
+    commercialReason,
   ])
 
   const [message, setMessage] = useState(defaultMessage)
@@ -173,6 +267,26 @@ export default function QuoteProposalSharePanel({
         city,
         state: addressState,
         language,
+        packageTotal,
+        additionalTotal,
+        packageHasGarnish,
+        garnishIncludedTotal,
+        garnishDescription,
+        packageItemsDescription,
+        packageUnitPrice,
+        packageSelectionLines,
+        additionalLines,
+        mileageFee,
+        chargedMiles,
+        mileageFreeLimit,
+        grillRentalTotal,
+        grillRentalQty,
+        discountAmount,
+        baseSubtotal,
+        holidaySurchargeAmount,
+        minimumOrderAdjustment,
+        minimumOrderAmount,
+        commercialReason,
       }),
   })
 

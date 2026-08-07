@@ -9,6 +9,7 @@ const PUBLIC_PREFIXES = [
   '/quote-request',
   '/proposta/',
   '/designacao-equipe/',
+  '/confirmacao-guarnicao/',
   '/api/public/',
 ]
 

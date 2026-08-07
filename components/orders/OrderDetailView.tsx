@@ -14,6 +14,7 @@ import {
   nextServiceOrderStatuses,
   serviceOrderStatusRequiresReason,
 } from '@/Lib/orders/statusMachine'
+import SupplierGarnishSharePanel from '@/components/orders/SupplierGarnishSharePanel'
 
 function formatMoney(value: number | null | undefined) {
   if (value == null) return '—'
@@ -218,15 +219,16 @@ export default function OrderDetailView({
                 {order.billable_guest_count ?? order.physical_guest_count ?? '—'}
               </dd>
             </div>
-            {order.agenda_event ? (
+            {order.agenda_event || order.team_name ? (
               <div>
                 <dt className="text-cdl-muted">
                   {tQuotesOrders(locale, 'teamDesignatedField')}
                 </dt>
                 <dd className="font-medium text-cdl-fg">
-                  {order.agenda_event.team_id
-                    ? tQuotesOrders(locale, 'viewInAgenda')
-                    : '—'}
+                  {order.team_name ||
+                    (order.agenda_event?.team_id
+                      ? tQuotesOrders(locale, 'viewInAgenda')
+                      : '—')}
                 </dd>
               </div>
             ) : null}
@@ -265,6 +267,23 @@ export default function OrderDetailView({
           </dl>
         </section>
       </div>
+
+      {order.has_garnish_order || (order.garnish_items?.length ?? 0) > 0 ? (
+        <SupplierGarnishSharePanel
+          orderId={order.id}
+          orderNumber={order.service_order_number}
+          eventDate={order.event_date}
+          eventStartTime={order.start_time}
+          eventEndTime={order.end_time}
+          teamName={order.team_name}
+          garnishItems={order.garnish_items ?? []}
+          guestCount={order.billable_guest_count ?? order.physical_guest_count}
+          adultCount={order.adult_count}
+          hasGarnish={order.has_garnish_order}
+          garnishKitConfig={order.supplier_garnish_kit_config}
+          language={locale}
+        />
+      ) : null}
 
       {canManage ? (
         <section className="liquid-glass-card space-y-3 p-5">

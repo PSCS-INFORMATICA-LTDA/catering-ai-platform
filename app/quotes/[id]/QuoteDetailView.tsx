@@ -15,6 +15,7 @@ import {
   formatCurrency,
   formatDate,
   formatTime,
+  getAdditionalCategory,
   getAdditionalImage,
   getAdditionalLabel,
   getDiscount,
@@ -22,9 +23,14 @@ import {
   getZipCode,
   groupAdditionalsByCategory,
 } from './quoteDetailTypes'
+import { getPackageHasGarnish } from '@/Lib/packageFieldAccess'
 import CatalogImageFrame from '@/components/CatalogImageFrame'
 import CdlBrandLogo from '../../../components/CdlBrandLogo'
-import { CdlPdfPoliciesSection } from '../../../components/CdlImportantRulesPanel'
+import {
+  CdlCancellationPolicySection,
+  CdlImportantRulesPanel,
+} from '../../../components/CdlImportantRulesPanel'
+import QuoteCommercialAdjustmentNotice from '@/components/quote-review/QuoteCommercialAdjustmentNotice'
 import {
   BALANCE_PERCENTAGE,
   RESERVATION_PAYMENT_TEXT,
@@ -44,6 +50,15 @@ import QuoteFlashBanner from '@/components/QuoteFlashBanner'
 import { Suspense } from 'react'
 import QuoteDebugPanel from './QuoteDebugPanel'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import { applyCommercialMinimums } from '@/Lib/quotes/applyCommercialMinimums'
+import {
+  HOLIDAY_MIN_ORDER,
+  HOLIDAY_SURCHARGE_PERCENT,
+  MIN_ORDER_DEC_JAN,
+  MIN_ORDER_WEEKDAY,
+  MIN_ORDER_WEEKEND,
+} from '@/Lib/cdlCommercialRules'
+import { calcGrillRentalFee } from '@/Lib/calculateQuoteTotals'
 
 function ProposalSection({
   title,
@@ -188,6 +203,31 @@ export default function QuoteDetailView({
 
   const snapshot = readQuoteSnapshot(quote)
   const packageSummary = buildQuoteReviewPackageSummaryFromQuote(quote, snapshot)
+  const packageHasGarnish = getPackageHasGarnish({
+    package_key: quote.package_key,
+  })
+  const sharePackageTotal =
+    packageHasGarnish && packageSummary?.packageTotalPrice != null
+      ? packageSummary.packageTotalPrice
+      : snapshot.packageTotal
+  const garnishIncludedTotal =
+    packageHasGarnish && packageSummary
+      ? Number(packageSummary.garnishTotalPrice ?? 0)
+      : 0
+  const shareAdditionalLines = additionalItems
+    .filter((item) => Number(item.total_price ?? 0) > 0)
+    .map((item) => {
+      const category = (getAdditionalCategory(item, lang) ?? '').toLowerCase()
+      const isGarnish =
+        item.item_type === 'SIDE' ||
+        category.includes('guarni') ||
+        category.includes('side')
+      return {
+        label: getAdditionalLabel(item, lang) || 'Adicional',
+        amount: Number(item.total_price ?? 0),
+        isGarnish,
+      }
+    })
   const packageImageUrl = resolveQuoteDetailPackageImageUrl(quote)
   const guestCounts = snapshot.guestCounts
   const chargedMiles = getChargedMilesFromSnapshot(
@@ -195,14 +235,104 @@ export default function QuoteDetailView({
     snapshot.mileageFreeLimit,
   )
 
+  const grillRentalStored = Number(quote.grill_rental_total ?? 0)
+  const grillRentalTotal =
+    grillRentalStored > 0
+      ? grillRentalStored
+      : calcGrillRentalFee(
+          Boolean(quote.grill_rental_required),
+          Number(quote.grill_rental_qty ?? 0),
+        )
+  const grillRentalQty = Number(quote.grill_rental_qty ?? 0)
+  const baseSubtotal =
+    Number(snapshot.packageTotal ?? 0) +
+    Number(snapshot.additionalTotal ?? 0) +
+    Number(snapshot.mileageFee ?? 0) +
+    grillRentalTotal
+  const commercialApplied = applyCommercialMinimums(
+    baseSubtotal,
+    quote.event_date,
+    {
+      minOrderWeekday: MIN_ORDER_WEEKDAY,
+      minOrderWeekend: MIN_ORDER_WEEKEND,
+      minOrderDecJan: MIN_ORDER_DEC_JAN,
+      holidaySurchargePercent: HOLIDAY_SURCHARGE_PERCENT,
+      holidayMinOrder: HOLIDAY_MIN_ORDER,
+    },
+  )
+  // Prefer persisted value; fallback when quote_detail_view omits commercial cols.
+  const holidaySurchargeStored = Number(quote.holiday_surcharge_amount ?? 0)
+  const holidaySurcharge =
+    holidaySurchargeStored > 0
+      ? holidaySurchargeStored
+      : commercialApplied.holidaySurchargeAmount
+  const minimumAdjustment = quote.minimum_order_applied
+    ? Math.max(
+        0,
+        Number(snapshot.quoteTotal ?? 0) - baseSubtotal - holidaySurcharge,
+      )
+    : Math.max(0, commercialApplied.minimumOrderAdjustment)
+  const minimumOrderAmount =
+    Number(quote.minimum_order_amount ?? 0) ||
+    commercialApplied.minimumOrderAmount
+  const commercialReason = commercialApplied.reasonLabelKey
+
+  const mileageFreeLimit = Number(
+    snapshot.mileageFreeLimit ?? quote.mileage_free_limit ?? 20,
+  )
+  const chargedMilesValue = Number(chargedMiles ?? 0)
+  const mileageSummaryLabel =
+    chargedMilesValue > 0
+      ? t('docMileageChargedSummaryLine')
+          .replace('{charged}', String(chargedMilesValue))
+          .replace('{free}', String(mileageFreeLimit))
+      : t('mileageLabel')
+
   const pricingLines = [
     { label: t('packageLabel'), value: formatMoneyOrDash(snapshot.packageTotal) },
     {
       label: t('additionalsLabel'),
       value: formatMoneyOrDash(snapshot.additionalTotal),
     },
-    { label: t('mileageLabel'), value: formatMoneyOrDash(snapshot.mileageFee) },
-    { label: t('docDiscountLine'), value: formatCurrency(discount), accent: true },
+    {
+      label: mileageSummaryLabel,
+      value: formatMoneyOrDash(snapshot.mileageFee),
+    },
+    ...(grillRentalTotal > 0
+      ? [
+          {
+            label:
+              grillRentalQty > 1
+                ? t('docGrillRentalLineQty').replace(
+                    '{qty}',
+                    String(grillRentalQty),
+                  )
+                : t('docGrillRentalLine'),
+            value: formatCurrency(grillRentalTotal),
+          },
+        ]
+      : []),
+    ...(holidaySurcharge > 0
+      ? [
+          {
+            label: t('docHolidaySurchargeLine'),
+            value: formatCurrency(holidaySurcharge),
+          },
+        ]
+      : []),
+    ...(minimumAdjustment > 0.009
+      ? [
+          {
+            label: `${t('docMinOrderAppliedLine')} (mín. ${formatCurrency(minimumOrderAmount)})`,
+            value: formatCurrency(minimumAdjustment),
+          },
+        ]
+      : []),
+    {
+      label: t('docDiscountLine'),
+      value: formatCurrency(discount),
+      discount: discount > 0,
+    },
     {
       label: t('reservationLabel'),
       value: formatMoneyOrDash(snapshot.reservationAmount),
@@ -254,6 +384,39 @@ export default function QuoteDetailView({
               city={quote.city}
               addressState={quote.state}
               language={quote.language ?? 'pt'}
+              packageTotal={sharePackageTotal}
+              additionalTotal={snapshot.additionalTotal}
+              packageHasGarnish={packageHasGarnish}
+              garnishIncludedTotal={garnishIncludedTotal}
+              garnishDescription={
+                packageSummary?.garnishDescription ?? null
+              }
+              packageItemsDescription={
+                packageSummary?.packageItemsDescription ?? null
+              }
+              packageUnitPrice={
+                packageSummary?.packageUnitPrice ??
+                snapshot.packageUnitPrice ??
+                null
+              }
+              packageSelectionLines={
+                (quote.package_selection_labels ?? []).map((sel) => ({
+                  groupTitle: sel.groupTitle,
+                  itemLabel: sel.itemLabel,
+                }))
+              }
+              additionalLines={shareAdditionalLines}
+              mileageFee={snapshot.mileageFee}
+              chargedMiles={chargedMilesValue}
+              mileageFreeLimit={mileageFreeLimit}
+              grillRentalTotal={grillRentalTotal}
+              grillRentalQty={grillRentalQty}
+              discountAmount={discount}
+              baseSubtotal={baseSubtotal}
+              holidaySurchargeAmount={holidaySurcharge}
+              minimumOrderAdjustment={minimumAdjustment}
+              minimumOrderAmount={minimumOrderAmount}
+              commercialReason={commercialReason}
               initial={{
                 proposal_token: quote.proposal_token ?? null,
                 proposal_sent_at: quote.proposal_sent_at ?? null,
@@ -346,10 +509,31 @@ export default function QuoteDetailView({
           packageTotal={snapshot.packageTotal}
           additionalTotal={snapshot.additionalTotal}
           mileageFee={snapshot.mileageFee}
+          chargedMiles={chargedMilesValue}
+          mileageFreeLimit={mileageFreeLimit}
+          grillRentalTotal={grillRentalTotal}
+          holidaySurchargeAmount={holidaySurcharge}
+          minimumOrderAdjustment={minimumAdjustment}
+          discountAmount={discount}
           reservationAmount={snapshot.reservationAmount}
           quoteTotal={snapshot.quoteTotal}
           additionalsCount={additionalItems.length}
           grillRentalRequired={quote.grill_rental_required}
+          afterClient={
+            <>
+              <QuoteCommercialAdjustmentNotice
+                baseSubtotal={baseSubtotal}
+                holidaySurchargeAmount={holidaySurcharge}
+                minimumOrderAdjustment={minimumAdjustment}
+                minimumOrderAmount={minimumOrderAmount}
+                quoteTotal={snapshot.quoteTotal}
+              />
+              <CdlImportantRulesPanel
+                variant="summary"
+                showReservationText
+              />
+            </>
+          }
         />
 
         <div className="quote-proposal-grid-2">
@@ -358,6 +542,11 @@ export default function QuoteDetailView({
               packageName={packageName ?? null}
               packageImageUrl={packageImageUrl}
               packageSummary={packageSummary}
+              packageSelections={quote.package_selection_labels ?? []}
+              additionalItems={shareAdditionalLines.map((line) => ({
+                label: line.label,
+                amount: line.amount,
+              }))}
               physicalGuestCount={snapshot.physicalGuestCount}
               billableGuestCount={snapshot.billableGuestCount}
               packageTotal={snapshot.packageTotal}
@@ -573,7 +762,7 @@ export default function QuoteDetailView({
                   key={line.label}
                   className={`quote-proposal-pricing-row${
                     line.highlight ? ' quote-proposal-pricing-row--highlight' : ''
-                  }${line.accent ? ' quote-proposal-pricing-row--accent' : ''}`}
+                  }${'discount' in line && line.discount ? ' quote-proposal-pricing-row--discount' : ''}`}
                 >
                   <span>{line.label}</span>
                   <span>{line.value}</span>
@@ -596,7 +785,7 @@ export default function QuoteDetailView({
           </div>
         </section>
 
-        <CdlPdfPoliciesSection />
+        <CdlCancellationPolicySection variant="pdf" />
 
         <QuoteDebugPanel
           quote={{
