@@ -189,6 +189,11 @@ export default function OrderTeamConfirmationsPanel({
       setSelectedPersonId(nextShares[0]?.person_id ?? null)
       setPreviewOpen(true)
       await refresh()
+      window.setTimeout(() => {
+        document
+          .getElementById('team-confirmation-preview')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }, 50)
     } finally {
       setBusy(false)
     }
@@ -265,13 +270,16 @@ export default function OrderTeamConfirmationsPanel({
       </ul>
 
       {previewOpen && selectedShare ? (
-        <div className="space-y-3 rounded-xl border border-emerald-300/40 bg-emerald-50/80 p-4 text-sm dark:border-emerald-500/30 dark:bg-emerald-500/10">
+        <div
+          id="team-confirmation-preview"
+          className="space-y-3 rounded-xl border border-emerald-300/40 bg-emerald-50/80 p-4 text-sm dark:border-emerald-500/30 dark:bg-emerald-500/10"
+        >
           <p className="font-semibold text-emerald-900 dark:text-emerald-100">
             Prévia da confirmação — revise a mensagem antes de abrir o WhatsApp
           </p>
           <p className="text-xs text-cdl-muted">
-            Mesmo padrão da designação de equipe: edite o texto, confira o
-            telefone e só então envie.
+            Selecione o integrante, edite o texto e use o botão verde do
+            WhatsApp (não abre sozinho).
           </p>
 
           <div className="flex flex-wrap gap-2">
@@ -299,12 +307,6 @@ export default function OrderTeamConfirmationsPanel({
             {selectedMember ? ` · ${memberName(selectedMember)}` : ''}
           </p>
 
-          {selectedShare.confirmUrl ? (
-            <p className="break-all text-xs text-cdl-muted">
-              Link de confirmação: {selectedShare.confirmUrl}
-            </p>
-          ) : null}
-
           <label className="block space-y-1">
             <span className="text-xs font-medium text-cdl-muted">
               WhatsApp do integrante
@@ -323,44 +325,7 @@ export default function OrderTeamConfirmationsPanel({
             />
           </label>
 
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-cdl-muted">
-              Mensagem (editável)
-            </span>
-            <textarea
-              className="min-h-[12rem] w-full rounded-lg border border-cdl-border bg-cdl-surface p-3 text-xs text-cdl-fg"
-              value={selectedMessage}
-              onChange={(e) =>
-                setDrafts((prev) => ({
-                  ...prev,
-                  [selectedShare.person_id]: e.target.value,
-                }))
-              }
-            />
-          </label>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className={glassBtn('ghost')}
-              onClick={() =>
-                setDrafts((prev) => ({
-                  ...prev,
-                  [selectedShare.person_id]: selectedShare.whatsappText,
-                }))
-              }
-            >
-              Restaurar texto padrão
-            </button>
-            <button
-              type="button"
-              className={glassBtn('ghost')}
-              onClick={() => setPreviewOpen(false)}
-            >
-              Fechar prévia
-            </button>
-          </div>
-
+          {/* Toolbar acima da mensagem — visível sem rolar (padrão designação) */}
           <div className="proposal-toolbar flex flex-wrap items-center gap-2">
             <WhatsAppButton
               phone={selectedPhone}
@@ -437,17 +402,60 @@ export default function OrderTeamConfirmationsPanel({
                 </button>
               )
             })()}
+
+            <button
+              type="button"
+              className={glassBtn('ghost')}
+              onClick={() =>
+                setDrafts((prev) => ({
+                  ...prev,
+                  [selectedShare.person_id]: selectedShare.whatsappText,
+                }))
+              }
+            >
+              Restaurar texto padrão
+            </button>
+            <button
+              type="button"
+              className={glassBtn('ghost')}
+              onClick={() => setPreviewOpen(false)}
+            >
+              Fechar prévia
+            </button>
           </div>
 
           {phoneOk ? (
             <p className="text-xs text-cdl-muted">
-              Destino: {formatWhatsAppPhoneDisplay(selectedPhone)}
+              Destino: {formatWhatsAppPhoneDisplay(selectedPhone)} — clique no
+              ícone verde do WhatsApp para abrir o painel de envio.
             </p>
           ) : (
             <p className="text-xs text-amber-700 dark:text-amber-200">
               Informe um telefone válido com DDI para liberar o envio.
             </p>
           )}
+
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-cdl-muted">
+              Mensagem (editável)
+            </span>
+            <textarea
+              className="min-h-[10rem] w-full rounded-lg border border-cdl-border bg-cdl-surface p-3 text-xs text-cdl-fg"
+              value={selectedMessage}
+              onChange={(e) =>
+                setDrafts((prev) => ({
+                  ...prev,
+                  [selectedShare.person_id]: e.target.value,
+                }))
+              }
+            />
+          </label>
+
+          {selectedShare.confirmUrl ? (
+            <p className="break-all text-xs text-cdl-muted">
+              Link de confirmação: {selectedShare.confirmUrl}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
