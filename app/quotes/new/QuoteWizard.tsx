@@ -108,6 +108,7 @@ export type Customer = {
   zip_code?: string | null
   postal_code?: string | null
   venue_name?: string | null
+  is_supplier?: boolean | null
   updated_at?: string | null
   created_at?: string | null
 }
@@ -1010,6 +1011,8 @@ export default function QuoteWizard({
     () => initialState ?? createInitialWizardState(commercialRules),
   )
   const [customerSearch, setCustomerSearch] = useState('')
+  const [customerSearchOpen, setCustomerSearchOpen] = useState(false)
+  const customerSearchRef = useRef<HTMLDivElement>(null)
   const [endTimeCustomized, setEndTimeCustomized] = useState(false)
   const [openAdditionalCategories, setOpenAdditionalCategories] = useState<
     Set<string>
@@ -1244,10 +1247,30 @@ export default function QuoteWizard({
     [selectedPackage, packages, state.packageId],
   )
 
-  const filteredCustomers = useMemo(
-    () => filterCustomersBySearch(localCustomers, customerSearch),
-    [localCustomers, customerSearch],
-  )
+  const filteredCustomers = useMemo(() => {
+    const quoteClients = localCustomers.filter(
+      (row) => row.is_supplier !== true,
+    )
+    return filterCustomersBySearch(quoteClients, customerSearch)
+  }, [localCustomers, customerSearch])
+
+  const customerSuggestions = useMemo(() => {
+    if (customerSearch.trim().length < 1) return []
+    return filteredCustomers.slice(0, 12)
+  }, [filteredCustomers, customerSearch])
+
+  useEffect(() => {
+    if (!customerSearchOpen) return
+    const onPointerDown = (event: MouseEvent) => {
+      const root = customerSearchRef.current
+      if (!root) return
+      if (event.target instanceof Node && !root.contains(event.target)) {
+        setCustomerSearchOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [customerSearchOpen])
 
   const packagesWithoutSides = useMemo(
     () =>
@@ -1408,10 +1431,13 @@ export default function QuoteWizard({
       packagePricePerPerson: selectedPackage ? getPackagePrice(selectedPackage) : 0,
       additionals,
       mileageDistance: state.distance,
+      grillRentalRequired: state.grillRentalRequired,
+      grillRentalQty: state.grillRentalQty,
       pricing: commercialRules,
       reservationPercentage: state.reservationPercentage,
       reservationAmountOverride: state.reservationAmount,
       useCustomReservation: reservationAmountCustomized,
+      eventDate: state.eventDate,
     })
   }, [
     state.adultCount,
@@ -1419,6 +1445,9 @@ export default function QuoteWizard({
     state.children4To12Count,
     state.additionals,
     state.distance,
+    state.grillRentalRequired,
+    state.grillRentalQty,
+    state.eventDate,
     state.reservationPercentage,
     state.reservationAmount,
     selectedPackage,
@@ -2208,80 +2237,91 @@ export default function QuoteWizard({
               </div>
             ) : null}
 
-            <div className="sm:col-span-2">
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end">
-                <div className="min-w-0 flex-1">
+            <div className="sm:col-span-2" ref={customerSearchRef}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="relative min-w-0 flex-1">
                   <InputField
                     label="Pesquisar cliente existente"
                     value={customerSearch}
                     onChange={(value) => {
                       setCustomerSearch(value)
                       setCustomerLinkSuccess(null)
+                      setCustomerSearchOpen(true)
                     }}
-                    onFocus={() => void refreshCustomersFromApi(customerSearch)}
-                    placeholder="Nome, telefone, e-mail ou AB number"
+                    onFocus={() => {
+                      setCustomerSearchOpen(true)
+                      void refreshCustomersFromApi(customerSearch)
+                    }}
+                    placeholder="Digite nome, telefone, e-mail ou AB number"
                   />
+                  {customerSearchOpen && customerSearch.trim().length >= 1 ? (
+                    <div
+                      className="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 max-h-72 overflow-y-auto rounded-xl border border-cdl-border bg-cdl-surface shadow-lg"
+                      role="listbox"
+                      aria-label="Clientes encontrados"
+                    >
+                      {customersRefreshing ? (
+                        <p className="px-4 py-3 text-sm text-cdl-muted">
+                          Buscando…
+                        </p>
+                      ) : customerSuggestions.length === 0 ? (
+                        <p className="px-4 py-3 text-sm text-cdl-muted">
+                          Nenhum cliente encontrado.
+                        </p>
+                      ) : (
+                        customerSuggestions.map((customer) => {
+                          const selected = state.customerId === customer.id
+                          return (
+                            <button
+                              key={customer.id}
+                              type="button"
+                              role="option"
+                              aria-selected={selected}
+                              onClick={() => {
+                                selectCustomer(customer.id)
+                                setCustomerSearch(getCustomerName(customer))
+                                setCustomerSearchOpen(false)
+                              }}
+                              className={`flex w-full flex-col gap-0.5 border-b border-cdl-border-subtle px-4 py-3 text-left last:border-b-0 ${
+                                selected
+                                  ? 'bg-cdl-success-soft'
+                                  : 'hover:bg-cdl-inset'
+                              }`}
+                            >
+                              <span className="text-sm font-bold text-cdl-fg">
+                                {getCustomerName(customer)}
+                                {selected ? (
+                                  <span className="ml-2 text-cdl-success">✓</span>
+                                ) : null}
+                              </span>
+                              <span className="text-xs text-cdl-muted">
+                                {[customer.phone, customer.email, customer.ab_number]
+                                  .filter(Boolean)
+                                  .join(' · ')}
+                              </span>
+                            </button>
+                          )
+                        })
+                      )}
+                    </div>
+                  ) : null}
                 </div>
                 <button
                   type="button"
-                  onClick={() => void refreshCustomersFromApi(customerSearch)}
+                  onClick={() => {
+                    setCustomerSearchOpen(true)
+                    void refreshCustomersFromApi(customerSearch)
+                  }}
                   disabled={customersRefreshing}
                   className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-xl border border-cdl-border bg-cdl-surface px-4 py-3 text-xs font-bold uppercase tracking-wider text-cdl-fg disabled:opacity-50"
                 >
                   {customersRefreshing ? 'Atualizando…' : 'Atualizar'}
                 </button>
               </div>
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:col-span-2 sm:grid-cols-2">
-              {filteredCustomers.length === 0 ? (
-                <p className="text-sm text-cdl-muted sm:col-span-2">
-                  Nenhum cliente encontrado.
-                </p>
-              ) : (
-                filteredCustomers.map((customer) => {
-                  const selected = state.customerId === customer.id
-                  return (
-                    <button
-                      key={customer.id}
-                      type="button"
-                      onClick={() => selectCustomer(customer.id)}
-                      className={`rounded-xl border p-5 text-left shadow-cdl transition-colors ${
-                        selected
-                          ? 'border-cdl-success-border bg-cdl-success-soft'
-                          : 'border-cdl-border bg-cdl-inset hover:border-cdl-accent-border'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <h3
-                          className="cursor-pointer font-bold text-cdl-fg"
-                          title="Duplo clique para ir ao evento"
-                          onDoubleClick={() =>
-                            selectCustomerAndAdvance(customer.id)
-                          }
-                        >
-                          {getCustomerName(customer)}
-                        </h3>
-                        {selected && (
-                          <span className="text-sm font-bold text-cdl-success">
-                            ✓
-                          </span>
-                        )}
-                      </div>
-                      {customer.email && (
-                        <p className="mt-1 text-sm text-cdl-muted">{customer.email}</p>
-                      )}
-                      {customer.phone && (
-                        <p className="text-sm text-cdl-muted">{customer.phone}</p>
-                      )}
-                      {customer.ab_number && (
-                        <p className="text-xs font-semibold uppercase tracking-wider text-cdl-muted">
-                          {customer.ab_number}
-                        </p>
-                      )}
-                    </button>
-                  )
-                })
-              )}
+              <p className="mt-2 text-xs text-cdl-muted">
+                Digite para buscar no cadastro — a lista aparece suspensa abaixo
+                do campo.
+              </p>
             </div>
           </SectionCard>
         )}

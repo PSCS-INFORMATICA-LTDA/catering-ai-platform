@@ -2,13 +2,21 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
 import DeleteQuoteButton from '@/components/DeleteQuoteButton'
-import QuoteStatusBadge from '@/components/QuoteStatusBadge'
 import type { QuoteListItem } from '@/Lib/fetchQuoteList'
 import { glassBtn } from '@/Lib/liquidGlass'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
-import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import {
+  quoteStatusLabel,
+  tQuotesOrders,
+} from '@/Lib/i18n/quotesOrders'
 
 type StatusFilter = 'all' | string
 type AcceptanceFilter = 'all' | 'pending' | 'accepted' | 'rejected'
@@ -62,6 +70,36 @@ function acceptanceClassName(value: string | null | undefined) {
     return 'border-red-300/40 bg-red-500/10 text-red-500'
   }
   return 'border-cdl-border bg-cdl-inset text-cdl-text-secondary'
+}
+
+function quoteStatusClassName(status: string | null | undefined) {
+  const key = (status ?? '').trim().toLowerCase()
+  if (key === 'accepted' || key === 'approved' || key === 'converted') {
+    return 'border-cdl-success-border bg-cdl-success-soft text-cdl-success'
+  }
+  if (key === 'sent' || key === 'viewed' || key === 'ready_for_review') {
+    return 'border-cdl-accent-border bg-cdl-accent/15 text-cdl-brand'
+  }
+  if (key === 'rejected' || key === 'cancelled' || key === 'canceled') {
+    return 'border-red-300/40 bg-red-500/10 text-red-500'
+  }
+  return 'border-cdl-border bg-cdl-inset text-cdl-text-secondary'
+}
+
+function Pill({
+  className,
+  children,
+}: {
+  className: string
+  children: ReactNode
+}) {
+  return (
+    <span
+      className={`inline-flex max-w-full items-center truncate rounded-full border px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wider ${className}`}
+    >
+      {children}
+    </span>
+  )
 }
 
 function buildQuery(filters: QuotesFilters) {
@@ -193,28 +231,24 @@ export default function QuotesDashboard({
 
   function renderActions(quote: QuoteListItem) {
     const eligible = isConvertEligible(quote)
+    const actionBtn =
+      'liquid-glass-btn liquid-glass-btn--secondary !min-h-[28px] !px-2 !py-1 !text-[10px] !font-bold uppercase tracking-wide'
     return (
-      <div className="flex flex-wrap items-center justify-end gap-1.5">
-        <Link
-          href={`/quotes/${quote.id}`}
-          className="inline-flex min-h-[36px] items-center justify-center rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-neutral-800 transition hover:border-neutral-300"
-        >
+      <div className="flex flex-wrap items-center justify-center gap-1">
+        <Link href={`/quotes/${quote.id}`} className={actionBtn}>
           {tQuotesOrders(locale, 'view')}
         </Link>
         <Link
           href={`/quotes/${quote.id}/edit?step=churrasqueira`}
-          className="inline-flex min-h-[36px] items-center justify-center rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-neutral-800 transition hover:border-neutral-300"
+          className={actionBtn}
         >
           {tQuotesOrders(locale, 'edit')}
         </Link>
-        <Link
-          href={`/quotes/${quote.id}?pdf=1`}
-          className="inline-flex min-h-[36px] items-center justify-center rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-neutral-800 transition hover:border-neutral-300"
-        >
+        <Link href={`/quotes/${quote.id}?pdf=1`} className={actionBtn}>
           {tQuotesOrders(locale, 'pdf')}
         </Link>
         {canConvert && quote.converted_service_order_id ? (
-          <span className="inline-flex min-h-[36px] items-center justify-center rounded-lg border border-cdl-success-border bg-cdl-success-soft px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-cdl-success">
+          <span className="inline-flex min-h-[28px] items-center justify-center rounded-lg border border-cdl-success-border bg-cdl-success-soft px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-cdl-success">
             {tQuotesOrders(locale, 'converted')}
           </span>
         ) : canConvert && eligible ? (
@@ -222,7 +256,7 @@ export default function QuotesDashboard({
             type="button"
             onClick={() => void handleConvert(quote)}
             disabled={convertingId === quote.id}
-            className={`${glassBtn('primary')} min-h-[36px] px-2.5 py-1.5 text-xs`}
+            className={`${glassBtn('primary')} !min-h-[28px] whitespace-nowrap !px-2 !py-1 !text-[10px]`}
           >
             {convertingId === quote.id
               ? tQuotesOrders(locale, 'converting')
@@ -234,7 +268,6 @@ export default function QuotesDashboard({
           compact
           redirectToList={false}
           onDeleted={handleQuoteDeleted}
-          className="pscs-btn-danger"
         />
       </div>
     )
@@ -351,55 +384,132 @@ export default function QuotesDashboard({
             : tQuotesOrders(locale, 'noQuotesFiltered')}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
-          <div className="hidden border-b border-neutral-100 bg-neutral-50 px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500 lg:grid lg:grid-cols-[7rem_minmax(0,1.4fr)_7rem_7rem_7rem_7rem_auto] lg:gap-3">
-            <span>{tQuotesOrders(locale, 'tableNumber')}</span>
-            <span>{tQuotesOrders(locale, 'tableCustomerEvent')}</span>
-            <span>{tQuotesOrders(locale, 'tableDate')}</span>
-            <span>{tQuotesOrders(locale, 'status')}</span>
-            <span>{tQuotesOrders(locale, 'filterAcceptance')}</span>
-            <span className="text-right">{tQuotesOrders(locale, 'total')}</span>
-            <span className="text-right">{tQuotesOrders(locale, 'actions')}</span>
-          </div>
-          <ul>
+        <>
+          {/* Mobile: stacked cards keep the same field order */}
+          <ul className="space-y-3 lg:hidden">
             {quotes.map((quote) => (
               <li
                 key={quote.id}
-                className="border-b border-neutral-100 px-4 py-3 last:border-b-0"
+                className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm"
               >
-                <div className="grid gap-2.5 lg:grid-cols-[7rem_minmax(0,1.4fr)_7rem_7rem_7rem_7rem_auto] lg:items-center lg:gap-3">
-                  <p className="text-xs font-bold uppercase tracking-wide text-neutral-500 lg:text-sm">
-                    {quote.quote_number}
-                  </p>
+                <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
+                    <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+                      {quote.quote_number}
+                    </p>
                     <p className="truncate text-sm font-bold text-neutral-900">
                       {quote.customer_name}
                     </p>
-                    <p className="truncate text-xs text-neutral-500">
-                      {[quote.city, quote.state].filter(Boolean).join(', ') || '—'}
-                      {quote.package_name ? ` · ${quote.package_name}` : ''}
+                    <p className="mt-1 text-xs text-neutral-500">
+                      {formatDate(quote.event_date)}
                     </p>
                   </div>
-                  <p className="text-sm text-neutral-700">{formatDate(quote.event_date)}</p>
-                  <div>
-                    <QuoteStatusBadge status={quote.quote_status} />
-                  </div>
-                  <div>
-                    <span
-                      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wider ${acceptanceClassName(quote.proposal_response)}`}
-                    >
-                      {acceptanceLabel(quote.proposal_response, locale)}
-                    </span>
-                  </div>
-                  <p className="text-right text-sm font-black text-neutral-900 lg:text-left lg:text-right">
+                  <p className="shrink-0 text-sm font-black text-neutral-900">
                     {formatMoney(quote.quote_total)}
                   </p>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Pill className={quoteStatusClassName(quote.quote_status)}>
+                    {quoteStatusLabel(quote.quote_status, locale)}
+                  </Pill>
+                  <Pill className={acceptanceClassName(quote.proposal_response)}>
+                    {acceptanceLabel(quote.proposal_response, locale)}
+                  </Pill>
+                </div>
+                <div className="mt-3 border-t border-neutral-100 pt-3">
                   {renderActions(quote)}
                 </div>
               </li>
             ))}
           </ul>
-        </div>
+
+          {/* Desktop: real table so every value stays under its header */}
+          <div className="hidden max-h-[min(70vh,52rem)] overflow-auto rounded-2xl border border-neutral-200 bg-white shadow-sm lg:block">
+            <table className="w-full min-w-[960px] table-fixed border-collapse text-center">
+              <colgroup>
+                <col className="w-[11%]" />
+                <col className="w-[20%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[10%]" />
+                <col className="w-[9%]" />
+                <col className="w-[28%]" />
+              </colgroup>
+              <thead className="sticky top-0 z-20">
+                <tr className="border-b border-neutral-100 bg-neutral-50 text-[11px] font-bold uppercase tracking-wider text-neutral-500">
+                  <th className="px-2 py-2.5 text-center font-bold">
+                    {tQuotesOrders(locale, 'tableNumber')}
+                  </th>
+                  <th className="px-2 py-2.5 text-center font-bold">
+                    {tQuotesOrders(locale, 'tableCustomerEvent')}
+                  </th>
+                  <th className="px-2 py-2.5 text-center font-bold">
+                    {tQuotesOrders(locale, 'tableDate')}
+                  </th>
+                  <th className="px-2 py-2.5 text-center font-bold">
+                    {tQuotesOrders(locale, 'status')}
+                  </th>
+                  <th className="px-2 py-2.5 text-center font-bold">
+                    {tQuotesOrders(locale, 'filterAcceptance')}
+                  </th>
+                  <th className="px-2 py-2.5 text-center font-bold">
+                    {tQuotesOrders(locale, 'total')}
+                  </th>
+                  <th className="px-2 py-2.5 text-center font-bold">
+                    {tQuotesOrders(locale, 'actions')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {quotes.map((quote) => (
+                  <tr
+                    key={quote.id}
+                    className="border-b border-neutral-100 last:border-b-0"
+                  >
+                    <td className="align-middle px-2 py-2.5 text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                      <span className="block truncate">{quote.quote_number}</span>
+                    </td>
+                    <td className="align-middle px-2 py-2.5">
+                      <p className="truncate text-xs font-bold text-neutral-900">
+                        {quote.customer_name}
+                      </p>
+                      <p className="truncate text-[11px] text-neutral-500">
+                        {[quote.city, quote.state].filter(Boolean).join(', ') ||
+                          '—'}
+                        {quote.package_name ? ` · ${quote.package_name}` : ''}
+                      </p>
+                    </td>
+                    <td className="align-middle whitespace-nowrap px-2 py-2.5 text-xs text-neutral-700">
+                      {formatDate(quote.event_date)}
+                    </td>
+                    <td className="align-middle px-2 py-2.5">
+                      <div className="flex justify-center">
+                        <Pill className={quoteStatusClassName(quote.quote_status)}>
+                          {quoteStatusLabel(quote.quote_status, locale)}
+                        </Pill>
+                      </div>
+                    </td>
+                    <td className="align-middle px-2 py-2.5">
+                      <div className="flex justify-center">
+                        <Pill
+                          className={acceptanceClassName(quote.proposal_response)}
+                        >
+                          {acceptanceLabel(quote.proposal_response, locale)}
+                        </Pill>
+                      </div>
+                    </td>
+                    <td className="align-middle whitespace-nowrap px-2 py-2.5 text-xs font-black text-neutral-900">
+                      {formatMoney(quote.quote_total)}
+                    </td>
+                    <td className="align-middle px-2 py-2.5">
+                      {renderActions(quote)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   )

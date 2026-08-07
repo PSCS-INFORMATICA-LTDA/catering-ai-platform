@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   buildTeamAvailabilityWhatsAppText,
-  parseTeamLeaderFromNotes,
+  resolveTeamLeaderDisplayName,
 } from '@/Lib/whatsappMessageTemplates'
 import { MailIcon, SmsIcon, WhatsAppIcon } from '@/components/icons/ShareIcons'
 import SmsShareAnchor from '@/components/share/SmsShareAnchor'
@@ -17,6 +17,9 @@ import {
 import { glassAction, glassBtn, glassField } from '@/Lib/liquidGlass'
 
 const TEAM_PHONE_STORAGE_KEY = 'catering.teamWhatsAppPhones'
+
+const SHARE_ICON =
+  'inline-flex h-10 w-10 shrink-0 items-center justify-center p-0'
 
 function loadStoredPhone(teamId: string): string {
   if (typeof window === 'undefined') return ''
@@ -58,6 +61,8 @@ export default function TeamAvailabilitySharePanel({
   quoteId,
   language = 'pt',
   defaultPhone,
+  contactFullName,
+  contactAbName,
   packageLabel,
   companyName = 'BBQ At Home',
 }: {
@@ -78,12 +83,20 @@ export default function TeamAvailabilitySharePanel({
   language?: string | null
   /** Telefone da pessoa vinculada (cadastro único) */
   defaultPhone?: string | null
+  contactFullName?: string | null
+  contactAbName?: string | null
   packageLabel?: string | null
   companyName?: string | null
 }) {
   const leaderName = useMemo(
-    () => parseTeamLeaderFromNotes(teamNotes),
-    [teamNotes],
+    () =>
+      resolveTeamLeaderDisplayName({
+        contactFullName,
+        contactAbName,
+        teamName,
+        notes: teamNotes,
+      }),
+    [contactFullName, contactAbName, teamName, teamNotes],
   )
 
   const defaultMessage = useMemo(
@@ -156,13 +169,20 @@ export default function TeamAvailabilitySharePanel({
     <div className="mt-2 w-full space-y-2">
       <button
         type="button"
-        className={glassBtn('secondary', 'liquid-glass-tab-link--plain')}
+        className={open ? glassBtn('secondary') : glassAction('green')}
         onClick={() => {
           setOpen((v) => !v)
           setHint(null)
         }}
       >
-        {open ? 'Fechar WhatsApp equipe' : 'Designação / WhatsApp equipe'}
+        {open ? (
+          'Fechar WhatsApp equipe'
+        ) : (
+          <span className="inline-flex items-center gap-2">
+            <WhatsAppIcon className="h-5 w-5 text-white" />
+            WhatsApp equipe
+          </span>
+        )}
       </button>
 
       {open ? (
@@ -219,13 +239,18 @@ export default function TeamAvailabilitySharePanel({
           >
             Restaurar texto padrão
           </button>
-          <div className="flex w-full flex-col gap-2">
+          <div className="proposal-toolbar flex flex-wrap items-center gap-2">
             <WhatsAppButton
               phone={phone}
               message={message}
               editable
               onMessageChange={setMessage}
-              className="h-12 w-full justify-center"
+              className={SHARE_ICON}
+              title={
+                phoneOk
+                  ? `WhatsApp · ${formatWhatsAppPhoneDisplay(phone)}`
+                  : 'Informe um telefone válido com DDI.'
+              }
               onOpenRequested={() => {
                 void ensureAssignmentSent()
                 if (phone.trim()) saveStoredPhone(teamId, phone.trim())
@@ -233,17 +258,14 @@ export default function TeamAvailabilitySharePanel({
               onInvalidPhone={() =>
                 setHint('Informe um telefone válido com DDI.')
               }
-            >
-              <span className="inline-flex items-center gap-2">
-                <WhatsAppIcon className="h-5 w-5" />
-                Abrir WhatsApp Desktop
-              </span>
-            </WhatsAppButton>
+            />
             {buildSmsShareHref(phone, message) ? (
               <SmsShareAnchor
                 href={buildSmsShareHref(phone, message)!}
                 message={message}
-                className={`${glassAction('sky')} h-12 w-full justify-center`}
+                className={`${glassAction('sky', true)} ${SHARE_ICON}`}
+                title="Enviar por SMS"
+                aria-label="Enviar por SMS"
                 onOpen={() => {
                   void ensureAssignmentSent()
                   if (phone.trim()) saveStoredPhone(teamId, phone.trim())
@@ -252,12 +274,19 @@ export default function TeamAvailabilitySharePanel({
                   setHint('Mensagem SMS copiada. No PC use Phone Link se disponível.')
                 }
               >
-                <span className="inline-flex items-center gap-2">
-                  <SmsIcon className="h-5 w-5" />
-                  Enviar por SMS
-                </span>
+                <SmsIcon className="h-5 w-5" />
               </SmsShareAnchor>
-            ) : null}
+            ) : (
+              <button
+                type="button"
+                disabled
+                className={`${glassAction('sky', true)} ${SHARE_ICON} opacity-50`}
+                title="SMS indisponível"
+                aria-label="SMS indisponível"
+              >
+                <SmsIcon className="h-5 w-5" />
+              </button>
+            )}
             {(() => {
               const mailHref = buildMailtoHref({
                 email: null,
@@ -267,17 +296,26 @@ export default function TeamAvailabilitySharePanel({
               return mailHref ? (
                 <a
                   href={mailHref}
-                  className={`${glassAction('sky')} h-11 w-fit justify-center px-4`}
+                  className={`${glassAction('sky', true)} ${SHARE_ICON}`}
+                  title="E-mail"
+                  aria-label="E-mail"
                   onClick={() => {
                     void ensureAssignmentSent()
                   }}
                 >
-                  <span className="inline-flex items-center gap-2">
-                    <MailIcon className="h-5 w-5" />
-                    E-mail
-                  </span>
+                  <MailIcon className="h-5 w-5" />
                 </a>
-              ) : null
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className={`${glassAction('sky', true)} ${SHARE_ICON} opacity-50`}
+                  title="E-mail indisponível"
+                  aria-label="E-mail indisponível"
+                >
+                  <MailIcon className="h-5 w-5" />
+                </button>
+              )
             })()}
           </div>
           {phoneOk ? (

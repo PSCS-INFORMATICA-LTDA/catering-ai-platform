@@ -68,7 +68,7 @@ export async function GET(_request: Request, { params }: Params) {
   const { data: quote, error } = await db
     .from('quotes')
     .select(
-      'id, company_id, quote_number, quote_status, proposal_response, team_presentation_time, designated_team_id, event_id, customer_id, active',
+      'id, company_id, quote_number, quote_status, proposal_response, team_presentation_time, designated_team_id, event_id, customer_id, active, reservation_confirmed_at',
     )
     .eq('id', id)
     .eq('company_id', companyId)
@@ -156,6 +156,9 @@ export async function GET(_request: Request, { params }: Params) {
       proposal_response: quote.proposal_response ?? 'pending',
       team_presentation_time: quote.team_presentation_time,
       designated_team_id: quote.designated_team_id,
+      reservation_confirmed_at:
+        (quote as { reservation_confirmed_at?: string | null })
+          .reservation_confirmed_at ?? null,
       event_date: eventDate,
       start_time: event?.start_time ?? null,
       end_time: event?.end_time ?? null,
@@ -195,7 +198,7 @@ export async function POST(request: Request, { params }: Params) {
   const { data: quote, error: qErr } = await db
     .from('quotes')
     .select(
-      'id, company_id, quote_number, quote_status, proposal_response, team_presentation_time, designated_team_id, event_id, customer_id, package_id, active',
+      'id, company_id, quote_number, quote_status, proposal_response, team_presentation_time, designated_team_id, event_id, customer_id, package_id, active, reservation_confirmed_at',
     )
     .eq('id', id)
     .eq('company_id', companyId)
@@ -211,12 +214,30 @@ export async function POST(request: Request, { params }: Params) {
 
   const accepted =
     quote.proposal_response === 'accepted' ||
-    quote.quote_status === 'approved'
+    quote.quote_status === 'approved' ||
+    quote.quote_status === 'accepted'
   if (!accepted && action !== 'mark_sent') {
     return Response.json(
       {
         error:
           'A cotação precisa estar aceita/aprovada pelo cliente antes de designar a equipe.',
+      },
+      { status: 409 },
+    )
+  }
+
+  const reservationConfirmed = Boolean(
+    (quote as { reservation_confirmed_at?: string | null })
+      .reservation_confirmed_at,
+  )
+  if (
+    !reservationConfirmed &&
+    (action === 'designate' || action == null || action === '')
+  ) {
+    return Response.json(
+      {
+        error:
+          'Confirme o recebimento do sinal (30%) antes de designar a equipe e fechar a agenda.',
       },
       { status: 409 },
     )

@@ -6,12 +6,19 @@ import type { AgendaEvent, OperationalTeam } from '@/Lib/agenda/types'
 import { eventsToSegments } from '@/Lib/agenda/segments'
 import { teamHasBookingOnDate } from '@/Lib/agenda/teamAvailability'
 import {
+  AGENDA_MONTH_OPTIONS,
   buildAgendaQuoteHref,
   dayLabel,
   dayLabelParts,
+  endOfMonth,
   formatMinutes,
+  formatRangeLabel,
   formatWeekRangeLabel,
+  inclusiveDaySpan,
+  parseDayKey,
   shiftWeek,
+  startOfMonth,
+  toDayKey,
   todayDayKey,
   visibleWeekDayKeys,
   weekDayKeys,
@@ -21,6 +28,7 @@ import TeamAvailabilitySharePanel from '@/components/agenda/TeamAvailabilityShar
 import { buildPublicTeamAssignmentUrl } from '@/Lib/teamAssignment'
 
 type Selection = { teamId: string; dayKey: string } | null
+type RangeMode = 'week' | 'custom'
 
 export default function AgendaDashboard({
   initialTeams,
@@ -34,8 +42,20 @@ export default function AgendaDashboard({
   const [teams] = useState(initialTeams)
   const [events, setEvents] = useState(initialEvents)
   /** Âncora da semana (qualquer dia), como no Logistics — weekDayKeys normaliza p/ segunda. */
-  const [weekAnchor, setWeekAnchor] = useState(() => parseDay(initialWeekStart))
+  const [weekAnchor, setWeekAnchor] = useState(() =>
+    parseDayKey(initialWeekStart),
+  )
   const [teamFilter, setTeamFilter] = useState('')
+  const [rangeMode, setRangeMode] = useState<RangeMode>('week')
+  const initialKeys = weekDayKeys(parseDayKey(initialWeekStart))
+  const [rangeFrom, setRangeFrom] = useState(initialKeys[0]!)
+  const [rangeTo, setRangeTo] = useState(initialKeys[6]!)
+  const [filterYear, setFilterYear] = useState(() =>
+    parseDayKey(initialWeekStart).getFullYear(),
+  )
+  const [filterMonth, setFilterMonth] = useState(() =>
+    parseDayKey(initialWeekStart).getMonth(),
+  )
   const [selection, setSelection] = useState<Selection>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -52,29 +72,97 @@ export default function AgendaDashboard({
     return teams.filter((t) => t.id === teamFilter)
   }, [teams, teamFilter])
 
-  const reload = useCallback(
-    async (nextAnchor: Date) => {
+  const yearOptions = useMemo(() => {
+    const y = Number(todayKey.slice(0, 4))
+    return [y - 1, y, y + 1]
+  }, [todayKey])
+
+  const showPeriodList =
+    rangeMode === 'custom' && inclusiveDaySpan(rangeFrom, rangeTo) > 7
+
+  const periodEvents = useMemo(() => {
+    if (!showPeriodList) return []
+    return [...events].sort((a, b) => {
+      const byDate = a.event_date.localeCompare(b.event_date)
+      if (byDate !== 0) return byDate
+      return String(a.start_time).localeCompare(String(b.start_time))
+    })
+  }, [events, showPeriodList])
+
+  const teamNameById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const t of teams) map.set(t.id, t.name)
+    return map
+  }, [teams])
+
+  const fetchEvents = useCallback(
+    async (from: string, to: string, teamId: string) => {
+      const params = new URLSearchParams({ from, to })
+      if (teamId) params.set('team_id', teamId)
+      const res = await fetch(`/api/agenda/events?${params}`, { cache: 'no-store' })
+      const json = (await res.json()) as { data?: AgendaEvent[]; error?: string }
+      if (!res.ok) throw new Error(json.error ?? 'Falha ao carregar agenda')
+      return json.data ?? []
+    },
+    [],
+  )
+
+  /** Navegação semanal — volta ao modo semana. */
+  const reloadWeek = useCallback(
+    async (nextAnchor: Date, teamId = teamFilter) => {
       setLoading(true)
       setError(null)
       try {
         const keys = weekDayKeys(nextAnchor)
-        const params = new URLSearchParams({
-          from: keys[0]!,
-          to: keys[6]!,
-        })
-        if (teamFilter) params.set('team_id', teamFilter)
-        const res = await fetch(`/api/agenda/events?${params}`, { cache: 'no-store' })
-        const json = (await res.json()) as { data?: AgendaEvent[]; error?: string }
-        if (!res.ok) throw new Error(json.error ?? 'Falha ao carregar agenda')
-        setEvents(json.data ?? [])
+        const from = keys[0]!
+        const to = keys[6]!
+        const data = await fetchEvents(from, to, teamId)
+        setEvents(data)
         setWeekAnchor(nextAnchor)
+        setRangeMode('week')
+        setRangeFrom(from)
+        setRangeTo(to)
+        setFilterYear(nextAnchor.getFullYear())
+        setFilterMonth(nextAnchor.getMonth())
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Erro')
       } finally {
         setLoading(false)
       }
     },
-    [teamFilter],
+    [fetchEvents, teamFilter],
+  )
+
+  /** Intervalo customizado (mês / de–até). Quadro mostra a semana do início. */
+  const reloadCustom = useCallback(
+    async (from: string, to: string, teamId = teamFilter) => {
+      if (!from || !to || from > to) {
+        setError('Informe um intervalo válido (De ≤ Até).')
+        return
+      }
+      if (inclusiveDaySpan(from, to) > 366) {
+        setError('Intervalo máximo: 366 dias.')
+        return
+      }
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await fetchEvents(from, to, teamId)
+        const anchor = parseDayKey(from)
+        setEvents(data)
+        setWeekAnchor(anchor)
+        setRangeMode('custom')
+        setRangeFrom(from)
+        setRangeTo(to)
+        setFilterYear(anchor.getFullYear())
+        setFilterMonth(anchor.getMonth())
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Erro')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [fetchEvents, teamFilter],
   )
 
   async function markStatus(id: string, status: 'completed' | 'cancelled' | 'scheduled') {
@@ -89,7 +177,11 @@ export default function AgendaDashboard({
       setError(json.error ?? 'Falha ao atualizar')
       return
     }
-    await reload(weekAnchor)
+    if (rangeMode === 'custom') {
+      await reloadCustom(rangeFrom, rangeTo)
+    } else {
+      await reloadWeek(weekAnchor)
+    }
   }
 
   const selectedSegs = useMemo(() => {
@@ -123,7 +215,7 @@ export default function AgendaDashboard({
             </h1>
             <p className="mt-1 text-sm text-neutral-500">
               Quadro semanal por equipe — análogo à Agenda da Frota do Logistics.
-              Eventos entram aqui após cotação aprovada e sinal (reserva).
+              Eventos entram aqui após aceite do cliente e confirmação do sinal (30%) na cotação.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -142,7 +234,7 @@ export default function AgendaDashboard({
             Nova cotação
           </Link>
           : cliente → evento (adultos/crianças) → pacote → adicionais → resumo.
-          Com aprovação do cliente e pagamento do sinal (30%), a data fecha aqui.
+          Com aceite do cliente e confirmação do sinal (30%) na cotação, a data fecha aqui ao designar a equipe.
         </div>
 
         {teams.length === 0 ? (
@@ -155,69 +247,215 @@ export default function AgendaDashboard({
           </div>
         ) : null}
 
-        <div className="liquid-glass-panel flex flex-wrap items-end gap-3">
-          <button
-            type="button"
-            className={glassTabLink(false)}
-            onClick={() => void reload(shiftWeek(weekAnchor, -1))}
-          >
-            ← Semana anterior
-          </button>
-          <button
-            type="button"
-            className={glassTabLink(false)}
-            onClick={() => {
-              setSelection(null)
-              void reload(parseDay(todayDayKey()))
-            }}
-          >
-            Hoje
-          </button>
-          <button
-            type="button"
-            className={glassTabLink(false)}
-            onClick={() => void reload(shiftWeek(weekAnchor, 1))}
-          >
-            Próxima semana →
-          </button>
-          <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-wider text-cdl-muted">
-            Equipe
-            <select
-              className={glassField(false)}
-              value={teamFilter}
-              onChange={(e) => {
-                setTeamFilter(e.target.value)
-                void (async () => {
-                  const next = weekAnchor
-                  const keys = weekDayKeys(next)
-                  const params = new URLSearchParams({
-                    from: keys[0]!,
-                    to: keys[6]!,
-                  })
-                  if (e.target.value) params.set('team_id', e.target.value)
-                  const res = await fetch(`/api/agenda/events?${params}`, {
-                    cache: 'no-store',
-                  })
-                  const json = (await res.json()) as { data?: AgendaEvent[] }
-                  setEvents(json.data ?? [])
-                })()
+        <div className="liquid-glass-panel flex flex-col gap-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <button
+              type="button"
+              className={glassTabLink(false)}
+              onClick={() => {
+                setSelection(null)
+                void reloadWeek(shiftWeek(weekAnchor, -1))
               }}
             >
-              <option value="">Todas</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <span className="text-sm font-medium capitalize text-cdl-muted">
-            {formatWeekRangeLabel(weekAnchor, todayKey)}
-            {loading ? ' · atualizando…' : ''}
-          </span>
+              ← Semana anterior
+            </button>
+            <button
+              type="button"
+              className={glassTabLink(false)}
+              onClick={() => {
+                setSelection(null)
+                void reloadWeek(parseDayKey(todayDayKey()))
+              }}
+            >
+              Hoje
+            </button>
+            <button
+              type="button"
+              className={glassTabLink(false)}
+              onClick={() => {
+                setSelection(null)
+                void reloadWeek(shiftWeek(weekAnchor, 1))
+              }}
+            >
+              Próxima semana →
+            </button>
+            <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-wider text-cdl-muted">
+              Equipe
+              <select
+                className={glassField(false)}
+                value={teamFilter}
+                onChange={(e) => {
+                  const nextTeam = e.target.value
+                  setTeamFilter(nextTeam)
+                  if (rangeMode === 'custom') {
+                    void reloadCustom(rangeFrom, rangeTo, nextTeam)
+                  } else {
+                    void reloadWeek(weekAnchor, nextTeam)
+                  }
+                }}
+              >
+                <option value="">Todas</option>
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-wider text-cdl-muted">
+              Ano
+              <select
+                className={glassField(false)}
+                value={filterYear}
+                onChange={(e) => setFilterYear(Number(e.target.value))}
+              >
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-wider text-cdl-muted">
+              Mês
+              <select
+                className={glassField(false)}
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(Number(e.target.value))}
+              >
+                {AGENDA_MONTH_OPTIONS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className={glassTabLink(false)}
+              onClick={() => {
+                setSelection(null)
+                const from = toDayKey(startOfMonth(filterYear, filterMonth))
+                const to = toDayKey(endOfMonth(filterYear, filterMonth))
+                void reloadCustom(from, to)
+              }}
+            >
+              Ver mês
+            </button>
+            <span className="pb-2 text-sm font-medium capitalize text-cdl-muted">
+              {rangeMode === 'custom'
+                ? formatRangeLabel(rangeFrom, rangeTo)
+                : formatWeekRangeLabel(weekAnchor, todayKey)}
+              {rangeMode === 'custom' ? ' · período' : ' · semana'}
+              {loading ? ' · atualizando…' : ''}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-end gap-3 border-t border-cdl-border/60 pt-3">
+            <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-wider text-cdl-muted">
+              De
+              <input
+                type="date"
+                className={glassField(false)}
+                value={rangeFrom}
+                onChange={(e) => setRangeFrom(e.target.value)}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-wider text-cdl-muted">
+              Até
+              <input
+                type="date"
+                className={glassField(false)}
+                value={rangeTo}
+                onChange={(e) => setRangeTo(e.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className={glassTabLink(false)}
+              onClick={() => {
+                setSelection(null)
+                void reloadCustom(rangeFrom, rangeTo)
+              }}
+            >
+              Aplicar período
+            </button>
+          </div>
         </div>
 
         {error ? <p className="text-sm text-red-500">{error}</p> : null}
+
+        {showPeriodList ? (
+          <div className="liquid-glass-card space-y-3 p-4">
+            <h2 className="text-base font-bold text-cdl-fg">
+              Eventos no período ({periodEvents.length})
+            </h2>
+            <p className="text-xs text-cdl-muted">
+              Lista do intervalo selecionado. O quadro abaixo continua semanal
+              (semana do início do período).
+            </p>
+            {periodEvents.length === 0 ? (
+              <p className="text-sm text-cdl-muted">
+                Nenhum evento neste período.
+              </p>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-cdl-border">
+                <table className="w-full min-w-[640px] border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-cdl-inset text-left text-[11px] uppercase tracking-wider text-cdl-muted">
+                      <th className="px-3 py-2">Data</th>
+                      <th className="px-3 py-2">Horário</th>
+                      <th className="px-3 py-2">Equipe</th>
+                      <th className="px-3 py-2">Código</th>
+                      <th className="px-3 py-2">Evento</th>
+                      <th className="px-3 py-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {periodEvents.map((ev) => (
+                      <tr
+                        key={ev.id}
+                        className="border-t border-cdl-border text-cdl-fg"
+                      >
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {dayLabel(ev.event_date)}
+                        </td>
+                        <td className="px-3 py-2 tabular-nums whitespace-nowrap">
+                          {String(ev.start_time).slice(0, 5)}–
+                          {String(ev.end_time).slice(0, 5)}
+                        </td>
+                        <td className="px-3 py-2">
+                          {teamNameById.get(ev.team_id) ?? '—'}
+                        </td>
+                        <td className="px-3 py-2 font-medium">
+                          {ev.quote_id ? (
+                            <Link
+                              href={`/quotes/${ev.quote_id}`}
+                              className="underline-offset-2 hover:underline"
+                            >
+                              {ev.code}
+                            </Link>
+                          ) : (
+                            ev.code
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          {ev.title}
+                          {ev.client_name ? (
+                            <span className="text-cdl-muted">
+                              {' '}
+                              · {ev.client_name}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="px-3 py-2 capitalize">{ev.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : null}
 
         <div className="flex flex-wrap gap-3 text-xs text-cdl-muted">
           <span className="inline-flex items-center gap-1.5">
@@ -238,29 +476,34 @@ export default function AgendaDashboard({
           use domingo (se livre), dia útil ou feriado.
         </p>
 
-        <div className="schedule-day-board overflow-auto rounded-2xl border border-cdl-border bg-cdl-surface">
-          <table className="min-w-[900px] w-full border-collapse text-sm">
+        <div className="schedule-day-board max-h-[min(70vh,52rem)] overflow-auto rounded-2xl border border-cdl-border bg-cdl-surface">
+          <table className="w-full min-w-[720px] border-collapse text-sm">
             <thead>
               <tr>
-                <th className="sticky left-0 z-20 min-w-[10rem] border-b border-r border-cdl-border bg-cdl-surface px-3 py-3 text-left text-xs font-bold uppercase tracking-wider text-cdl-muted">
+                <th className="sticky left-0 top-0 z-30 w-[6.5rem] max-w-[6.5rem] border-b border-r border-cdl-border bg-cdl-surface px-2 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-cdl-muted">
                   Equipe
                 </th>
                 {weekKeys.map((key) => {
                   const { weekday, date } = dayLabelParts(key)
                   const isToday = key === todayKey
+                  const isPast = key < todayKey
                   return (
                     <th
                       key={key}
-                      className={`min-w-[7.5rem] border-b border-cdl-border px-2 py-3 text-center text-xs font-bold tracking-wider ${
+                      className={`sticky top-0 z-20 min-w-[5.5rem] border-b border-cdl-border px-1.5 py-2.5 text-center text-[11px] font-bold tracking-wider ${
                         isToday
-                          ? 'bg-sky-500/10 text-sky-800 dark:text-sky-200'
-                          : 'uppercase text-cdl-muted'
+                          ? 'bg-sky-500/15 text-sky-800 dark:text-sky-200'
+                          : isPast
+                            ? 'bg-cdl-surface uppercase text-cdl-muted/70'
+                            : 'bg-cdl-surface uppercase text-cdl-muted'
                       }`}
                     >
                       <span className="block capitalize">{weekday}</span>
                       <span
-                        className={`block text-[0.7rem] font-normal ${
-                          isToday ? 'text-sky-700 dark:text-sky-300' : 'text-cdl-muted'
+                        className={`block text-[0.65rem] font-normal ${
+                          isToday
+                            ? 'text-sky-700 dark:text-sky-300'
+                            : 'text-cdl-muted'
                         }`}
                       >
                         {date}
@@ -273,13 +516,13 @@ export default function AgendaDashboard({
             <tbody>
               {visibleTeams.map((team) => (
                 <tr key={team.id}>
-                  <td className="sticky left-0 z-10 border-b border-r border-cdl-border bg-cdl-surface px-3 py-2 align-top">
-                    <div className="flex items-center gap-2 font-semibold text-cdl-fg">
+                  <td className="sticky left-0 z-10 w-[6.5rem] max-w-[6.5rem] border-b border-r border-cdl-border bg-cdl-surface px-2 py-2 align-top">
+                    <div className="flex items-start gap-1.5 text-center text-[11px] font-semibold leading-tight text-cdl-fg">
                       <span
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        className="mt-1 h-2 w-2 shrink-0 rounded-full"
                         style={{ background: team.color }}
                       />
-                      {team.name}
+                      <span className="min-w-0 break-words">{team.name}</span>
                     </div>
                   </td>
                   {weekKeys.map((dayKey) => {
@@ -289,15 +532,18 @@ export default function AgendaDashboard({
                     const selected =
                       selection?.teamId === team.id && selection.dayKey === dayKey
                     const isToday = dayKey === todayKey
+                    const isPast = dayKey < todayKey
                     return (
                       <td
                         key={dayKey}
-                        className={`border-b border-cdl-border p-1.5 align-top ${
+                        className={`border-b border-cdl-border p-1 align-top ${
                           selected
                             ? 'bg-sky-500/10 ring-2 ring-inset ring-sky-400/50'
                             : isToday
                               ? 'bg-sky-500/5'
-                              : ''
+                              : isPast
+                                ? 'bg-cdl-inset/40'
+                                : ''
                         }`}
                       >
                         <div
@@ -477,6 +723,8 @@ export default function AgendaDashboard({
                           'pt'
                         }
                         defaultPhone={selectedTeam.contact?.phone ?? null}
+                        contactFullName={selectedTeam.contact?.full_name ?? null}
+                        contactAbName={selectedTeam.contact?.ab_name ?? null}
                         confirmUrl={
                           seg.assignmentToken
                             ? buildPublicTeamAssignmentUrl(seg.assignmentToken)
@@ -509,9 +757,4 @@ export default function AgendaDashboard({
         ) : null}
     </div>
   )
-}
-
-function parseDay(dayKey: string): Date {
-  const [y, m, d] = dayKey.split('-').map(Number)
-  return new Date(y!, m! - 1, d!, 12, 0, 0, 0)
 }

@@ -985,6 +985,31 @@ body {
   border-color: rgba(148, 163, 184, 0.4);
 }
 
+.liquid-glass-btn--danger {
+  color: #b91c1c;
+  background: linear-gradient(
+    145deg,
+    rgba(254, 242, 242, 0.96) 0%,
+    rgba(254, 226, 226, 0.92) 55%,
+    rgba(254, 202, 202, 0.9) 100%
+  );
+  border-color: rgba(248, 113, 113, 0.55);
+  box-shadow:
+    0 4px 14px rgba(185, 28, 28, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.liquid-glass-btn--danger:hover:not(:disabled) {
+  color: #991b1b;
+  background: linear-gradient(
+    145deg,
+    rgba(254, 226, 226, 1) 0%,
+    rgba(254, 202, 202, 0.96) 55%,
+    rgba(252, 165, 165, 0.92) 100%
+  );
+  border-color: rgba(239, 68, 68, 0.7);
+}
+
 /* Ações de compartilhamento (padrão Logistics) */
 .liquid-glass-action {
   position: relative;
@@ -1196,6 +1221,19 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
+[data-theme="dark"] .liquid-glass-btn--danger {
+  color: #fecaca;
+  background: linear-gradient(
+    145deg,
+    rgba(127, 29, 29, 0.55) 0%,
+    rgba(153, 27, 27, 0.45) 100%
+  );
+  border-color: rgba(248, 113, 113, 0.45);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
 [data-theme="dark"] .liquid-glass-menu-panel {
   background: linear-gradient(
     145deg,
@@ -1367,6 +1405,9 @@ body {
   object-fit: contain;
   object-position: center;
   margin-inline: auto;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 /* MENU + X: hidden no desktop (padrão Logistics — evita guerra com display:inline-flex) */

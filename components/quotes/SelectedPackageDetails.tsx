@@ -171,86 +171,102 @@ export default function SelectedPackageDetails({
       : null
 
   return (
-    <div className="mt-2 space-y-2.5 border-t border-cdl-border-subtle pt-2.5 px-0">
-      <PackageHeroImage
-        src={image}
-        alt={pkg.label_pt?.trim() || pkg.package_key || 'Pacote'}
-        fallbackLabel="Imagem do pacote"
-      />
-
-      {highlightItems.length > 0 ? (
-        <div className="rounded-xl bg-gradient-to-br from-amber-100 via-amber-50 to-yellow-50 px-3 py-2.5 ring-1 ring-amber-200/80">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-amber-900">
-            Destaques do pacote
-          </p>
-          <ul className="mt-1.5 space-y-0.5">
-            {highlightItems.map((item) => (
-              <li
-                key={item}
-                className="text-xs leading-snug text-amber-950 before:mr-1.5 before:font-bold before:content-['•'] sm:text-sm"
-              >
-                {item}
-              </li>
-            ))}
-          </ul>
+    <div className="mt-2 border-t border-cdl-border-subtle pt-2.5 px-0">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-12 md:items-start md:gap-5">
+        <div className="md:col-span-5 lg:col-span-5">
+          <PackageHeroImage
+            src={image}
+            alt={pkg.label_pt?.trim() || pkg.package_key || 'Pacote'}
+            fallbackLabel="Imagem do pacote"
+            compact
+          />
         </div>
-      ) : null}
 
-      {optionProps ? (
-        <PackageIncludedOptions {...optionProps} onlyGroupKeys={['SEAFOOD_OPTION']} />
-      ) : null}
-
-      {optionProps ? (
-        <PackageIncludedOptions {...optionProps} onlyGroupKeys={['COSTELA_OPTION']} />
-      ) : null}
-
-      {variant === 'with_sides' && pkg.id ? (
-        <PackageIncludedSidesSummary
-          packageId={pkg.id}
-          packageSideItems={packageSideItems}
-          optionGroups={optionGroups}
-          language={language}
-        />
-      ) : null}
-
-      {optionProps ? (
-        <PackageIncludedOptions {...optionProps} onlyGroupKeys={['SIDE_OPTION']} />
-      ) : null}
-
-      <PackagePriceSummary
-        pkg={pkg}
-        allPackages={allPackages}
-        sidesPricePerPerson={sidesPricePerPerson}
-        language={language}
-      />
-
-      {onNext ? (
-        <div className="space-y-2 pt-1">
-          {stepMessage ? (
-            <p className="text-center text-sm font-medium text-[var(--brand-primary)] sm:text-right">
-              {stepMessage}
-            </p>
+        <div className="space-y-2.5 md:col-span-7 lg:col-span-7">
+          {highlightItems.length > 0 ? (
+            <div className="rounded-xl bg-gradient-to-br from-amber-100 via-amber-50 to-yellow-50 px-3 py-2.5 ring-1 ring-amber-200/80">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-amber-900">
+                Destaques do pacote
+              </p>
+              <ul className="mt-1.5 space-y-0.5">
+                {highlightItems.map((item) => (
+                  <li
+                    key={item}
+                    className="text-xs leading-snug text-amber-950 before:mr-1.5 before:font-bold before:content-['•'] sm:text-sm"
+                  >
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : null}
-          <div className="relative">
-            {nextDisabled && onNextBlockedClick ? (
-              <button
-                type="button"
-                aria-label="Próximo — complete as opções obrigatórias"
-                className="absolute inset-0 z-10 cursor-not-allowed rounded-xl"
-                onClick={onNextBlockedClick}
-              />
-            ) : null}
-            <button
-              type="button"
-              onClick={onNext}
-              disabled={nextDisabled}
-              className="cdl-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Próximo
-            </button>
-          </div>
+
+          {optionProps ? (
+            <PackageIncludedOptions
+              {...optionProps}
+              onlyGroupKeys={['SEAFOOD_OPTION']}
+            />
+          ) : null}
+
+          {optionProps ? (
+            <PackageIncludedOptions
+              {...optionProps}
+              onlyGroupKeys={['COSTELA_OPTION']}
+            />
+          ) : null}
+
+          {variant === 'with_sides' && pkg.id ? (
+            <PackageIncludedSidesSummary
+              packageId={pkg.id}
+              packageSideItems={packageSideItems}
+              optionGroups={optionGroups}
+              language={language}
+            />
+          ) : null}
+
+          {optionProps ? (
+            <PackageIncludedOptions
+              {...optionProps}
+              onlyGroupKeys={['SIDE_OPTION']}
+            />
+          ) : null}
+
+          <PackagePriceSummary
+            pkg={pkg}
+            allPackages={allPackages}
+            sidesPricePerPerson={sidesPricePerPerson}
+            language={language}
+          />
+
+          {onNext ? (
+            <div className="space-y-2 pt-1">
+              {stepMessage ? (
+                <p className="text-center text-sm font-medium text-[var(--brand-primary)] sm:text-right">
+                  {stepMessage}
+                </p>
+              ) : null}
+              <div className="relative">
+                {nextDisabled && onNextBlockedClick ? (
+                  <button
+                    type="button"
+                    aria-label="Próximo — complete as opções obrigatórias"
+                    className="absolute inset-0 z-10 cursor-not-allowed rounded-xl"
+                    onClick={onNextBlockedClick}
+                  />
+                ) : null}
+                <button
+                  type="button"
+                  onClick={onNext}
+                  disabled={nextDisabled}
+                  className="cdl-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Próximo
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      </div>
     </div>
   )
 }

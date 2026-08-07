@@ -33,7 +33,7 @@ export function glassTabLink(active = false, className = ''): string {
 }
 
 export function glassBtn(
-  tone: 'primary' | 'secondary' | 'ghost' = 'secondary',
+  tone: 'primary' | 'secondary' | 'ghost' | 'danger' = 'secondary',
   className = '',
 ): string {
   return [

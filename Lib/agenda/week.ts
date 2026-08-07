@@ -52,19 +52,15 @@ export function weekDayKeys(anchor: Date): string[] {
 }
 
 /**
- * Colunas visíveis do quadro.
- * Na semana atual, omite dias já passados (hoje em diante) — evita “dia 3”
- * quando hoje é dia 4. Semanas futuras/passadas mostram seg→dom completo.
+ * Colunas visíveis do quadro: sempre segunda → domingo (semana completa).
+ * Dias passados permanecem visíveis (busca de OS/ordens na agenda).
+ * O destaque de “hoje” fica a cargo da UI.
  */
 export function visibleWeekDayKeys(
   anchor: Date,
-  todayKey: string = todayDayKey(),
+  _todayKey: string = todayDayKey(),
 ): string[] {
-  const keys = weekDayKeys(anchor)
-  const weekStartKey = keys[0]!
-  const currentWeekStartKey = toDayKey(startOfWeekMondayFromDayKey(todayKey))
-  if (weekStartKey !== currentWeekStartKey) return keys
-  return keys.filter((key) => key >= todayKey)
+  return weekDayKeys(anchor)
 }
 
 export function shiftWeek(anchor: Date, weeks: number): Date {
@@ -135,3 +131,72 @@ export function formatMinutes(min: number): string {
   const m = min % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
+
+/** Primeiro dia do mês (mês 0–11). */
+export function startOfMonth(year: number, monthIndex: number): Date {
+  return new Date(year, monthIndex, 1, 12, 0, 0, 0)
+}
+
+/** Último dia do mês (mês 0–11). */
+export function endOfMonth(year: number, monthIndex: number): Date {
+  return new Date(year, monthIndex + 1, 0, 12, 0, 0, 0)
+}
+
+/** Dias inclusivos entre fromKey e toKey (máx. `maxDays`, padrão 366). */
+export function dayKeysInRange(
+  fromKey: string,
+  toKey: string,
+  maxDays = 366,
+): string[] {
+  if (!fromKey || !toKey || fromKey > toKey) return []
+  const keys: string[] = []
+  let cursor = parseDayKey(fromKey)
+  const end = parseDayKey(toKey)
+  while (cursor <= end && keys.length < maxDays) {
+    keys.push(toDayKey(cursor))
+    cursor = new Date(
+      cursor.getFullYear(),
+      cursor.getMonth(),
+      cursor.getDate() + 1,
+      12,
+      0,
+      0,
+      0,
+    )
+  }
+  return keys
+}
+
+/** Diferença inclusiva em dias (from→to). */
+export function inclusiveDaySpan(fromKey: string, toKey: string): number {
+  if (!fromKey || !toKey || fromKey > toKey) return 0
+  const a = parseDayKey(fromKey)
+  const b = parseDayKey(toKey)
+  return Math.round((b.getTime() - a.getTime()) / 86_400_000) + 1
+}
+
+export function formatRangeLabel(fromKey: string, toKey: string): string {
+  if (!fromKey || !toKey) return ''
+  const fmt = (key: string) =>
+    parseDayKey(key).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
+  return `${fmt(fromKey)} — ${fmt(toKey)}`
+}
+
+export const AGENDA_MONTH_OPTIONS = [
+  { value: 0, label: 'Janeiro' },
+  { value: 1, label: 'Fevereiro' },
+  { value: 2, label: 'Março' },
+  { value: 3, label: 'Abril' },
+  { value: 4, label: 'Maio' },
+  { value: 5, label: 'Junho' },
+  { value: 6, label: 'Julho' },
+  { value: 7, label: 'Agosto' },
+  { value: 8, label: 'Setembro' },
+  { value: 9, label: 'Outubro' },
+  { value: 10, label: 'Novembro' },
+  { value: 11, label: 'Dezembro' },
+] as const

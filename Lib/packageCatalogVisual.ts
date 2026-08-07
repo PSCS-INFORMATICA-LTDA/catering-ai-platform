@@ -222,12 +222,12 @@ export function formatPackageCatalogPriceLabel(
 
 export function getPackageSidesDescription(language: QuoteLanguage): string {
   if (language === 'en') {
-    return 'Sides: rice, tropeiro beans, vinaigrette, farofa and cassava.'
+    return 'Sides: white rice, black beans, vinaigrette, farofa and cassava.'
   }
   if (language === 'es') {
-    return 'Guarniciones: arroz, feijão tropeiro, vinagrete, farofa y mandioca.'
+    return 'Guarniciones: arroz blanco, feijão preto, vinagrete, farofa y mandioca.'
   }
-  return 'Guarnições: arroz, feijão tropeiro, vinagrete, farofa e mandioca.'
+  return 'Guarnições: arroz branco, feijão preto, vinagrete, farofa e mandioca.'
 }
 
 export function getPackageSidesIncludedLabel(language: QuoteLanguage): string {

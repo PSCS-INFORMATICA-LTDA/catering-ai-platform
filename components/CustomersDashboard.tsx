@@ -13,6 +13,7 @@ import {
   BackofficeMetaRow,
   BackofficeOpenQuoteBadge,
 } from '@/components/backoffice/BackofficeCardPrimitives'
+import { glassBtn } from '@/Lib/liquidGlass'
 import { getCustomerDisplayName } from '@/Lib/getCustomerDisplayName'
 import type { CustomersUpdatePayload } from '@/Lib/customersTableSchema'
 import { glassField } from '@/Lib/liquidGlass'
@@ -408,15 +409,21 @@ export default function CustomersDashboard({
             title={`Editar cadastro · ${displayName}`}
             actions={
               <>
-                <BackofficeBtnPrimary
+                <button
+                  type="button"
                   onClick={() => void saveRow()}
                   disabled={saving}
+                  className={glassBtn('primary', '!min-h-[36px] !px-4 !text-xs')}
                 >
                   {saving ? 'Salvando…' : 'Salvar'}
-                </BackofficeBtnPrimary>
-                <BackofficeBtnSecondary onClick={cancelEdit}>
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  className={glassBtn('secondary', '!min-h-[36px] !px-4 !text-xs')}
+                >
                   Cancelar
-                </BackofficeBtnSecondary>
+                </button>
               </>
             }
           >
@@ -473,16 +480,37 @@ export default function CustomersDashboard({
             <p className="truncate">{customer.email || '—'}</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <BackofficeBtnSecondary onClick={() => startEdit(customer)}>
+          <div className="flex flex-wrap items-center justify-center gap-1.5 sm:justify-end">
+            <button
+              type="button"
+              onClick={() => startEdit(customer)}
+              className={glassBtn(
+                'secondary',
+                '!min-h-[32px] !px-3 !py-1.5 !text-[11px] !font-bold uppercase tracking-wide',
+              )}
+            >
               Editar
-            </BackofficeBtnSecondary>
-            <BackofficeBtnSecondary onClick={() => toggleAnalyze(customer.id)}>
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleAnalyze(customer.id)}
+              className={glassBtn(
+                'secondary',
+                '!min-h-[32px] !px-3 !py-1.5 !text-[11px] !font-bold uppercase tracking-wide',
+              )}
+            >
               {isAnalyzing ? 'Fechar' : 'Analisar'}
-            </BackofficeBtnSecondary>
-            <BackofficeBtnDanger onClick={() => void handleDeactivate(customer)}>
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleDeactivate(customer)}
+              className={glassBtn(
+                'danger',
+                '!min-h-[32px] !px-3 !py-1.5 !text-[11px] !font-bold uppercase tracking-wide',
+              )}
+            >
               Excluir
-            </BackofficeBtnDanger>
+            </button>
           </div>
         </div>
 
@@ -546,7 +574,7 @@ export default function CustomersDashboard({
           <button
             type="button"
             onClick={startNew}
-            className="cdl-btn-primary inline-flex min-h-[44px] items-center justify-center rounded-xl px-5 py-3 text-sm font-bold"
+            className={glassBtn('primary', 'min-h-[44px] px-5 py-3 text-sm font-bold')}
           >
             Nova pessoa
           </button>
@@ -559,15 +587,21 @@ export default function CustomersDashboard({
             title="Nova pessoa"
             actions={
               <>
-                <BackofficeBtnPrimary
+                <button
+                  type="button"
                   onClick={() => void saveRow()}
                   disabled={saving}
+                  className={glassBtn('primary', '!min-h-[36px] !px-4 !text-xs')}
                 >
                   {saving ? 'Salvando…' : 'Salvar'}
-                </BackofficeBtnPrimary>
-                <BackofficeBtnSecondary onClick={cancelEdit}>
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  className={glassBtn('secondary', '!min-h-[36px] !px-4 !text-xs')}
+                >
                   Cancelar
-                </BackofficeBtnSecondary>
+                </button>
               </>
             }
           >
@@ -581,12 +615,12 @@ export default function CustomersDashboard({
             message="Nenhuma pessoa encontrada."
           />
         ) : (
-          <ul className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
-            <li className="hidden border-b border-neutral-100 bg-neutral-50 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-neutral-500 sm:grid sm:grid-cols-[minmax(0,1.4fr)_minmax(9rem,0.9fr)_minmax(0,1.2fr)_auto] sm:gap-4">
+          <ul className="max-h-[min(70vh,52rem)] overflow-auto rounded-2xl border border-neutral-200 bg-white shadow-sm">
+            <li className="sticky top-0 z-10 hidden border-b border-neutral-100 bg-neutral-50 px-4 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-neutral-500 sm:grid sm:grid-cols-[minmax(0,1.4fr)_minmax(9rem,0.9fr)_minmax(0,1.2fr)_auto] sm:gap-4">
               <span>Pessoa</span>
               <span>Papel</span>
               <span>Contato</span>
-              <span className="text-right">Ações</span>
+              <span>Ações</span>
             </li>
             {filteredCustomers.map((customer) => renderPersonRow(customer))}
           </ul>

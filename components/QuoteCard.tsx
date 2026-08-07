@@ -146,7 +146,6 @@ function QuoteCardActions({
         compact
         redirectToList={false}
         onDeleted={onDeleted}
-        className="pscs-btn-danger"
       />
       <Link
         href={`/quotes/${quote.id}?pdf=1`}

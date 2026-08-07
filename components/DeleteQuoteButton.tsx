@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { glassBtn } from '@/Lib/liquidGlass'
 
 export default function DeleteQuoteButton({
   quoteId,
@@ -55,25 +56,27 @@ export default function DeleteQuoteButton({
   }
 
   return (
-    <div className={className.includes('pscs-btn-danger') ? '' : className}>
+    <div className="inline-flex flex-col items-stretch">
       <button
         type="button"
         onClick={() => void handleDelete()}
         disabled={deleting}
-        className={`inline-flex items-center justify-center rounded-lg font-bold uppercase tracking-wider transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-          className.includes('pscs-btn-danger')
-            ? `pscs-btn-danger ${compact ? 'min-w-0 flex-1 px-3 py-2 text-xs sm:flex-none' : 'px-5 py-3 text-sm'}`
-            : `border border-cdl-action/50 bg-cdl-red-soft text-cdl-action hover:border-cdl-action ${
-                compact
-                  ? 'min-w-0 flex-1 px-3 py-2 text-xs sm:flex-none'
-                  : 'px-5 py-3 text-sm'
-              }`
-        }`}
+        className={glassBtn(
+          'danger',
+          [
+            compact
+              ? '!min-h-[28px] !px-2 !py-1 !text-[10px]'
+              : 'min-h-[40px] px-5 py-2.5 text-sm',
+            className,
+          ]
+            .filter(Boolean)
+            .join(' '),
+        )}
       >
         {deleting ? 'Excluindo…' : compact ? 'Excluir' : 'Excluir Cotação'}
       </button>
       {error ? (
-        <p className="mt-2 text-xs text-cdl-action">{error}</p>
+        <p className="mt-1 text-xs text-cdl-action">{error}</p>
       ) : null}
     </div>
   )

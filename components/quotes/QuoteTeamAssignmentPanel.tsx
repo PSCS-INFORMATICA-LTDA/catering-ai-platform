@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   buildTeamAvailabilityWhatsAppText,
-  parseTeamLeaderFromNotes,
+  resolveTeamLeaderDisplayName,
 } from '@/Lib/whatsappMessageTemplates'
 import {
   suggestPresentationTime,
@@ -62,6 +62,7 @@ type PanelData = {
   quote_status: string | null
   team_presentation_time: string | null
   designated_team_id: string | null
+  reservation_confirmed_at?: string | null
   event_date: string | null
   start_time: string | null
   end_time: string | null
@@ -74,6 +75,9 @@ type PanelData = {
 }
 
 const TEAM_PHONE_STORAGE_KEY = 'catering.teamWhatsAppPhones'
+
+const SHARE_ICON =
+  'inline-flex h-10 w-10 shrink-0 items-center justify-center p-0'
 
 function loadStoredPhone(teamId: string): string {
   if (typeof window === 'undefined') return ''
@@ -177,7 +181,12 @@ export default function QuoteTeamAssignmentPanel({
     const a = data.assignment
     return buildTeamAvailabilityWhatsAppText({
       teamName: selectedTeam.name,
-      leaderName: parseTeamLeaderFromNotes(selectedTeam.notes),
+      leaderName: resolveTeamLeaderDisplayName({
+        contactFullName: selectedTeam.contact?.full_name,
+        contactAbName: selectedTeam.contact?.ab_name,
+        teamName: selectedTeam.name,
+        notes: selectedTeam.notes,
+      }),
       eventCode: a.code,
       eventTitle: data.event_name || a.code,
       clientName: data.client_name,
@@ -207,6 +216,20 @@ export default function QuoteTeamAssignmentPanel({
     setPhone(fromPerson || stored || '')
   }, [teamId, selectedTeam])
 
+  const teamOptions = useMemo(() => {
+    if (!data) return []
+    const map = new Map<string, TeamRow>()
+    for (const t of data.available_teams) map.set(t.id, t)
+    // Mantém a equipe já designada na lista mesmo se “ocupada” por este evento
+    if (teamId) {
+      const current = data.all_teams.find((t) => t.id === teamId)
+      if (current) map.set(current.id, current)
+    }
+    return Array.from(map.values())
+  }, [data, teamId])
+
+  const reservationConfirmed = Boolean(data?.reservation_confirmed_at)
+
   if (!canDesignate) return null
 
   const responseLabel =
@@ -220,17 +243,32 @@ export default function QuoteTeamAssignmentPanel({
             ? tQuotesOrders(locale, 'designatedNotSent')
             : tQuotesOrders(locale, 'notDesignatedYet')
 
-  const teamOptions = useMemo(() => {
-    if (!data) return []
-    const map = new Map<string, TeamRow>()
-    for (const t of data.available_teams) map.set(t.id, t)
-    // Mantém a equipe já designada na lista mesmo se “ocupada” por este evento
-    if (teamId) {
-      const current = data.all_teams.find((t) => t.id === teamId)
-      if (current) map.set(current.id, current)
+  async function confirmReservation() {
+    setBusy(true)
+    setError(null)
+    setHint(null)
+    try {
+      const res = await fetch(`/api/quotes/${quoteId}/reservation-confirm`, {
+        method: 'POST',
+      })
+      const json = (await res.json()) as { error?: string }
+      if (!res.ok) {
+        throw new Error(
+          json.error ?? tQuotesOrders(locale, 'reservationConfirmNeeded'),
+        )
+      }
+      setHint(tQuotesOrders(locale, 'reservationConfirmSuccess'))
+      await load()
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : tQuotesOrders(locale, 'reservationConfirmNeeded'),
+      )
+    } finally {
+      setBusy(false)
     }
-    return Array.from(map.values())
-  }, [data, teamId])
+  }
 
   async function designate() {
     setBusy(true)
@@ -338,6 +376,31 @@ export default function QuoteTeamAssignmentPanel({
             ) : null}
           </dl>
 
+          <div className="rounded-xl border border-cdl-border bg-cdl-inset px-3 py-3">
+            {reservationConfirmed ? (
+              <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                {tQuotesOrders(locale, 'reservationConfirmed')}
+                {data.reservation_confirmed_at
+                  ? ` · ${new Date(data.reservation_confirmed_at).toLocaleString()}`
+                  : ''}
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-cdl-muted">
+                  {tQuotesOrders(locale, 'reservationConfirmNeeded')}
+                </p>
+                <button
+                  type="button"
+                  className={glassBtn('primary', 'shrink-0')}
+                  disabled={busy}
+                  onClick={() => void confirmReservation()}
+                >
+                  {tQuotesOrders(locale, 'confirmReservation')}
+                </button>
+              </div>
+            )}
+          </div>
+
           <label className="block space-y-1">
             <span className="text-xs font-medium text-cdl-muted">
               {tQuotesOrders(locale, 'presentationTimeLabel')}
@@ -383,7 +446,9 @@ export default function QuoteTeamAssignmentPanel({
             <button
               type="button"
               className={glassBtn('primary')}
-              disabled={busy || !teamId || !presentationTime}
+              disabled={
+                busy || !teamId || !presentationTime || !reservationConfirmed
+              }
               onClick={() => void designate()}
             >
               {data.assignment
@@ -392,11 +457,14 @@ export default function QuoteTeamAssignmentPanel({
             </button>
             <button
               type="button"
-              className={glassBtn('secondary')}
+              className={glassAction('green')}
               disabled={busy || !data.assignment}
               onClick={() => void ensureSent({ openWa: true })}
             >
-              {tQuotesOrders(locale, 'teamWhatsAppButton')}
+              <span className="inline-flex items-center gap-2">
+                <WhatsAppIcon className="h-5 w-5 text-white" />
+                {tQuotesOrders(locale, 'teamWhatsAppButton')}
+              </span>
             </button>
           </div>
         </>
@@ -427,21 +495,30 @@ export default function QuoteTeamAssignmentPanel({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
           />
-          <button
-            type="button"
-            className={glassBtn('ghost')}
-            onClick={() => setMessage(defaultMessage)}
-          >
-            {tQuotesOrders(locale, 'restoreDefaultText')}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className={glassBtn('ghost')}
+              onClick={() => setMessage(defaultMessage)}
+            >
+              {tQuotesOrders(locale, 'restoreDefaultText')}
+            </button>
+            <button
+              type="button"
+              className={glassBtn('ghost')}
+              onClick={() => setWaOpen(false)}
+            >
+              {tQuotesOrders(locale, 'closeLabel')}
+            </button>
+          </div>
 
-          <div className="flex w-full flex-col gap-2">
+          <div className="proposal-toolbar flex flex-wrap items-center gap-2">
             <WhatsAppButton
               phone={phone}
               message={message}
               editable
               onMessageChange={setMessage}
-              className="h-12 w-full justify-center"
+              className={SHARE_ICON}
               title={
                 phoneOk
                   ? `WhatsApp · ${formatWhatsAppPhoneDisplay(phone)}`
@@ -454,18 +531,13 @@ export default function QuoteTeamAssignmentPanel({
               onInvalidPhone={() =>
                 setHint(tQuotesOrders(locale, 'informPhoneHint'))
               }
-            >
-              <span className="inline-flex items-center gap-2">
-                <WhatsAppIcon className="h-5 w-5" />
-                {tQuotesOrders(locale, 'openWhatsAppDesktop')}
-              </span>
-            </WhatsAppButton>
+            />
 
             {buildSmsShareHref(phone, message) ? (
               <SmsShareAnchor
                 href={buildSmsShareHref(phone, message)!}
                 message={message}
-                className={`${glassAction('sky')} h-12 w-full justify-center`}
+                className={`${glassAction('sky', true)} ${SHARE_ICON}`}
                 title={tQuotesOrders(locale, 'sendBySms')}
                 aria-label={tQuotesOrders(locale, 'sendBySms')}
                 onOpen={() => {
@@ -474,21 +546,17 @@ export default function QuoteTeamAssignmentPanel({
                 }}
                 onDesktopHint={() => setHint(tQuotesOrders(locale, 'smsCopiedHint'))}
               >
-                <span className="inline-flex items-center gap-2">
-                  <SmsIcon className="h-5 w-5" />
-                  {tQuotesOrders(locale, 'sendBySms')}
-                </span>
+                <SmsIcon className="h-5 w-5" />
               </SmsShareAnchor>
             ) : (
               <button
                 type="button"
                 disabled
-                className={`${glassAction('sky')} h-12 w-full justify-center opacity-50`}
+                className={`${glassAction('sky', true)} ${SHARE_ICON} opacity-50`}
+                title={tQuotesOrders(locale, 'sendBySms')}
+                aria-label={tQuotesOrders(locale, 'sendBySms')}
               >
-                <span className="inline-flex items-center gap-2">
-                  <SmsIcon className="h-5 w-5" />
-                  {tQuotesOrders(locale, 'sendBySms')}
-                </span>
+                <SmsIcon className="h-5 w-5" />
               </button>
             )}
 
@@ -501,26 +569,31 @@ export default function QuoteTeamAssignmentPanel({
               return mailHref ? (
                 <a
                   href={mailHref}
-                  className={`${glassAction('sky')} h-11 w-fit justify-center px-4`}
+                  className={`${glassAction('sky', true)} ${SHARE_ICON}`}
+                  title={
+                    selectedTeam?.contact?.email
+                      ? `E-mail · ${selectedTeam.contact.email}`
+                      : tQuotesOrders(locale, 'emailLabel')
+                  }
+                  aria-label={tQuotesOrders(locale, 'emailLabel')}
                   onClick={() => {
                     void ensureSent({ openWa: false })
                   }}
                 >
-                  <span className="inline-flex items-center gap-2">
-                    <MailIcon className="h-5 w-5" />
-                    {tQuotesOrders(locale, 'emailLabel')}
-                  </span>
+                  <MailIcon className="h-5 w-5" />
                 </a>
-              ) : null
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className={`${glassAction('sky', true)} ${SHARE_ICON} opacity-50`}
+                  title={tQuotesOrders(locale, 'emailLabel')}
+                  aria-label={tQuotesOrders(locale, 'emailLabel')}
+                >
+                  <MailIcon className="h-5 w-5" />
+                </button>
+              )
             })()}
-
-            <button
-              type="button"
-              className={glassBtn('ghost')}
-              onClick={() => setWaOpen(false)}
-            >
-              {tQuotesOrders(locale, 'closeLabel')}
-            </button>
           </div>
 
           {phoneOk ? (

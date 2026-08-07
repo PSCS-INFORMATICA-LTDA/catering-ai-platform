@@ -25,7 +25,7 @@ export function CateringAuthLogo({ className = '' }: CateringAuthLogoProps) {
       alt="Catering AI Platform"
       width={720}
       height={420}
-      className={`mx-auto h-auto w-full max-w-[22rem] object-contain sm:max-w-[26rem] ${className}`}
+      className={`mx-auto h-auto w-full max-w-[28rem] object-contain sm:max-w-[34rem] ${className}`}
     />
   )
 }

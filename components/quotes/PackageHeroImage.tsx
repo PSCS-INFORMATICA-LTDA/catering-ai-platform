@@ -7,12 +7,15 @@ export default function PackageHeroImage({
   alt,
   fallbackLabel = 'Imagem do pacote',
   expand = true,
+  compact = false,
 }: {
   src?: string | null
   alt: string
   fallbackLabel?: string
   /** Expande além do padding do card pai (Etapa 3 / resumo). */
   expand?: boolean
+  /** Coluna ao lado das opções — imagem menor, sem max-width largo. */
+  compact?: boolean
 }) {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const normalizedSrc = src?.trim() || null
@@ -35,12 +38,20 @@ export default function PackageHeroImage({
   }, [lightboxOpen])
 
   const frameClass = [
-    expand ? '-mx-4 my-4 sm:-mx-2 sm:my-3' : 'my-3',
+    compact
+      ? 'my-0'
+      : expand
+        ? '-mx-4 my-4 sm:-mx-2 sm:my-3'
+        : 'my-3',
     'overflow-hidden rounded-3xl bg-white p-1 shadow-lg ring-1 ring-black/5',
-    'md:mx-auto md:max-w-3xl lg:max-w-4xl',
+    compact ? 'w-full max-w-full' : 'md:mx-auto md:max-w-3xl lg:max-w-4xl',
   ]
     .filter(Boolean)
     .join(' ')
+
+  const imgMaxClass = compact
+    ? 'max-h-[280px] md:max-h-[360px] lg:max-h-[420px]'
+    : 'max-h-[620px] md:max-h-[760px]'
 
   const openLightbox = () => setLightboxOpen(true)
 
@@ -72,7 +83,7 @@ export default function PackageHeroImage({
           }}
           role="button"
           tabIndex={0}
-          className="h-auto max-h-[620px] w-full max-w-full cursor-zoom-in rounded-2xl object-contain md:max-h-[760px]"
+          className={`h-auto w-full max-w-full cursor-zoom-in rounded-2xl object-contain ${imgMaxClass}`}
           loading="lazy"
           decoding="async"
           aria-label={`Ampliar imagem: ${alt}`}
