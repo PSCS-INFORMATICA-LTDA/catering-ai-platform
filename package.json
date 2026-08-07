@@ -50,7 +50,10 @@
     "seed:dev:team-scale:dry": "node scripts/dev/seed-team-scale-demo.mjs",
     "seed:dev:team-scale": "node scripts/dev/seed-team-scale-demo.mjs --apply",
     "verify:dev:team-scale": "node scripts/dev/seed-team-scale-demo.mjs --verify",
-    "test:dev:team-scale-designation": "node scripts/dev/test-team-scale-designation.mjs"
+    "test:dev:team-scale-designation": "node scripts/dev/test-team-scale-designation.mjs",
+    "seed:dev:schedule-turnaround:dry": "node scripts/dev/seed-schedule-turnaround-rule.mjs",
+    "seed:dev:schedule-turnaround": "node scripts/dev/seed-schedule-turnaround-rule.mjs --apply",
+    "test:dev:person-schedule-conflicts": "node scripts/dev/test-person-schedule-conflicts.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",

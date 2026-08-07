@@ -55,7 +55,8 @@ function fail(msg) {
   process.exit(1)
 }
 
-/** Espelho de overlap [start,end) + disponibilidade */
+/** Espelho: overlap + janela operacional (gap 120 min — piloto CDL) */
+const TURNAROUND_GAP_MIN = 120
 function statusBlocksTeamDay(status) {
   return status === 'scheduled' || status === 'completed'
 }
@@ -68,6 +69,17 @@ function intervalsOverlap(aStart, aEnd, bStart, bEnd) {
     timeToMinutes(aStart) < timeToMinutes(bEnd) &&
     timeToMinutes(aEnd) > timeToMinutes(bStart)
   )
+}
+/** Conflito se overlap OU next.start < prev.end + gap */
+function hasTurnaroundConflict(aStart, aEnd, bStart, bEnd, gap = TURNAROUND_GAP_MIN) {
+  if (intervalsOverlap(aStart, aEnd, bStart, bEnd)) return true
+  const ae = timeToMinutes(aEnd)
+  const be = timeToMinutes(bEnd)
+  const as = timeToMinutes(aStart)
+  const bs = timeToMinutes(bStart)
+  if (bs >= ae && bs < ae + gap) return true
+  if (as >= be && as < be + gap) return true
+  return false
 }
 function teamHasBookingOnDate(
   events,
@@ -82,7 +94,12 @@ function teamHasBookingOnDate(
     if (!statusBlocksTeamDay(e.status)) return false
     if (excludeEventId && e.id === excludeEventId) return false
     if (startTime && endTime && e.start_time && e.end_time) {
-      return intervalsOverlap(startTime, endTime, e.start_time, e.end_time)
+      return hasTurnaroundConflict(
+        startTime,
+        endTime,
+        e.start_time,
+        e.end_time,
+      )
     }
     return true
   })
@@ -109,7 +126,7 @@ function availableTeamsForDate(
   )
 }
 const TEAM_DAY_BUSY_MESSAGE =
-  'Esta equipe já tem evento com horário sobreposto neste dia. Ajuste o intervalo ou escolha outra equipe.'
+  'Equipe indisponível até 16:00. Janela operacional entre eventos.'
 
 async function main() {
   const fx = JSON.parse(readFileSync(FIXTURE_PATH, 'utf8'))
@@ -146,8 +163,14 @@ async function main() {
   if (!teamHasBookingOnDate(mockEvents, 'ta', '2027-01-01', null, '13:00', '15:00')) {
     fail('ta deveria conflitar com overlap 13–15')
   }
-  if (teamHasBookingOnDate(mockEvents, 'ta', '2027-01-01', null, '14:00', '18:00')) {
-    fail('ta adjacente 14–18 não deveria conflitar')
+  if (!teamHasBookingOnDate(mockEvents, 'ta', '2027-01-01', null, '14:00', '18:00')) {
+    fail('ta 14–18 deveria conflitar por janela operacional 120min')
+  }
+  if (!teamHasBookingOnDate(mockEvents, 'ta', '2027-01-01', null, '15:00', '19:00')) {
+    fail('ta 15–19 deveria conflitar por turnaround')
+  }
+  if (teamHasBookingOnDate(mockEvents, 'ta', '2027-01-01', null, '16:00', '20:00')) {
+    fail('ta 16–20 não deveria conflitar (14:00+120)')
   }
   if (teamHasBookingOnDate(mockEvents, 'tb', '2027-01-01', null, '10:00', '14:00')) {
     fail('tb (cancelado) não deveria estar ocupada')
@@ -159,13 +182,13 @@ async function main() {
     mockEvents,
     '2027-01-01',
     null,
-    '14:00',
-    '18:00',
+    '16:00',
+    '20:00',
   )
   if (available.length !== 3) {
-    fail(`com slot adjacente todas as equipes livres, obtido: ${JSON.stringify(available)}`)
+    fail(`com slot 16–20 todas as equipes livres, obtido: ${JSON.stringify(available)}`)
   }
-  console.log('  OK funções de disponibilidade (overlap) espelhadas corretamente')
+  console.log('  OK funções de disponibilidade (overlap + turnaround 120) espelhadas')
 
   console.log('\n--- 2) Integração: setup equipes + cotações de teste ---')
   const client = createClient(url, service, {
@@ -239,40 +262,65 @@ async function main() {
   if (agendaEvent1.team_id !== TEAM_A_ID) fail('agenda_events.team_id não vinculado corretamente')
   console.log(`  OK agenda_events id=${agendaEvent1.id} quote_id=${agendaEvent1.quote_id} team_id=${agendaEvent1.team_id}`)
 
-  console.log('\n--- 4) Multi-evento: mesma equipe (A), mesma data, horários sem overlap → permitido ---')
+  console.log('\n--- 4) Multi-evento: 10–14 + 16–20 permitido; 14–18 conflita por turnaround ---')
   {
-    const { data: adj, error } = await client
+    if (
+      !teamHasBookingOnDate(
+        [agendaEvent1],
+        TEAM_A_ID,
+        TEST_DATE,
+        null,
+        '14:00:00',
+        '18:00:00',
+      )
+    ) {
+      fail('helper deveria detectar turnaround 14–18 após 10–14')
+    }
+    console.log(`  OK turnaround helper: ${TEAM_DAY_BUSY_MESSAGE}`)
+
+    const { data: okEvt, error } = await client
       .from('agenda_events')
       .insert({
         company_id: companyId,
         team_id: TEAM_A_ID,
         code: CODE_2,
-        title: 'TEST-DEV Evento 2 (adjacente)',
+        title: 'TEST-DEV Evento 2 (após janela)',
         event_date: TEST_DATE,
-        start_time: '14:00:00',
-        end_time: '18:00:00',
+        start_time: '16:00:00',
+        end_time: '20:00:00',
         status: 'scheduled',
         quote_id: QUOTE_2_ID,
       })
       .select('*')
       .single()
-    if (error) fail(`insert adjacente deveria passar após remover day-lock: ${error.message}`)
+    if (error) fail(`insert 16–20 deveria passar no DB: ${error.message}`)
     if (
       teamHasBookingOnDate(
-        [agendaEvent1, adj],
+        [agendaEvent1, okEvt],
         TEAM_A_ID,
         TEST_DATE,
         null,
-        '13:00:00',
-        '15:00:00',
+        '16:00:00',
+        '20:00:00',
       )
     ) {
-      console.log(`  OK overlap helper detecta conflito (${TEAM_DAY_BUSY_MESSAGE.slice(0, 48)}...)`)
-    } else {
-      fail('helper deveria detectar overlap 13–15 com 10–14 e 14–18')
+      // exclude self via exclude would be needed; with both events, 16-20 vs 10-14 is ok
+      // vs itself would match — use exclude
     }
-    // remove adjacente para não atrapalhar passos seguintes que reusam CODE_2 liberação
-    await client.from('agenda_events').delete().eq('id', adj.id)
+    if (
+      teamHasBookingOnDate(
+        [agendaEvent1, okEvt],
+        TEAM_A_ID,
+        TEST_DATE,
+        okEvt.id,
+        '16:00:00',
+        '20:00:00',
+      )
+    ) {
+      fail('16–20 não deveria conflitar com 10–14')
+    }
+    console.log('  OK 10–14 + 16–20 permitido')
+    await client.from('agenda_events').delete().eq('id', okEvt.id)
   }
 
   console.log('\n--- 5) Equipe B pode assumir a mesma data (equipes diferentes) ---')
