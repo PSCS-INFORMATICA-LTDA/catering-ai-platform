@@ -62,6 +62,56 @@ node scripts/dev/cleanup-catering-functional-validation.mjs --confirm-dev-cleanu
 
 Remove apenas IDs do fixture. Não apaga a empresa principal CDL (default da app).
 
+## Datas comemorativas / feriados EUA (pedido mínimo + acréscimo 100%)
+
+Fixture + seed para validar comportamento das cotações em:
+
+- **Feriados federais dos EUA** (New Year’s, MLK, Presidents’ Day, Memorial Day, Juneteenth, Independence Day, Labor Day, Columbus Day, Veterans Day, Thanksgiving, Christmas) + dias observados (sáb→sex, dom→seg)
+- **Extras CDL:** 24 e 31 de dezembro
+- Controles: dia útil e dezembro regular (mín. $900, sem +100%)
+
+```bash
+npm run seed:dev:commemorative-dates:dry   # matrix + plano
+npm run seed:dev:commemorative-dates       # --apply no DEV
+npm run verify:dev:commemorative-dates     # compara DB vs esperado
+npm run report:dev:commemorative-dates     # verify + relatório JSON
+npm run test:dev:commercial-minimums      # unitário do motor
+```
+
+Pré-requisito: `npm run seed:dev:functional` (empresa/cliente/pacote).
+
+Cotações: `TEST-DEV-QUOTE-HOL-*` — abrir em `/quotes` no Preview DEV.
+
+## Pedido de guarnição ao fornecedor (WhatsApp na OS)
+
+Fixture + seed para validar o painel **Pedido de guarnição (fornecedor)** na OS.
+Packing **HC–HK** vem de `commercial_rules.supplier_garnish_kit_packing` (por empresa).
+Sem regra ativa, cai no modelo por porções (não herda CDL).
+
+```bash
+npm run seed:dev:supplier-garnish-kit-rule:dry
+npm run seed:dev:supplier-garnish-kit-rule   # upsert da regra CDL no DEV
+```
+
+- 2 fornecedores (`customers.is_supplier`) com telefone
+- OSs com equipe Caio + evento de agenda
+  - `TEST-DEV-OS-SUP-GAR` — pacote com guarnições inclusas (BBQPRI+)
+  - `TEST-DEV-OS-SUP-ADD` — BBQPRI + 2 sides como adicional
+  - `TEST-DEV-OS-SUP-MULTI-A` — BBQPRI + **4** sides (40 convidados → 1 kit grande)
+  - `TEST-DEV-OS-SUP-MULTI-B` — BBQPRI + **3** sides (25 convidados → 1 kit pequeno)
+  - `TEST-DEV-OS-SUP-REAL` — BBQPRI + **4** sides (48 convidados → 1 kit grande)
+
+```bash
+npm run seed:dev:supplier-garnish:dry   # plano sem escrita
+npm run seed:dev:supplier-garnish       # --apply no DEV
+npm run verify:dev:supplier-garnish     # confere OS + agenda + fornecedores
+npm run test:dev:supplier-garnish-message  # unitário do texto WhatsApp
+```
+
+Arquivos: `fixtures/supplier-garnish-order-v1.json`, `seed-supplier-garnish-order.mjs`.
+
+Validação UI (Preview DEV): `/orders/<serviceOrderId>` → painel de share; fornecedores em Clientes (filtro Fornecedor).
+
 ## Seed demo — equipes + agenda (fins de semana)
 
 ```bash

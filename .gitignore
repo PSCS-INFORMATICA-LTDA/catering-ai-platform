@@ -60,3 +60,9 @@ scripts/dev/_audit-rls-out.json
 
 .tmp-video-frames-5/
 
+# Local video review extractions (not product assets)
+assets/_video_review/
+
+# Seed/preview run outputs (DEV local only)
+scripts/dev/reports/
+
