@@ -15,6 +15,7 @@ export type OperationalAuditEntityType =
   | 'service_order'
   | 'checklist_item'
   | 'agenda_event'
+  | 'operational_team'
 
 export type OperationalAuditAction =
   | 'quote_version_created'
@@ -27,6 +28,12 @@ export type OperationalAuditAction =
   | 'team_assignment_substituted'
   | 'team_assignment_sent'
   | 'reservation_confirmed'
+  | 'team_member_added'
+  | 'team_member_removed'
+  | 'team_scale_sent'
+  | 'team_member_confirmed'
+  | 'team_member_declined'
+  | 'team_member_substituted'
 
 export async function writeOperationalAudit(input: {
   companyId: string
