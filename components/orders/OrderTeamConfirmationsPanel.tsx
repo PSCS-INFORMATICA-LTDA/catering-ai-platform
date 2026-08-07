@@ -82,6 +82,19 @@ export default function OrderTeamConfirmationsPanel({
       })),
     )
 
+    const confs = json.data?.confirmations ?? []
+    const activeConfs = confs.filter(
+      (c) => c.status === 'pending' || c.status === 'confirmed',
+    )
+    const allMembersHaveActive = memberList.every((m) =>
+      activeConfs.some((c) => c.person_id === m.person_id),
+    )
+    const allConfirmed =
+      memberList.length > 0 &&
+      memberList.every((m) =>
+        confs.some((c) => c.person_id === m.person_id && c.status === 'confirmed'),
+      )
+
     if (!json.data?.event) setAlert('SEM EQUIPE')
     else if (!scale.closed) {
       setAlert(
@@ -90,10 +103,10 @@ export default function OrderTeamConfirmationsPanel({
           : 'EQUIPE INCOMPLETA',
       )
     } else if ((json.data.summary?.declined ?? 0) > 0) setAlert('INTEGRANTE RECUSOU')
-    else if ((json.data.confirmations ?? []).length === 0)
-      setAlert('EQUIPE FECHADA — enviar confirmações')
+    else if (!allMembersHaveActive)
+      setAlert('EQUIPE FECHADA — enviar confirmações aos integrantes')
     else if ((json.data.summary?.pending ?? 0) > 0) setAlert('AGUARDANDO CONFIRMAÇÕES')
-    else if ((json.data.summary?.confirmed ?? 0) > 0) setAlert('EQUIPE CONFIRMADA')
+    else if (allConfirmed) setAlert('EQUIPE CONFIRMADA')
     else setAlert(null)
   }, [orderId])
 

@@ -269,18 +269,31 @@ export async function POST(request: Request, context: Ctx) {
       preferred_language?: string | null
     } | null
 
-    // Cancela pending anterior da mesma pessoa neste evento
-    await db
+    // Já confirmado neste evento → não recriar (índice uq_agenda_member_conf_active_person)
+    const { data: existingActive } = await db
       .from('agenda_event_member_confirmations')
-      .update({
-        status: 'cancelled',
-        token_revoked_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+      .select('id, status')
       .eq('company_id', companyId)
       .eq('agenda_event_id', evt.id)
       .eq('person_id', member.person_id)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'confirmed'])
+      .maybeSingle()
+
+    if (existingActive?.status === 'confirmed') {
+      continue
+    }
+
+    // Cancela pending anterior da mesma pessoa neste evento (reenvio)
+    if (existingActive?.status === 'pending') {
+      await db
+        .from('agenda_event_member_confirmations')
+        .update({
+          status: 'cancelled',
+          token_revoked_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingActive.id)
+    }
 
     const rawToken = newTeamMemberConfirmationToken()
     const tokenHash = hashTeamMemberConfirmationToken(rawToken)
@@ -303,10 +316,11 @@ export async function POST(request: Request, context: Ctx) {
       .single()
 
     if (error || !row) {
-      return Response.json(
-        { error: error?.message || 'Falha ao criar confirmação.' },
-        { status: 500 },
-      )
+      const msg = error?.message || 'Falha ao criar confirmação.'
+      const friendly = msg.includes('uq_agenda_member_conf_active_person')
+        ? 'Integrante já possui confirmação ativa neste evento. Atualize a página e tente novamente.'
+        : msg
+      return Response.json({ error: friendly }, { status: 500 })
     }
 
     const localeRaw = (person?.preferred_language || 'pt').slice(0, 2)
