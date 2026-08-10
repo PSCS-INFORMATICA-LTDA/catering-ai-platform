@@ -183,7 +183,14 @@ export async function fetchServiceOrderDetail(
 
   const customer = customerRes.data as CustomerNameSource | null
   const snapshot = (order.commercial_snapshot ?? {}) as {
-    package?: { id?: string | null }
+    package?: {
+      id?: string | null
+      total?: number | null
+      label_pt?: string | null
+      label?: string | null
+      name?: string | null
+      package_name?: string | null
+    }
     guest_counts?: {
       adult_count?: number | null
       billable_guest_count?: number | null
@@ -191,6 +198,11 @@ export async function fetchServiceOrderDetail(
     additional_items?: Array<{
       additional_item_id?: string
       quantity?: number | null
+      unit_price?: number | null
+      total_price?: number | null
+      label_pt?: string | null
+      item_name?: string | null
+      selected?: boolean
     }>
   }
   const packageId = snapshot.package?.id?.trim() || null
@@ -330,7 +342,45 @@ export async function fetchServiceOrderDetail(
     completed_at: order.completed_at,
     created_at: order.created_at,
     updated_at: order.updated_at,
-    items: itemsRes.data ?? [],
+    items: (() => {
+      const fromTable = itemsRes.data ?? []
+      if (fromTable.length > 0) return fromTable
+      // Fallback: snapshot comercial (OS seed/legado sem service_order_items)
+      const fallback: ServiceOrderDetail['items'] = []
+      if (snapshot.package?.id) {
+        fallback.push({
+          id: `snap-package-${snapshot.package.id}`,
+          item_type: 'package',
+          item_key: snapshot.package.id,
+          label_pt:
+            snapshot.package.label_pt?.trim() ||
+            snapshot.package.label?.trim() ||
+            snapshot.package.package_name?.trim() ||
+            snapshot.package.name?.trim() ||
+            packageLabel ||
+            'Pacote',
+          quantity: snapshot.guest_counts?.billable_guest_count ?? null,
+          unit_price: null,
+          total_price: Number(snapshot.package.total ?? order.package_total ?? 0),
+          display_order: 0,
+        })
+      }
+      let i = 1
+      for (const add of snapshot.additional_items ?? []) {
+        if (!add.additional_item_id || add.selected === false) continue
+        fallback.push({
+          id: `snap-additional-${add.additional_item_id}`,
+          item_type: 'additional',
+          item_key: add.additional_item_id,
+          label_pt: add.label_pt?.trim() || add.item_name?.trim() || 'Adicional',
+          quantity: add.quantity ?? null,
+          unit_price: add.unit_price ?? null,
+          total_price: add.total_price ?? null,
+          display_order: i++,
+        })
+      }
+      return fallback
+    })(),
     checklist: checklistRes.data ?? [],
     status_history: historyRes.data ?? [],
     agenda_event: agendaRes.data ?? null,

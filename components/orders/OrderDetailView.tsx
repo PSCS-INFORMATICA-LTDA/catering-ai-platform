@@ -295,6 +295,41 @@ export default function OrderDetailView({
 
       <OrderTeamConfirmationsPanel orderId={order.id} canManage={canManage} />
 
+      <section className="liquid-glass-card space-y-3 p-5">
+        <h2 className="text-lg font-bold text-cdl-fg">
+          {tQuotesOrders(locale, 'commercialItemsSection')}
+        </h2>
+        {order.items.length === 0 ? (
+          <p className="text-sm text-cdl-muted">
+            {tQuotesOrders(locale, 'commercialItemsEmpty')}
+          </p>
+        ) : (
+          <ul className="divide-y divide-cdl-border text-sm">
+            {order.items.map((item) => (
+              <li
+                key={item.id}
+                className="flex flex-wrap items-baseline justify-between gap-2 py-2"
+              >
+                <div>
+                  <p className="font-medium text-cdl-fg">{item.label_pt}</p>
+                  <p className="text-xs text-cdl-muted">
+                    {item.item_type === 'package'
+                      ? tQuotesOrders(locale, 'commercialItemPackage')
+                      : item.item_type === 'additional'
+                        ? tQuotesOrders(locale, 'commercialItemAdditional')
+                        : item.item_type}
+                    {item.quantity != null ? ` · qty ${item.quantity}` : ''}
+                  </p>
+                </div>
+                <p className="font-semibold text-cdl-fg">
+                  {formatMoney(item.total_price)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       {canManage ? (
         <section className="liquid-glass-card space-y-3 p-5">
           <h2 className="text-lg font-bold text-cdl-fg">

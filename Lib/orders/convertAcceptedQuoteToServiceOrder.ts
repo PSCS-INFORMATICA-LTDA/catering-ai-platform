@@ -109,12 +109,19 @@ async function insertServiceOrderItems(
   const rows: Record<string, unknown>[] = []
 
   if (snapshot.package) {
+    const packageLabel =
+      snapshot.package.label_pt?.trim() ||
+      snapshot.package.label?.trim() ||
+      snapshot.package.package_name?.trim() ||
+      snapshot.package.name?.trim() ||
+      'Pacote'
     rows.push({
       company_id: companyId,
       service_order_id: serviceOrderId,
       item_type: 'package',
       item_key: snapshot.package.id ?? null,
-      label_pt: 'Pacote',
+      label_pt: packageLabel,
+      quantity: snapshot.guest_counts?.billable_guest_count ?? null,
       total_price: snapshot.package.total ?? 0,
       display_order: 0,
     })
@@ -122,12 +129,14 @@ async function insertServiceOrderItems(
 
   const additionalItems = snapshot.additional_items ?? []
   additionalItems.forEach((item, index) => {
+    const addLabel =
+      item.label_pt?.trim() || item.item_name?.trim() || 'Adicional'
     rows.push({
       company_id: companyId,
       service_order_id: serviceOrderId,
       item_type: 'additional',
       item_key: item.additional_item_id ?? null,
-      label_pt: 'Adicional',
+      label_pt: addLabel,
       quantity: item.quantity ?? null,
       unit_price: item.unit_price ?? null,
       total_price: item.total_price ?? null,

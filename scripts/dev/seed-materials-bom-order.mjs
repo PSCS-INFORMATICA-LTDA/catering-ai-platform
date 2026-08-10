@@ -183,6 +183,32 @@ await sb
   .update({ converted_service_order_id: IDS.os })
   .eq('id', IDS.quote)
 
+await sb.from('service_order_items').delete().eq('service_order_id', IDS.os)
+const { error: itemsErr } = await sb.from('service_order_items').insert([
+  {
+    company_id: COMPANY,
+    service_order_id: IDS.os,
+    item_type: 'package',
+    item_key: PKG_ID,
+    label_pt: 'TEST-DEV Pacote BOM',
+    quantity: GUESTS.billable_guest_count,
+    total_price: 1800,
+    display_order: 0,
+  },
+  {
+    company_id: COMPANY,
+    service_order_id: IDS.os,
+    item_type: 'additional',
+    item_key: ADD_ID,
+    label_pt: 'TEST-DEV Adicional BOM',
+    quantity: 1,
+    unit_price: 25,
+    total_price: 25,
+    display_order: 1,
+  },
+])
+if (itemsErr) throw new Error(`items: ${itemsErr.message}`)
+
 const { data: rules, error: rErr } = await sb
   .from('operational_material_rules')
   .select('*')

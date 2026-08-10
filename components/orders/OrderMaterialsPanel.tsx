@@ -140,9 +140,14 @@ export default function OrderMaterialsPanel({
   return (
     <section className="liquid-glass-card space-y-3 p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-bold text-cdl-fg">
-          {tQuotesOrders(locale, 'materialsSection')}
-        </h2>
+        <div>
+          <h2 className="text-lg font-bold text-cdl-fg">
+            {tQuotesOrders(locale, 'materialsSection')}
+          </h2>
+          <p className="mt-0.5 text-xs text-cdl-muted">
+            {tQuotesOrders(locale, 'materialsOperationalHint')}
+          </p>
+        </div>
         {canPrepare ? (
           <button
             type="button"
