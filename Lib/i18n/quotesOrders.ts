@@ -107,6 +107,23 @@ const dict = {
     materialStatusChecked: 'Conferido',
     materialStatusDivergence: 'Divergência',
     materialStatusCancelled: 'Cancelado',
+    materialStatusDispatched: 'Saiu',
+    materialStatusReturned: 'Retornou',
+    materialStatusClosed: 'Fechado',
+    materialDispatchedLabel: 'Saiu',
+    materialReturnedLabel: 'Voltou',
+    materialLeftoverLabel: 'Sobra',
+    materialPrepareDispatch: 'Preparar conferência de saída',
+    materialRevokeDispatch: 'Revogar link de saída',
+    materialConfirmDispatchHint:
+      'Revise a mensagem antes de enviar ao líder da equipe.',
+    materialRegisterReturn: 'Registrar retorno',
+    materialClose: 'Fechar',
+    materialReturnDivergenceHint:
+      'Divergência no retorno — quantidade diferente da saída.',
+    materialNoLeader:
+      'Não foi possível gerar a conferência — equipe sem líder designado.',
+    materialDispatchReady: 'Link de conferência de saída pronto.',
     materialTypeConsumable: 'Consumível',
     materialTypeReturnable: 'Retornável',
     materialTypeEquipment: 'Equipamento',
@@ -410,6 +427,23 @@ const dict = {
     materialStatusChecked: 'Checked',
     materialStatusDivergence: 'Divergence',
     materialStatusCancelled: 'Cancelled',
+    materialStatusDispatched: 'Dispatched',
+    materialStatusReturned: 'Returned',
+    materialStatusClosed: 'Closed',
+    materialDispatchedLabel: 'Dispatched',
+    materialReturnedLabel: 'Returned',
+    materialLeftoverLabel: 'Leftover',
+    materialPrepareDispatch: 'Prepare dispatch check',
+    materialRevokeDispatch: 'Revoke dispatch link',
+    materialConfirmDispatchHint:
+      'Review the message before sending to the team leader.',
+    materialRegisterReturn: 'Register return',
+    materialClose: 'Close',
+    materialReturnDivergenceHint:
+      'Return divergence — quantity differs from dispatch.',
+    materialNoLeader:
+      'Could not generate dispatch check — team has no designated leader.',
+    materialDispatchReady: 'Dispatch check link ready.',
     materialTypeConsumable: 'Consumable',
     materialTypeReturnable: 'Returnable',
     materialTypeEquipment: 'Equipment',
@@ -706,6 +740,23 @@ const dict = {
     materialStatusChecked: 'Conferido',
     materialStatusDivergence: 'Divergencia',
     materialStatusCancelled: 'Cancelado',
+    materialStatusDispatched: 'Salió',
+    materialStatusReturned: 'Retornó',
+    materialStatusClosed: 'Cerrado',
+    materialDispatchedLabel: 'Salió',
+    materialReturnedLabel: 'Retornó',
+    materialLeftoverLabel: 'Sobra',
+    materialPrepareDispatch: 'Preparar conferencia de salida',
+    materialRevokeDispatch: 'Revocar enlace de salida',
+    materialConfirmDispatchHint:
+      'Revise el mensaje antes de enviar al líder del equipo.',
+    materialRegisterReturn: 'Registrar retorno',
+    materialClose: 'Cerrar',
+    materialReturnDivergenceHint:
+      'Divergencia en el retorno — cantidad distinta de la salida.',
+    materialNoLeader:
+      'No se pudo generar la conferencia — equipo sin líder designado.',
+    materialDispatchReady: 'Enlace de conferencia de salida listo.',
     materialTypeConsumable: 'Consumible',
     materialTypeReturnable: 'Retornable',
     materialTypeEquipment: 'Equipo',
@@ -984,6 +1035,9 @@ const MATERIAL_STATUS_KEY_MAP: Record<string, QuotesOrdersMessageKey> = {
   checked: 'materialStatusChecked',
   divergence: 'materialStatusDivergence',
   cancelled: 'materialStatusCancelled',
+  dispatched: 'materialStatusDispatched',
+  returned: 'materialStatusReturned',
+  closed: 'materialStatusClosed',
 }
 
 export function materialStatusLabel(

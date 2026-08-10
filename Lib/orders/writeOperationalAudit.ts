@@ -17,6 +17,7 @@ export type OperationalAuditEntityType =
   | 'agenda_event'
   | 'operational_team'
   | 'service_order_material'
+  | 'service_order_material_dispatch'
   | 'operational_material_rule'
 
 export type OperationalAuditAction =
@@ -43,6 +44,14 @@ export type OperationalAuditAction =
   | 'material_separated'
   | 'material_checked'
   | 'material_divergence'
+  | 'dispatch_link_created'
+  | 'dispatch_link_revoked'
+  | 'material_dispatch_confirmed'
+  | 'material_dispatch_divergence'
+  | 'material_returned'
+  | 'material_return_divergence'
+  | 'material_leftover_recorded'
+  | 'materials_closed'
   | 'bom_rule_created'
   | 'bom_rule_updated'
   | 'bom_rule_disabled'

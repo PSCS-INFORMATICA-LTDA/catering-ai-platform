@@ -37,6 +37,12 @@ export default async function OrderDetailPage({
   const canMaterialsCheck =
     session.isPlatformAdmin ||
     hasPermission(session.permissions, 'orders.materials.check')
+  const canMaterialsDispatch =
+    session.isPlatformAdmin ||
+    hasPermission(session.permissions, 'orders.materials.dispatch')
+  const canMaterialsReturn =
+    session.isPlatformAdmin ||
+    hasPermission(session.permissions, 'orders.materials.return')
 
   const companyId = resolveAuthorizedCompanyId(session)
   const { data, error } = await fetchServiceOrderDetail(companyId, id, {
@@ -65,6 +71,8 @@ export default async function OrderDetailPage({
       canMaterialsView={canMaterialsView}
       canMaterialsPrepare={canMaterialsPrepare}
       canMaterialsCheck={canMaterialsCheck}
+      canMaterialsDispatch={canMaterialsDispatch}
+      canMaterialsReturn={canMaterialsReturn}
     />
   )
 }

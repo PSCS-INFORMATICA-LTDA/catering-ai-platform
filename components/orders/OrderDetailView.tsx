@@ -56,6 +56,8 @@ export default function OrderDetailView({
   canMaterialsView = false,
   canMaterialsPrepare = false,
   canMaterialsCheck = false,
+  canMaterialsDispatch = false,
+  canMaterialsReturn = false,
 }: {
   initialOrder: ServiceOrderDetail
   canManage: boolean
@@ -64,6 +66,8 @@ export default function OrderDetailView({
   canMaterialsView?: boolean
   canMaterialsPrepare?: boolean
   canMaterialsCheck?: boolean
+  canMaterialsDispatch?: boolean
+  canMaterialsReturn?: boolean
 }) {
   const locale = useAuthLocaleFromMe()
   const [order, setOrder] = useState(initialOrder)
@@ -399,6 +403,8 @@ export default function OrderDetailView({
           orderId={order.id}
           canPrepare={canMaterialsPrepare}
           canCheck={canMaterialsCheck}
+          canDispatch={canMaterialsDispatch}
+          canReturn={canMaterialsReturn}
         />
       ) : null}
 

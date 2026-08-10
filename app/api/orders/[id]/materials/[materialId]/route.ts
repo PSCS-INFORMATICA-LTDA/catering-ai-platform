@@ -3,6 +3,7 @@ import {
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
 import {
+  canCloseMaterial,
   deriveMaterialStatus,
   isMaterialType,
   parseNonNegativeQuantity,
@@ -27,12 +28,18 @@ type MaterialRow = {
   required_quantity: number
   separated_quantity: number
   checked_quantity: number
+  dispatched_quantity: number
+  returned_quantity: number
+  leftover_quantity: number
   status: MaterialStatus
   notes: string | null
+  return_notes: string | null
   separated_by_user_id: string | null
   separated_at: string | null
   checked_by_user_id: string | null
   checked_at: string | null
+  dispatched_at: string | null
+  returned_at: string | null
 }
 
 async function loadMaterial(
@@ -62,7 +69,11 @@ export async function PATCH(request: Request, { params }: Params) {
     required_quantity?: number
     separated_quantity?: number
     checked_quantity?: number
+    returned_quantity?: number
+    leftover_quantity?: number
     notes?: string | null
+    return_notes?: string | null
+    justification?: string | null
   }
   try {
     body = await request.json()
@@ -77,9 +88,11 @@ export async function PATCH(request: Request, { params }: Params) {
       ? 'orders.materials.prepare'
       : action === 'check'
         ? 'orders.materials.check'
-        : action === 'cancel'
-          ? 'orders.materials.prepare'
-          : 'orders.materials.prepare'
+        : action === 'return' || action === 'close'
+          ? 'orders.materials.return'
+          : action === 'cancel'
+            ? 'orders.materials.prepare'
+            : 'orders.materials.prepare'
 
   const auth = await requireApiPermission(permission)
   if (!auth.ok) return auth.response
@@ -106,7 +119,11 @@ export async function PATCH(request: Request, { params }: Params) {
     | 'material_cancelled'
     | 'material_separated'
     | 'material_checked'
-    | 'material_divergence' = 'material_updated'
+    | 'material_divergence'
+    | 'material_returned'
+    | 'material_return_divergence'
+    | 'material_leftover_recorded'
+    | 'materials_closed' = 'material_updated'
 
   if (action === 'cancel') {
     patch.status = 'cancelled'
@@ -126,6 +143,7 @@ export async function PATCH(request: Request, { params }: Params) {
       checked,
       hasChecked,
       currentStatus: current.status,
+      materialType: current.material_type,
     })
     auditAction = 'material_separated'
   } else if (action === 'check') {
@@ -142,11 +160,91 @@ export async function PATCH(request: Request, { params }: Params) {
       checked: qty.value,
       hasChecked: true,
       currentStatus: current.status,
+      materialType: current.material_type,
     })
     patch.status = next
     auditAction = next === 'divergence' ? 'material_divergence' : 'material_checked'
+  } else if (action === 'return') {
+    if (!current.dispatched_at && Number(current.dispatched_quantity) <= 0) {
+      return Response.json(
+        { error: 'Material ainda não saiu — registre a saída antes do retorno.' },
+        { status: 400 },
+      )
+    }
+    const returned = parseNonNegativeQuantity(body.returned_quantity)
+    if (!returned.ok) {
+      return Response.json({ error: returned.error }, { status: 400 })
+    }
+    const leftover =
+      body.leftover_quantity === undefined
+        ? { ok: true as const, value: Number(current.leftover_quantity || 0) }
+        : parseNonNegativeQuantity(body.leftover_quantity)
+    if (!leftover.ok) {
+      return Response.json({ error: leftover.error }, { status: 400 })
+    }
+
+    const dispatched = Number(current.dispatched_quantity)
+    if (returned.value > dispatched) {
+      return Response.json(
+        {
+          error:
+            'Retorno maior que a saída não é permitido. Ajuste a quantidade.',
+        },
+        { status: 400 },
+      )
+    }
+
+    patch.returned_quantity = returned.value
+    patch.leftover_quantity = leftover.value
+    patch.returned_by_user_id = auth.session.userId
+    patch.returned_at = new Date().toISOString()
+    if (body.return_notes !== undefined) {
+      patch.return_notes = body.return_notes?.trim() || null
+    }
+
+    const next = deriveMaterialStatus({
+      required: Number(current.required_quantity),
+      separated: Number(current.separated_quantity),
+      checked: Number(current.checked_quantity),
+      hasChecked: Boolean(current.checked_at),
+      dispatched,
+      hasDispatched: true,
+      returned: returned.value,
+      hasReturned: true,
+      leftover: leftover.value,
+      materialType: current.material_type,
+      currentStatus: current.status,
+    })
+    patch.status = next
+
+    if (leftover.value > 0) {
+      auditAction = 'material_leftover_recorded'
+    } else if (next === 'divergence') {
+      auditAction = 'material_return_divergence'
+    } else {
+      auditAction = 'material_returned'
+    }
+  } else if (action === 'close') {
+    if (
+      !canCloseMaterial({
+        status: current.status,
+        material_type: current.material_type,
+        dispatched_quantity: Number(current.dispatched_quantity),
+        returned_quantity: Number(current.returned_quantity),
+        returned_at: current.returned_at,
+      })
+    ) {
+      return Response.json(
+        {
+          error:
+            'Material com divergência ou retorno pendente não pode ser fechado.',
+        },
+        { status: 400 },
+      )
+    }
+    patch.status = 'closed'
+    auditAction = 'materials_closed'
   } else {
-    // update metadata / required
     if (body.description_snapshot != null) {
       const d = body.description_snapshot.trim()
       if (!d) {
@@ -174,17 +272,23 @@ export async function PATCH(request: Request, { params }: Params) {
       patch.notes = body.notes?.trim() || null
     }
 
-    const required = Number(patch.required_quantity ?? current.required_quantity)
-    const separated = Number(current.separated_quantity)
-    const checked = Number(current.checked_quantity)
-    const hasChecked = Boolean(current.checked_at)
-    if (current.status !== 'cancelled') {
+    if (
+      current.status !== 'cancelled' &&
+      current.status !== 'closed' &&
+      current.status !== 'dispatched' &&
+      current.status !== 'returned'
+    ) {
+      const required = Number(patch.required_quantity ?? current.required_quantity)
+      const separated = Number(current.separated_quantity)
+      const checked = Number(current.checked_quantity)
+      const hasChecked = Boolean(current.checked_at)
       patch.status = deriveMaterialStatus({
         required,
         separated,
         checked,
         hasChecked,
         currentStatus: current.status,
+        materialType: current.material_type,
       })
     }
     auditAction = 'material_updated'
@@ -214,6 +318,9 @@ export async function PATCH(request: Request, { params }: Params) {
       required_quantity: current.required_quantity,
       separated_quantity: current.separated_quantity,
       checked_quantity: current.checked_quantity,
+      dispatched_quantity: current.dispatched_quantity,
+      returned_quantity: current.returned_quantity,
+      leftover_quantity: current.leftover_quantity,
     },
     newData: {
       service_order_id: orderId,
@@ -221,6 +328,9 @@ export async function PATCH(request: Request, { params }: Params) {
       required_quantity: data.required_quantity,
       separated_quantity: data.separated_quantity,
       checked_quantity: data.checked_quantity,
+      dispatched_quantity: data.dispatched_quantity,
+      returned_quantity: data.returned_quantity,
+      leftover_quantity: data.leftover_quantity,
     },
   })
 

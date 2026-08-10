@@ -3,6 +3,7 @@ import {
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
 import {
+  defaultStockPostingStatus,
   deriveMaterialStatus,
   inferMaterialTypeFromCatalog,
   isMaterialSourceType,
@@ -144,6 +145,10 @@ export async function POST(request: Request, { params }: Params) {
       required_quantity: qty.value,
       separated_quantity: 0,
       checked_quantity: 0,
+      dispatched_quantity: 0,
+      returned_quantity: 0,
+      leftover_quantity: 0,
+      stock_posting_status: defaultStockPostingStatus(materialType),
       status,
       notes: body.notes?.trim() || null,
       created_by: auth.session.userId,
