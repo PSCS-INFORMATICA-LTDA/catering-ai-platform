@@ -51,6 +51,19 @@ URL: `/orders/f2400000-0000-4000-8000-000000000091`
 
 ---
 
+## Regressão / Build / Deploy
+
+| Item | Resultado |
+|------|-----------|
+| `qa:dev:schedule-conflict-matrix` | PASS 12/12 |
+| `verify:dev:team-scale` | PASS |
+| `verify:dev:functional` | PASS |
+| `npm run build` | PASS |
+| Push | `feat/order-materials-operations-dev` |
+| Preview | https://catering-ai-platform-gprt05hit-pscs-informatica-ltda-s-projects.vercel.app |
+| Alias estável | https://catering-ai-agenda-dev.vercel.app |
+| Commits | `c28c493` … `21b4ece` |
+
 ## Confirmações
 
 - DEV only  
@@ -58,3 +71,6 @@ URL: `/orders/f2400000-0000-4000-8000-000000000091`
 - main / homologation não alteradas nesta fase  
 - Agenda / Supplier Garnish não alterados funcionalmente  
 - Estoque **não** implementado  
+
+**STATUS:** PRONTO PARA VALIDAÇÃO DE PHILIPPE — MATERIAIS DA OS: SEPARAÇÃO E CONFERÊNCIA  
+
