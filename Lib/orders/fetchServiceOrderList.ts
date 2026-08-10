@@ -2,6 +2,7 @@ import {
   getCustomerDisplayName,
   type CustomerNameSource,
 } from '@/Lib/getCustomerDisplayName'
+import { sanitizeServiceOrderListRowForActor } from '@/Lib/orders/sanitizeServiceOrderFinancial'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export type ServiceOrderListItem = {
@@ -16,8 +17,9 @@ export type ServiceOrderListItem = {
   state: string | null
   physical_guest_count: number | null
   billable_guest_count: number | null
-  service_order_total: number
-  currency_code: string
+  /** Somente com `orders.financial.view`. */
+  service_order_total?: number
+  currency_code?: string
   created_at: string
 }
 
@@ -42,7 +44,9 @@ const SERVICE_ORDER_LIST_SELECT =
 
 export async function fetchServiceOrderList(
   companyId: string,
+  options?: { includeFinancial?: boolean },
 ): Promise<{ data: ServiceOrderListItem[] | null; error: { message: string } | null }> {
+  const includeFinancial = options?.includeFinancial === true
   const supabase = getSupabaseServerClient()
 
   const { data: rows, error } = await supabase
@@ -82,7 +86,7 @@ export async function fetchServiceOrderList(
 
   const data: ServiceOrderListItem[] = list.map((row) => {
     const customer = row.customer_id ? customerMap.get(row.customer_id) : undefined
-    return {
+    const full = {
       id: row.id,
       service_order_number: row.service_order_number,
       quote_id: row.quote_id,
@@ -100,6 +104,9 @@ export async function fetchServiceOrderList(
       currency_code: row.currency_code ?? 'USD',
       created_at: row.created_at,
     }
+    return sanitizeServiceOrderListRowForActor(full, {
+      includeFinancial,
+    }) as ServiceOrderListItem
   })
 
   return { data, error: null }

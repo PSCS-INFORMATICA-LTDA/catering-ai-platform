@@ -1,8 +1,10 @@
+import { hasPermission } from '@/Lib/auth/permissions'
 import {
   requireApiPermission,
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
 import { convertAcceptedQuoteToServiceOrder } from '@/Lib/orders/convertAcceptedQuoteToServiceOrder'
+import { sanitizeServiceOrderListRowForActor } from '@/Lib/orders/sanitizeServiceOrderFinancial'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -27,5 +29,13 @@ export async function POST(_request: Request, { params }: Params) {
     return Response.json({ error: error.message }, { status: error.status ?? 500 })
   }
 
-  return Response.json({ data })
+  const includeFinancial =
+    auth.session.isPlatformAdmin ||
+    hasPermission(auth.session.permissions, 'orders.financial.view')
+  const payload = sanitizeServiceOrderListRowForActor(
+    (data ?? {}) as unknown as Record<string, unknown>,
+    { includeFinancial },
+  )
+
+  return Response.json({ data: payload })
 }

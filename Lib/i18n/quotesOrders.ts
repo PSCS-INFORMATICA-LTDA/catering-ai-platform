@@ -89,6 +89,8 @@ const dict = {
     commercialItemsEmpty: 'Nenhum item comercial nesta ordem.',
     commercialItemPackage: 'Pacote',
     commercialItemAdditional: 'Adicional',
+    financialAccessDenied:
+      'Você não possui acesso às informações financeiras desta ordem.',
     materialsSection: 'Materiais',
     materialsEmpty: 'Nenhum material na ordem.',
     materialsOperationalHint:
@@ -390,6 +392,8 @@ const dict = {
     commercialItemsEmpty: 'No commercial items on this order.',
     commercialItemPackage: 'Package',
     commercialItemAdditional: 'Additional',
+    financialAccessDenied:
+      "You do not have access to this order's financial information.",
     materialsSection: 'Materials',
     materialsEmpty: 'No materials on this order.',
     materialsOperationalHint:
@@ -684,6 +688,8 @@ const dict = {
     commercialItemsEmpty: 'Ningún ítem comercial en la orden.',
     commercialItemPackage: 'Paquete',
     commercialItemAdditional: 'Adicional',
+    financialAccessDenied:
+      'No tienes acceso a la información financiera de esta orden.',
     materialsSection: 'Materiales',
     materialsEmpty: 'Ningún material en la orden.',
     materialsOperationalHint:

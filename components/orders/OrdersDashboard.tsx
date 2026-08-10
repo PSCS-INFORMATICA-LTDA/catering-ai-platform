@@ -39,8 +39,10 @@ function formatDate(value: string | null | undefined) {
 
 export default function OrdersDashboard({
   initialOrders,
+  canViewFinancial = false,
 }: {
   initialOrders: ServiceOrderListItem[]
+  canViewFinancial?: boolean
 }) {
   const locale = useAuthLocaleFromMe()
   const [orders, setOrders] = useState<ServiceOrderListItem[]>(initialOrders)
@@ -155,12 +157,20 @@ export default function OrdersDashboard({
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
-          <div className="hidden border-b border-neutral-100 bg-neutral-50 px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500 lg:grid lg:grid-cols-[8rem_minmax(0,1.4fr)_7rem_8rem_7rem_auto] lg:gap-3">
+          <div
+            className={`hidden border-b border-neutral-100 bg-neutral-50 px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500 lg:grid lg:gap-3 ${
+              canViewFinancial
+                ? 'lg:grid-cols-[8rem_minmax(0,1.4fr)_7rem_8rem_7rem_auto]'
+                : 'lg:grid-cols-[8rem_minmax(0,1.4fr)_7rem_8rem_auto]'
+            }`}
+          >
             <span>{tQuotesOrders(locale, 'orderNumber')}</span>
             <span>{tQuotesOrders(locale, 'tableCustomerEvent')}</span>
             <span>{tQuotesOrders(locale, 'tableDate')}</span>
             <span>{tQuotesOrders(locale, 'status')}</span>
-            <span className="text-right">{tQuotesOrders(locale, 'total')}</span>
+            {canViewFinancial ? (
+              <span className="text-right">{tQuotesOrders(locale, 'total')}</span>
+            ) : null}
             <span className="text-right">{tQuotesOrders(locale, 'actions')}</span>
           </div>
           <ul>
@@ -169,7 +179,13 @@ export default function OrdersDashboard({
                 key={order.id}
                 className="border-b border-neutral-100 px-4 py-3 last:border-b-0"
               >
-                <div className="grid gap-2.5 lg:grid-cols-[8rem_minmax(0,1.4fr)_7rem_8rem_7rem_auto] lg:items-center lg:gap-3">
+                <div
+                  className={`grid gap-2.5 lg:items-center lg:gap-3 ${
+                    canViewFinancial
+                      ? 'lg:grid-cols-[8rem_minmax(0,1.4fr)_7rem_8rem_7rem_auto]'
+                      : 'lg:grid-cols-[8rem_minmax(0,1.4fr)_7rem_8rem_auto]'
+                  }`}
+                >
                   <p className="text-xs font-bold uppercase tracking-wide text-neutral-500 lg:text-sm">
                     {order.service_order_number}
                   </p>
@@ -195,9 +211,11 @@ export default function OrdersDashboard({
                       {orderStatusLabel(order.status, locale)}
                     </span>
                   </div>
-                  <p className="text-right text-sm font-black text-neutral-900">
-                    {formatMoney(order.service_order_total)}
-                  </p>
+                  {canViewFinancial ? (
+                    <p className="text-right text-sm font-black text-neutral-900">
+                      {formatMoney(order.service_order_total)}
+                    </p>
+                  ) : null}
                   <div className="flex justify-end">
                     <Link
                       href={`/orders/${order.id}`}

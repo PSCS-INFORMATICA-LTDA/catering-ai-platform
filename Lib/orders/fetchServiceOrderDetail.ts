@@ -12,6 +12,7 @@ import {
   parseSupplierGarnishKitConfig,
   type SupplierGarnishKitConfig,
 } from '@/Lib/supplierGarnishKitRule'
+import { sanitizeServiceOrderDetailForActor } from '@/Lib/orders/sanitizeServiceOrderFinancial'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { CATALOG_ITEMS_TABLE } from '@/Lib/catalogItemsTableSchema'
 
@@ -40,14 +41,15 @@ export type ServiceOrderDetail = {
   billable_guest_count: number | null
   /** Adultos (snapshot da cotação) — base HH/HI do kit CDL. */
   adult_count: number | null
-  currency_code: string
-  package_total: number
-  additional_total: number
-  mileage_fee: number
-  discount_amount: number
-  reservation_amount: number
-  balance_due: number
-  service_order_total: number
+  /** Presente somente com `orders.financial.view`. */
+  currency_code?: string
+  package_total?: number
+  additional_total?: number
+  mileage_fee?: number
+  discount_amount?: number
+  reservation_amount?: number
+  balance_due?: number
+  service_order_total?: number
   commercial_snapshot: Record<string, unknown>
   notes: string | null
   cancel_reason: string | null
@@ -61,8 +63,9 @@ export type ServiceOrderDetail = {
     item_key: string | null
     label_pt: string
     quantity: number | null
-    unit_price: number | null
-    total_price: number | null
+    /** Somente com `orders.financial.view`. */
+    unit_price?: number | null
+    total_price?: number | null
     display_order: number
   }>
   checklist: Array<{
@@ -109,7 +112,9 @@ export type ServiceOrderDetail = {
 export async function fetchServiceOrderDetail(
   companyId: string,
   serviceOrderId: string,
+  options?: { includeFinancial?: boolean },
 ): Promise<{ data: ServiceOrderDetail | null; error: { message: string; status?: number } | null }> {
+  const includeFinancial = options?.includeFinancial === true
   const supabase = getSupabaseServerClient()
 
   const { data: order, error } = await supabase
@@ -141,7 +146,9 @@ export async function fetchServiceOrderDetail(
         : Promise.resolve({ data: null }),
       supabase
         .from('service_order_items')
-        .select('*')
+        .select(
+          'id, service_order_id, item_type, item_key, label_pt, quantity, unit_price, total_price, display_order, created_at',
+        )
         .eq('service_order_id', serviceOrderId)
         .order('display_order', { ascending: true }),
       supabase
@@ -395,5 +402,10 @@ export async function fetchServiceOrderDetail(
         : null,
   }
 
-  return { data, error: null }
+  const sanitized = sanitizeServiceOrderDetailForActor(
+    data as unknown as Record<string, unknown>,
+    { includeFinancial },
+  ) as unknown as ServiceOrderDetail
+
+  return { data: sanitized, error: null }
 }

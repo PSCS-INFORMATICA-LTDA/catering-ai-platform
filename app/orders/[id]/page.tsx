@@ -26,8 +26,7 @@ export default async function OrderDetailPage({
     session.isPlatformAdmin || hasPermission(session.permissions, 'orders.manage')
   const canViewFinancial =
     session.isPlatformAdmin ||
-    hasPermission(session.permissions, 'quotes.manage') ||
-    hasPermission(session.permissions, 'audit.view')
+    hasPermission(session.permissions, 'orders.financial.view')
   const canMaterialsView =
     session.isPlatformAdmin ||
     hasPermission(session.permissions, 'orders.materials.view') ||
@@ -40,7 +39,9 @@ export default async function OrderDetailPage({
     hasPermission(session.permissions, 'orders.materials.check')
 
   const companyId = resolveAuthorizedCompanyId(session)
-  const { data, error } = await fetchServiceOrderDetail(companyId, id)
+  const { data, error } = await fetchServiceOrderDetail(companyId, id, {
+    includeFinancial: canViewFinancial,
+  })
 
   if (error) {
     if (error.status === 404) notFound()

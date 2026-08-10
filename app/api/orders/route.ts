@@ -1,9 +1,11 @@
+import { hasPermission } from '@/Lib/auth/permissions'
 import {
   requireApiPermission,
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
 import { convertAcceptedQuoteToServiceOrder } from '@/Lib/orders/convertAcceptedQuoteToServiceOrder'
 import { fetchServiceOrderList } from '@/Lib/orders/fetchServiceOrderList'
+import { sanitizeServiceOrderListRowForActor } from '@/Lib/orders/sanitizeServiceOrderFinancial'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -13,7 +15,12 @@ export async function GET() {
   if (!auth.ok) return auth.response
 
   const companyId = resolveAuthorizedCompanyId(auth.session)
-  const { data, error } = await fetchServiceOrderList(companyId)
+  const includeFinancial =
+    auth.session.isPlatformAdmin ||
+    hasPermission(auth.session.permissions, 'orders.financial.view')
+  const { data, error } = await fetchServiceOrderList(companyId, {
+    includeFinancial,
+  })
 
   if (error) {
     return Response.json(
@@ -60,5 +67,13 @@ export async function POST(request: Request) {
     return Response.json({ error: error.message }, { status: error.status ?? 500 })
   }
 
-  return Response.json({ data }, { status: 201 })
+  const includeFinancial =
+    auth.session.isPlatformAdmin ||
+    hasPermission(auth.session.permissions, 'orders.financial.view')
+  const payload = sanitizeServiceOrderListRowForActor(
+    (data ?? {}) as unknown as Record<string, unknown>,
+    { includeFinancial },
+  )
+
+  return Response.json({ data: payload }, { status: 201 })
 }

@@ -1,8 +1,10 @@
+import { hasPermission } from '@/Lib/auth/permissions'
 import {
   requireApiPermission,
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
 import { fetchServiceOrderDetail } from '@/Lib/orders/fetchServiceOrderDetail'
+import { sanitizeServiceOrderListRowForActor } from '@/Lib/orders/sanitizeServiceOrderFinancial'
 import {
   isValidServiceOrderTransition,
   serviceOrderStatusRequiresReason,
@@ -20,7 +22,12 @@ export async function GET(_request: Request, { params }: Params) {
 
   const { id } = await params
   const companyId = resolveAuthorizedCompanyId(auth.session)
-  const { data, error } = await fetchServiceOrderDetail(companyId, id)
+  const includeFinancial =
+    auth.session.isPlatformAdmin ||
+    hasPermission(auth.session.permissions, 'orders.financial.view')
+  const { data, error } = await fetchServiceOrderDetail(companyId, id, {
+    includeFinancial,
+  })
 
   if (error) {
     return Response.json({ error: error.message }, { status: error.status ?? 500 })
@@ -98,6 +105,10 @@ export async function PATCH(request: Request, { params }: Params) {
     }
   }
 
+  const includeFinancial =
+    auth.session.isPlatformAdmin ||
+    hasPermission(auth.session.permissions, 'orders.financial.view')
+
   const { data: updated, error: updateError } = await db
     .from('service_orders')
     .update(update)
@@ -146,5 +157,11 @@ export async function PATCH(request: Request, { params }: Params) {
     }
   }
 
-  return Response.json({ data: updated })
+  // Resposta ao cliente: financeiro só com orders.financial.view
+  const payload = sanitizeServiceOrderListRowForActor(
+    (updated ?? {}) as unknown as Record<string, unknown>,
+    { includeFinancial },
+  )
+
+  return Response.json({ data: payload })
 }

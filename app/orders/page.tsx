@@ -16,8 +16,14 @@ export default async function OrdersPage() {
     session.isPlatformAdmin || hasPermission(session.permissions, 'orders.view')
   if (!canView) redirect('/quotes')
 
+  const canViewFinancial =
+    session.isPlatformAdmin ||
+    hasPermission(session.permissions, 'orders.financial.view')
+
   const companyId = resolveAuthorizedCompanyId(session)
-  const { data, error } = await fetchServiceOrderList(companyId)
+  const { data, error } = await fetchServiceOrderList(companyId, {
+    includeFinancial: canViewFinancial,
+  })
 
   if (error) {
     return (
@@ -30,5 +36,10 @@ export default async function OrdersPage() {
     )
   }
 
-  return <OrdersDashboard initialOrders={data ?? []} />
+  return (
+    <OrdersDashboard
+      initialOrders={data ?? []}
+      canViewFinancial={canViewFinancial}
+    />
+  )
 }
