@@ -23,6 +23,7 @@ import {
   BackofficeCascadePanel,
   BackofficeInventoryButton,
 } from '@/components/backoffice/BackofficeSectionPrimitives'
+import OperationalMaterialsBomPanel from '@/components/materials/OperationalMaterialsBomPanel'
 import CatalogImageFrame from '@/components/CatalogImageFrame'
 import {
   groupAdditionalItemsByCategory,
@@ -472,6 +473,13 @@ export default function AdditionalItemsDashboard({
             }
           >
             <AdditionalItemAdminFormFields draft={draft} setDraft={setDraft} />
+            {selectedItem.id !== 'new' ? (
+              <OperationalMaterialsBomPanel
+                sourceType="additional"
+                sourceId={selectedItem.id}
+                canManage
+              />
+            ) : null}
           </BackofficeFormCard>
         </BackofficeCascadePanel>
       )
@@ -569,6 +577,11 @@ export default function AdditionalItemsDashboard({
               </BackofficeBtnDanger>
             ) : null}
           </div>
+          <OperationalMaterialsBomPanel
+            sourceType="additional"
+            sourceId={selectedItem.id}
+            canManage
+          />
         </div>
       </BackofficeCascadePanel>
     )

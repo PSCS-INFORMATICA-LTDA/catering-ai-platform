@@ -295,6 +295,21 @@ export default function OrderMaterialsPanel({
                   >
                     <td className="py-2 pr-2 font-medium text-cdl-fg">
                       {row.description_snapshot}
+                      <p className="text-xs font-normal text-cdl-muted">
+                        {tQuotesOrders(locale, 'materialOrigin')}:{' '}
+                        {row.source_type === 'package'
+                          ? tQuotesOrders(locale, 'materialOriginPackage')
+                          : row.source_type === 'additional'
+                            ? tQuotesOrders(locale, 'materialOriginAdditional')
+                            : row.source_type === 'rule'
+                              ? tQuotesOrders(locale, 'materialOriginRule')
+                              : row.source_type === 'supplier'
+                                ? tQuotesOrders(locale, 'materialOriginSupplier')
+                                : tQuotesOrders(locale, 'materialOriginManual')}
+                        {row.source_label_snapshot
+                          ? ` ${row.source_label_snapshot}`
+                          : ''}
+                      </p>
                       {row.status === 'divergence' ? (
                         <p className="text-xs text-red-600">
                           {tQuotesOrders(locale, 'materialDivergenceHint')}
@@ -420,9 +435,26 @@ export default function OrderMaterialsPanel({
                 className="space-y-2 rounded-lg border border-cdl-border p-3"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-medium text-cdl-fg">
-                    {row.description_snapshot}
-                  </p>
+                  <div>
+                    <p className="font-medium text-cdl-fg">
+                      {row.description_snapshot}
+                    </p>
+                    <p className="text-xs text-cdl-muted">
+                      {tQuotesOrders(locale, 'materialOrigin')}:{' '}
+                      {row.source_type === 'package'
+                        ? tQuotesOrders(locale, 'materialOriginPackage')
+                        : row.source_type === 'additional'
+                          ? tQuotesOrders(locale, 'materialOriginAdditional')
+                          : row.source_type === 'rule'
+                            ? tQuotesOrders(locale, 'materialOriginRule')
+                            : row.source_type === 'supplier'
+                              ? tQuotesOrders(locale, 'materialOriginSupplier')
+                              : tQuotesOrders(locale, 'materialOriginManual')}
+                      {row.source_label_snapshot
+                        ? ` ${row.source_label_snapshot}`
+                        : ''}
+                    </p>
+                  </div>
                   <span
                     className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${statusBadgeClass(row.status)}`}
                   >

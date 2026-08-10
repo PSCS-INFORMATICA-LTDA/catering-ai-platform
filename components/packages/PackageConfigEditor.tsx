@@ -9,6 +9,7 @@ import {
   BackofficeInput,
 } from '@/components/backoffice/BackofficeCardPrimitives'
 import { BackofficeFormSectionTitle } from '@/components/backoffice/BackofficeSectionPrimitives'
+import OperationalMaterialsBomPanel from '@/components/materials/OperationalMaterialsBomPanel'
 import AdditionalItemPicker, {
   type AdditionalItemOption,
 } from '@/components/packages/AdditionalItemPicker'
@@ -307,6 +308,12 @@ export default function PackageConfigEditor({
             groupId,
           )
         }
+      />
+
+      <OperationalMaterialsBomPanel
+        sourceType="package"
+        sourceId={packageId}
+        canManage
       />
     </div>
   )
