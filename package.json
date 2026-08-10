@@ -79,7 +79,13 @@
     "test:dev:order-material-public-security": "node scripts/dev/test-order-material-public-security.mjs",
     "test:dev:order-material-dispatch-i18n": "node scripts/dev/test-order-material-dispatch-i18n.mjs",
     "qa:dev:materials-phase2-evidence": "node scripts/dev/qa/materials-phase2-evidence.mjs",
-    "qa:dev:mint-material-dispatch-token": "node scripts/dev/qa/mint-material-dispatch-token.mjs"
+    "qa:dev:mint-material-dispatch-token": "node scripts/dev/qa/mint-material-dispatch-token.mjs",
+    "seed:dev:inventory-v1:dry": "node scripts/dev/seed-inventory-v1.mjs",
+    "seed:dev:inventory-v1": "node scripts/dev/seed-inventory-v1.mjs --apply",
+    "test:dev:inventory-core": "node scripts/dev/test-inventory-core.mjs",
+    "test:dev:inventory-order-posting": "node scripts/dev/test-inventory-order-posting.mjs",
+    "test:dev:inventory-reconciliation": "node scripts/dev/test-inventory-reconciliation.mjs",
+    "rebuild:dev:inventory-balances": "node scripts/dev/rebuild-inventory-balances.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",

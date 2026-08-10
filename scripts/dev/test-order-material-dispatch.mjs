@@ -57,7 +57,32 @@ if (!mats?.length) {
   process.exit(1)
 }
 
-for (const m of mats) {
+// Remove materiais QA de Estoque que possam estar na mesma OS
+await sb
+  .from('service_order_materials')
+  .delete()
+  .eq('service_order_id', OS_ID)
+  .in('id', [
+    'f2500000-0000-4000-8000-0000000000a1',
+    'f2500000-0000-4000-8000-0000000000a2',
+    'f2500000-0000-4000-8000-0000000000a3',
+    'f2500000-0000-4000-8000-0000000000a4',
+    'f2500000-0000-4000-8000-0000000000a9',
+  ])
+
+const { data: mats2 } = await sb
+  .from('service_order_materials')
+  .select('*')
+  .eq('service_order_id', OS_ID)
+  .neq('status', 'cancelled')
+
+const activeMats = mats2 ?? []
+if (!activeMats.length) {
+  fail('pré-condição materials após cleanup', 'sem materiais ativos na OS')
+  process.exit(1)
+}
+
+for (const m of activeMats) {
   const req = Number(m.required_quantity)
   await sb
     .from('service_order_materials')
@@ -72,6 +97,10 @@ for (const m of mats) {
       returned_quantity: 0,
       leftover_quantity: 0,
       returned_at: null,
+      stock_posting_status:
+        m.catalog_item_id && m.material_type !== 'disposable'
+          ? 'pending'
+          : 'not_applicable',
     })
     .eq('id', m.id)
 }
@@ -120,7 +149,7 @@ await sb
     .single()
   if (error) fail('T01 create token', error.message)
   else {
-    const lines = mats.map((m) => ({
+    const lines = activeMats.map((m) => ({
       id: m.id,
       dispatched_quantity: Number(m.required_quantity),
     }))
@@ -147,7 +176,7 @@ await sb
 
 // T02 — divergence bloqueado sem justificativa
 {
-  const div = mats[0]
+  const div = activeMats[0]
   await sb
     .from('service_order_materials')
     .update({ status: 'divergence', checked_quantity: Number(div.required_quantity) - 1 })
@@ -196,7 +225,7 @@ await sb
     token_hash: hash(t),
     expires_at: new Date(Date.now() + 86400000).toISOString(),
   })
-  const lines = mats.map((m) => ({
+  const lines = activeMats.map((m) => ({
     id: m.id,
     dispatched_quantity: Number(m.required_quantity),
   }))
