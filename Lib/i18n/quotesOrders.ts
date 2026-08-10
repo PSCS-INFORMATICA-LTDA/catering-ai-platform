@@ -113,7 +113,9 @@ const dict = {
     materialDispatchedLabel: 'Saiu',
     materialReturnedLabel: 'Voltou',
     materialLeftoverLabel: 'Sobra',
-    materialPrepareDispatch: 'Preparar conferência de saída',
+    materialLeftoverNotApplicable:
+      'Sobra só se aplica a consumíveis',
+    materialPrepareDispatch: 'Confirmar saída',
     materialRevokeDispatch: 'Revogar link de saída',
     materialConfirmDispatchHint:
       'Revise a mensagem antes de enviar ao líder da equipe.',
@@ -463,7 +465,9 @@ const dict = {
     materialDispatchedLabel: 'Dispatched',
     materialReturnedLabel: 'Returned',
     materialLeftoverLabel: 'Leftover',
-    materialPrepareDispatch: 'Prepare dispatch check',
+    materialLeftoverNotApplicable:
+      'Leftover applies only to consumables',
+    materialPrepareDispatch: 'Confirm exit',
     materialRevokeDispatch: 'Revoke dispatch link',
     materialConfirmDispatchHint:
       'Review the message before sending to the team leader.',
@@ -806,7 +810,9 @@ const dict = {
     materialDispatchedLabel: 'Salió',
     materialReturnedLabel: 'Retornó',
     materialLeftoverLabel: 'Sobra',
-    materialPrepareDispatch: 'Preparar conferencia de salida',
+    materialLeftoverNotApplicable:
+      'La sobra solo aplica a consumibles',
+    materialPrepareDispatch: 'Confirmar salida',
     materialRevokeDispatch: 'Revocar enlace de salida',
     materialConfirmDispatchHint:
       'Revise el mensaje antes de enviar al líder del equipo.',

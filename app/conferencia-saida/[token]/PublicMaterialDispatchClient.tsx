@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { tQuotesOrders, type AuthLocale } from '@/Lib/i18n/quotesOrders'
+import { sortMaterialsForOperations } from '@/Lib/orders/orderMaterials'
 
 type MaterialLine = {
   id: string
@@ -44,7 +45,10 @@ export default function PublicMaterialDispatchClient({
   canConfirm: boolean
   dispatch: DispatchInfo
 }) {
-  const materials = dispatch.materials ?? []
+  const materials = useMemo(
+    () => sortMaterialsForOperations(dispatch.materials ?? []),
+    [dispatch.materials],
+  )
   const [status, setStatus] = useState(initialStatus)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)

@@ -183,6 +183,10 @@ export async function PATCH(request: Request, { params }: Params) {
       return Response.json({ error: leftover.error }, { status: 400 })
     }
 
+    // Retornável/equipamento/descartável: sobra não se aplica — forçar 0.
+    const leftoverValue =
+      current.material_type === 'consumable' ? leftover.value : 0
+
     const dispatched = Number(current.dispatched_quantity)
     if (returned.value > dispatched) {
       return Response.json(
@@ -195,7 +199,7 @@ export async function PATCH(request: Request, { params }: Params) {
     }
 
     patch.returned_quantity = returned.value
-    patch.leftover_quantity = leftover.value
+    patch.leftover_quantity = leftoverValue
     patch.returned_by_user_id = auth.session.userId
     patch.returned_at = new Date().toISOString()
     if (body.return_notes !== undefined) {
@@ -211,13 +215,13 @@ export async function PATCH(request: Request, { params }: Params) {
       hasDispatched: true,
       returned: returned.value,
       hasReturned: true,
-      leftover: leftover.value,
+      leftover: leftoverValue,
       materialType: current.material_type,
       currentStatus: current.status,
     })
     patch.status = next
 
-    if (leftover.value > 0) {
+    if (leftoverValue > 0) {
       auditAction = 'material_leftover_recorded'
     } else if (next === 'divergence') {
       auditAction = 'material_return_divergence'

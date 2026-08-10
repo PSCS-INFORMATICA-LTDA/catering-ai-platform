@@ -17,6 +17,31 @@ export const MATERIAL_TYPES = [
 
 export type MaterialType = (typeof MATERIAL_TYPES)[number]
 
+/** Ordem operacional: retornáveis → equipamentos → consumíveis → descartáveis. */
+export const MATERIAL_TYPE_PACK_ORDER: Record<MaterialType, number> = {
+  returnable: 0,
+  equipment: 1,
+  consumable: 2,
+  disposable: 3,
+}
+
+export function sortMaterialsForOperations<
+  T extends { material_type: string; description_snapshot?: string | null },
+>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => {
+    const oa =
+      MATERIAL_TYPE_PACK_ORDER[a.material_type as MaterialType] ?? 99
+    const ob =
+      MATERIAL_TYPE_PACK_ORDER[b.material_type as MaterialType] ?? 99
+    if (oa !== ob) return oa - ob
+    return String(a.description_snapshot || '').localeCompare(
+      String(b.description_snapshot || ''),
+      undefined,
+      { sensitivity: 'base' },
+    )
+  })
+}
+
 export const MATERIAL_STATUSES = [
   'pending',
   'partial',

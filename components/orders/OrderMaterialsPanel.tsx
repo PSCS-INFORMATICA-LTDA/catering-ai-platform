@@ -18,6 +18,7 @@ import type {
 import {
   canCloseMaterial,
   MATERIAL_TYPES,
+  sortMaterialsForOperations,
 } from '@/Lib/orders/orderMaterials'
 import {
   formatWhatsAppPhoneDisplay,
@@ -68,6 +69,77 @@ function materialOriginText(
 
 function canRegisterReturn(row: ServiceOrderMaterialRow): boolean {
   return row.status === 'dispatched' || Number(row.dispatched_quantity) > 0
+}
+
+/** Sobra só faz sentido para consumível (carne, guarnição…). */
+function canEditLeftover(row: ServiceOrderMaterialRow): boolean {
+  return row.material_type === 'consumable'
+}
+
+/** Separação editável só antes da conferência fechada. */
+function canEditSeparation(row: ServiceOrderMaterialRow): boolean {
+  return (
+    row.status === 'pending' ||
+    row.status === 'partial' ||
+    row.status === 'separated'
+  )
+}
+
+/** Conferência: após salvar (status checked+) vira só leitura. */
+function canEditCheck(row: ServiceOrderMaterialRow): boolean {
+  return (
+    row.status === 'pending' ||
+    row.status === 'partial' ||
+    row.status === 'separated' ||
+    row.status === 'divergence'
+  )
+}
+
+/** Cores por tipo — facilita montagem de malas (equipamento vs retornável vs consumível). */
+function materialTypeBadgeClass(type: MaterialType): string {
+  switch (type) {
+    case 'equipment':
+      return 'bg-sky-100 text-sky-900 ring-1 ring-sky-300/80 dark:bg-sky-500/25 dark:text-sky-100 dark:ring-sky-400/40'
+    case 'returnable':
+      return 'bg-indigo-950 text-indigo-50 ring-1 ring-indigo-800 dark:bg-indigo-900/80 dark:text-indigo-50 dark:ring-indigo-500/50'
+    case 'consumable':
+      return 'bg-amber-100 text-amber-950 ring-1 ring-amber-400/70 dark:bg-amber-500/20 dark:text-amber-100 dark:ring-amber-400/40'
+    case 'disposable':
+      return 'bg-stone-200 text-stone-800 ring-1 ring-stone-400/60 dark:bg-stone-500/25 dark:text-stone-100 dark:ring-stone-400/40'
+    default:
+      return 'bg-neutral-100 text-neutral-700 ring-1 ring-neutral-300 dark:bg-white/10 dark:text-neutral-200'
+  }
+}
+
+function materialTypeRowClass(type: MaterialType): string {
+  switch (type) {
+    case 'equipment':
+      return 'border-l-4 border-l-sky-500 bg-sky-50/40 dark:bg-sky-500/5'
+    case 'returnable':
+      return 'border-l-4 border-l-indigo-950 bg-indigo-950/[0.04] dark:bg-indigo-500/10'
+    case 'consumable':
+      return 'border-l-4 border-l-amber-500 bg-amber-50/50 dark:bg-amber-500/5'
+    case 'disposable':
+      return 'border-l-4 border-l-stone-400 bg-stone-50/60 dark:bg-stone-500/5'
+    default:
+      return 'border-l-4 border-l-transparent'
+  }
+}
+
+function MaterialTypeBadge({
+  type,
+  locale,
+}: {
+  type: MaterialType
+  locale: ReturnType<typeof useAuthLocaleFromMe>
+}) {
+  return (
+    <span
+      className={`inline-block rounded-md px-2 py-0.5 text-xs font-semibold tracking-wide ${materialTypeBadgeClass(type)}`}
+    >
+      {materialTypeLabel(type, locale)}
+    </span>
+  )
 }
 
 type DispatchPrepareResult = {
@@ -253,10 +325,16 @@ export default function OrderMaterialsPanel({
   }
 
   const dispatchPhoneOk = Boolean(normalizeWhatsAppPhone(dispatchPhone))
-  const active = rows.filter((r) => r.status !== 'cancelled')
+  const active = sortMaterialsForOperations(
+    rows.filter((r) => r.status !== 'cancelled'),
+  )
 
   function renderReturnInputs(row: ServiceOrderMaterialRow, compact = false) {
     if (!canReturn || !canRegisterReturn(row)) return null
+    const leftoverEditable = canEditLeftover(row)
+    const leftoverValue = leftoverEditable
+      ? (draftLeftover[row.id] ?? String(row.leftover_quantity))
+      : '0'
     const inputs = (
       <>
         <label className="block space-y-0.5">
@@ -279,14 +357,22 @@ export default function OrderMaterialsPanel({
             {tQuotesOrders(locale, 'materialLeftoverLabel')}
           </span>
           <input
-            className={glassField()}
+            className={`${glassField()} ${leftoverEditable ? '' : 'cursor-not-allowed opacity-50'}`}
             type="number"
             min={0}
             step="any"
-            value={draftLeftover[row.id] ?? String(row.leftover_quantity)}
-            onChange={(e) =>
-              setDraftLeftover((d) => ({ ...d, [row.id]: e.target.value }))
+            disabled={!leftoverEditable}
+            readOnly={!leftoverEditable}
+            title={
+              leftoverEditable
+                ? undefined
+                : tQuotesOrders(locale, 'materialLeftoverNotApplicable')
             }
+            value={leftoverValue}
+            onChange={(e) => {
+              if (!leftoverEditable) return
+              setDraftLeftover((d) => ({ ...d, [row.id]: e.target.value }))
+            }}
           />
         </label>
       </>
@@ -305,9 +391,9 @@ export default function OrderMaterialsPanel({
                 returned_quantity: Number(
                   draftReturn[row.id] ?? row.returned_quantity,
                 ),
-                leftover_quantity: Number(
-                  draftLeftover[row.id] ?? row.leftover_quantity,
-                ),
+                leftover_quantity: leftoverEditable
+                  ? Number(draftLeftover[row.id] ?? row.leftover_quantity)
+                  : 0,
               })
             }
           >
@@ -321,6 +407,7 @@ export default function OrderMaterialsPanel({
 
   function registerReturnButton(row: ServiceOrderMaterialRow) {
     if (!canReturn || !canRegisterReturn(row)) return null
+    const leftoverEditable = canEditLeftover(row)
     return (
       <button
         type="button"
@@ -332,9 +419,9 @@ export default function OrderMaterialsPanel({
             returned_quantity: Number(
               draftReturn[row.id] ?? row.returned_quantity,
             ),
-            leftover_quantity: Number(
-              draftLeftover[row.id] ?? row.leftover_quantity,
-            ),
+            leftover_quantity: leftoverEditable
+              ? Number(draftLeftover[row.id] ?? row.leftover_quantity)
+              : 0,
           })
         }
       >
@@ -663,7 +750,7 @@ export default function OrderMaterialsPanel({
                 {active.map((row) => (
                   <tr
                     key={row.id}
-                    className="border-t border-black/5 align-top"
+                    className={`border-t border-black/5 align-top ${materialTypeRowClass(row.material_type)}`}
                   >
                     <td className="py-2 pr-2 font-medium text-cdl-fg">
                       {row.description_snapshot}
@@ -674,12 +761,15 @@ export default function OrderMaterialsPanel({
                       {renderDivergenceHints(row)}
                     </td>
                     <td className="py-2 pr-2">
-                      {materialTypeLabel(row.material_type, locale)}
+                      <MaterialTypeBadge
+                        type={row.material_type}
+                        locale={locale}
+                      />
                     </td>
                     <td className="py-2 pr-2">{row.unit}</td>
                     <td className="py-2 pr-2">{row.required_quantity}</td>
                     <td className="py-2 pr-2">
-                      {canPrepare ? (
+                      {canPrepare && canEditSeparation(row) ? (
                         <div className="flex flex-col gap-1">
                           <input
                             className={glassField()}
@@ -719,7 +809,7 @@ export default function OrderMaterialsPanel({
                       )}
                     </td>
                     <td className="py-2 pr-2">
-                      {canCheck ? (
+                      {canCheck && canEditCheck(row) ? (
                         <div className="flex flex-col gap-1">
                           <input
                             className={glassField()}
@@ -786,7 +876,9 @@ export default function OrderMaterialsPanel({
                       )}
                     </td>
                     <td className="py-2 pr-2">
-                      {canReturn && canRegisterReturn(row) ? (
+                      {canReturn &&
+                      canRegisterReturn(row) &&
+                      canEditLeftover(row) ? (
                         <label className="block space-y-0.5">
                           <span className="sr-only">
                             {tQuotesOrders(locale, 'materialLeftoverLabel')}
@@ -809,7 +901,25 @@ export default function OrderMaterialsPanel({
                           />
                         </label>
                       ) : (
-                        row.leftover_quantity
+                        <span
+                          className={
+                            canRegisterReturn(row) && !canEditLeftover(row)
+                              ? 'text-cdl-muted opacity-50'
+                              : undefined
+                          }
+                          title={
+                            canRegisterReturn(row) && !canEditLeftover(row)
+                              ? tQuotesOrders(
+                                  locale,
+                                  'materialLeftoverNotApplicable',
+                                )
+                              : undefined
+                          }
+                        >
+                          {canEditLeftover(row)
+                            ? row.leftover_quantity
+                            : 0}
+                        </span>
                       )}
                     </td>
                     <td className="py-2 pr-2">
@@ -848,7 +958,7 @@ export default function OrderMaterialsPanel({
             {active.map((row) => (
               <li
                 key={row.id}
-                className="space-y-2 rounded-lg border border-cdl-border p-3"
+                className={`space-y-2 rounded-lg border border-cdl-border p-3 ${materialTypeRowClass(row.material_type)}`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -866,9 +976,13 @@ export default function OrderMaterialsPanel({
                     {materialStatusLabel(row.status, locale)}
                   </span>
                 </div>
-                <p className="text-xs text-cdl-muted">
-                  {materialTypeLabel(row.material_type, locale)} · {row.unit}
-                </p>
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <MaterialTypeBadge
+                    type={row.material_type}
+                    locale={locale}
+                  />
+                  <span className="text-cdl-muted">{row.unit}</span>
+                </div>
                 {renderDivergenceHints(row)}
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
                   <p>
@@ -885,14 +999,28 @@ export default function OrderMaterialsPanel({
                         {tQuotesOrders(locale, 'materialReturnedLabel')}:{' '}
                         {row.returned_quantity}
                       </p>
-                      <p>
+                      <p
+                        className={
+                          !canEditLeftover(row)
+                            ? 'text-cdl-muted opacity-50'
+                            : undefined
+                        }
+                        title={
+                          !canEditLeftover(row)
+                            ? tQuotesOrders(
+                                locale,
+                                'materialLeftoverNotApplicable',
+                              )
+                            : undefined
+                        }
+                      >
                         {tQuotesOrders(locale, 'materialLeftoverLabel')}:{' '}
-                        {row.leftover_quantity}
+                        {canEditLeftover(row) ? row.leftover_quantity : 0}
                       </p>
                     </>
                   ) : null}
                 </div>
-                {canPrepare ? (
+                {canPrepare && canEditSeparation(row) ? (
                   <label className="block space-y-1">
                     <span className="text-xs text-cdl-muted">
                       {tQuotesOrders(locale, 'materialSeparatedLabel')}
@@ -937,7 +1065,7 @@ export default function OrderMaterialsPanel({
                     {row.separated_quantity}
                   </p>
                 )}
-                {canCheck ? (
+                {canCheck && canEditCheck(row) ? (
                   <label className="block space-y-1">
                     <span className="text-xs text-cdl-muted">
                       {tQuotesOrders(locale, 'materialCheckedLabel')}
