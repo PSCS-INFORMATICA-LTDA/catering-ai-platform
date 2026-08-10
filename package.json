@@ -76,7 +76,10 @@
     "seed:dev:order-materials-phase2": "node scripts/dev/seed-order-materials-phase2.mjs --apply",
     "test:dev:order-material-dispatch": "node scripts/dev/test-order-material-dispatch.mjs",
     "test:dev:order-material-return": "node scripts/dev/test-order-material-return.mjs",
-    "test:dev:order-material-public-security": "node scripts/dev/test-order-material-public-security.mjs"
+    "test:dev:order-material-public-security": "node scripts/dev/test-order-material-public-security.mjs",
+    "test:dev:order-material-dispatch-i18n": "node scripts/dev/test-order-material-dispatch-i18n.mjs",
+    "qa:dev:materials-phase2-evidence": "node scripts/dev/qa/materials-phase2-evidence.mjs",
+    "qa:dev:mint-material-dispatch-token": "node scripts/dev/qa/mint-material-dispatch-token.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
