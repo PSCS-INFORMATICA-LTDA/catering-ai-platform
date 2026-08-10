@@ -62,7 +62,12 @@
     "seed:dev:staff-conflict-pool": "node scripts/dev/seed-staff-conflict-pool.mjs --apply",
     "verify:dev:staff-conflict-pool": "node scripts/dev/seed-staff-conflict-pool.mjs --verify",
     "test:dev:schedule-conflict-matrix": "node scripts/dev/test-schedule-conflict-matrix.mjs",
-    "qa:dev:schedule-conflict-matrix": "node scripts/dev/test-schedule-conflict-matrix.mjs --apply --report"
+    "qa:dev:schedule-conflict-matrix": "node scripts/dev/test-schedule-conflict-matrix.mjs --apply --report",
+    "seed:dev:order-materials:dry": "node scripts/dev/seed-order-materials-demo.mjs",
+    "seed:dev:order-materials": "node scripts/dev/seed-order-materials-demo.mjs --apply",
+    "test:dev:order-materials": "node scripts/dev/test-order-materials.mjs",
+    "test:dev:order-material-preparation": "node scripts/dev/test-order-material-preparation.mjs",
+    "test:dev:order-material-check": "node scripts/dev/test-order-material-check.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
