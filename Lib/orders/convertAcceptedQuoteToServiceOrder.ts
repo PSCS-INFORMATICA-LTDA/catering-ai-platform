@@ -1,3 +1,4 @@
+import { generateOrderMaterialsFromBom } from '@/Lib/orders/generateOrderMaterialsFromBom'
 import { canConvertQuote } from '@/Lib/quotes/statusMachine'
 import { ensureAcceptedQuoteVersion } from '@/Lib/quotes/versions'
 import { getNextServiceOrderNumber } from '@/Lib/getNextDocumentNumber'
@@ -54,13 +55,29 @@ type SnapshotEvent = {
 
 type SnapshotShape = {
   currency_code?: string
-  package?: { id?: string | null; total?: number }
-  guest_counts?: { physical_guest_count?: number; billable_guest_count?: number }
+  package?: {
+    id?: string | null
+    total?: number
+    label?: string | null
+    name?: string | null
+    package_name?: string | null
+    label_pt?: string | null
+  }
+  guest_counts?: {
+    adult_count?: number
+    children_under_3_count?: number
+    children_4_to_12_count?: number
+    physical_guest_count?: number
+    billable_guest_count?: number
+  }
   additional_items?: Array<{
     additional_item_id?: string
     quantity?: number
     unit_price?: number
     total_price?: number
+    selected?: boolean
+    label_pt?: string | null
+    item_name?: string | null
   }>
   additional_total?: number
   mileage?: { fee?: number }
@@ -327,6 +344,46 @@ export async function convertAcceptedQuoteToServiceOrder(input: {
     insertServiceOrderItems(companyId, serviceOrder.id, snapshot),
     writeStatusHistory(companyId, serviceOrder.id, actorUserId),
   ])
+
+  // Materiais operacionais (BOM) — somente na criação; não regenera OS existente.
+  let packageLabel =
+    snapshot.package?.label_pt ||
+    snapshot.package?.label ||
+    snapshot.package?.package_name ||
+    snapshot.package?.name ||
+    null
+  if (!packageLabel && snapshot.package?.id) {
+    const { data: pkg } = await supabase
+      .from('packages')
+      .select('package_name, label_pt')
+      .eq('id', snapshot.package.id)
+      .eq('company_id', companyId)
+      .maybeSingle()
+    packageLabel = pkg?.label_pt || pkg?.package_name || null
+  }
+
+  const additionalLabels: Record<string, string> = {}
+  const addIds = (snapshot.additional_items ?? [])
+    .map((a) => a.additional_item_id)
+    .filter((id): id is string => Boolean(id))
+  if (addIds.length > 0) {
+    const { data: cats } = await supabase
+      .from('catalog_items')
+      .select('id, item_name, label_pt')
+      .eq('company_id', companyId)
+      .in('id', addIds)
+    for (const c of cats ?? []) {
+      additionalLabels[c.id] = c.label_pt || c.item_name || 'Adicional'
+    }
+  }
+
+  await generateOrderMaterialsFromBom({
+    companyId,
+    serviceOrderId: serviceOrder.id,
+    snapshot,
+    actorUserId,
+    sourceLabels: { packageLabel, additionalLabels },
+  })
 
   await supabase
     .from('quotes')
