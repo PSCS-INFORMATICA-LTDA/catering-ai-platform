@@ -33,8 +33,10 @@ export type ServiceOrderMaterialRow = {
   company_id: string
   service_order_id: string
   catalog_item_id: string | null
+  bom_rule_id?: string | null
   source_type: MaterialSourceType
   source_id: string | null
+  source_label_snapshot?: string | null
   description_snapshot: string
   material_type: MaterialType
   unit: string
