@@ -12,9 +12,29 @@ export function hashMaterialDispatchToken(token: string): string {
 export function buildPublicMaterialDispatchUrl(
   token: string,
   origin?: string,
+  locale?: 'pt' | 'en' | 'es' | null,
 ): string {
   const base = (origin ?? getPublicAppOrigin()).replace(/\/$/, '')
-  return `${base}/conferencia-saida/${token}`
+  const lang = locale === 'en' || locale === 'es' ? locale : 'pt'
+  return `${base}/conferencia-saida/${token}?lang=${lang}`
+}
+
+/** Locale da rota pública: query → líder → Accept-Language → PT. */
+export function resolvePublicDispatchLocale(input: {
+  queryLang?: string | null
+  leaderLocale?: string | null
+  acceptLanguage?: string | null
+}): 'pt' | 'en' | 'es' {
+  const q = (input.queryLang || '').trim().toLowerCase()
+  if (q === 'en' || q === 'es' || q === 'pt') return q
+  const leader = (input.leaderLocale || '').trim().toLowerCase()
+  if (leader.startsWith('en')) return 'en'
+  if (leader.startsWith('es')) return 'es'
+  if (leader.startsWith('pt')) return 'pt'
+  const accept = (input.acceptLanguage || '').toLowerCase()
+  if (accept.includes('en')) return 'en'
+  if (accept.includes('es')) return 'es'
+  return 'pt'
 }
 
 /**

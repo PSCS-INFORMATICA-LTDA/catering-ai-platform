@@ -1,5 +1,8 @@
+import { headers } from 'next/headers'
 import PublicMaterialDispatchClient from './PublicMaterialDispatchClient'
 import { GET as getPublicDispatch } from '@/app/api/public/conferencia-saida/[token]/route'
+import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import { resolvePublicDispatchLocale } from '@/Lib/orders/materialDispatchConfirmation'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -18,10 +21,19 @@ type MaterialLine = {
 
 export default async function PublicMaterialDispatchPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ token: string }>
+  searchParams: Promise<{ lang?: string; locale?: string }>
 }) {
   const { token } = await params
+  const query = await searchParams
+  const hdrs = await headers()
+  const locale = resolvePublicDispatchLocale({
+    queryLang: query.lang || query.locale,
+    acceptLanguage: hdrs.get('accept-language'),
+  })
+
   const res = await getPublicDispatch(
     new Request(`http://local/api/public/conferencia-saida/${token}`),
     { params: Promise.resolve({ token }) },
@@ -48,12 +60,19 @@ export default async function PublicMaterialDispatchPage({
   }
 
   if (!payload.found || !payload.dispatch) {
+    const revoked = payload.status === 'revoked'
     return (
       <main className="mx-auto flex min-h-screen max-w-lg items-center justify-center px-4">
         <div className="liquid-glass-card p-8 text-center">
-          <h1 className="text-xl font-bold text-cdl-fg">Link não encontrado</h1>
+          <h1 className="text-xl font-bold text-cdl-fg">
+            {revoked
+              ? tQuotesOrders(locale, 'publicDispatchLinkRevoked')
+              : tQuotesOrders(locale, 'publicDispatchLinkInvalid')}
+          </h1>
           <p className="mt-2 text-sm text-cdl-muted">
-            O link pode estar incompleto, expirado ou revogado.
+            {revoked
+              ? tQuotesOrders(locale, 'publicDispatchLinkRevokedHint')
+              : tQuotesOrders(locale, 'publicDispatchLinkInvalidHint')}
           </p>
         </div>
       </main>
@@ -64,9 +83,11 @@ export default async function PublicMaterialDispatchPage({
     return (
       <main className="mx-auto flex min-h-screen max-w-lg items-center justify-center px-4">
         <div className="liquid-glass-card p-8 text-center">
-          <h1 className="text-xl font-bold text-cdl-fg">Link expirado</h1>
+          <h1 className="text-xl font-bold text-cdl-fg">
+            {tQuotesOrders(locale, 'publicDispatchLinkExpired')}
+          </h1>
           <p className="mt-2 text-sm text-cdl-muted">
-            Solicite um novo link de conferência de saída à operação.
+            {tQuotesOrders(locale, 'publicDispatchLinkExpiredHint')}
           </p>
         </div>
       </main>
@@ -76,6 +97,7 @@ export default async function PublicMaterialDispatchPage({
   return (
     <PublicMaterialDispatchClient
       token={token}
+      locale={locale}
       companyName={payload.company_name || 'Catering'}
       initialStatus={payload.status || 'pending'}
       canConfirm={Boolean(payload.can_confirm)}

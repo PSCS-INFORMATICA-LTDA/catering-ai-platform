@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { tQuotesOrders, type AuthLocale } from '@/Lib/i18n/quotesOrders'
 
 type MaterialLine = {
   id: string
@@ -30,12 +31,14 @@ type DispatchInfo = {
 
 export default function PublicMaterialDispatchClient({
   token,
+  locale,
   companyName,
   initialStatus,
   canConfirm,
   dispatch,
 }: {
   token: string
+  locale: AuthLocale
   companyName: string
   initialStatus: string
   canConfirm: boolean
@@ -73,7 +76,7 @@ export default function PublicMaterialDispatchClient({
         dispatched_quantity: Number(qtys[m.id] ?? m.checked_quantity ?? 0),
         justification:
           Number(qtys[m.id] ?? 0) !== Number(m.checked_quantity)
-            ? 'Ajuste na retirada'
+            ? tQuotesOrders(locale, 'publicDispatchAdjustmentJustification')
             : undefined,
       }))
       const res = await fetch(`/api/public/conferencia-saida/${token}`, {
@@ -90,10 +93,10 @@ export default function PublicMaterialDispatchClient({
       if (!json.ok) {
         setError(
           json.error === 'divergence_requires_justification'
-            ? 'Há divergência — solicite ajuste à operação.'
+            ? tQuotesOrders(locale, 'publicDispatchErrorDivergence')
             : json.error === 'expired'
-              ? 'Link expirado.'
-              : json.error || 'Falha ao confirmar.',
+              ? tQuotesOrders(locale, 'publicDispatchErrorExpired')
+              : json.error || tQuotesOrders(locale, 'publicDispatchErrorGeneric'),
         )
         return
       }
@@ -115,7 +118,7 @@ export default function PublicMaterialDispatchClient({
             {companyName}
           </p>
           <h1 className="text-xl font-black text-cdl-fg">
-            Conferência de saída
+            {tQuotesOrders(locale, 'publicDispatchTitle')}
           </h1>
           <p className="text-sm text-cdl-muted">
             {dispatch.service_order_number}
@@ -123,19 +126,27 @@ export default function PublicMaterialDispatchClient({
           </p>
           <dl className="mt-3 grid gap-1 text-sm text-cdl-fg">
             <div>
-              <span className="text-cdl-muted">Data: </span>
+              <span className="text-cdl-muted">
+                {tQuotesOrders(locale, 'publicDispatchDate')}:{' '}
+              </span>
               {dispatch.event_date || '—'}
             </div>
             <div>
-              <span className="text-cdl-muted">Horário: </span>
+              <span className="text-cdl-muted">
+                {tQuotesOrders(locale, 'publicDispatchTime')}:{' '}
+              </span>
               {start && end ? `${start}–${end}` : '—'}
             </div>
             <div>
-              <span className="text-cdl-muted">Local: </span>
+              <span className="text-cdl-muted">
+                {tQuotesOrders(locale, 'publicDispatchLocation')}:{' '}
+              </span>
               {location}
             </div>
             <div>
-              <span className="text-cdl-muted">Equipe: </span>
+              <span className="text-cdl-muted">
+                {tQuotesOrders(locale, 'publicDispatchTeam')}:{' '}
+              </span>
               {dispatch.team_name || '—'}
             </div>
           </dl>
@@ -144,14 +155,17 @@ export default function PublicMaterialDispatchClient({
         {done || status === 'confirmed' ? (
           <div className="liquid-glass-card p-6 text-center">
             <h2 className="text-lg font-bold text-emerald-700">
-              Retirada confirmada
+              {tQuotesOrders(locale, 'publicDispatchPickupConfirmed')}
             </h2>
             <p className="mt-2 text-sm text-cdl-muted">
-              Materiais registrados como saída. Bom evento!
+              {tQuotesOrders(locale, 'publicDispatchPickupConfirmedHint')}
             </p>
           </div>
         ) : (
           <>
+            <p className="text-sm font-semibold text-cdl-fg">
+              {tQuotesOrders(locale, 'publicDispatchMaterials')}
+            </p>
             <div className="space-y-3">
               {materials.map((m) => (
                 <article
@@ -162,11 +176,13 @@ export default function PublicMaterialDispatchClient({
                     {m.description_snapshot}
                   </h2>
                   <p className="text-xs text-cdl-muted">
-                    Unidade: {m.unit} · Conferido: {m.checked_quantity}
+                    {tQuotesOrders(locale, 'publicDispatchUnitLabel')}: {m.unit}{' '}
+                    · {tQuotesOrders(locale, 'publicDispatchCheckedQty')}:{' '}
+                    {m.checked_quantity}
                   </p>
                   <label className="block space-y-1">
                     <span className="text-xs font-medium text-cdl-muted">
-                      Qtd a retirar
+                      {tQuotesOrders(locale, 'publicDispatchPickupQty')}
                     </span>
                     <input
                       type="number"
@@ -195,9 +211,11 @@ export default function PublicMaterialDispatchClient({
               type="button"
               disabled={!canConfirm || busy || materials.length === 0}
               onClick={() => void confirm()}
-              className="w-full rounded-2xl bg-[#E85D04] px-4 py-4 text-base font-black text-white disabled:opacity-50"
+              className="w-full rounded-2xl bg-[#E85D04] px-4 py-4 text-base font-black uppercase text-white disabled:opacity-50"
             >
-              {busy ? 'Confirmando…' : 'CONFIRMAR RETIRADA'}
+              {busy
+                ? tQuotesOrders(locale, 'publicDispatchConfirming')
+                : tQuotesOrders(locale, 'publicDispatchConfirmPickup')}
             </button>
           </>
         )}

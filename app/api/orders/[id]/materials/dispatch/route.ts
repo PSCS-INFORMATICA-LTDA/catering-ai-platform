@@ -206,11 +206,16 @@ export async function POST(request: Request, context: Ctx) {
     .eq('id', companyId)
     .maybeSingle()
 
-  const confirmUrl = buildPublicMaterialDispatchUrl(token)
+  const locale =
+    leader.leaderLocale === 'en' ||
+    leader.leaderLocale === 'es' ||
+    leader.leaderLocale === 'pt'
+      ? leader.leaderLocale
+      : 'pt'
+  const confirmUrl = buildPublicMaterialDispatchUrl(token, undefined, locale)
   const location = [order.address_line, order.city, order.state]
     .filter(Boolean)
     .join(', ')
-  const locale = leader.leaderLocale ?? 'pt'
   const whatsappText = buildMaterialDispatchWhatsAppText({
     companyName: company?.trade_name || company?.company_name,
     leaderName: leader.leaderName,
