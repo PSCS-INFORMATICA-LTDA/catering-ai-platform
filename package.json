@@ -72,7 +72,11 @@
     "seed:dev:materials-bom": "node scripts/dev/seed-materials-bom-demo.mjs --apply",
     "seed:dev:materials-bom-order": "node scripts/dev/seed-materials-bom-order.mjs --apply",
     "test:dev:materials-bom": "node scripts/dev/test-materials-bom.mjs",
-    "test:dev:order-financial-rbac": "node scripts/dev/test-order-financial-rbac.mjs"
+    "test:dev:order-financial-rbac": "node scripts/dev/test-order-financial-rbac.mjs",
+    "seed:dev:order-materials-phase2": "node scripts/dev/seed-order-materials-phase2.mjs --apply",
+    "test:dev:order-material-dispatch": "node scripts/dev/test-order-material-dispatch.mjs",
+    "test:dev:order-material-return": "node scripts/dev/test-order-material-return.mjs",
+    "test:dev:order-material-public-security": "node scripts/dev/test-order-material-public-security.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
