@@ -19,6 +19,9 @@ export type OperationalAuditEntityType =
   | 'service_order_material'
   | 'service_order_material_dispatch'
   | 'operational_material_rule'
+  | 'inventory_location'
+  | 'inventory_movement'
+  | 'inventory_balance'
 
 export type OperationalAuditAction =
   | 'quote_version_created'
@@ -56,6 +59,12 @@ export type OperationalAuditAction =
   | 'bom_rule_updated'
   | 'bom_rule_disabled'
   | 'order_materials_generated'
+  | 'inventory_location_created'
+  | 'inventory_initial_balance_posted'
+  | 'inventory_movement_posted'
+  | 'inventory_adjustment_posted'
+  | 'inventory_posting_failed'
+  | 'inventory_reconciliation_checked'
 
 export async function writeOperationalAudit(input: {
   companyId: string

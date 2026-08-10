@@ -60,6 +60,13 @@ export async function POST(request: Request, context: Ctx) {
     p_notes: body.notes ?? null,
   })
   if (error) {
+    const msg = error.message || ''
+    if (/inventory_posting_failed|negative_stock_blocked/i.test(msg)) {
+      return Response.json(
+        { ok: false, error: 'inventory_posting_failed', detail: msg },
+        { status: 409 },
+      )
+    }
     return Response.json({ ok: false, error: error.message }, { status: 500 })
   }
 

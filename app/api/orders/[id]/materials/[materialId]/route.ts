@@ -334,5 +334,51 @@ export async function PATCH(request: Request, { params }: Params) {
     },
   })
 
+  if (action === 'return') {
+    const { postInventoryForMaterialReturn } = await import(
+      '@/Lib/inventory/postInventory'
+    )
+    const inv = await postInventoryForMaterialReturn({
+      companyId,
+      materialId,
+      actorUserId: auth.session.userId,
+    })
+    if (inv.ok === false) {
+      await writeOperationalAudit({
+        companyId,
+        actorUserId: auth.session.userId,
+        entityType: 'inventory_movement',
+        entityId: materialId,
+        action: 'inventory_posting_failed',
+        newData: {
+          service_order_id: orderId,
+          error: inv.error ?? 'unknown',
+          phase: 'return',
+        },
+      })
+      return Response.json(
+        {
+          data,
+          inventory: inv,
+          warning: 'Retorno salvo, mas posting de estoque falhou.',
+        },
+        { status: 200 },
+      )
+    }
+    await writeOperationalAudit({
+      companyId,
+      actorUserId: auth.session.userId,
+      entityType: 'inventory_movement',
+      entityId: materialId,
+      action: 'inventory_movement_posted',
+      newData: {
+        service_order_id: orderId,
+        phase: 'return',
+        results: inv.results ?? null,
+      },
+    })
+    return Response.json({ data, inventory: inv })
+  }
+
   return Response.json({ data })
 }
