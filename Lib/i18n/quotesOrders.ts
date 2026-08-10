@@ -85,6 +85,36 @@ const dict = {
     addChecklistItem: 'Adicionar item',
     markDone: 'Concluir',
     markPending: 'Reabrir',
+    materialsSection: 'Materiais',
+    materialsEmpty: 'Nenhum material na ordem.',
+    materialLabel: 'Material',
+    materialTypeLabel: 'Tipo',
+    materialUnitLabel: 'Unidade',
+    materialRequiredLabel: 'Necessário',
+    materialSeparatedLabel: 'Separado',
+    materialCheckedLabel: 'Conferido',
+    materialStatusPending: 'Pendente',
+    materialStatusPartial: 'Parcial',
+    materialStatusSeparated: 'Separado',
+    materialStatusChecked: 'Conferido',
+    materialStatusDivergence: 'Divergência',
+    materialStatusCancelled: 'Cancelado',
+    materialTypeConsumable: 'Consumível',
+    materialTypeReturnable: 'Retornável',
+    materialTypeEquipment: 'Equipamento',
+    materialTypeDisposable: 'Descartável',
+    materialAdd: 'Adicionar material',
+    materialSeparate: 'Separar',
+    materialCheck: 'Conferir',
+    materialCancel: 'Cancelar',
+    materialSaveSeparate: 'Salvar separação',
+    materialSaveCheck: 'Salvar conferência',
+    materialNotes: 'Observações',
+    materialDescription: 'Descrição',
+    materialManual: 'Manual',
+    materialFromCatalog: 'Do catálogo',
+    materialDivergenceHint: 'Divergência entre separado e conferido.',
+    materialSaving: 'Salvando…',
     skip: 'Pular',
     backToOrders: 'Voltar para Ordens de Serviço',
     backToQuotes: 'Voltar para Cotações',
@@ -344,6 +374,36 @@ const dict = {
     addChecklistItem: 'Add item',
     markDone: 'Complete',
     markPending: 'Reopen',
+    materialsSection: 'Materials',
+    materialsEmpty: 'No materials on this order.',
+    materialLabel: 'Material',
+    materialTypeLabel: 'Type',
+    materialUnitLabel: 'Unit',
+    materialRequiredLabel: 'Required',
+    materialSeparatedLabel: 'Separated',
+    materialCheckedLabel: 'Checked',
+    materialStatusPending: 'Pending',
+    materialStatusPartial: 'Partial',
+    materialStatusSeparated: 'Separated',
+    materialStatusChecked: 'Checked',
+    materialStatusDivergence: 'Divergence',
+    materialStatusCancelled: 'Cancelled',
+    materialTypeConsumable: 'Consumable',
+    materialTypeReturnable: 'Returnable',
+    materialTypeEquipment: 'Equipment',
+    materialTypeDisposable: 'Disposable',
+    materialAdd: 'Add material',
+    materialSeparate: 'Separate',
+    materialCheck: 'Check',
+    materialCancel: 'Cancel',
+    materialSaveSeparate: 'Save separation',
+    materialSaveCheck: 'Save check',
+    materialNotes: 'Notes',
+    materialDescription: 'Description',
+    materialManual: 'Manual',
+    materialFromCatalog: 'From catalog',
+    materialDivergenceHint: 'Divergence between separated and checked.',
+    materialSaving: 'Saving…',
     skip: 'Skip',
     backToOrders: 'Back to Service Orders',
     backToQuotes: 'Back to Quotes',
@@ -596,6 +656,36 @@ const dict = {
     addChecklistItem: 'Agregar ítem',
     markDone: 'Completar',
     markPending: 'Reabrir',
+    materialsSection: 'Materiales',
+    materialsEmpty: 'Ningún material en la orden.',
+    materialLabel: 'Material',
+    materialTypeLabel: 'Tipo',
+    materialUnitLabel: 'Unidad',
+    materialRequiredLabel: 'Necesario',
+    materialSeparatedLabel: 'Separado',
+    materialCheckedLabel: 'Conferido',
+    materialStatusPending: 'Pendiente',
+    materialStatusPartial: 'Parcial',
+    materialStatusSeparated: 'Separado',
+    materialStatusChecked: 'Conferido',
+    materialStatusDivergence: 'Divergencia',
+    materialStatusCancelled: 'Cancelado',
+    materialTypeConsumable: 'Consumible',
+    materialTypeReturnable: 'Retornable',
+    materialTypeEquipment: 'Equipo',
+    materialTypeDisposable: 'Descartable',
+    materialAdd: 'Agregar material',
+    materialSeparate: 'Separar',
+    materialCheck: 'Conferir',
+    materialCancel: 'Cancelar',
+    materialSaveSeparate: 'Guardar separación',
+    materialSaveCheck: 'Guardar conferencia',
+    materialNotes: 'Notas',
+    materialDescription: 'Descripción',
+    materialManual: 'Manual',
+    materialFromCatalog: 'Del catálogo',
+    materialDivergenceHint: 'Divergencia entre separado y conferido.',
+    materialSaving: 'Guardando…',
     skip: 'Omitir',
     backToOrders: 'Volver a Órdenes de Servicio',
     backToQuotes: 'Volver a Cotizaciones',
@@ -842,6 +932,40 @@ export function checklistCategoryLabel(
 ): string {
   const key = CHECKLIST_CATEGORY_KEY_MAP[(category ?? '').trim().toLowerCase()]
   if (!key) return category ?? '—'
+  return tQuotesOrders(locale, key)
+}
+
+const MATERIAL_STATUS_KEY_MAP: Record<string, QuotesOrdersMessageKey> = {
+  pending: 'materialStatusPending',
+  partial: 'materialStatusPartial',
+  separated: 'materialStatusSeparated',
+  checked: 'materialStatusChecked',
+  divergence: 'materialStatusDivergence',
+  cancelled: 'materialStatusCancelled',
+}
+
+export function materialStatusLabel(
+  status: string | null | undefined,
+  locale: AuthLocale | string | null | undefined = 'pt',
+): string {
+  const key = MATERIAL_STATUS_KEY_MAP[(status ?? '').trim().toLowerCase()]
+  if (!key) return status ?? '—'
+  return tQuotesOrders(locale, key)
+}
+
+const MATERIAL_TYPE_KEY_MAP: Record<string, QuotesOrdersMessageKey> = {
+  consumable: 'materialTypeConsumable',
+  returnable: 'materialTypeReturnable',
+  equipment: 'materialTypeEquipment',
+  disposable: 'materialTypeDisposable',
+}
+
+export function materialTypeLabel(
+  type: string | null | undefined,
+  locale: AuthLocale | string | null | undefined = 'pt',
+): string {
+  const key = MATERIAL_TYPE_KEY_MAP[(type ?? '').trim().toLowerCase()]
+  if (!key) return type ?? '—'
   return tQuotesOrders(locale, key)
 }
 

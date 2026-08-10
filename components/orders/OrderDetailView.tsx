@@ -14,6 +14,7 @@ import {
   nextServiceOrderStatuses,
   serviceOrderStatusRequiresReason,
 } from '@/Lib/orders/statusMachine'
+import OrderMaterialsPanel from '@/components/orders/OrderMaterialsPanel'
 import OrderTeamConfirmationsPanel from '@/components/orders/OrderTeamConfirmationsPanel'
 import SupplierGarnishSharePanel from '@/components/orders/SupplierGarnishSharePanel'
 
@@ -51,9 +52,15 @@ function formatTime(value: string | null | undefined) {
 export default function OrderDetailView({
   initialOrder,
   canManage,
+  canMaterialsView = false,
+  canMaterialsPrepare = false,
+  canMaterialsCheck = false,
 }: {
   initialOrder: ServiceOrderDetail
   canManage: boolean
+  canMaterialsView?: boolean
+  canMaterialsPrepare?: boolean
+  canMaterialsCheck?: boolean
 }) {
   const locale = useAuthLocaleFromMe()
   const [order, setOrder] = useState(initialOrder)
@@ -337,6 +344,14 @@ export default function OrderDetailView({
             </button>
           </div>
         </section>
+      ) : null}
+
+      {canMaterialsView ? (
+        <OrderMaterialsPanel
+          orderId={order.id}
+          canPrepare={canMaterialsPrepare}
+          canCheck={canMaterialsCheck}
+        />
       ) : null}
 
       <section className="liquid-glass-card space-y-3 p-5">
