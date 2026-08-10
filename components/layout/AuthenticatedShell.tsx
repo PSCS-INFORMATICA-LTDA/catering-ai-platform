@@ -12,6 +12,10 @@ function isPublicPath(pathname: string): boolean {
   if (pathname.startsWith('/customer-quote')) return true
   if (pathname.startsWith('/quote-request')) return true
   if (pathname.startsWith('/proposta/')) return true
+  if (pathname.startsWith('/designacao-equipe/')) return true
+  if (pathname.startsWith('/confirmacao-equipe/')) return true
+  if (pathname.startsWith('/confirmacao-guarnicao/')) return true
+  if (pathname.startsWith('/conferencia-saida/')) return true
   return false
 }
 
