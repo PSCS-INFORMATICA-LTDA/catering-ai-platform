@@ -24,6 +24,10 @@ export default async function OrderDetailPage({
 
   const canManage =
     session.isPlatformAdmin || hasPermission(session.permissions, 'orders.manage')
+  const canViewFinancial =
+    session.isPlatformAdmin ||
+    hasPermission(session.permissions, 'quotes.manage') ||
+    hasPermission(session.permissions, 'audit.view')
   const canMaterialsView =
     session.isPlatformAdmin ||
     hasPermission(session.permissions, 'orders.materials.view') ||
@@ -56,6 +60,7 @@ export default async function OrderDetailPage({
     <OrderDetailView
       initialOrder={data}
       canManage={canManage}
+      canViewFinancial={canViewFinancial}
       canMaterialsView={canMaterialsView}
       canMaterialsPrepare={canMaterialsPrepare}
       canMaterialsCheck={canMaterialsCheck}

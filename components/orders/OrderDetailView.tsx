@@ -52,12 +52,15 @@ function formatTime(value: string | null | undefined) {
 export default function OrderDetailView({
   initialOrder,
   canManage,
+  canViewFinancial = false,
   canMaterialsView = false,
   canMaterialsPrepare = false,
   canMaterialsCheck = false,
 }: {
   initialOrder: ServiceOrderDetail
   canManage: boolean
+  /** Totais/preços — não exibir para operação/equipe. */
+  canViewFinancial?: boolean
   canMaterialsView?: boolean
   canMaterialsPrepare?: boolean
   canMaterialsCheck?: boolean
@@ -197,8 +200,12 @@ export default function OrderDetailView({
         </span>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <section className="liquid-glass-card space-y-3 p-5 lg:col-span-2">
+      <div
+        className={`grid gap-4 ${canViewFinancial ? 'lg:grid-cols-3' : ''}`}
+      >
+        <section
+          className={`liquid-glass-card space-y-3 p-5 ${canViewFinancial ? 'lg:col-span-2' : ''}`}
+        >
           <h2 className="text-lg font-bold text-cdl-fg">
             {tQuotesOrders(locale, 'eventSection')}
           </h2>
@@ -243,37 +250,51 @@ export default function OrderDetailView({
           </dl>
         </section>
 
-        <section className="liquid-glass-card space-y-2 p-5">
-          <h2 className="text-lg font-bold text-cdl-fg">
-            {tQuotesOrders(locale, 'financialSection')}
-          </h2>
-          <dl className="space-y-1.5 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-cdl-muted">{tQuotesOrders(locale, 'packageLabel')}</dt>
-              <dd className="font-medium text-cdl-fg">{formatMoney(order.package_total)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-cdl-muted">{tQuotesOrders(locale, 'additionalsLabel')}</dt>
-              <dd className="font-medium text-cdl-fg">
-                {formatMoney(order.additional_total)}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-cdl-muted">{tQuotesOrders(locale, 'mileageLabel')}</dt>
-              <dd className="font-medium text-cdl-fg">{formatMoney(order.mileage_fee)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-cdl-muted">{tQuotesOrders(locale, 'reservationLabel')}</dt>
-              <dd className="font-medium text-cdl-fg">
-                {formatMoney(order.reservation_amount)}
-              </dd>
-            </div>
-            <div className="flex justify-between border-t border-cdl-border pt-1.5 text-base font-black">
-              <dt>{tQuotesOrders(locale, 'total')}</dt>
-              <dd>{formatMoney(order.service_order_total)}</dd>
-            </div>
-          </dl>
-        </section>
+        {canViewFinancial ? (
+          <section className="liquid-glass-card space-y-2 p-5">
+            <h2 className="text-lg font-bold text-cdl-fg">
+              {tQuotesOrders(locale, 'financialSection')}
+            </h2>
+            <dl className="space-y-1.5 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-cdl-muted">
+                  {tQuotesOrders(locale, 'packageLabel')}
+                </dt>
+                <dd className="font-medium text-cdl-fg">
+                  {formatMoney(order.package_total)}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-cdl-muted">
+                  {tQuotesOrders(locale, 'additionalsLabel')}
+                </dt>
+                <dd className="font-medium text-cdl-fg">
+                  {formatMoney(order.additional_total)}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-cdl-muted">
+                  {tQuotesOrders(locale, 'mileageLabel')}
+                </dt>
+                <dd className="font-medium text-cdl-fg">
+                  {formatMoney(order.mileage_fee)}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-cdl-muted">
+                  {tQuotesOrders(locale, 'reservationLabel')}
+                </dt>
+                <dd className="font-medium text-cdl-fg">
+                  {formatMoney(order.reservation_amount)}
+                </dd>
+              </div>
+              <div className="flex justify-between border-t border-cdl-border pt-1.5 text-base font-black">
+                <dt>{tQuotesOrders(locale, 'total')}</dt>
+                <dd>{formatMoney(order.service_order_total)}</dd>
+              </div>
+            </dl>
+          </section>
+        ) : null}
       </div>
 
       {order.has_garnish_order || (order.garnish_items?.length ?? 0) > 0 ? (
@@ -306,23 +327,15 @@ export default function OrderDetailView({
         ) : (
           <ul className="divide-y divide-cdl-border text-sm">
             {order.items.map((item) => (
-              <li
-                key={item.id}
-                className="flex flex-wrap items-baseline justify-between gap-2 py-2"
-              >
-                <div>
-                  <p className="font-medium text-cdl-fg">{item.label_pt}</p>
-                  <p className="text-xs text-cdl-muted">
-                    {item.item_type === 'package'
-                      ? tQuotesOrders(locale, 'commercialItemPackage')
-                      : item.item_type === 'additional'
-                        ? tQuotesOrders(locale, 'commercialItemAdditional')
-                        : item.item_type}
-                    {item.quantity != null ? ` · qty ${item.quantity}` : ''}
-                  </p>
-                </div>
-                <p className="font-semibold text-cdl-fg">
-                  {formatMoney(item.total_price)}
+              <li key={item.id} className="py-2">
+                <p className="font-medium text-cdl-fg">{item.label_pt}</p>
+                <p className="text-xs text-cdl-muted">
+                  {item.item_type === 'package'
+                    ? tQuotesOrders(locale, 'commercialItemPackage')
+                    : item.item_type === 'additional'
+                      ? tQuotesOrders(locale, 'commercialItemAdditional')
+                      : item.item_type}
+                  {item.quantity != null ? ` · qty ${item.quantity}` : ''}
                 </p>
               </li>
             ))}
