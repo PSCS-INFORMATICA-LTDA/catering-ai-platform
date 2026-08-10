@@ -57,7 +57,12 @@
     "test:dev:person-schedule-conflicts": "node scripts/dev/test-person-schedule-conflicts.mjs",
     "qa:dev:schedule-turnaround": "node scripts/dev/run-schedule-turnaround-qa.mjs --apply",
     "fix:dev:turn-orders": "node scripts/dev/fix-turn-orders-for-designation.mjs",
-    "seed:dev:qa-designation-orders": "node scripts/dev/seed-qa-designation-orders.mjs --apply"
+    "seed:dev:qa-designation-orders": "node scripts/dev/seed-qa-designation-orders.mjs --apply",
+    "seed:dev:staff-conflict-pool:dry": "node scripts/dev/seed-staff-conflict-pool.mjs",
+    "seed:dev:staff-conflict-pool": "node scripts/dev/seed-staff-conflict-pool.mjs --apply",
+    "verify:dev:staff-conflict-pool": "node scripts/dev/seed-staff-conflict-pool.mjs --verify",
+    "test:dev:schedule-conflict-matrix": "node scripts/dev/test-schedule-conflict-matrix.mjs",
+    "qa:dev:schedule-conflict-matrix": "node scripts/dev/test-schedule-conflict-matrix.mjs --apply --report"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",

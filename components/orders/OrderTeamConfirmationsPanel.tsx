@@ -384,8 +384,8 @@ export default function OrderTeamConfirmationsPanel({
           Escala deste evento — escolha churrasqueiro e ajudantes na lista
         </p>
         <p className="text-xs text-cdl-muted">
-          Se alguém estiver indisponível, troque pela lista. A mensagem e o
-          WhatsApp usam a pessoa selecionada.
+          Mínimo 1 churrasqueiro; pode adicionar mais. Se alguém estiver
+          indisponível, troque pela lista. WhatsApp usa a pessoa selecionada.
         </p>
         <div className="grid gap-2 sm:grid-cols-2">
           {slots.map((slot) => {
@@ -422,6 +422,35 @@ export default function OrderTeamConfirmationsPanel({
             )
           })}
         </div>
+        {canManage ? (
+          <button
+            type="button"
+            className={glassBtn('ghost')}
+            onClick={() => {
+              setSlots((prev) => {
+                const grillCount = prev.filter(
+                  (s) => s.role_key === 'grill_master',
+                ).length
+                const nextIndex = grillCount
+                return [
+                  ...prev,
+                  {
+                    slotKey: `grill_master:${nextIndex}`,
+                    role_key: 'grill_master' as OperationalRoleKey,
+                    label: `Churrasqueiro ${nextIndex + 1}`,
+                    index: nextIndex,
+                    person_id: '',
+                  },
+                ]
+              })
+              setHint(
+                'Slot extra de churrasqueiro adicionado — selecione a pessoa e prepare a prévia.',
+              )
+            }}
+          >
+            + Adicionar churrasqueiro
+          </button>
+        ) : null}
       </div>
 
       <ul className="space-y-1 text-sm">
