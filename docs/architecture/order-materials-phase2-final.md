@@ -15,7 +15,7 @@
 
 | Campo | Valor |
 |-------|--------|
-| `MATERIALS_BASELINE_HEAD` | _(preencher após push final desta rodada)_ |
+| `MATERIALS_BASELINE_HEAD` | `e9a213597a6fb685ffa7568eb1f6a03ef62b377f` |
 | HEAD inicial desta rodada | `74db72f56e3ca4de41b899dcdcff5e9f0341f4f3` |
 | Production / main / homologation | Intactas |
 | Logistics | Intacto |

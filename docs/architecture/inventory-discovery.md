@@ -4,7 +4,7 @@
 **Responsável funcional:** Philippe Santana  
 **Data:** 2026-08-10  
 **Branch de referência:** `feat/order-materials-operations-dev`  
-**Baseline de Materiais:** ver `docs/architecture/order-materials-phase2-final.md` → `MATERIALS_BASELINE_HEAD`  
+**Baseline de Materiais:** `MATERIALS_BASELINE_HEAD=e9a213597a6fb685ffa7568eb1f6a03ef62b377f`  
 **Ambiente analisado:** DEV `yasprgtlqclwsjcshtls`  
 **Escopo desta rodada:** **somente discovery**. Sem migration, tabela, API, UI, saldo ou movimento de estoque.
 
