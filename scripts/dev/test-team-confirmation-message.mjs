@@ -30,6 +30,7 @@ assert.match(scaleSrc, /Ajudante/)
 
 assert.match(panelSrc, /tCommon\(locale, 'select'\)/)
 assert.match(panelSrc, /optionsForSlot/)
+assert.match(panelSrc, /role_keys\.includes\(slot\.role_key\)/)
 assert.match(panelSrc, /updateSlotPerson/)
 assert.match(panelSrc, /whitespace-pre-wrap/)
 assert.match(panelSrc, /members: selectedMembers/)

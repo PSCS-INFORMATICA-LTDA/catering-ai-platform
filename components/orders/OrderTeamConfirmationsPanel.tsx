@@ -225,13 +225,9 @@ export default function OrderTeamConfirmationsPanel({
     const taken = new Set(
       slots.filter((s) => s.slotKey !== slot.slotKey && s.person_id).map((s) => s.person_id),
     )
-    const available = candidates.filter((c) => !taken.has(c.id))
-    const preferred = available.filter(
-      (c) =>
-        c.role_keys.includes(slot.role_key) || c.role_keys.length === 0,
+    const list = candidates.filter(
+      (c) => !taken.has(c.id) && c.role_keys.includes(slot.role_key),
     )
-    const rest = available.filter((c) => !preferred.some((p) => p.id === c.id))
-    const list = [...preferred, ...rest]
     const selected = slot.person_id ? candidateById.get(slot.person_id) : null
     if (selected && !list.some((c) => c.id === selected.id)) {
       return [selected, ...list]
