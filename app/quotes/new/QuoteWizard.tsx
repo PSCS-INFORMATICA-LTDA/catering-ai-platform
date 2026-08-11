@@ -38,8 +38,7 @@ import { calcAdditionalLineTotal } from '../../../Lib/calculateQuoteTotals'
 import type { CommercialRulesSnapshot } from '../../../Lib/supabaseCommercialRules'
 import { calculateQuoteDraftFromSupabasePricing } from '../../../Lib/calculateQuoteDraftFromSupabasePricing'
 import type { QuoteSaveInput } from '../../../Lib/buildQuoteSavePayload'
-import { createQuote } from '../../../Lib/createQuote'
-import { updateQuote } from '../../../Lib/updateQuote'
+import { saveQuoteViaApi } from '../../../Lib/saveQuoteViaApi'
 import {
   buildSaveQuoteError,
   logSaveQuoteError,
@@ -2053,9 +2052,10 @@ export default function QuoteWizard({
     }
 
     try {
-      const result = isEditMode
-        ? await updateQuote(quoteId!, payload)
-        : await createQuote(payload)
+      const result = await saveQuoteViaApi(
+        payload,
+        isEditMode ? { quoteId: quoteId! } : undefined,
+      )
 
       if (result.error || !result.data?.id) {
         const errorInfo = normalizeSaveQuoteError(

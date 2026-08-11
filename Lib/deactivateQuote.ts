@@ -1,8 +1,9 @@
 import { getActiveCompanyId } from '@/Lib/tenant/resolveTenant'
-import { supabase } from './supabase'
+import { getSupabaseServerClient } from './supabaseServer'
 
 export async function deactivateQuote(quoteId: string) {
   const companyId = getActiveCompanyId()
+  const supabase = getSupabaseServerClient()
 
   const { data, error } = await supabase
     .from('quotes')

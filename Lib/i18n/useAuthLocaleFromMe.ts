@@ -16,6 +16,12 @@ export function useAuthLocaleFromMe(initial?: string | null): AuthLocale {
 
   useEffect(() => {
     let cancelled = false
+    try {
+      const stored = window.localStorage.getItem('catering.auth.locale')
+      if (stored) setLocale(resolveAuthLocale(stored))
+    } catch {
+      /* ignore */
+    }
     fetch('/api/auth/me', { cache: 'no-store' })
       .then(async (res) => {
         if (!res.ok || cancelled) return

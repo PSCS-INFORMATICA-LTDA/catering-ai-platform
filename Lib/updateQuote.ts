@@ -11,7 +11,7 @@ import {
   logSaveQuoteError,
   type SaveQuoteErrorInfo,
 } from './supabaseSaveError'
-import { supabase } from './supabase'
+import { getSupabaseServerClient } from './supabaseServer'
 
 export type UpdateQuoteResult = {
   data: { id: string } | null
@@ -23,6 +23,7 @@ export async function updateQuote(
   input: QuoteSaveInput,
 ): Promise<UpdateQuoteResult> {
   const companyId = getCdlCompanyId()
+  const supabase = getSupabaseServerClient()
 
   const { data: existingQuote, error: fetchError } = await supabase
     .from('quotes')
