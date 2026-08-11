@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import CatalogImageFrame from '@/components/CatalogImageFrame'
 import CdlBrandLogo from '@/components/CdlBrandLogo'
+import PackageHeroImage from '@/components/quotes/PackageHeroImage'
 import QuoteReviewPackageCdlSection from '@/components/quote-review/QuoteReviewPackageCdlSection'
 import {
   CdlCancellationPolicySection,
@@ -271,6 +272,14 @@ export default function QuoteReviewLayout({
       <div className="quote-proposal-body mx-auto max-w-6xl px-4 pb-10 sm:px-8 sm:pb-12">
         {beforeBody}
 
+        {data.packageImageUrl?.trim() ? (
+          <PackageHeroImage
+            src={data.packageImageUrl}
+            alt={data.packageName ?? tw(lang, 'packageSummary')}
+            fallbackLabel={tw(lang, 'packageImageMissing')}
+          />
+        ) : null}
+
         <QuoteProposalOverviewCard
           customerName={displayValue(data.customerName)}
           eventDate={data.eventDate}
@@ -294,25 +303,18 @@ export default function QuoteReviewLayout({
           grillRentalRequired={data.grillRentalRequired}
           language={lang}
           afterClient={
-            <>
-              <QuoteCommercialAdjustmentNotice
-                baseSubtotal={
-                  Number(data.packageTotal ?? 0) +
-                  Number(data.additionalTotal ?? 0) +
-                  Number(data.mileageFee ?? 0)
-                }
-                holidaySurchargeAmount={holidaySurcharge}
-                minimumOrderAdjustment={minimumAdjustment}
-                minimumOrderAmount={Number(data.minimumOrderAmount ?? 0)}
-                quoteTotal={data.quoteTotal}
-                language={lang}
-              />
-              <CdlImportantRulesPanel
-                variant="summary"
-                showReservationText
-                language={lang}
-              />
-            </>
+            <QuoteCommercialAdjustmentNotice
+              baseSubtotal={
+                Number(data.packageTotal ?? 0) +
+                Number(data.additionalTotal ?? 0) +
+                Number(data.mileageFee ?? 0)
+              }
+              holidaySurchargeAmount={holidaySurcharge}
+              minimumOrderAdjustment={minimumAdjustment}
+              minimumOrderAmount={Number(data.minimumOrderAmount ?? 0)}
+              quoteTotal={data.quoteTotal}
+              language={lang}
+            />
           }
         />
 
@@ -334,6 +336,7 @@ export default function QuoteReviewLayout({
               packageTotal={data.packageTotal}
               packageUnitPrice={data.packageUnitPrice}
               language={lang}
+              showHeroImage={!data.packageImageUrl?.trim()}
             />
           </ProposalSection>
 
@@ -615,6 +618,12 @@ export default function QuoteReviewLayout({
             </div>
           </div>
         </section>
+
+        <CdlImportantRulesPanel
+          variant={rulesVariant === 'pdf' ? 'pdf' : 'summary'}
+          showReservationText
+          language={lang}
+        />
 
         <CdlCancellationPolicySection
           variant={rulesVariant === 'pdf' ? 'pdf' : 'summary'}

@@ -223,7 +223,7 @@ export function CdlCancellationPolicySection({
   )
 }
 
-/** Regras + cancelamento (legado / PDF completo). Preferir regras no topo da cotação. */
+/** Regras + cancelamento (legado / PDF completo). Regras no fim; cancelamento por último. */
 export function CdlPdfPoliciesSection({
   language = 'pt',
 }: {

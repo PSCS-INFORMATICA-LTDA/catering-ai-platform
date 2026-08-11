@@ -171,7 +171,7 @@ export default function QuoteProposalOverviewCard({
   quoteTotal: number | null
   additionalsCount?: number
   grillRentalRequired?: boolean | null
-  /** Conteúdo logo após o nome do cliente (ex.: regras comerciais). */
+  /** Conteúdo após endereço e preço (ex.: aviso de mínimo comercial). */
   afterClient?: ReactNode
   language?: QuoteLanguage | string | null
 }) {
@@ -210,12 +210,6 @@ export default function QuoteProposalOverviewCard({
           <p className="quote-proposal-value">{formatDate(eventDate, locale)}</p>
         </div>
       </div>
-
-      {afterClient ? (
-        <div className="quote-proposal-overview-after-client mt-5 space-y-4">
-          {afterClient}
-        </div>
-      ) : null}
 
       <div className="quote-proposal-overview-location">
         <span className="quote-proposal-label">
@@ -276,6 +270,12 @@ export default function QuoteProposalOverviewCard({
           ))}
         </div>
       </div>
+
+      {afterClient ? (
+        <div className="quote-proposal-overview-after-client mt-5 space-y-4">
+          {afterClient}
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -68,6 +68,7 @@ export default function QuoteReviewPackageCdlSection({
   packageTotal,
   packageUnitPrice,
   language = 'pt',
+  showHeroImage = true,
 }: {
   packageName: string | null
   packageImageUrl?: string | null
@@ -79,6 +80,7 @@ export default function QuoteReviewPackageCdlSection({
   packageTotal: number | null
   packageUnitPrice: number | null
   language?: QuoteLanguage | string | null
+  showHeroImage?: boolean
 }) {
   const loc: QuoteLanguage =
     language === 'en' || language === 'es' ? language : 'pt'
@@ -117,11 +119,13 @@ export default function QuoteReviewPackageCdlSection({
         title={tw(loc, 'packageSummary')}
         subtitle={displayValue(packageName)}
       />
-      <PackageHeroImage
-        src={packageImageUrl}
-        alt={packageName ?? tw(loc, 'packageSummary')}
-        fallbackLabel={tw(loc, 'packageImageMissing')}
-      />
+      {showHeroImage ? (
+        <PackageHeroImage
+          src={packageImageUrl}
+          alt={packageName ?? tw(loc, 'packageSummary')}
+          fallbackLabel={tw(loc, 'packageImageMissing')}
+        />
+      ) : null}
       {packageSelections.length > 0 ? (
         <div className="space-y-1">
           <p className="quote-proposal-package-detail">

@@ -26,6 +26,7 @@ import {
 import { getPackageHasGarnish } from '@/Lib/packageFieldAccess'
 import CatalogImageFrame from '@/components/CatalogImageFrame'
 import CdlBrandLogo from '../../../components/CdlBrandLogo'
+import PackageHeroImage from '@/components/quotes/PackageHeroImage'
 import {
   CdlCancellationPolicySection,
   CdlImportantRulesPanel,
@@ -50,6 +51,7 @@ import QuoteFlashBanner from '@/components/QuoteFlashBanner'
 import { Suspense } from 'react'
 import QuoteDebugPanel from './QuoteDebugPanel'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import { tw } from '@/Lib/quoteTranslations'
 import { applyCommercialMinimums } from '@/Lib/quotes/applyCommercialMinimums'
 import {
   HOLIDAY_MIN_ORDER,
@@ -501,6 +503,14 @@ export default function QuoteDetailView({
       </header>
 
       <div className="quote-proposal-body mx-auto max-w-6xl px-4 pb-10 sm:px-8 sm:pb-12">
+        {packageImageUrl?.trim() ? (
+          <PackageHeroImage
+            src={packageImageUrl}
+            alt={packageName ?? tw(lang, 'packageSummary')}
+            fallbackLabel={tw(lang, 'packageImageMissing')}
+          />
+        ) : null}
+
         <QuoteProposalOverviewCard
           customerName={displayValue(customerDisplayName)}
           eventDate={quote.event_date ?? null}
@@ -524,21 +534,14 @@ export default function QuoteDetailView({
           grillRentalRequired={quote.grill_rental_required}
           language={lang}
           afterClient={
-            <>
-              <QuoteCommercialAdjustmentNotice
-                baseSubtotal={baseSubtotal}
-                holidaySurchargeAmount={holidaySurcharge}
-                minimumOrderAdjustment={minimumAdjustment}
-                minimumOrderAmount={minimumOrderAmount}
-                quoteTotal={snapshot.quoteTotal}
-                language={lang}
-              />
-              <CdlImportantRulesPanel
-                variant="summary"
-                showReservationText
-                language={lang}
-              />
-            </>
+            <QuoteCommercialAdjustmentNotice
+              baseSubtotal={baseSubtotal}
+              holidaySurchargeAmount={holidaySurcharge}
+              minimumOrderAdjustment={minimumAdjustment}
+              minimumOrderAmount={minimumOrderAmount}
+              quoteTotal={snapshot.quoteTotal}
+              language={lang}
+            />
           }
         />
 
@@ -558,6 +561,7 @@ export default function QuoteDetailView({
               packageTotal={snapshot.packageTotal}
               packageUnitPrice={snapshot.packageUnitPrice}
               language={lang}
+              showHeroImage={!packageImageUrl?.trim()}
             />
           </ProposalSection>
 
@@ -792,6 +796,12 @@ export default function QuoteDetailView({
             </div>
           </div>
         </section>
+
+        <CdlImportantRulesPanel
+          variant="summary"
+          showReservationText
+          language={lang}
+        />
 
         <CdlCancellationPolicySection variant="pdf" language={lang} />
 

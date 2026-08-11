@@ -105,17 +105,20 @@ export function PackageCodeOption({
   onClick,
   hideTechnical = false,
   selectionTone = 'default',
+  imageUrl,
 }: {
   pkg: PackageFieldSource
   active?: boolean
   onClick: () => void
   hideTechnical?: boolean
   selectionTone?: 'default' | 'brand'
+  imageUrl?: string | null
 }) {
   const locale = useAuthLocaleFromMe()
   const code = getPackageKey(pkg) || '—'
   const withSides = code.endsWith('+')
   const friendlyLabel = getPackageCascadeFriendlyLabel(pkg)
+  const thumb = imageUrl?.trim() || null
 
   const activeClass =
     selectionTone === 'brand'
@@ -126,12 +129,21 @@ export function PackageCodeOption({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-2xl border p-4 text-left transition ${
+      className={`flex w-full gap-3 rounded-2xl border p-3 text-left transition sm:p-4 ${
         active
           ? activeClass
           : 'border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50'
       }`}
     >
+      {thumb ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={thumb}
+          alt=""
+          className="h-16 w-24 shrink-0 rounded-xl object-cover sm:h-20 sm:w-28"
+        />
+      ) : null}
+      <div className="min-w-0 flex-1">
       {!hideTechnical ? (
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-xs font-bold uppercase tracking-wider text-neutral-500">
@@ -149,10 +161,11 @@ export function PackageCodeOption({
         </span>
       ) : null}
       <p
-        className={`${hideTechnical ? '' : 'mt-2 '}text-lg font-extrabold tracking-tight text-neutral-900`}
+        className={`${hideTechnical && !withSides ? '' : 'mt-2 '}text-lg font-extrabold tracking-tight text-neutral-900`}
       >
         {friendlyLabel}
       </p>
+      </div>
     </button>
   )
 }

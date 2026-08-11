@@ -5,7 +5,10 @@ import { PackageCodeOption } from '@/components/premium/PremiumPrimitives'
 import SelectedPackageDetails from '@/components/quotes/SelectedPackageDetails'
 import { sortPackagesByCommercialTier } from '@/Lib/packageDisplay'
 import { getPackageHasGarnish } from '@/Lib/packageFieldAccess'
-import type { PackageCatalogFields } from '@/Lib/packageCatalogVisual'
+import {
+  getPackageCatalogImage,
+  type PackageCatalogFields,
+} from '@/Lib/packageCatalogVisual'
 import type { PackageItem, PackageSideItem } from '@/Lib/packageConfiguration'
 import type { PackageOptionGroup } from '@/Lib/packageOptionGroups'
 import type { CatalogItemListItem } from '@/Lib/itemCatalog'
@@ -101,6 +104,7 @@ function PackageListWithInlineDetails({
               active={isSelected}
               hideTechnical
               selectionTone="brand"
+              imageUrl={getPackageCatalogImage(pkg, allPackages)}
               onClick={() => onSelect(pkg.id)}
             />
             {isSelected ? (
