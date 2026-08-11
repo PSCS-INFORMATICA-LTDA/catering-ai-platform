@@ -4,7 +4,11 @@ import {
   resolveAuthorizedCompanyId,
   type ApiAuthResult,
 } from '@/Lib/auth/requireApi'
-import { formatAddressFromParts, formatCep, normalizeCep } from '@/Lib/cep'
+import {
+  formatAddressFromParts,
+  formatPostalCode,
+  isUsablePostalCode,
+} from '@/Lib/cep'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
@@ -67,6 +71,15 @@ export async function PATCH(request: Request) {
   }
 
   const postal = trim(body.postal_code)
+  if (postal && !isUsablePostalCode(postal)) {
+    return Response.json(
+      {
+        error:
+          'CEP inválido. Informe um CEP brasileiro (ex.: 01310-100) ou ZIP dos EUA (ex.: 32801).',
+      },
+      { status: 400 },
+    )
+  }
   const street = trim(body.street) ?? ''
   const number = trim(body.address_number) ?? ''
   const neighborhood = trim(body.neighborhood) ?? ''
@@ -80,7 +93,7 @@ export async function PATCH(request: Request) {
       neighborhood,
       city,
       state,
-      postal_code: postal ? formatCep(postal) : '',
+      postal_code: postal ? formatPostalCode(postal) : '',
     }) ||
     null
 
@@ -90,7 +103,7 @@ export async function PATCH(request: Request) {
     trade_name: trim(body.trade_name),
     document: trim(body.document),
     state_registration: trim(body.state_registration),
-    postal_code: postal ? formatCep(normalizeCep(postal)) : null,
+    postal_code: postal ? formatPostalCode(postal) : null,
     street: street || null,
     address_number: number || null,
     address_complement: trim(body.address_complement),

@@ -8,6 +8,7 @@ import {
 import { getCdlCompanyId } from './cdlCompany'
 import { findOrCreateCustomerByPhone } from './findOrCreateCustomerByPhone'
 import { getNextQuoteNumber } from './getNextDocumentNumber'
+import { postalCodeSaveError } from './cep'
 import { isUsablePhone } from './normalizePhone'
 import {
   buildSaveQuoteError,
@@ -28,6 +29,10 @@ function validateSaveInput(input: QuoteSaveInput): SaveQuoteErrorInfo | null {
   }
   if (!companyId?.trim()) {
     return buildSaveQuoteError('validation', new Error('company_id vazio.'))
+  }
+  const zipError = postalCodeSaveError(input.zipCode, true)
+  if (zipError) {
+    return buildSaveQuoteError('validation', new Error(zipError))
   }
   return null
 }

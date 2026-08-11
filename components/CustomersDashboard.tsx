@@ -27,6 +27,12 @@ import {
   sortCustomersByRecency,
   type CustomerSearchRecord,
 } from '@/Lib/searchCustomers'
+import {
+  fetchAddressByCep,
+  formatPostalCode,
+  isUsablePostalCode,
+  normalizePostalDigits,
+} from '@/Lib/cep'
 import { isUsablePhone, normalizePhone } from '@/Lib/normalizePhone'
 
 type CustomerRow = CustomerSearchRecord & { id: string }
@@ -183,8 +189,34 @@ function CustomerEditFields({
       <BackofficeField label={tCommon(locale, 'postalCode')}>
         <BackofficeInput
           value={draft.postal_code ?? ''}
-          onChange={(v) => setDraft((c) => ({ ...c, postal_code: v }))}
+          placeholder={tCommon(locale, 'postalCodePlaceholder')}
+          onChange={(v) => {
+            const postal_code = formatPostalCode(v)
+            setDraft((c) => ({ ...c, postal_code }))
+            if (normalizePostalDigits(postal_code).length !== 8) return
+            void fetchAddressByCep(postal_code)
+              .then((addr) => {
+                setDraft((c) => ({
+                  ...c,
+                  postal_code: addr.cep,
+                  city: addr.city || c.city,
+                  state: addr.state || c.state,
+                  address_line: c.address_line || addr.formatted,
+                }))
+              })
+              .catch(() => {})
+          }}
         />
+        {normalizePostalDigits(
+          typeof draft.postal_code === 'string' ? draft.postal_code : '',
+        ).length >= 5 &&
+        !isUsablePostalCode(
+          typeof draft.postal_code === 'string' ? draft.postal_code : '',
+        ) ? (
+          <p className="mt-1 text-xs text-cdl-action">
+            {tCommon(locale, 'invalidPostalCode')}
+          </p>
+        ) : null}
       </BackofficeField>
       <BackofficeField label={tCommon(locale, 'langMessages')}>
         <select
@@ -348,6 +380,11 @@ export default function CustomersDashboard({
     try {
       if (!isUsablePhone(draft.phone)) {
         throw new Error(tCommon(locale, 'invalidPhone'))
+      }
+      const postal =
+        typeof draft.postal_code === 'string' ? draft.postal_code.trim() : ''
+      if (postal && !isUsablePostalCode(postal)) {
+        throw new Error(tCommon(locale, 'invalidPostalCode'))
       }
       const url =
         editingId && editingId !== 'new'

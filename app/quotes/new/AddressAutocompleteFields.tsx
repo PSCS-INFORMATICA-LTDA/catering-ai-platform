@@ -1,6 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import {
+  fetchAddressByCep,
+  formatPostalCode,
+  isUsablePostalCode,
+  normalizePostalDigits,
+} from '@/Lib/cep'
 import { parseGooglePlace, type AddressValues } from './googlePlaces'
 import { tCommon } from '@/Lib/i18n/common'
 import { tw } from '../../../Lib/quoteTranslations'
@@ -111,7 +117,7 @@ export default function AddressAutocompleteFields({
       searchInputRef.current,
       {
         types: ['address'],
-        componentRestrictions: { country: 'us' },
+        componentRestrictions: { country: ['br', 'us'] },
         fields: ['address_components', 'formatted_address'],
       },
     )
@@ -127,6 +133,37 @@ export default function AddressAutocompleteFields({
 
     autocompleteRef.current = autocomplete
   }, [ready])
+
+  const lastCepLookupRef = useRef('')
+  const valuesRef = useRef(values)
+  valuesRef.current = values
+
+  useEffect(() => {
+    const digits = normalizePostalDigits(values.zipCode)
+    if (digits.length !== 8 || lastCepLookupRef.current === digits) return
+    lastCepLookupRef.current = digits
+    let cancelled = false
+    void fetchAddressByCep(digits)
+      .then((addr) => {
+        if (cancelled) return
+        const current = valuesRef.current
+        onChangeRef.current({
+          zipCode: addr.cep,
+          city: addr.city || current.city,
+          state: addr.state || current.state,
+          address: current.address.trim()
+            ? current.address
+            : addr.street || addr.formatted || current.address,
+        })
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [values.zipCode])
+
+  const zipDigits = normalizePostalDigits(values.zipCode)
+  const zipInvalid = zipDigits.length >= 5 && !isUsablePostalCode(values.zipCode)
 
   return (
     <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${className}`}>
@@ -192,13 +229,22 @@ export default function AddressAutocompleteFields({
         <div className="relative">
           <input
             type="text"
+            inputMode="numeric"
+            autoComplete="postal-code"
             value={values.zipCode}
-            onChange={(e) => onChange({ zipCode: e.target.value })}
-            placeholder={tw(loc, 'zipPlaceholder')}
+            onChange={(e) =>
+              onChange({ zipCode: formatPostalCode(e.target.value) })
+            }
+            placeholder={tCommon(loc, 'postalCodePlaceholder')}
             className={getInputClassName(fieldCompletions?.zipCode)}
           />
           <FieldCheck show={fieldCompletions?.zipCode === 'filled'} />
         </div>
+        {zipInvalid ? (
+          <p className="text-xs text-cdl-action">
+            {tCommon(loc, 'invalidPostalCode')}
+          </p>
+        ) : null}
       </label>
     </div>
   )

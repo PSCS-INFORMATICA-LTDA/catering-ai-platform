@@ -11,6 +11,11 @@ import {
 } from '@/Lib/fetchCustomers'
 import { getNextAbNumber } from '@/Lib/getNextDocumentNumber'
 import { countOpenQuotesForCustomers } from '@/Lib/customerOpenQuotes'
+import {
+  formatPostalCode,
+  inferCountryFromPostalCode,
+  postalCodeSaveError,
+} from '@/Lib/cep'
 import { isUsablePhone, normalizePhone } from '@/Lib/normalizePhone'
 import {
   customerMatchesSearch,
@@ -106,6 +111,13 @@ export async function POST(request: Request) {
     )
   }
 
+  const postal =
+    typeof body.postal_code === 'string' ? body.postal_code.trim() : ''
+  const postalError = postalCodeSaveError(postal)
+  if (postalError) {
+    return Response.json({ error: postalError }, { status: 400 })
+  }
+
   const { number: abNumber } = await getNextAbNumber(companyId)
 
   const row = pickCustomersInsertPayload({
@@ -113,6 +125,12 @@ export async function POST(request: Request) {
     company_id: companyId,
     phone,
     phone_normalized: phoneNormalized,
+    ...(postal
+      ? {
+          postal_code: formatPostalCode(postal),
+          country: inferCountryFromPostalCode(postal),
+        }
+      : {}),
     active: body.active !== false,
     ...(abNumber ? { ab_number: abNumber } : {}),
     ab_name:

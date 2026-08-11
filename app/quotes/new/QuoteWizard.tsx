@@ -55,6 +55,7 @@ import {
 } from '../../../Lib/getCustomerDisplayName'
 import { getCatalogItemImageUrl } from '../../../Lib/catalogItemVisual'
 import { filterCatalogItems } from '../../../Lib/itemCatalog'
+import { isUsablePostalCode } from '../../../Lib/cep'
 import { isUsablePhone, normalizePhone } from '../../../Lib/normalizePhone'
 import {
   dedupeCustomersList,
@@ -2423,7 +2424,9 @@ export default function QuoteWizard({
                 fieldCompletions={{
                   city: getFieldCompletion(state.city),
                   state: getFieldCompletion(state.state),
-                  zipCode: getFieldCompletion(state.zipCode),
+                  zipCode: isUsablePostalCode(state.zipCode)
+                    ? 'filled'
+                    : 'empty',
                 }}
                 onChange={(patch) => updateState(patch)}
                 language={uiLocale}

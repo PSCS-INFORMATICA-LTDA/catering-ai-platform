@@ -8,6 +8,7 @@ import {
   type CommercialRulesSnapshot,
 } from '@/Lib/supabaseCommercialRules'
 import type { GrillPhotoStatus } from '@/Lib/grillPhotoStatus'
+import { isUsablePostalCode } from '@/Lib/cep'
 import { isUsablePhone } from '@/Lib/normalizePhone'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
@@ -192,7 +193,7 @@ export function getStepIssues(
       if (!isFilled(state.address)) issues.push(tw(language, 'issueAddress'))
       if (!isFilled(state.city)) issues.push(tw(language, 'issueCity'))
       if (!isFilled(state.state)) issues.push(tw(language, 'issueState'))
-      if (!isFilled(state.zipCode)) issues.push(tw(language, 'issueZip'))
+      if (!isUsablePostalCode(state.zipCode)) issues.push(tw(language, 'issueZip'))
       if (!(state.adultCount > 0)) {
         issues.push(tw(language, 'issueAdults'))
       }

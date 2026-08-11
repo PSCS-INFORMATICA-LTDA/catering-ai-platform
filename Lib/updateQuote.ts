@@ -5,6 +5,7 @@ import {
   buildQuoteSavePayload,
   type QuoteSaveInput,
 } from './buildQuoteSavePayload'
+import { postalCodeSaveError } from './cep'
 import { getCdlCompanyId } from './cdlCompany'
 import {
   buildSaveQuoteError,
@@ -23,6 +24,12 @@ export async function updateQuote(
   input: QuoteSaveInput,
 ): Promise<UpdateQuoteResult> {
   const companyId = getCdlCompanyId()
+  const zipError = postalCodeSaveError(input.zipCode, true)
+  if (zipError) {
+    const errorInfo = buildSaveQuoteError('validation', new Error(zipError))
+    logSaveQuoteError(errorInfo)
+    return { data: null, error: errorInfo }
+  }
   const supabase = getSupabaseServerClient()
 
   const { data: existingQuote, error: fetchError } = await supabase

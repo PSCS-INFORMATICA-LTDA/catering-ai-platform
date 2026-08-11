@@ -6,6 +6,11 @@ import {
   type CustomersUpdatePayload,
 } from '@/Lib/customersTableSchema'
 import { assertCustomerCanBeDeactivated } from '@/Lib/customerOpenQuotes'
+import {
+  formatPostalCode,
+  inferCountryFromPostalCode,
+  postalCodeSaveError,
+} from '@/Lib/cep'
 import { isUsablePhone, normalizePhone } from '@/Lib/normalizePhone'
 import { supabase } from '@/Lib/supabase'
 
@@ -66,6 +71,18 @@ export async function PATCH(
     }
     updatePayload.phone = phone
     updatePayload.phone_normalized = normalizePhone(phone)
+  }
+
+  if (!isDeactivateOnly && body.postal_code !== undefined) {
+    const postal = String(body.postal_code ?? '').trim()
+    const postalError = postalCodeSaveError(postal)
+    if (postalError) {
+      return Response.json({ error: postalError }, { status: 400 })
+    }
+    if (postal) {
+      updatePayload.postal_code = formatPostalCode(postal)
+      updatePayload.country = inferCountryFromPostalCode(postal)
+    }
   }
 
   const { data, error } = await supabase

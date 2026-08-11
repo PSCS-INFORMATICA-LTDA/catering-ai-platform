@@ -7,14 +7,62 @@ export type CepAddress = {
   formatted: string
 }
 
+export const INVALID_POSTAL_CODE_MESSAGE =
+  'CEP inválido. Informe um CEP brasileiro (ex.: 01310-100) ou ZIP dos EUA (ex.: 32801).'
+
 export function normalizeCep(value: string): string {
   return value.replace(/\D/g, '').slice(0, 8)
+}
+
+export function normalizePostalDigits(value: string | null | undefined): string {
+  if (!value) return ''
+  return value.replace(/\D/g, '').slice(0, 9)
 }
 
 export function formatCep(value: string): string {
   const digits = normalizeCep(value)
   if (digits.length <= 5) return digits
   return `${digits.slice(0, 5)}-${digits.slice(5)}`
+}
+
+export function formatPostalCode(value: string | null | undefined): string {
+  const digits = normalizePostalDigits(value)
+  if (digits.length === 8) return formatCep(digits)
+  if (digits.length === 9) return `${digits.slice(0, 5)}-${digits.slice(5)}`
+  return digits
+}
+
+export function isBrazilCep(value: string | null | undefined): boolean {
+  return normalizePostalDigits(value).length === 8
+}
+
+export function isUsZip(value: string | null | undefined): boolean {
+  const digits = (value ?? '').replace(/\D/g, '')
+  return digits.length === 5 || digits.length === 9
+}
+
+/** BR CEP (8 digits) or US ZIP (5 / ZIP+4). Rejects incomplete values. */
+export function isUsablePostalCode(value: string | null | undefined): boolean {
+  if (!value?.trim()) return false
+  return isBrazilCep(value) || isUsZip(value)
+}
+
+export function inferCountryFromPostalCode(
+  value: string | null | undefined,
+): 'BR' | 'US' | null {
+  if (isBrazilCep(value)) return 'BR'
+  if (isUsZip(value)) return 'US'
+  return null
+}
+
+export function postalCodeSaveError(
+  value: string | null | undefined,
+  required = false,
+): string | null {
+  const trimmed = value?.trim() ?? ''
+  if (!trimmed) return required ? INVALID_POSTAL_CODE_MESSAGE : null
+  if (!isUsablePostalCode(trimmed)) return INVALID_POSTAL_CODE_MESSAGE
+  return null
 }
 
 export function formatAddressFromParts(data: {

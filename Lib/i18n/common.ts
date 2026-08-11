@@ -123,6 +123,16 @@ const { t, list } = makeI18nModule('common', 'ui', {
     en: '+1 407 555 1234',
     es: '+55 11 98348-1803',
   },
+  invalidPostalCode: {
+    pt: 'Informe um CEP brasileiro com 8 dígitos (ex.: 01310-100) ou ZIP dos EUA (ex.: 32801).',
+    en: 'Enter a valid Brazilian ZIP (8 digits, e.g. 01310-100) or US ZIP (e.g. 32801).',
+    es: 'Indique un CEP de Brasil con 8 dígitos (ej.: 01310-100) o ZIP de EE. UU. (ej.: 32801).',
+  },
+  postalCodePlaceholder: {
+    pt: '01310-100',
+    en: '32801',
+    es: '01310-100',
+  },
   smsUnavailable: { pt: 'SMS indisponível', en: 'SMS unavailable', es: 'SMS no disponible' },
   errorLoad: { pt: 'Erro ao carregar.', en: 'Failed to load.', es: 'Error al cargar.' },
   errorSave: { pt: 'Não foi possível salvar.', en: 'Could not save.', es: 'No fue posible guardar.' },

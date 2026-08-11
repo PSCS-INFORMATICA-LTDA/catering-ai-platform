@@ -54,6 +54,7 @@ export const CUSTOMERS_INSERT_COLUMNS = [
   'city',
   'state',
   'postal_code',
+  'country',
   'preferred_language',
   'is_customer',
   'is_supplier',

@@ -1,3 +1,4 @@
+import { formatPostalCode, inferCountryFromPostalCode } from './cep'
 import { getCdlCompanyId } from './cdlCompany'
 import { buildQuoteDraftSnapshotPayload } from './calculateQuoteDraftFromSupabasePricing'
 import { calcAdditionalLineTotal } from './calculateQuoteTotals'
@@ -135,8 +136,8 @@ export function buildEventSavePayload(
     address_line: input.address.trim(),
     city: input.city.trim(),
     state: input.state.trim(),
-    postal_code: input.zipCode.trim() || null,
-    country: 'US',
+    postal_code: formatPostalCode(input.zipCode) || null,
+    country: inferCountryFromPostalCode(input.zipCode) ?? 'BR',
     adults_count: input.adultCount,
     children_count: childrenCount,
     billable_guests: billableGuestCount,
