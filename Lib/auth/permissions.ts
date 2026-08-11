@@ -29,6 +29,8 @@ const FALLBACK: Record<CompanyRole, string[]> = {
     'teams.manage',
     'company.settings',
     'audit.view',
+    'data_dictionary.view',
+    'translation_dictionary.view',
   ],
   admin: [
     'users.view',
@@ -57,6 +59,8 @@ const FALLBACK: Record<CompanyRole, string[]> = {
     'teams.manage',
     'company.settings',
     'audit.view',
+    'data_dictionary.view',
+    'translation_dictionary.view',
   ],
   manager: [
     'users.view',
