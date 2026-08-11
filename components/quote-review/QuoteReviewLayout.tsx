@@ -235,6 +235,15 @@ export default function QuoteReviewLayout({
 
   return (
     <div className="quote-proposal overflow-x-hidden">
+      {data.packageImageUrl?.trim() ? (
+        <PackageHeroImage
+          src={data.packageImageUrl}
+          alt={data.packageName ?? tw(lang, 'packageSummary')}
+          fallbackLabel={tw(lang, 'packageImageMissing')}
+          opening
+        />
+      ) : null}
+
       <header className="quote-proposal-hero quote-print-header">
         <div className="quote-proposal-hero-inner">
           <div className="quote-proposal-hero-brand">
@@ -271,14 +280,6 @@ export default function QuoteReviewLayout({
 
       <div className="quote-proposal-body mx-auto max-w-6xl px-4 pb-10 sm:px-8 sm:pb-12">
         {beforeBody}
-
-        {data.packageImageUrl?.trim() ? (
-          <PackageHeroImage
-            src={data.packageImageUrl}
-            alt={data.packageName ?? tw(lang, 'packageSummary')}
-            fallbackLabel={tw(lang, 'packageImageMissing')}
-          />
-        ) : null}
 
         <QuoteProposalOverviewCard
           customerName={displayValue(data.customerName)}

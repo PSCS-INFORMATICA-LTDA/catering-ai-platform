@@ -11,6 +11,7 @@ export default function PackageHeroImage({
   language = 'pt',
   expand = true,
   compact = false,
+  opening = false,
 }: {
   src?: string | null
   alt: string
@@ -20,6 +21,8 @@ export default function PackageHeroImage({
   expand?: boolean
   /** Coluna ao lado das opções — imagem menor, sem max-width largo. */
   compact?: boolean
+  /** Primeira peça da revisão da cotação — foto grande no começo. */
+  opening?: boolean
 }) {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const normalizedSrc = src?.trim() || null
@@ -43,20 +46,23 @@ export default function PackageHeroImage({
   }, [lightboxOpen])
 
   const frameClass = [
-    compact
-      ? 'my-0'
-      : expand
-        ? '-mx-4 my-4 sm:-mx-2 sm:my-3'
-        : 'my-3',
+    opening
+      ? 'mx-auto mb-6 mt-0 w-full max-w-6xl px-4 sm:px-8'
+      : compact
+        ? 'my-0 w-full max-w-full'
+        : expand
+          ? '-mx-4 my-4 sm:-mx-2 sm:my-3 md:mx-auto md:max-w-3xl lg:max-w-4xl'
+          : 'my-3 md:mx-auto md:max-w-3xl lg:max-w-4xl',
     'overflow-hidden rounded-3xl bg-white p-1 shadow-lg ring-1 ring-black/5',
-    compact ? 'w-full max-w-full' : 'md:mx-auto md:max-w-3xl lg:max-w-4xl',
   ]
     .filter(Boolean)
     .join(' ')
 
-  const imgMaxClass = compact
-    ? 'max-h-[280px] md:max-h-[360px] lg:max-h-[420px]'
-    : 'max-h-[620px] md:max-h-[760px]'
+  const imgMaxClass = opening
+    ? 'max-h-[70vh] md:max-h-[820px]'
+    : compact
+      ? 'max-h-[280px] md:max-h-[360px] lg:max-h-[420px]'
+      : 'max-h-[620px] md:max-h-[760px]'
 
   const openLightbox = () => setLightboxOpen(true)
 

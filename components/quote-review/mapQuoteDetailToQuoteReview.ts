@@ -30,7 +30,12 @@ function packageNameIndicatesGarnish(name: string | null | undefined): boolean {
 function linkedPackageFromQuote(
   quote: QuoteDetail,
 ): QuoteDetailPackageCatalogRow | null {
-  return quote.packageCatalogPackages?.[0] ?? null
+  const catalog = quote.packageCatalogPackages ?? []
+  if (quote.package_id) {
+    const match = catalog.find((row) => row.id === quote.package_id)
+    if (match) return match
+  }
+  return catalog[0] ?? null
 }
 
 export function quoteDetailToPackageFields(
@@ -78,11 +83,7 @@ export function resolveQuoteDetailPackageImageUrl(quote: QuoteDetail): string | 
   const pkg = quoteDetailToPackageFields(quote)
 
   return (
-    resolvePackageCatalogImageUrl(
-      catalogPackages[0] ?? pkg,
-      catalogPackages,
-      quote.package_id,
-    ) ||
+    resolvePackageCatalogImageUrl(pkg, catalogPackages, quote.package_id) ||
     quote.package_image_url?.trim() ||
     null
   )
