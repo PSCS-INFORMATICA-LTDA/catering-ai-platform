@@ -1322,6 +1322,7 @@
 }
 
 .quote-proposal-reservation-card {
+  margin-top: 1rem;
   background: #fffdf8;
   border-color: rgba(214, 40, 40, 0.22);
 }
