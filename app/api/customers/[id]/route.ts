@@ -6,7 +6,7 @@ import {
   type CustomersUpdatePayload,
 } from '@/Lib/customersTableSchema'
 import { assertCustomerCanBeDeactivated } from '@/Lib/customerOpenQuotes'
-import { normalizePhone } from '@/Lib/normalizePhone'
+import { isUsablePhone, normalizePhone } from '@/Lib/normalizePhone'
 import { supabase } from '@/Lib/supabase'
 
 export const dynamic = 'force-dynamic'
@@ -58,6 +58,12 @@ export async function PATCH(
 
   if (!isDeactivateOnly && body.phone !== undefined) {
     const phone = String(body.phone ?? '').trim()
+    if (!isUsablePhone(phone)) {
+      return Response.json(
+        { error: 'Telefone inválido. Informe o DDI (ex.: +5511983481803).' },
+        { status: 400 },
+      )
+    }
     updatePayload.phone = phone
     updatePayload.phone_normalized = normalizePhone(phone)
   }

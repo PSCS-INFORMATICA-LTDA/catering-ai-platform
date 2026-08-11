@@ -11,7 +11,7 @@ import {
 } from '@/Lib/fetchCustomers'
 import { getNextAbNumber } from '@/Lib/getNextDocumentNumber'
 import { countOpenQuotesForCustomers } from '@/Lib/customerOpenQuotes'
-import { normalizePhone } from '@/Lib/normalizePhone'
+import { isUsablePhone, normalizePhone } from '@/Lib/normalizePhone'
 import {
   customerMatchesSearch,
   dedupeCustomersList,
@@ -99,9 +99,9 @@ export async function POST(request: Request) {
   const phone =
     typeof body.phone === 'string' ? body.phone.trim() : String(body.phone ?? '').trim()
   const phoneNormalized = normalizePhone(phone)
-  if (!phoneNormalized || phoneNormalized.length < 10) {
+  if (!isUsablePhone(phone)) {
     return Response.json(
-      { error: 'Telefone inválido (mínimo 10 dígitos).' },
+      { error: 'Telefone inválido. Informe o DDI (ex.: +5511983481803).' },
       { status: 400 },
     )
   }

@@ -206,9 +206,9 @@ const { t, list } = makeI18nModule('agenda', 'ui', {
     es: 'WhatsApp del equipo / líder',
   },
   phonePlaceholder: {
-    pt: '+1 407 … ou (11) 9… ',
-    en: '+1 407 … or (11) 9… ',
-    es: '+1 407 … o (11) 9… ',
+    pt: '+55 11 98348-1803',
+    en: '+1 407 555 1234',
+    es: '+55 11 98348-1803',
   },
   smsCopiedHint: {
     pt: 'Mensagem SMS copiada. No PC use Phone Link se disponível.',

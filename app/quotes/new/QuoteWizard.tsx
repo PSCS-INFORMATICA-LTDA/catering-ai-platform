@@ -25,6 +25,7 @@ import {
   toBcp47Locale,
 } from '../../../Lib/i18n/locales'
 import { tQuotesOrders } from '../../../Lib/i18n/quotesOrders'
+import { tCommon } from '../../../Lib/i18n/common'
 import PackageOptionsDebugPanel from '../../../components/quotes/PackageOptionsDebugPanel'
 import { CDL_DEFAULT_COMPANY_ID } from '../../../Lib/cdlCompany'
 import type { PackageOptionQueryDebug } from '../../../Lib/fetchPackageOptionGroups'
@@ -2199,7 +2200,7 @@ export default function QuoteWizard({
                     customerPhoneLinkError: null,
                   })
                 }
-                placeholder="(555) 123-4567"
+                placeholder={tCommon(uiLocale, 'phonePlaceholder')}
                 completion={
                   selectedCustomer || isUsablePhone(state.customerDraftPhone)
                     ? 'filled'
@@ -2223,6 +2224,12 @@ export default function QuoteWizard({
               />
             </div>
 
+            {normalizePhone(state.customerDraftPhone).length >= 10 &&
+            !isUsablePhone(state.customerDraftPhone) ? (
+              <p className="sm:col-span-2 text-sm text-cdl-action">
+                {tCommon(uiLocale, 'invalidPhone')}
+              </p>
+            ) : null}
             {state.customerPhoneLinking ? (
               <p className="sm:col-span-2 text-sm text-cdl-muted">
                 {w.linkingCustomer}

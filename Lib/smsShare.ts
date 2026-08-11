@@ -1,3 +1,5 @@
+import { isUsablePhone, toE164Digits } from './normalizePhone'
+
 /** SMS deep-link (padrão Logistics) — abre o app de SMS do operador. */
 
 export function canUseDeviceSms(): boolean {
@@ -26,9 +28,8 @@ export function copyTextToClipboardSync(text: string): boolean {
 }
 
 export function phoneDigitsForSms(phone: string | null | undefined): string | null {
-  if (!phone) return null
-  const digits = phone.replace(/\D/g, '')
-  return digits.length >= 10 ? digits : null
+  if (!isUsablePhone(phone)) return null
+  return toE164Digits(phone) || null
 }
 
 export function plainTextForSms(text: string): string {

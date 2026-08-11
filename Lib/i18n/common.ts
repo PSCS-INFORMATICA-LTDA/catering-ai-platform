@@ -114,9 +114,14 @@ const { t, list } = makeI18nModule('common', 'ui', {
     es: 'Restaurar texto predeterminado',
   },
   invalidPhone: {
-    pt: 'Informe um telefone válido com DDI.',
-    en: 'Enter a valid phone number with country code.',
-    es: 'Indique un teléfono válido con código de país.',
+    pt: 'Informe um telefone válido com DDI (ex.: +5511983481803).',
+    en: 'Enter a valid phone number with country code (e.g. +15551234567).',
+    es: 'Indique un teléfono válido con código de país (ej.: +5511983481803).',
+  },
+  phonePlaceholder: {
+    pt: '+55 11 98348-1803',
+    en: '+1 407 555 1234',
+    es: '+55 11 98348-1803',
   },
   smsUnavailable: { pt: 'SMS indisponível', en: 'SMS unavailable', es: 'SMS no disponible' },
   errorLoad: { pt: 'Erro ao carregar.', en: 'Failed to load.', es: 'Error al cargar.' },

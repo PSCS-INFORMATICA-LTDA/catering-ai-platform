@@ -148,7 +148,7 @@ export async function findOrCreateCustomerByPhone(
     return {
       customer: null,
       created: false,
-      error: { message: 'Telefone inválido (mínimo 10 dígitos).' },
+      error: { message: 'Telefone inválido. Informe o DDI (ex.: +5511983481803).' },
     }
   }
 

@@ -27,6 +27,7 @@ import {
   sortCustomersByRecency,
   type CustomerSearchRecord,
 } from '@/Lib/searchCustomers'
+import { isUsablePhone, normalizePhone } from '@/Lib/normalizePhone'
 
 type CustomerRow = CustomerSearchRecord & { id: string }
 type ActiveFilter = 'active' | 'all'
@@ -149,7 +150,11 @@ function CustomerEditFields({
         <BackofficeInput
           value={draft.phone ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, phone: v }))}
+          placeholder={tCommon(locale, 'phonePlaceholder')}
         />
+        {normalizePhone(draft.phone).length >= 10 && !isUsablePhone(draft.phone) ? (
+          <p className="mt-1 text-xs text-cdl-action">{tCommon(locale, 'invalidPhone')}</p>
+        ) : null}
       </BackofficeField>
       <BackofficeField label={tCommon(locale, 'email')}>
         <BackofficeInput
@@ -341,6 +346,9 @@ export default function CustomersDashboard({
     setSaving(true)
     setError(null)
     try {
+      if (!isUsablePhone(draft.phone)) {
+        throw new Error(tCommon(locale, 'invalidPhone'))
+      }
       const url =
         editingId && editingId !== 'new'
           ? `/api/customers/${editingId}`

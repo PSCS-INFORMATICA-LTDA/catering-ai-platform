@@ -106,7 +106,7 @@ async function resolveCustomerIdForSave(
       customerId: null,
       error: buildSaveQuoteError(
         'validation',
-        new Error('Telefone do cliente inválido (mínimo 10 dígitos).'),
+        new Error('Telefone inválido. Informe o DDI (ex.: +5511983481803).'),
       ),
     }
   }

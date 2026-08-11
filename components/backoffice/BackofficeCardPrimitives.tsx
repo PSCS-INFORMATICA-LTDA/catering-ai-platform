@@ -164,17 +164,20 @@ export function BackofficeInput({
   value,
   onChange,
   disabled,
+  placeholder,
 }: {
   type?: string
   value: string | number | boolean | null | undefined
   onChange: (value: string) => void
   disabled?: boolean
+  placeholder?: string
 }) {
   return (
     <input
       type={type}
       value={value == null ? '' : String(value)}
       disabled={disabled}
+      placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
       className={inputClass}
     />

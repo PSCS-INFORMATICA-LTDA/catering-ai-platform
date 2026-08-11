@@ -1,3 +1,5 @@
+import { isUsablePhone, toE164Digits } from './normalizePhone'
+
 /** Abertura de WhatsApp (padrão Logistics) — deep link no aparelho do operador. */
 
 export type WhatsAppOpenResult = {
@@ -12,19 +14,12 @@ let lastNativePhone = ''
 let lastNativeLaunchAt = 0
 const NATIVE_DEBOUNCE_MS = 2000
 
-/** Somente dígitos com DDI (BR → 55…; US → mantém 1…). */
+/** Somente dígitos com DDI já informado. Não prefixa 55/1 em número local. */
 export function normalizeWhatsAppPhone(
   phone: string | null | undefined,
 ): string | null {
-  if (!phone) return null
-  const digits = phone.replace(/\D/g, '')
-  if (digits.length < 10) return null
-  // CDL / Orlando: prefer US (+1). BR (+55) when already with DDI or 11 dígitos locais.
-  if (digits.length === 10) return `1${digits}`
-  if (digits.length === 11 && digits.startsWith('1')) return digits
-  if (digits.startsWith('55') && digits.length >= 12) return digits
-  if (digits.length === 11) return `55${digits}`
-  return digits
+  if (!isUsablePhone(phone)) return null
+  return toE164Digits(phone) || null
 }
 
 function isWindowsDesktop(): boolean {
