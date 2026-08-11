@@ -3,7 +3,6 @@
 import type { ReactNode } from 'react'
 import CatalogImageFrame from '@/components/CatalogImageFrame'
 import CdlBrandLogo from '@/components/CdlBrandLogo'
-import PackageHeroImage from '@/components/quotes/PackageHeroImage'
 import QuoteReviewPackageCdlSection from '@/components/quote-review/QuoteReviewPackageCdlSection'
 import {
   CdlCancellationPolicySection,
@@ -235,15 +234,6 @@ export default function QuoteReviewLayout({
 
   return (
     <div className="quote-proposal overflow-x-hidden">
-      {data.packageImageUrl?.trim() ? (
-        <PackageHeroImage
-          src={data.packageImageUrl}
-          alt={data.packageName ?? tw(lang, 'packageSummary')}
-          fallbackLabel={tw(lang, 'packageImageMissing')}
-          opening
-        />
-      ) : null}
-
       <header className="quote-proposal-hero quote-print-header">
         <div className="quote-proposal-hero-inner">
           <div className="quote-proposal-hero-brand">
@@ -337,7 +327,6 @@ export default function QuoteReviewLayout({
               packageTotal={data.packageTotal}
               packageUnitPrice={data.packageUnitPrice}
               language={lang}
-              showHeroImage={false}
             />
           </ProposalSection>
 

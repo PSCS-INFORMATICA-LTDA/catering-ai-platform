@@ -26,7 +26,6 @@ import {
 import { getPackageHasGarnish } from '@/Lib/packageFieldAccess'
 import CatalogImageFrame from '@/components/CatalogImageFrame'
 import CdlBrandLogo from '../../../components/CdlBrandLogo'
-import PackageHeroImage from '@/components/quotes/PackageHeroImage'
 import {
   CdlCancellationPolicySection,
   CdlImportantRulesPanel,
@@ -51,7 +50,6 @@ import QuoteFlashBanner from '@/components/QuoteFlashBanner'
 import { Suspense } from 'react'
 import QuoteDebugPanel from './QuoteDebugPanel'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
-import { tw } from '@/Lib/quoteTranslations'
 import { applyCommercialMinimums } from '@/Lib/quotes/applyCommercialMinimums'
 import {
   HOLIDAY_MIN_ORDER,
@@ -448,15 +446,6 @@ export default function QuoteDetailView({
         </div>
       </div>
 
-      {packageImageUrl?.trim() ? (
-        <PackageHeroImage
-          src={packageImageUrl}
-          alt={packageName ?? tw(lang, 'packageSummary')}
-          fallbackLabel={tw(lang, 'packageImageMissing')}
-          opening
-        />
-      ) : null}
-
       <div className="quote-print-compact-header">
         <CdlBrandLogo
           size="sm"
@@ -562,7 +551,6 @@ export default function QuoteDetailView({
               packageTotal={snapshot.packageTotal}
               packageUnitPrice={snapshot.packageUnitPrice}
               language={lang}
-              showHeroImage={false}
             />
           </ProposalSection>
 
