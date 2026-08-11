@@ -8,6 +8,8 @@ import {
   tQuotesOrders,
 } from '@/Lib/i18n/quotesOrders'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
+import { resolveCatalogItemDisplayLabel } from '@/Lib/cdlPackageItemI18n'
+import { toBcp47Locale } from '@/Lib/i18n/locales'
 import { glassBtn, glassField } from '@/Lib/liquidGlass'
 import type { ServiceOrderDetail } from '@/Lib/orders/fetchServiceOrderDetail'
 import {
@@ -23,23 +25,29 @@ function formatMoney(value: number | null | undefined) {
   return `$${Number(value).toFixed(2)}`
 }
 
-function formatDate(value: string | null | undefined) {
+function formatDate(
+  value: string | null | undefined,
+  locale?: string | null,
+) {
   if (!value) return '—'
   const normalized = value.includes('T') ? value : `${value}T00:00:00`
   const date = new Date(normalized)
   if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString('pt-BR', {
+  return date.toLocaleDateString(toBcp47Locale(locale), {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
   })
 }
 
-function formatDateTime(value: string | null | undefined) {
+function formatDateTime(
+  value: string | null | undefined,
+  locale?: string | null,
+) {
   if (!value) return '—'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleString('pt-BR')
+  return date.toLocaleString(toBcp47Locale(locale))
 }
 
 function formatTime(value: string | null | undefined) {
@@ -216,7 +224,9 @@ export default function OrderDetailView({
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
             <div>
               <dt className="text-cdl-muted">{tQuotesOrders(locale, 'docDateLabel')}</dt>
-              <dd className="font-medium text-cdl-fg">{formatDate(order.event_date)}</dd>
+              <dd className="font-medium text-cdl-fg">
+                {formatDate(order.event_date, locale)}
+              </dd>
             </div>
             <div>
               <dt className="text-cdl-muted">{tQuotesOrders(locale, 'timeLabel')}</dt>
@@ -332,7 +342,16 @@ export default function OrderDetailView({
           <ul className="divide-y divide-cdl-border text-sm">
             {order.items.map((item) => (
               <li key={item.id} className="py-2">
-                <p className="font-medium text-cdl-fg">{item.label_pt}</p>
+                <p className="font-medium text-cdl-fg">
+                  {resolveCatalogItemDisplayLabel(
+                    {
+                      pt: item.label_pt,
+                      en: item.label_en,
+                      es: item.label_es,
+                    },
+                    locale,
+                  ) || item.label_pt}
+                </p>
                 <p className="text-xs text-cdl-muted">
                   {item.item_type === 'package'
                     ? tQuotesOrders(locale, 'commercialItemPackage')
@@ -499,7 +518,7 @@ export default function OrderDetailView({
                   {entry.reason ? ` (${entry.reason})` : ''}
                 </span>
                 <span className="text-xs text-cdl-muted">
-                  {formatDateTime(entry.created_at)}
+                  {formatDateTime(entry.created_at, locale)}
                 </span>
               </li>
             ))}

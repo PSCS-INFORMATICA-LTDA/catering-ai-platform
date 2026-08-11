@@ -13,10 +13,9 @@ export default async function QuoteDetailPage({
 }) {
   const { id } = await params
 
-  const [{ data, error }, session] = await Promise.all([
-    fetchQuoteDetail(id),
-    getAuthSession(),
-  ])
+  const session = await getAuthSession()
+  const uiLocale = resolveAuthLocale(session?.appUser?.preferred_language)
+  const { data, error } = await fetchQuoteDetail(id, uiLocale)
 
   if (error) {
     const locale = resolveAuthLocale(session?.appUser?.preferred_language)
@@ -36,5 +35,11 @@ export default async function QuoteDetailPage({
     session?.isPlatformAdmin || hasPermission(session?.permissions, 'quotes.convert'),
   )
 
-  return <QuoteDetailView quote={data as QuoteDetail} canConvert={canConvert} />
+  return (
+    <QuoteDetailView
+      quote={data as QuoteDetail}
+      canConvert={canConvert}
+      uiLocale={uiLocale}
+    />
+  )
 }

@@ -2,6 +2,8 @@ import type { AdditionalItemsInsertPayload } from '@/Lib/additionalItemsTableSch
 import { pickAdditionalItemsInsertPayload } from '@/Lib/additionalItemsTableSchema'
 import { getCatalogItemImageUrl as resolveCatalogImageUrl } from '@/Lib/catalogItemVisual'
 import { getCatalogItemSalePrice } from '@/Lib/itemCatalog'
+import { pickLocalizedText } from '@/Lib/i18n/locales'
+import { resolveCatalogItemDisplayLabel } from '@/Lib/cdlPackageItemI18n'
 
 export type AdditionalItemFieldSource = {
   item_key?: string | null
@@ -33,11 +35,17 @@ export function getAdditionalItemCategoryKey(
 
 export function getAdditionalItemCategoryLabel(
   item: AdditionalItemFieldSource | null | undefined,
+  locale?: string | null,
 ): string {
   return (
-    item?.category_pt?.trim() ||
-    item?.category_en?.trim() ||
-    item?.category_es?.trim() ||
+    pickLocalizedText(
+      {
+        pt: item?.category_pt,
+        en: item?.category_en,
+        es: item?.category_es,
+      },
+      locale,
+    ).trim() ||
     item?.category_key?.trim() ||
     'Outros'
   )
@@ -45,12 +53,18 @@ export function getAdditionalItemCategoryLabel(
 
 export function getAdditionalItemLabel(
   item: AdditionalItemFieldSource | null | undefined,
+  locale?: string | null,
 ): string {
   return (
-    item?.label_pt?.trim() ||
-    item?.item_name?.trim() ||
-    item?.label_en?.trim() ||
-    item?.label_es?.trim() ||
+    resolveCatalogItemDisplayLabel(
+      {
+        pt: item?.label_pt,
+        en: item?.label_en,
+        es: item?.label_es,
+        fallback: item?.item_name,
+      },
+      locale,
+    ) ||
     item?.item_key?.trim() ||
     'Item do catálogo'
   )

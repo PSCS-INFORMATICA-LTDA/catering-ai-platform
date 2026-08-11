@@ -70,6 +70,7 @@ export default async function EditQuotePage({
       packageSideItems={packageSideItems}
       commercialRules={commercialRules}
       fetchErrors={fetchErrors}
+      initialUiLocale={locale}
     />
   )
 }

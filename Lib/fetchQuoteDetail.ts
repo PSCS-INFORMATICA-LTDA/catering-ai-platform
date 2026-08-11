@@ -61,7 +61,10 @@ const ORDER_COLUMNS = 'accepted_version_id, converted_service_order_id'
 const COMMERCIAL_COLUMNS =
   'holiday_surcharge_amount, minimum_order_amount, minimum_order_applied, reservation_confirmed_at, reservation_confirmed_by, package_total, additional_total, grill_rental_total, grill_rental_required, grill_rental_qty, discount_amount, mileage_base_location, mileage_distance, mileage_free_limit, mileage_rate, mileage_fee, quote_total, reservation_amount, balance_due, reservation_percentage'
 
-export async function fetchQuoteDetail(id: string) {
+export async function fetchQuoteDetail(
+  id: string,
+  displayLanguage?: string | null,
+) {
   const companyId = getActiveCompanyId()
   const supabase = getSupabaseServerClient()
 
@@ -225,7 +228,13 @@ export async function fetchQuoteDetail(id: string) {
       const groupsRes = await fetchPackageOptionGroups({ packageId })
       if (!groupsRes.error && groupsRes.data?.length) {
         const lang =
-          data.language === 'en' || data.language === 'es' ? data.language : 'pt'
+          displayLanguage === 'en' ||
+          displayLanguage === 'es' ||
+          displayLanguage === 'pt'
+            ? displayLanguage
+            : data.language === 'en' || data.language === 'es'
+              ? data.language
+              : 'pt'
         data = {
           ...data,
           package_selection_labels: buildPackageSelectionLabels(

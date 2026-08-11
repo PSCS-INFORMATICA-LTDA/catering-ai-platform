@@ -24,6 +24,7 @@ import { glassAction, glassBtn, glassField } from '@/Lib/liquidGlass'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
 import { tCommon } from '@/Lib/i18n/common'
+import { translateCdlItemList } from '@/Lib/cdlPackageItemI18n'
 import { toBcp47Locale } from '@/Lib/i18n/locales'
 
 const SUPPLIER_PHONE_STORAGE_KEY = 'catering.supplierWhatsAppPhones'
@@ -155,7 +156,7 @@ export default function SupplierGarnishSharePanel({
         eventEndTime,
         pickupTime: pickupTime || null,
         teamName,
-        garnishItems,
+        garnishItems: translateCdlItemList(garnishItems, messageLanguage),
         guestCount,
         adultCount,
         cdlKits,

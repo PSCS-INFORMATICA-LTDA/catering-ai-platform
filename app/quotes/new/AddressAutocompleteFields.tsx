@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { parseGooglePlace, type AddressValues } from './googlePlaces'
+import { tCommon } from '@/Lib/i18n/common'
 import { tw } from '../../../Lib/quoteTranslations'
 import type { QuoteLanguage } from '../../../Lib/quoteWizardTypes'
 
@@ -148,7 +149,7 @@ export default function AddressAutocompleteFields({
       )}
 
       <div className="flex flex-col gap-2 sm:col-span-2">
-        <FieldLabel>Address</FieldLabel>
+        <FieldLabel>{tCommon(loc, 'address')}</FieldLabel>
         <input
           type="text"
           value={values.address}
@@ -159,7 +160,7 @@ export default function AddressAutocompleteFields({
       </div>
 
       <label className="flex flex-col gap-2">
-        <FieldLabel>City</FieldLabel>
+        <FieldLabel>{tCommon(loc, 'city')}</FieldLabel>
         <div className="relative">
           <input
             type="text"
@@ -173,7 +174,7 @@ export default function AddressAutocompleteFields({
       </label>
 
       <label className="flex flex-col gap-2">
-        <FieldLabel>State</FieldLabel>
+        <FieldLabel>{tCommon(loc, 'state')}</FieldLabel>
         <div className="relative">
           <input
             type="text"
@@ -187,7 +188,7 @@ export default function AddressAutocompleteFields({
       </label>
 
       <label className="flex flex-col gap-2">
-        <FieldLabel>Zip Code</FieldLabel>
+        <FieldLabel>{tCommon(loc, 'postalCode')}</FieldLabel>
         <div className="relative">
           <input
             type="text"

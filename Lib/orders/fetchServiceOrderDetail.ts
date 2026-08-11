@@ -62,6 +62,8 @@ export type ServiceOrderDetail = {
     item_type: string
     item_key: string | null
     label_pt: string
+    label_en?: string | null
+    label_es?: string | null
     quantity: number | null
     /** Somente com `orders.financial.view`. */
     unit_price?: number | null
@@ -232,12 +234,25 @@ export async function fetchServiceOrderDetail(
 
   let packageKey: string | null = null
   let packageLabel: string | null = null
+  let packageLabelEn: string | null = null
+  let packageLabelEs: string | null = null
   const garnishItems: string[] = []
+  const catalogById = new Map<
+    string,
+    {
+      id: string
+      label_pt?: string | null
+      label_en?: string | null
+      label_es?: string | null
+      item_type?: string | null
+      item_key?: string | null
+    }
+  >()
 
   if (packageId) {
     let pkgRes = await supabase
       .from('packages')
-      .select('package_key, label_pt')
+      .select('package_key, label_pt, label_en, label_es')
       .eq('id', packageId)
       .maybeSingle()
     if (pkgRes.error) {
@@ -249,6 +264,8 @@ export async function fetchServiceOrderDetail(
     }
     packageKey = (pkgRes.data?.package_key as string | null) ?? null
     packageLabel = (pkgRes.data?.label_pt as string | null) ?? null
+    packageLabelEn = (pkgRes.data?.label_en as string | null) ?? null
+    packageLabelEs = (pkgRes.data?.label_es as string | null) ?? null
 
     let sidesRes = await supabase
       .from('package_side_items')
@@ -282,15 +299,15 @@ export async function fetchServiceOrderDetail(
   if (additionalIds.length > 0) {
     const { data: catalogRows } = await supabase
       .from(CATALOG_ITEMS_TABLE)
-      .select('id, label_pt, item_type, item_key')
+      .select('id, label_pt, label_en, label_es, item_type, item_key')
       .in('id', additionalIds)
-    const byId = new Map(
-      (catalogRows ?? []).map((row) => [row.id as string, row]),
-    )
+    for (const row of catalogRows ?? []) {
+      catalogById.set(row.id as string, row)
+    }
     for (const add of snapshot.additional_items ?? []) {
       const id = add.additional_item_id?.trim()
       if (!id) continue
-      const cat = byId.get(id)
+      const cat = catalogById.get(id)
       if (!cat) continue
       const type = String(cat.item_type ?? '').toUpperCase()
       const label = String(cat.label_pt ?? cat.item_key ?? '').trim()
@@ -309,6 +326,89 @@ export async function fetchServiceOrderDetail(
 
   const hasGarnishOrder =
     garnishItems.length > 0 || Boolean((packageKey ?? '').endsWith('+'))
+
+  const rawItems: ServiceOrderDetail['items'] = (() => {
+    const fromTable = (itemsRes.data ?? []) as ServiceOrderDetail['items']
+    if (fromTable.length > 0) return fromTable
+    const fallback: ServiceOrderDetail['items'] = []
+    if (snapshot.package?.id) {
+      fallback.push({
+        id: `snap-package-${snapshot.package.id}`,
+        item_type: 'package',
+        item_key: snapshot.package.id,
+        label_pt:
+          snapshot.package.label_pt?.trim() ||
+          snapshot.package.label?.trim() ||
+          snapshot.package.package_name?.trim() ||
+          snapshot.package.name?.trim() ||
+          packageLabel ||
+          'Pacote',
+        quantity: snapshot.guest_counts?.billable_guest_count ?? null,
+        unit_price: null,
+        total_price: Number(snapshot.package.total ?? order.package_total ?? 0),
+        display_order: 0,
+      })
+    }
+    let i = 1
+    for (const add of snapshot.additional_items ?? []) {
+      if (!add.additional_item_id || add.selected === false) continue
+      fallback.push({
+        id: `snap-additional-${add.additional_item_id}`,
+        item_type: 'additional',
+        item_key: add.additional_item_id,
+        label_pt: add.label_pt?.trim() || add.item_name?.trim() || 'Adicional',
+        quantity: add.quantity ?? null,
+        unit_price: add.unit_price ?? null,
+        total_price: add.total_price ?? null,
+        display_order: i++,
+      })
+    }
+    return fallback
+  })()
+
+  const missingCatalogIds = [
+    ...new Set(
+      rawItems
+        .filter(
+          (item) =>
+            item.item_type === 'additional' &&
+            item.item_key &&
+            !catalogById.has(item.item_key),
+        )
+        .map((item) => item.item_key as string),
+    ),
+  ]
+  if (missingCatalogIds.length > 0) {
+    const { data: extraCatalog } = await supabase
+      .from(CATALOG_ITEMS_TABLE)
+      .select('id, label_pt, label_en, label_es, item_type, item_key')
+      .in('id', missingCatalogIds)
+    for (const row of extraCatalog ?? []) {
+      catalogById.set(row.id as string, row)
+    }
+  }
+
+  const items = rawItems.map((item) => {
+    if (item.item_type === 'package') {
+      return {
+        ...item,
+        label_pt: packageLabel || item.label_pt,
+        label_en: packageLabelEn,
+        label_es: packageLabelEs,
+      }
+    }
+    if (item.item_type === 'additional' && item.item_key) {
+      const cat = catalogById.get(item.item_key)
+      if (!cat) return item
+      return {
+        ...item,
+        label_pt: String(cat.label_pt ?? item.label_pt),
+        label_en: cat.label_en ?? null,
+        label_es: cat.label_es ?? null,
+      }
+    }
+    return item
+  })
 
   const data: ServiceOrderDetail = {
     id: order.id,
@@ -349,45 +449,7 @@ export async function fetchServiceOrderDetail(
     completed_at: order.completed_at,
     created_at: order.created_at,
     updated_at: order.updated_at,
-    items: (() => {
-      const fromTable = itemsRes.data ?? []
-      if (fromTable.length > 0) return fromTable
-      // Fallback: snapshot comercial (OS seed/legado sem service_order_items)
-      const fallback: ServiceOrderDetail['items'] = []
-      if (snapshot.package?.id) {
-        fallback.push({
-          id: `snap-package-${snapshot.package.id}`,
-          item_type: 'package',
-          item_key: snapshot.package.id,
-          label_pt:
-            snapshot.package.label_pt?.trim() ||
-            snapshot.package.label?.trim() ||
-            snapshot.package.package_name?.trim() ||
-            snapshot.package.name?.trim() ||
-            packageLabel ||
-            'Pacote',
-          quantity: snapshot.guest_counts?.billable_guest_count ?? null,
-          unit_price: null,
-          total_price: Number(snapshot.package.total ?? order.package_total ?? 0),
-          display_order: 0,
-        })
-      }
-      let i = 1
-      for (const add of snapshot.additional_items ?? []) {
-        if (!add.additional_item_id || add.selected === false) continue
-        fallback.push({
-          id: `snap-additional-${add.additional_item_id}`,
-          item_type: 'additional',
-          item_key: add.additional_item_id,
-          label_pt: add.label_pt?.trim() || add.item_name?.trim() || 'Adicional',
-          quantity: add.quantity ?? null,
-          unit_price: add.unit_price ?? null,
-          total_price: add.total_price ?? null,
-          display_order: i++,
-        })
-      }
-      return fallback
-    })(),
+    items,
     checklist: checklistRes.data ?? [],
     status_history: historyRes.data ?? [],
     agenda_event: agendaRes.data ?? null,

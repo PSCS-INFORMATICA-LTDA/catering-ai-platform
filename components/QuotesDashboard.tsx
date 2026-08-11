@@ -10,7 +10,10 @@ import {
   type ReactNode,
 } from 'react'
 import DeleteQuoteButton from '@/components/DeleteQuoteButton'
-import type { QuoteListItem } from '@/Lib/fetchQuoteList'
+import {
+  getQuoteListPackageName,
+  type QuoteListItem,
+} from '@/Lib/fetchQuoteList'
 import { glassBtn } from '@/Lib/liquidGlass'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import { formatUiDate } from '@/Lib/i18n/locales'
@@ -472,7 +475,9 @@ export default function QuotesDashboard({
                       <p className="truncate text-[11px] text-neutral-500">
                         {[quote.city, quote.state].filter(Boolean).join(', ') ||
                           '—'}
-                        {quote.package_name ? ` · ${quote.package_name}` : ''}
+                        {getQuoteListPackageName(quote, locale)
+                          ? ` · ${getQuoteListPackageName(quote, locale)}`
+                          : ''}
                       </p>
                     </td>
                     <td className="align-middle whitespace-nowrap px-2 py-2.5 text-xs text-neutral-700">

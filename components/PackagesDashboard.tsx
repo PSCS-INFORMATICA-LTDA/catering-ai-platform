@@ -122,14 +122,14 @@ export default function PackagesDashboard({
         pkg.label_pt,
         pkg.label_en,
         pkg.label_es,
-        getPackageDescription(pkg),
+        getPackageDescription(pkg, locale),
       ]
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
         .includes(q),
     )
-  }, [packages, search])
+  }, [packages, search, locale])
 
   const refreshPackages = useCallback(async () => {
     setLoading(true)
@@ -197,7 +197,7 @@ export default function PackagesDashboard({
   }
 
   async function deactivate(pkg: PackageListItem) {
-    const label = getPackageLabel(pkg)
+    const label = getPackageLabel(pkg, locale)
     if (!window.confirm(tPackages(locale, 'deactivateConfirm', { label }))) return
 
     setError(null)
@@ -341,7 +341,7 @@ export default function PackagesDashboard({
                     String(draft.image_url ?? '').trim() ||
                     getPackageImageUrl(editingPackage)
                   }
-                  alt={getPackageLabel(editingPackage)}
+                  alt={getPackageLabel(editingPackage, locale)}
                   variant="package"
                   fallbackLabel={tCommon(locale, 'noImageRegistered')}
                   rounded="all"

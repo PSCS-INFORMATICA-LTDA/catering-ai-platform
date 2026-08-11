@@ -78,7 +78,7 @@ export default function PackageDetailCard({
 }) {
   const locale = useAuthLocaleFromMe()
   const packageKey = getPackageKey(pkg) || '—'
-  const displayName = getPackageLabel(pkg)
+  const displayName = getPackageLabel(pkg, locale)
   const withSides = getPackageHasGarnish(pkg)
   const imageUrl = getPackageImageUrl(pkg)
   const currency = getPackageCurrencyCode(pkg)
@@ -90,12 +90,12 @@ export default function PackageDetailCard({
   )
   const itemsText =
     configuredItemsForPackage.length > 0
-      ? formatPackageItemsText(configuredItemsForPackage)
-      : getPackageItemsDisplayText(pkg)
+      ? formatPackageItemsText(configuredItemsForPackage, locale)
+      : getPackageItemsDisplayText(pkg, locale)
   const garnishText =
     configuredSidesForPackage.length > 0
-      ? formatPackageSideItemsText(configuredSidesForPackage)
-      : getPackageGarnishDisplayText(pkg)
+      ? formatPackageSideItemsText(configuredSidesForPackage, locale)
+      : getPackageGarnishDisplayText(pkg, locale)
   const highlightItems = parsePackageHighlightsText(pkg.package_highlights_pt)
   const optionGroupSummaries = formatPackageOptionGroupsSummary(
     getPackageOptionGroupsForPackage(

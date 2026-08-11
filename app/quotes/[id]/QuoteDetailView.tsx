@@ -183,13 +183,17 @@ function IconTeam() {
 export default function QuoteDetailView({
   quote,
   canConvert = false,
+  uiLocale,
 }: {
   quote: QuoteDetail
   canConvert?: boolean
+  uiLocale?: string | null
 }) {
-  const lang = quote.language ?? 'pt'
+  const lang = uiLocale === 'en' || uiLocale === 'es' || uiLocale === 'pt'
+    ? uiLocale
+    : quote.language ?? 'pt'
   const t = (key: Parameters<typeof tQuotesOrders>[1]) => tQuotesOrders(lang, key)
-  const packageName = getPackageName(quote)
+  const packageName = getPackageName(quote, lang)
   const additionalItems = quote.additional_items ?? []
   const groupedAdditionals = groupAdditionalsByCategory(additionalItems, lang)
   const discount = getDiscount(quote)
@@ -201,7 +205,11 @@ export default function QuoteDetailView({
     .join(' · ')
 
   const snapshot = readQuoteSnapshot(quote)
-  const packageSummary = buildQuoteReviewPackageSummaryFromQuote(quote, snapshot)
+  const packageSummary = buildQuoteReviewPackageSummaryFromQuote(
+    quote,
+    snapshot,
+    lang,
+  )
   const packageHasGarnish = getPackageHasGarnish({
     package_key: quote.package_key,
   })
@@ -222,7 +230,7 @@ export default function QuoteDetailView({
         category.includes('guarni') ||
         category.includes('side')
       return {
-        label: getAdditionalLabel(item, lang) || 'Adicional',
+        label: getAdditionalLabel(item, lang) || t('commercialItemAdditional'),
         amount: Number(item.total_price ?? 0),
         isGarnish,
       }
@@ -373,7 +381,9 @@ export default function QuoteDetailView({
               startTime={quote.start_time}
               endTime={quote.end_time}
               packageLabel={
-                getPackageName(quote) || quote.package_key || null
+                getPackageName(quote, quote.language) ||
+                quote.package_key ||
+                null
               }
               quoteTotal={quote.quote_total}
               reservationAmount={quote.reservation_amount}
@@ -482,7 +492,7 @@ export default function QuoteDetailView({
             <div className="quote-proposal-meta-card">
               <span className="quote-proposal-label">{t('docEventDateLabel')}</span>
               <p className="quote-proposal-meta-value">
-                {formatDate(quote.event_date)}
+                {formatDate(quote.event_date, lang)}
               </p>
             </div>
             <div className="quote-proposal-meta-card">
@@ -584,7 +594,7 @@ export default function QuoteDetailView({
               <EventRow
                 icon={<IconCalendar />}
                 label={t('docDateLabel')}
-                value={formatDate(quote.event_date)}
+                value={formatDate(quote.event_date, lang)}
               />
               <EventRow
                 icon={<IconClock />}
@@ -618,7 +628,7 @@ export default function QuoteDetailView({
             <div className="quote-proposal-info-grid">
               <div className="quote-proposal-info-cell">
                 <span className="quote-proposal-label">{t('docHasGrill')}</span>
-                <p className="quote-proposal-value">{formatBool(quote.has_grill)}</p>
+                <p className="quote-proposal-value">{formatBool(quote.has_grill, lang)}</p>
               </div>
               <div className="quote-proposal-info-cell">
                 <span className="quote-proposal-label">{t('docGrillPhoto')}</span>
@@ -634,7 +644,7 @@ export default function QuoteDetailView({
               <div className="quote-proposal-info-cell">
                 <span className="quote-proposal-label">{t('docGrillRentalRequired')}</span>
                 <p className="quote-proposal-value">
-                  {formatBool(quote.grill_rental_required)}
+                  {formatBool(quote.grill_rental_required, lang)}
                 </p>
               </div>
               <div className="quote-proposal-info-cell">

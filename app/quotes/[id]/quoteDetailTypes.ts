@@ -1,4 +1,5 @@
 import { getCatalogItemImageUrl } from '@/Lib/catalogItemVisual'
+import { resolveCatalogItemDisplayLabel } from '@/Lib/cdlPackageItemI18n'
 import type { PackageCatalogRecord } from '@/Lib/packageCatalogVisual'
 
 export type QuoteAdditionalItem = {
@@ -169,9 +170,16 @@ export function getAdditionalLabel(
   item: QuoteAdditionalItem,
   language: string,
 ) {
-  if (language === 'en') return item.label_en ?? item.label_pt ?? '—'
-  if (language === 'es') return item.label_es ?? item.label_pt ?? '—'
-  return item.label_pt ?? '—'
+  return (
+    resolveCatalogItemDisplayLabel(
+      {
+        pt: item.label_pt,
+        en: item.label_en,
+        es: item.label_es,
+      },
+      language,
+    ) || '—'
+  )
 }
 
 export function getAdditionalCategory(
@@ -183,16 +191,24 @@ export function getAdditionalCategory(
   return item.category_pt ?? 'Outros'
 }
 
-export function getPackageName(quote: QuoteDetail) {
-  if (quote.language === 'en') return quote.package_name_en ?? quote.package_name_pt
-  if (quote.language === 'es') return quote.package_name_es ?? quote.package_name_pt
+export function getPackageName(
+  quote: QuoteDetail,
+  language?: string | null,
+) {
+  const lang = language ?? quote.language ?? 'pt'
+  if (lang === 'en') return quote.package_name_en ?? quote.package_name_pt
+  if (lang === 'es') return quote.package_name_es ?? quote.package_name_pt
   return quote.package_name_pt
 }
 
-export function getPackageDescription(quote: QuoteDetail) {
+export function getPackageDescription(
+  quote: QuoteDetail,
+  language?: string | null,
+) {
   if (quote.package_description) return quote.package_description
-  if (quote.language === 'en') return quote.package_description_en
-  if (quote.language === 'es') return quote.package_description_es
+  const lang = language ?? quote.language ?? 'pt'
+  if (lang === 'en') return quote.package_description_en
+  if (lang === 'es') return quote.package_description_es
   return quote.package_description_pt
 }
 

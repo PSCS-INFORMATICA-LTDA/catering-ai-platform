@@ -7,13 +7,17 @@ import {
   findBasePackage,
   formatPackageCatalogPriceLabel,
   getPackageCatalogImage,
+  getPackageCatalogName,
   getPackageCatalogPrice,
   getPackageCatalogVariant,
   isPackageCatalogPriceOnRequest,
   resolvePackageSidesPricing,
   type PackageCatalogFields,
 } from '@/Lib/packageCatalogVisual'
-import { parsePackageHighlightsText } from '@/Lib/packageDisplay'
+import {
+  getPackageHighlights,
+  parsePackageHighlightsText,
+} from '@/Lib/packageDisplay'
 import { hasPackageIncludedChoices, type PackageOptionGroup } from '@/Lib/packageOptionGroups'
 import type { PackageSideItem } from '@/Lib/packageConfiguration'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
@@ -158,7 +162,9 @@ export default function SelectedPackageDetails({
     pkg.id && hasPackageIncludedChoices(pkg.id, optionGroups, pkg)
 
   const highlightItems = filterHighlightBullets(
-    parsePackageHighlightsText(pkg.package_highlights_pt),
+    parsePackageHighlightsText(
+      getPackageHighlights(pkg, language) || pkg.package_highlights_pt,
+    ),
   )
 
   const optionProps =
@@ -179,7 +185,7 @@ export default function SelectedPackageDetails({
         <div className="md:col-span-5 lg:col-span-5">
           <PackageHeroImage
             src={image}
-            alt={pkg.label_pt?.trim() || pkg.package_key || tw(language, 'packageImage')}
+            alt={getPackageCatalogName(pkg, language) || pkg.package_key || tw(language, 'packageImage')}
             fallbackLabel={tw(language, 'packageImage')}
             compact
           />
@@ -189,7 +195,7 @@ export default function SelectedPackageDetails({
           {highlightItems.length > 0 ? (
             <div className="rounded-xl bg-gradient-to-br from-amber-100 via-amber-50 to-yellow-50 px-3 py-2.5 ring-1 ring-amber-200/80">
               <p className="text-[11px] font-bold uppercase tracking-wide text-amber-900">
-                Destaques do pacote
+                {tw(language, 'packageHighlights')}
               </p>
               <ul className="mt-1.5 space-y-0.5">
                 {highlightItems.map((item) => (

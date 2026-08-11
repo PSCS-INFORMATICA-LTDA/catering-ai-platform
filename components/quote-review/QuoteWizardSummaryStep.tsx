@@ -104,6 +104,7 @@ export default function QuoteWizardSummaryStep({
         additionals,
         billableGuestCount,
         commercialRules,
+        displayLanguage: uiLanguage ?? state.language,
       }),
     [
       state,
@@ -122,6 +123,7 @@ export default function QuoteWizardSummaryStep({
       additionals,
       billableGuestCount,
       commercialRules,
+      uiLanguage,
     ],
   )
 

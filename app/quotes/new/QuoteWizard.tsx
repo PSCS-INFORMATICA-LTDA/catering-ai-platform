@@ -29,9 +29,12 @@ import PackageOptionsDebugPanel from '../../../components/quotes/PackageOptionsD
 import { CDL_DEFAULT_COMPANY_ID } from '../../../Lib/cdlCompany'
 import type { PackageOptionQueryDebug } from '../../../Lib/fetchPackageOptionGroups'
 import {
-  getPackageDetailTitle,
   sortPackagesByCommercialTier,
 } from '../../../Lib/packageDisplay'
+import {
+  getPackageDescription as catalogPackageDescription,
+  getPackageLabel,
+} from '../../../Lib/packageFieldAccess'
 import QuoteWizardSummaryStep from '../../../components/quote-review/QuoteWizardSummaryStep'
 import { resolvePackageCatalogImageUrl } from '../../../Lib/packageCatalogVisual'
 import { calcAdditionalLineTotal } from '../../../Lib/calculateQuoteTotals'
@@ -644,24 +647,12 @@ function getEventDefaultsFromCustomer(customer: Customer) {
   }
 }
 
-function getPackageName(pkg: Package) {
-  return (
-    pkg.label_pt ??
-    pkg.package_name ??
-    pkg.label_en ??
-    pkg.label_es ??
-    '—'
-  )
+function getPackageName(pkg: Package, language?: string | null) {
+  return getPackageLabel(pkg, language)
 }
 
-function getPackageDescription(pkg: Package) {
-  return (
-    pkg.description_pt ??
-    pkg.description_en ??
-    pkg.description_es ??
-    pkg.description ??
-    ''
-  )
+function getPackageDescription(pkg: Package, language?: string | null) {
+  return catalogPackageDescription(pkg, language)
 }
 
 function getPackagePrice(pkg: Package) {
@@ -999,6 +990,7 @@ export default function QuoteWizard({
   existingSnapshot,
   linkedCustomer = null,
   initialStep = 0,
+  initialUiLocale,
 }: {
   customers: Customer[]
   packages: Package[]
@@ -1019,6 +1011,7 @@ export default function QuoteWizard({
   existingSnapshot?: QuoteSnapshotRecord
   linkedCustomer?: Customer | null
   initialStep?: number
+  initialUiLocale?: string | null
 }) {
   const itemCatalog = catalogItems ?? additionalItems ?? []
   const isEditMode = mode === 'edit' && Boolean(quoteId)
@@ -1067,7 +1060,7 @@ export default function QuoteWizard({
   >(() => packageOptionGroupItems)
   const [packageOptionQueryDebugState, setPackageOptionQueryDebugState] =
     useState<PackageOptionQueryDebug | null>(() => packageOptionQueryDebug)
-  const uiLocale = useAuthLocaleFromMe()
+  const uiLocale = useAuthLocaleFromMe(initialUiLocale)
   const quoteStrings = useMemo(
     () => getQuoteStrings(uiLocale),
     [uiLocale],
@@ -1379,8 +1372,8 @@ export default function QuoteWizard({
   )
 
   const additionalItemsByCategory = useMemo(
-    () => groupAdditionalItemsByCategory(visibleAdditionalItems, state.language),
-    [visibleAdditionalItems, state.language],
+    () => groupAdditionalItemsByCategory(visibleAdditionalItems, uiLocale),
+    [visibleAdditionalItems, uiLocale],
   )
 
   const selectedCountByCategory = useMemo(() => {
@@ -1493,7 +1486,7 @@ export default function QuoteWizard({
               item,
               state.additionals[item.id] ?? 0,
               billableGuestCount,
-              state.language,
+              uiLocale,
             ),
           ),
       }))
@@ -1502,7 +1495,7 @@ export default function QuoteWizard({
     additionalItemsByCategory,
     state.additionals,
     billableGuestCount,
-    state.language,
+    uiLocale,
   ])
 
   const selectedAdditionals = useMemo(
@@ -1515,7 +1508,7 @@ export default function QuoteWizard({
       selectedAdditionalsByCategory.flatMap(({ categoryLabel, items }) =>
         items.map(({ item, quantity, unitPrice, perPerson, totalPrice }) => ({
           id: item.id,
-          label: getLocalizedAdditionalLabel(item, state.language),
+          label: getLocalizedAdditionalLabel(item, uiLocale),
           category: categoryLabel,
           quantity,
           unitPrice,
@@ -1526,7 +1519,7 @@ export default function QuoteWizard({
           perPerson,
         })),
       ),
-    [selectedAdditionalsByCategory, state.language],
+    [selectedAdditionalsByCategory, uiLocale],
   )
 
   const additionalTotal = quoteTotals.additionalTotal
@@ -2741,7 +2734,7 @@ export default function QuoteWizard({
                     w.customerNotLinkedShort
             }
             packageName={
-              selectedPackage ? getPackageName(selectedPackage) : null
+              selectedPackage ? getPackageName(selectedPackage, uiLocale) : null
             }
             packageImageUrl={packageImageUrl}
             packageUnitPrice={packageUnitPrice}

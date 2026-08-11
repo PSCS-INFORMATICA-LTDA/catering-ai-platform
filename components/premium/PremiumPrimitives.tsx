@@ -117,7 +117,7 @@ export function PackageCodeOption({
   const locale = useAuthLocaleFromMe()
   const code = getPackageKey(pkg) || '—'
   const withSides = code.endsWith('+')
-  const friendlyLabel = getPackageCascadeFriendlyLabel(pkg)
+  const friendlyLabel = getPackageCascadeFriendlyLabel(pkg, locale)
   const thumb = imageUrl?.trim() || null
 
   const activeClass =

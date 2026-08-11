@@ -264,6 +264,11 @@ type QuoteStrings = {
     garnish: string
     highlight: string
     includedItems: string
+    packageHighlights: string
+    meatsCategory: string
+    sausagesCategory: string
+    packageItemsCategory: string
+    condimentsCategory: string
     customPackageHint: string
     itemsConfiguring: string
     includedSides: string
@@ -571,6 +576,11 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       garnish: 'Guarnições',
       highlight: 'Destaque',
       includedItems: 'Itens inclusos',
+      packageHighlights: 'Destaques do pacote',
+      meatsCategory: 'Carnes',
+      sausagesCategory: 'Linguiças',
+      packageItemsCategory: 'Itens do pacote',
+      condimentsCategory: 'Condimentos internos',
       customPackageHint: 'Pacote personalizado — itens definidos na cotação.',
       itemsConfiguring: 'Itens do pacote em configuração.',
       includedSides: 'Guarnições inclusas',
@@ -877,6 +887,11 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       garnish: 'Sides',
       highlight: 'Highlight',
       includedItems: 'Included items',
+      packageHighlights: 'Package highlights',
+      meatsCategory: 'Meats',
+      sausagesCategory: 'Sausages',
+      packageItemsCategory: 'Package items',
+      condimentsCategory: 'Internal condiments',
       customPackageHint: 'Custom package — items defined on the quote.',
       itemsConfiguring: 'Package items are being configured.',
       includedSides: 'Included sides',
@@ -1187,6 +1202,11 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       garnish: 'Guarniciones',
       highlight: 'Destacado',
       includedItems: 'Ítems incluidos',
+      packageHighlights: 'Destacados del paquete',
+      meatsCategory: 'Carnes',
+      sausagesCategory: 'Embutidos',
+      packageItemsCategory: 'Ítems del paquete',
+      condimentsCategory: 'Condimentos internos',
       customPackageHint: 'Paquete personalizado — ítems definidos en la cotización.',
       itemsConfiguring: 'Ítems del paquete en configuración.',
       includedSides: 'Guarniciones incluidas',

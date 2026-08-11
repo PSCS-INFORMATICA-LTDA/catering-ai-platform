@@ -28,11 +28,14 @@ export type PackageItemDisplayCategory =
   | 'itens'
   | 'condimentos'
 
-const CATEGORY_LABELS: Record<PackageItemDisplayCategory, string> = {
-  carnes: 'Carnes',
-  linguicas: 'Linguiças',
-  itens: 'Itens do pacote',
-  condimentos: 'Condimentos internos',
+function categoryLabel(
+  category: PackageItemDisplayCategory,
+  language: QuoteLanguage,
+): string {
+  if (category === 'carnes') return tw(language, 'meatsCategory')
+  if (category === 'linguicas') return tw(language, 'sausagesCategory')
+  if (category === 'condimentos') return tw(language, 'condimentsCategory')
+  return tw(language, 'packageItemsCategory')
 }
 
 const CATEGORY_ORDER: PackageItemDisplayCategory[] = [
@@ -171,7 +174,7 @@ export function groupFixedPackageItemsForQuote({
     const label = getPackageItemLabel(item, language)
     const group = buckets.get(category) ?? {
       category,
-      label: CATEGORY_LABELS[category],
+      label: categoryLabel(category, language),
       items: [],
     }
     group.items.push({ label, item })

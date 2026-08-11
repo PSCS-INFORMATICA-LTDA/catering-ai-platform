@@ -1,6 +1,10 @@
 'use client'
 
 import { BackofficeSelect } from '@/components/backoffice/BackofficeCardPrimitives'
+import {
+  getAdditionalItemCategoryLabel,
+  getAdditionalItemLabel,
+} from '@/Lib/additionalItemFieldAccess'
 import { getAdditionalItemPrice } from '@/Lib/getAdditionalItemPrice'
 import { tCommon } from '@/Lib/i18n/common'
 import { tPackages } from '@/Lib/i18n/packages'
@@ -12,7 +16,11 @@ export type AdditionalItemOption = {
   item_key?: string | null
   item_name?: string | null
   label_pt?: string | null
+  label_en?: string | null
+  label_es?: string | null
   category_pt?: string | null
+  category_en?: string | null
+  category_es?: string | null
   image_url?: string | null
   item_type?: string | null
   price?: number | null
@@ -28,10 +36,12 @@ export type CatalogItemOption = AdditionalItemOption
 
 function formatPickerLabel(
   item: AdditionalItemOption,
+  locale: string,
   othersLabel: string,
 ): string {
-  const name = (item.item_name ?? item.label_pt ?? item.item_key ?? '—').trim()
-  const category = (item.category_pt ?? othersLabel).trim()
+  const name = getAdditionalItemLabel(item, locale)
+  const category =
+    getAdditionalItemCategoryLabel(item, locale).trim() || othersLabel
   const price = getAdditionalItemPrice(item)
   return `${name} — ${category} — $${price.toFixed(2)}`
 }
@@ -58,10 +68,13 @@ export default function AdditionalItemPicker({
   const collator = toBcp47Locale(locale)
 
   const sorted = [...items].sort((a, b) => {
-    const cat = (a.category_pt ?? '').localeCompare(b.category_pt ?? '', collator)
+    const cat = getAdditionalItemCategoryLabel(a, locale).localeCompare(
+      getAdditionalItemCategoryLabel(b, locale),
+      collator,
+    )
     if (cat !== 0) return cat
-    return (a.item_name ?? a.label_pt ?? '').localeCompare(
-      b.item_name ?? b.label_pt ?? '',
+    return getAdditionalItemLabel(a, locale).localeCompare(
+      getAdditionalItemLabel(b, locale),
       collator,
     )
   })
@@ -77,7 +90,7 @@ export default function AdditionalItemPicker({
       <option value="">{resolvedPlaceholder}</option>
       {sorted.map((item) => (
         <option key={item.id} value={item.id}>
-          {formatPickerLabel(item, othersLabel)}
+          {formatPickerLabel(item, locale, othersLabel)}
         </option>
       ))}
     </BackofficeSelect>

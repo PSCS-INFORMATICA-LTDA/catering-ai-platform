@@ -141,21 +141,25 @@ export default function AdditionalItemsDashboard({
         item.item_key,
         item.item_name,
         item.label_pt,
+        item.label_en,
+        item.label_es,
         item.category_pt,
+        item.category_en,
+        item.category_es,
         item.category_key,
-        getAdditionalItemCategoryLabel(item),
-        getAdditionalItemLabel(item),
+        getAdditionalItemCategoryLabel(item, locale),
+        getAdditionalItemLabel(item, locale),
       ]
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
         .includes(q),
     )
-  }, [items, search])
+  }, [items, search, locale])
 
   const grouped = useMemo(
-    () => groupAdditionalItemsByCategory(filteredItems),
-    [filteredItems],
+    () => groupAdditionalItemsByCategory(filteredItems, locale),
+    [filteredItems, locale],
   )
 
   const selectedGroup = useMemo(
@@ -358,7 +362,7 @@ export default function AdditionalItemsDashboard({
   }
 
   async function deactivate(item: CatalogItemListItem) {
-    const label = getAdditionalItemLabel(item)
+    const label = getAdditionalItemLabel(item, locale)
     if (!window.confirm(tPackages(locale, 'deactivateConfirm', { label }))) return
     const response = await fetch(`/api/additional-items/${item.id}`, {
       method: 'PATCH',
@@ -424,13 +428,13 @@ export default function AdditionalItemsDashboard({
 
     const isEditing = editingId === selectedItem.id
     const itemKey = selectedItem.item_key ?? '—'
-    const displayName = getAdditionalItemLabel(selectedItem)
+    const displayName = getAdditionalItemLabel(selectedItem, locale)
     const imageUrl = isEditing
       ? String(draft.image_url ?? '').trim() || null
       : getAdditionalItemImageUrl(selectedItem)
     const price = getAdditionalItemPrice(isEditing ? draft : selectedItem)
     const uploadError = uploadErrors[selectedItem.id]
-    const categoryLabel = getAdditionalItemCategoryLabel(selectedItem)
+    const categoryLabel = getAdditionalItemCategoryLabel(selectedItem, locale)
     const currency = getAdditionalItemCurrencyCode(selectedItem)
 
     if (isEditing) {
@@ -721,7 +725,7 @@ export default function AdditionalItemsDashboard({
                     <div className="flex min-w-0 flex-1 items-center gap-3">
                       <CatalogImageFrame
                         src={getAdditionalItemImageUrl(item)}
-                        alt={getAdditionalItemLabel(item)}
+                        alt={getAdditionalItemLabel(item, locale)}
                         variant="catalogItem"
                         itemType={item.item_type}
                         categoryPt={item.category_pt}
@@ -731,7 +735,7 @@ export default function AdditionalItemsDashboard({
                         className="!h-12 !w-12"
                       />
                       <div className="min-w-0">
-                        <span className="block truncate">{getAdditionalItemLabel(item)}</span>
+                        <span className="block truncate">{getAdditionalItemLabel(item, locale)}</span>
                         <span className="text-xs text-neutral-400">
                           {item.item_type ?? 'PRODUCT'} · {formatUsd(getAdditionalItemPrice(item))}
                         </span>

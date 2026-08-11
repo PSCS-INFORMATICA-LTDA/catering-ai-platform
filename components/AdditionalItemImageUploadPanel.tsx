@@ -2,20 +2,12 @@
 
 import CatalogImageFrame from '@/components/CatalogImageFrame'
 import type { CatalogItemListItem } from '@/Lib/fetchCatalogItems'
+import { getAdditionalItemLabel } from '@/Lib/additionalItemFieldAccess'
 import { tCommon } from '@/Lib/i18n/common'
 import { tPackages } from '@/Lib/i18n/packages'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-
-function getItemLabel(item: CatalogItemListItem) {
-  return (
-    item.label_pt?.trim() ||
-    item.item_name?.trim() ||
-    item.item_key?.trim() ||
-    item.id
-  )
-}
 
 export default function AdditionalItemImageUploadPanel({
   items,
@@ -100,7 +92,7 @@ export default function AdditionalItemImageUploadPanel({
         >
           {items.map((item) => (
             <option key={item.id} value={item.id}>
-              {getItemLabel(item)}
+              {getAdditionalItemLabel(item, locale)}
             </option>
           ))}
         </select>
@@ -109,7 +101,7 @@ export default function AdditionalItemImageUploadPanel({
       <div className="overflow-hidden rounded-2xl border border-cdl-border bg-cdl-inset">
         <CatalogImageFrame
           src={previewUrl}
-          alt={selected ? getItemLabel(selected) : tPackages(locale, 'additionalItem')}
+          alt={selected ? getAdditionalItemLabel(selected, locale) : tPackages(locale, 'additionalItem')}
           variant="catalogItem"
           itemType={selected?.item_type}
           categoryPt={selected?.category_pt}

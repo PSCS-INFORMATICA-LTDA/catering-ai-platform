@@ -1,3 +1,4 @@
+import { pickLocalizedText } from './i18n/locales'
 import { getCdlCompanyId } from './cdlCompany'
 import {
   buildCustomersSelect,
@@ -32,6 +33,8 @@ export type QuoteListItem = {
   city: string | null
   state: string | null
   package_name: string | null
+  package_label_en?: string | null
+  package_label_es?: string | null
   quote_total: number | null
   reservation_amount: number | null
   balance_due: number | null
@@ -96,6 +99,29 @@ type PackageRow = {
   id: string
   package_name?: string | null
   label_pt?: string | null
+  label_en?: string | null
+  label_es?: string | null
+}
+
+export function getQuoteListPackageName(
+  quote: Pick<
+    QuoteListItem,
+    'package_name' | 'package_label_en' | 'package_label_es'
+  >,
+  locale?: string | null,
+): string | null {
+  return (
+    pickLocalizedText(
+      {
+        pt: quote.package_name,
+        en: quote.package_label_en,
+        es: quote.package_label_es,
+      },
+      locale,
+    ).trim() ||
+    quote.package_name ||
+    null
+  )
 }
 
 type GrillViewRow = {
@@ -241,7 +267,7 @@ export async function fetchQuoteList() {
       packageIds.length > 0
         ? supabase
             .from('packages')
-            .select('id, package_name, label_pt')
+            .select('id, package_name, label_pt, label_en, label_es')
             .in('id', packageIds)
         : Promise.resolve({ data: [] as PackageRow[], error: null }),
       fetchGrillFieldsByQuoteId(quoteIds),
@@ -321,6 +347,8 @@ export async function fetchQuoteList() {
       city: view?.city ?? event?.city ?? null,
       state: view?.state ?? event?.state ?? null,
       package_name: resolvePackageName(view?.package_name, pkg),
+      package_label_en: pkg?.label_en?.trim() || null,
+      package_label_es: pkg?.label_es?.trim() || null,
       quote_total: row.quote_total,
       reservation_amount: row.reservation_amount,
       balance_due: row.balance_due,

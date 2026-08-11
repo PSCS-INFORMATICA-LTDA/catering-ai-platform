@@ -18,11 +18,13 @@ import {
 } from '@/Lib/packageCatalogVisual'
 import {
   getDisplayableFixedPackageItems,
+  getPackageSideItemLabel,
   type PackageItem,
   type PackageSideItem,
 } from '@/Lib/packageConfiguration'
 import {
   getPackageDetailTitle,
+  getPackageHighlights,
   parsePackageHighlightsText,
 } from '@/Lib/packageDisplay'
 import {
@@ -83,7 +85,7 @@ export default function QuotePackageSummary({
 }) {
   const image = getPackageCatalogImage(pkg, allPackages)
   const variant = getPackageCatalogVariant(pkg)
-  const detailTitle = getPackageDetailTitle(pkg)
+  const detailTitle = getPackageDetailTitle(pkg, language)
   const priceOnRequest = isPackageCatalogPriceOnRequest(pkg)
   const perPerson = getQuoteStrings(language).perPerson
   const basePackage = findBasePackage(pkg, allPackages)
@@ -123,7 +125,9 @@ export default function QuotePackageSummary({
     ? getQuoteDisplaySideItems(pkg.id, packageSideItems)
     : []
 
-  const highlightItems = parsePackageHighlightsText(pkg.package_highlights_pt)
+  const highlightItems = parsePackageHighlightsText(
+    getPackageHighlights(pkg, language) || pkg.package_highlights_pt,
+  )
 
   const breakdownRows = priceOnRequest
     ? [
@@ -213,7 +217,9 @@ export default function QuotePackageSummary({
 
       {highlightItems.length > 0 ? (
         <section className={sectionClass}>
-          <p className="text-sm font-bold text-neutral-900">Destaque</p>
+          <p className="text-sm font-bold text-neutral-900">
+            {tw(language, 'packageHighlights')}
+          </p>
           <ul className="mt-2 space-y-1">
             {highlightItems.map((item) => (
               <li
@@ -228,7 +234,9 @@ export default function QuotePackageSummary({
       ) : null}
 
       <section className={sectionClass}>
-        <p className="text-sm font-bold text-neutral-900">Itens inclusos</p>
+        <p className="text-sm font-bold text-neutral-900">
+          {tw(language, 'includedItems')}
+        </p>
         {hasFixedItems ? (
           <div className="mt-2">
             <PackageFixedItemsByCategory
@@ -255,7 +263,7 @@ export default function QuotePackageSummary({
           <div className="mt-3 flex flex-wrap gap-3">
             {configuredSides.map((side) => {
               const label =
-                side.label_pt?.trim() || side.item_name?.trim() || '—'
+                getPackageSideItemLabel(side, language) || '—'
               const visual = resolveCatalogItemImageForLink(catalogItems, {
                 additional_item_id: side.additional_item_id,
                 image_url: side.image_url,

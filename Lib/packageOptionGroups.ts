@@ -4,6 +4,7 @@ import {
   type PackageItem,
   type PackageSideItem,
 } from '@/Lib/packageConfiguration'
+import { resolveCatalogItemDisplayLabel } from '@/Lib/cdlPackageItemI18n'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import { tw } from '@/Lib/quoteTranslations'
 
@@ -63,23 +64,17 @@ export function getOptionItemLabel(
   item: PackageOptionGroupItem,
   language: QuoteLanguage = 'pt',
 ): string {
-  if (language === 'en') {
-    return (
-      item.label_en?.trim() ||
-      item.label_pt?.trim() ||
-      item.option_item_key?.trim() ||
-      '—'
-    )
-  }
-  if (language === 'es') {
-    return (
-      item.label_es?.trim() ||
-      item.label_pt?.trim() ||
-      item.option_item_key?.trim() ||
-      '—'
-    )
-  }
-  return item.label_pt?.trim() || item.option_item_key?.trim() || '—'
+  return (
+    resolveCatalogItemDisplayLabel(
+      {
+        pt: item.label_pt,
+        en: item.label_en,
+        es: item.label_es,
+        fallback: item.option_item_key,
+      },
+      language,
+    ) || '—'
+  )
 }
 
 export function getOptionGroupTitle(

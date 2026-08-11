@@ -153,6 +153,7 @@ export default async function NewQuotePage({
       fetchErrors={fetchErrors}
       initialState={initialState}
       initialStep={initialStep}
+      initialUiLocale={locale}
     />
   )
 }

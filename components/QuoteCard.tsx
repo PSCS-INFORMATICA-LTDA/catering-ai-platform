@@ -7,7 +7,10 @@ import {
   deriveGrillPhotoStatus,
   getGrillPhotoBadgeLabel,
 } from '@/Lib/grillPhotoStatus'
-import type { QuoteListItem } from '@/Lib/fetchQuoteList'
+import {
+  getQuoteListPackageName,
+  type QuoteListItem,
+} from '@/Lib/fetchQuoteList'
 import { QuoteBoolBadge, QuoteGrillPhotoBadge } from './QuoteStatusBadge'
 import QuoteStatusBadge from './QuoteStatusBadge'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
@@ -191,7 +194,7 @@ function QuoteCardCompactSummary({
       </div>
 
       <div className="mt-2.5 flex flex-wrap items-center gap-2">
-        <PackageBadge name={quote.package_name} compact />
+        <PackageBadge name={getQuoteListPackageName(quote, locale)} compact />
         <span className="quote-pscs-total text-sm font-black">
           {formatMoney(quote.quote_total)}
         </span>
@@ -280,7 +283,7 @@ export default function QuoteCard({
           <h2 className="mt-2 truncate text-lg font-black leading-tight text-cdl-title sm:text-xl">
             {quote.customer_name}
           </h2>
-          <PackageBadge name={quote.package_name} />
+          <PackageBadge name={getQuoteListPackageName(quote, locale)} />
         </>
       ) : (
         <>
@@ -290,7 +293,7 @@ export default function QuoteCard({
                 {quote.customer_name}
               </h2>
               <div className="mt-2">
-                <PackageBadge name={quote.package_name} />
+                <PackageBadge name={getQuoteListPackageName(quote, locale)} />
               </div>
             </div>
             <QuoteStatusBadge status={quote.quote_status} locale={locale} />

@@ -2,11 +2,18 @@ import {
   garnishDescription,
   packageItemsDescription,
 } from '@/components/quote-review/quoteReviewPackageSummary'
+import {
+  translateCdlItem,
+  translateCdlItemList,
+  translateCdlJoinedList,
+} from '@/Lib/cdlPackageItemI18n'
+import { pickLocalizedText } from '@/Lib/i18n/locales'
 import type { PackageFieldSource } from '@/Lib/packageFieldAccess'
 import {
   getPackageHasGarnish,
   getPackageKey,
 } from '@/Lib/packageFieldAccess'
+import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 const DEFAULT_GARNISH_TEXT_PT =
   'Arroz branco • Feijão preto • Vinagrete • Farofa • Mandioca'
@@ -75,9 +82,17 @@ const PACKAGE_HIGHLIGHTS_PT: Record<PackageCommercialTier, readonly string[]> = 
 
 type PackageDescriptionFields = PackageFieldSource & {
   items_description_pt?: string | null
+  items_description_en?: string | null
+  items_description_es?: string | null
   garnish_description_pt?: string | null
+  garnish_description_en?: string | null
+  garnish_description_es?: string | null
   sides_description_pt?: string | null
+  sides_description_en?: string | null
+  sides_description_es?: string | null
   package_highlights_pt?: string | null
+  package_highlights_en?: string | null
+  package_highlights_es?: string | null
 }
 
 const PACKAGE_TIER_NAMES: Record<
@@ -101,9 +116,15 @@ function detectPackageTier(
   return null
 }
 
-function buildTierItemsDescription(tier: PackageCommercialTier): string {
+function buildTierItemsDescription(
+  tier: PackageCommercialTier,
+  language: QuoteLanguage = 'pt',
+): string {
   if (tier === 'PERS') {
-    return 'Itens definidos conforme necessidade do evento.'
+    return translateCdlItem(
+      'Itens definidos conforme necessidade do evento.',
+      language,
+    )
   }
 
   const items = [
@@ -111,7 +132,7 @@ function buildTierItemsDescription(tier: PackageCommercialTier): string {
     ...TIER_EXTRA_ITEMS[tier],
     ...TRADITIONAL_COMMON_ITEMS,
   ]
-  return items.join(' • ')
+  return translateCdlItemList(items, language).join(' • ')
 }
 
 export function getPackageItemsDescription(
@@ -121,8 +142,16 @@ export function getPackageItemsDescription(
   if (!pkg) return ''
 
   const extended = pkg as PackageDescriptionFields
-  const fromColumn = extended.items_description_pt?.trim()
-  if (fromColumn) return fromColumn
+  const dedicated =
+    language === 'en'
+      ? extended.items_description_en?.trim()
+      : language === 'es'
+        ? extended.items_description_es?.trim()
+        : extended.items_description_pt?.trim()
+  if (dedicated) return dedicated
+
+  const fromPt = extended.items_description_pt?.trim()
+  if (fromPt) return translateCdlJoinedList(fromPt, language)
 
   const parsed = packageItemsDescription(pkg, language)
   if (parsed?.trim()) return parsed
@@ -130,23 +159,33 @@ export function getPackageItemsDescription(
   const tier = detectPackageTier(getPackageKey(pkg))
   if (!tier) return ''
 
-  return buildTierItemsDescription(tier)
+  return buildTierItemsDescription(tier, language)
 }
 
 export function getPackageHighlights(
   pkg: PackageFieldSource | null | undefined,
   language: 'pt' | 'en' | 'es' = 'pt',
 ): string {
-  if (!pkg || language !== 'pt') return ''
+  if (!pkg) return ''
 
   const extended = pkg as PackageDescriptionFields
-  const fromColumn = extended.package_highlights_pt?.trim()
-  if (fromColumn) return formatPackageBulletText(fromColumn)
+  const dedicated =
+    language === 'en'
+      ? extended.package_highlights_en?.trim()
+      : language === 'es'
+        ? extended.package_highlights_es?.trim()
+        : extended.package_highlights_pt?.trim()
+  if (dedicated) return formatPackageBulletText(dedicated)
+
+  const fromPt = extended.package_highlights_pt?.trim()
+  if (fromPt) {
+    return formatPackageBulletText(translateCdlJoinedList(fromPt, language))
+  }
 
   const tier = detectPackageTier(getPackageKey(pkg))
   if (!tier) return ''
 
-  return PACKAGE_HIGHLIGHTS_PT[tier].join(' • ')
+  return translateCdlItemList(PACKAGE_HIGHLIGHTS_PT[tier], language).join(' • ')
 }
 
 export function getPackageTierSortIndex(
@@ -188,16 +227,37 @@ export function getPackageGarnishDisplayText(
   }
 
   const extended = (pkg ?? null) as PackageDescriptionFields | null
-  const fromColumn =
-    extended?.garnish_description_pt?.trim() ||
-    extended?.sides_description_pt?.trim()
-  if (fromColumn) return formatPackageBulletText(fromColumn)
+  const dedicated =
+    pickLocalizedText(
+      {
+        pt: extended?.garnish_description_pt || extended?.sides_description_pt,
+        en: extended?.garnish_description_en || extended?.sides_description_en,
+        es: extended?.garnish_description_es || extended?.sides_description_es,
+      },
+      language,
+    ).trim()
+  if (dedicated) {
+    const sourceIsDedicated =
+      language === 'en'
+        ? Boolean(
+            extended?.garnish_description_en?.trim() ||
+              extended?.sides_description_en?.trim(),
+          )
+        : language === 'es'
+          ? Boolean(
+              extended?.garnish_description_es?.trim() ||
+                extended?.sides_description_es?.trim(),
+            )
+          : true
+    return formatPackageBulletText(
+      sourceIsDedicated ? dedicated : translateCdlJoinedList(dedicated, language),
+    )
+  }
 
   const parsed = garnishDescription(pkg ?? null, language)
   if (parsed?.trim()) return formatPackageBulletText(parsed)
 
-  if (language === 'pt') return DEFAULT_GARNISH_TEXT_PT
-  return parsed ? formatPackageBulletText(parsed) : DEFAULT_GARNISH_TEXT_PT
+  return translateCdlJoinedList(DEFAULT_GARNISH_TEXT_PT, language)
 }
 
 export function getPackageGroupSummaryCodes(
@@ -255,10 +315,14 @@ export function getPackageCommercialName(
 /** Segunda cascata: BBQ Prime, BBQ Choice, BBQ Personalizado, etc. */
 export function getPackageCascadeFriendlyLabel(
   pkg: PackageFieldSource | null | undefined,
+  language: QuoteLanguage = 'pt',
 ): string {
   const tier = detectPackageTier(getPackageKey(pkg))
   if (!tier) return getPackageCommercialName(pkg)
-  if (tier === 'PERS') return 'BBQ Personalizado'
+  if (tier === 'PERS') {
+    if (language === 'en') return 'BBQ Personalized'
+    return 'BBQ Personalizado'
+  }
   return `BBQ ${PACKAGE_TIER_NAMES[tier]}`
 }
 
@@ -277,10 +341,11 @@ export function findDefaultQuotePackage<
 /** Card de detalhe na cotação: BBQ Choice com guarnições, etc. */
 export function getPackageDetailTitle(
   pkg: PackageFieldSource | null | undefined,
+  language: QuoteLanguage = 'pt',
 ): string {
-  const friendly = getPackageCascadeFriendlyLabel(pkg)
-  if (getPackageHasGarnish(pkg)) {
-    return `${friendly} com guarnições`
-  }
-  return friendly
+  const friendly = getPackageCascadeFriendlyLabel(pkg, language)
+  if (!getPackageHasGarnish(pkg)) return friendly
+  if (language === 'en') return `${friendly} with sides`
+  if (language === 'es') return `${friendly} con guarniciones`
+  return `${friendly} com guarnições`
 }

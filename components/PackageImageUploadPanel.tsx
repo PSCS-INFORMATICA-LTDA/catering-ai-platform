@@ -2,6 +2,7 @@
 
 import CatalogImageFrame from '@/components/CatalogImageFrame'
 import { tCommon } from '@/Lib/i18n/common'
+import { pickLocalizedText } from '@/Lib/i18n/locales'
 import { tPackages } from '@/Lib/i18n/packages'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import { useRouter } from 'next/navigation'
@@ -12,12 +13,17 @@ type PackageRow = {
   package_key?: string | null
   package_name?: string | null
   label_pt?: string | null
+  label_en?: string | null
+  label_es?: string | null
   image_url?: string | null
 }
 
-function getPackageLabel(pkg: PackageRow) {
+function getPackageLabel(pkg: PackageRow, locale?: string | null) {
   return (
-    pkg.label_pt?.trim() ||
+    pickLocalizedText(
+      { pt: pkg.label_pt, en: pkg.label_en, es: pkg.label_es },
+      locale,
+    ).trim() ||
     pkg.package_name?.trim() ||
     pkg.package_key?.trim() ||
     pkg.id
@@ -101,7 +107,7 @@ export default function PackageImageUploadPanel({
         >
           {packages.map((pkg) => (
             <option key={pkg.id} value={pkg.id}>
-              {getPackageLabel(pkg)}
+              {getPackageLabel(pkg, locale)}
             </option>
           ))}
         </select>
@@ -110,7 +116,7 @@ export default function PackageImageUploadPanel({
       <div className="overflow-hidden rounded-2xl border border-cdl-border bg-cdl-inset">
         <CatalogImageFrame
           src={previewUrl}
-          alt={selected ? getPackageLabel(selected) : tCommon(locale, 'package')}
+          alt={selected ? getPackageLabel(selected, locale) : tCommon(locale, 'package')}
           variant="package"
           rounded="none"
         />

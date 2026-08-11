@@ -92,11 +92,22 @@ export function resolveQuoteDetailPackageImageUrl(quote: QuoteDetail): string | 
 export function buildQuoteReviewPackageSummaryFromQuote(
   quote: QuoteDetail,
   snapshot: Pick<QuoteSavedSnapshot, 'billableGuestCount'>,
+  language?: QuoteLanguage | string | null,
 ): QuoteReviewPackageSummary | null {
   const pkg = quoteDetailToPackageFields(quote)
   if (!pkg) return null
 
+  const displayLang: QuoteLanguage =
+    language === 'en' || language === 'es' || language === 'pt'
+      ? language
+      : quoteLanguage(quote)
+
   const packageName =
+    (displayLang === 'en'
+      ? quote.package_name_en
+      : displayLang === 'es'
+        ? quote.package_name_es
+        : quote.package_name_pt) ??
     quote.package_name_pt ??
     quote.package_name_en ??
     quote.package_name_es ??
@@ -110,6 +121,6 @@ export function buildQuoteReviewPackageSummaryFromQuote(
     fromWithSidesSection:
       (quote.package_key ?? '').trim().endsWith('+') ||
       packageNameIndicatesGarnish(packageName),
-    language: quoteLanguage(quote),
+    language: displayLang,
   })
 }

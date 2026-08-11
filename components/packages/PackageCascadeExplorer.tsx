@@ -245,7 +245,7 @@ export default function PackageCascadeExplorer({
                 >
                   <span>{getPackageKey(pkg)}</span>
                   <span className="text-xs text-neutral-400">
-                    {getPackageLabel(pkg)}
+                    {getPackageLabel(pkg, locale)}
                   </span>
                 </BackofficeCascadeListButton>
               ))}

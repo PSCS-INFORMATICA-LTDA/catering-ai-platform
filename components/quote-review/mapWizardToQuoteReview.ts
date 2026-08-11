@@ -57,12 +57,15 @@ export type MapWizardToQuoteReviewInput = {
   additionals: WizardSelectedAdditional[]
   billableGuestCount: number
   commercialRules: CommercialRulesSnapshot
+  /** Idioma da UI do operador (perfil). Itens e chrome da revisão seguem este locale. */
+  displayLanguage?: WizardState['language']
 }
 
 export function mapWizardToQuoteReview(
   input: MapWizardToQuoteReviewInput,
 ): QuoteReviewData {
   const { state, quoteTotals, commercialRules } = input
+  const lang = input.displayLanguage ?? state.language
 
   const reviewAdditionals: QuoteReviewAdditional[] = input.additionals.map(
     (item) => ({
@@ -92,7 +95,7 @@ export function mapWizardToQuoteReview(
       ? buildPackageSelectionLabels(
           state.packageSelections,
           packageGroups,
-          state.language,
+          lang,
         )
       : []
 
@@ -102,7 +105,7 @@ export function mapWizardToQuoteReview(
     sidesPricePerPerson: commercialRules.sidesPricePerPerson,
     chargedPeople: quoteTotals.billableGuestCount,
     fromWithSidesSection: input.fromWithSidesSection,
-    language: state.language,
+    language: lang,
   })
 
   const configuredItems =
@@ -116,8 +119,8 @@ export function mapWizardToQuoteReview(
 
   const baseItemsText =
     configuredItems.length > 0
-      ? formatPackageItemsText(configuredItems, state.language)
-      : getPackageItemsDescription(input.selectedPackage, state.language)
+      ? formatPackageItemsText(configuredItems, lang)
+      : getPackageItemsDescription(input.selectedPackage, lang)
 
   const resolvedItemsDescription =
     input.selectedPackage && baseItemsText
@@ -126,14 +129,14 @@ export function mapWizardToQuoteReview(
             baseItemsText,
             state.packageSelections,
             packageGroups,
-            state.language,
+            lang,
           )
         : baseItemsText
       : null
 
   const resolvedGarnishDescription =
     configuredSides.length > 0
-      ? formatPackageSideItemsText(configuredSides, state.language)
+      ? formatPackageSideItemsText(configuredSides, lang)
       : null
 
   const packageSummary = packageSummaryBase
@@ -184,8 +187,8 @@ export function mapWizardToQuoteReview(
     hasGrill: state.grillSetupAnswered ? state.hasGrill : null,
     grillPhotoRequired: state.grillPhotoRequired,
     grillPhotoStatusLabel: state.hasGrill
-      ? getGrillPhotoStatusLabel(state.grillPhotoStatus, state.language)
-      : tw(state.language, 'notApplicable'),
+      ? getGrillPhotoStatusLabel(state.grillPhotoStatus, lang)
+      : tw(lang, 'notApplicable'),
     grillPhotoUrl: state.grillPhotoUrl,
     grillRentalRequired: state.grillRentalRequired,
     grillRentalQty: state.grillRentalRequired ? state.grillRentalQty : null,
@@ -207,6 +210,6 @@ export function mapWizardToQuoteReview(
     balanceDue: quoteTotals.balanceDue,
     quoteTotal: quoteTotals.quoteTotal,
     additionals: reviewAdditionals,
-    language: state.language,
+    language: lang,
   }
 }
