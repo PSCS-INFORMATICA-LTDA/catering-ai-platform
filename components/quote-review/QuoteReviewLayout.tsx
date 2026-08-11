@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import CatalogImageFrame from '@/components/CatalogImageFrame'
 import CdlBrandLogo from '@/components/CdlBrandLogo'
 import QuoteGrillPhotoFrame from '@/components/quote-review/QuoteGrillPhotoFrame'
+import QuoteReservationPaymentCard from '@/components/quote-review/QuoteReservationPaymentCard'
 import QuoteReviewPackageCdlSection, {
   QuoteReviewPackageValueCards,
 } from '@/components/quote-review/QuoteReviewPackageCdlSection'
@@ -13,10 +14,6 @@ import {
 } from '@/components/CdlImportantRulesPanel'
 import QuoteCommercialAdjustmentNotice from '@/components/quote-review/QuoteCommercialAdjustmentNotice'
 import GuestBreakdownPanel from '@/components/GuestBreakdownPanel'
-import {
-  BALANCE_PERCENTAGE,
-  RESERVATION_PERCENTAGE,
-} from '@/Lib/cdlCommercialRules'
 import { formatMoneyOrDash } from '@/Lib/readQuoteSnapshot'
 import {
   displayValue,
@@ -28,7 +25,7 @@ import {
 import { IconCalendar, IconClock, IconLocation } from './QuoteReviewIcons'
 import QuoteProposalOverviewCard from './QuoteProposalOverviewCard'
 import type { QuoteReviewAdditional, QuoteReviewData } from './quoteReviewTypes'
-import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
+import { getQuoteStrings } from '@/Lib/quoteTranslations'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
 
 function ProposalSection({
@@ -610,27 +607,26 @@ export default function QuoteReviewLayout({
                 {formatMoneyOrDash(data.quoteTotal)}
               </span>
             </div>
-            <div className="quote-proposal-reservation-note">
-              <p>{tQuotesOrders(lang, 'docReservationPaymentText')}</p>
-              <p>
-                {tw(lang, 'reservationBalanceLine', {
-                  reservation: RESERVATION_PERCENTAGE,
-                  balance: BALANCE_PERCENTAGE,
-                })}
-              </p>
+          </div>
+        </section>
+
+        <QuoteReservationPaymentCard
+          language={lang}
+          extraNotes={
+            <>
               {minimumAdjustment > 0 ? (
-                <p className="mt-2 font-medium text-cdl-action">
+                <p className="mt-3 font-medium text-cdl-action">
                   {w.minOrderAppliedNote}
                 </p>
               ) : null}
               {holidaySurcharge > 0 ? (
-                <p className="mt-2 font-medium text-cdl-action">
+                <p className="mt-3 font-medium text-cdl-action">
                   {w.holidaySurchargeNote}
                 </p>
               ) : null}
-            </div>
-          </div>
-        </section>
+            </>
+          }
+        />
 
         <CdlImportantRulesPanel
           variant={rulesVariant === 'pdf' ? 'pdf' : 'summary'}

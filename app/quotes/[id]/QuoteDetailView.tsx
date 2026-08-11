@@ -8,6 +8,7 @@ import {
 } from '@/components/quote-review/mapQuoteDetailToQuoteReview'
 import QuoteProposalOverviewCard from '@/components/quote-review/QuoteProposalOverviewCard'
 import QuoteGrillPhotoFrame from '@/components/quote-review/QuoteGrillPhotoFrame'
+import QuoteReservationPaymentCard from '@/components/quote-review/QuoteReservationPaymentCard'
 import QuoteReviewPackageCdlSection, {
   QuoteReviewPackageValueCards,
 } from '@/components/quote-review/QuoteReviewPackageCdlSection'
@@ -34,11 +35,6 @@ import {
   CdlImportantRulesPanel,
 } from '../../../components/CdlImportantRulesPanel'
 import QuoteCommercialAdjustmentNotice from '@/components/quote-review/QuoteCommercialAdjustmentNotice'
-import {
-  BALANCE_PERCENTAGE,
-  RESERVATION_PAYMENT_TEXT,
-  RESERVATION_PERCENTAGE,
-} from '../../../Lib/cdlCommercialRules'
 import {
   formatMoneyOrDash,
   getChargedMilesFromSnapshot,
@@ -801,15 +797,10 @@ export default function QuoteDetailView({
                 {formatMoneyOrDash(snapshot.quoteTotal)}
               </span>
             </div>
-            <div className="quote-proposal-reservation-note">
-              <p>{RESERVATION_PAYMENT_TEXT}</p>
-              <p>
-                {t('reservationLabel')}: {RESERVATION_PERCENTAGE}% ·{' '}
-                {t('docBalanceDueLine')}: {BALANCE_PERCENTAGE}%
-              </p>
-            </div>
           </div>
         </section>
+
+        <QuoteReservationPaymentCard language={lang} />
 
         <CdlImportantRulesPanel
           variant="summary"

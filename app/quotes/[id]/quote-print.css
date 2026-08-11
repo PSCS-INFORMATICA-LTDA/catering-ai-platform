@@ -1222,6 +1222,15 @@
     font-size: 1.35rem !important;
   }
 
+  .quote-proposal-reservation-copy {
+    font-size: 0.88rem !important;
+  }
+
+  .quote-proposal-reservation-split {
+    font-size: 0.92rem !important;
+    margin-top: 0.45rem !important;
+  }
+
   .quote-print-keep {
     break-inside: avoid;
     page-break-inside: avoid;
@@ -1310,4 +1319,30 @@
 
 .quote-proposal-reservation-note p + p {
   margin-top: 0.35rem;
+}
+
+.quote-proposal-reservation-card {
+  background: #fffdf8;
+  border-color: rgba(214, 40, 40, 0.22);
+}
+
+.quote-proposal-reservation-copy {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--proposal-dark);
+}
+
+.quote-proposal-reservation-split {
+  margin: 0.85rem 0 0;
+  font-size: 1.12rem;
+  line-height: 1.5;
+  font-weight: 600;
+  color: var(--proposal-dark);
+}
+
+.quote-proposal-pct-mark {
+  color: var(--proposal-red);
+  font-weight: 800;
+  font-size: 1.18em;
 }
