@@ -176,3 +176,21 @@ export function resolveAuthLocale(
   if (v.startsWith('es')) return 'es'
   return 'pt'
 }
+
+export function listAuthI18nEntries(): Array<{
+  key: string
+  module: string
+  context: string
+  pt: string
+  en: string
+  es: string
+}> {
+  return (Object.keys(dict.pt) as AuthMessageKey[]).map((key) => ({
+    key: `auth.${key}`,
+    module: 'auth',
+    context: 'ui',
+    pt: dict.pt[key],
+    en: dict.en[key],
+    es: dict.es[key],
+  }))
+}

@@ -19,6 +19,7 @@ import {
   normalizeAdditionalQuantity,
 } from '../../../Lib/quoteAdditionalDisplay'
 import { getQuoteStrings } from '../../../Lib/quoteTranslations'
+import { useAuthLocaleFromMe } from '../../../Lib/i18n/useAuthLocaleFromMe'
 import PackageOptionsDebugPanel from '../../../components/quotes/PackageOptionsDebugPanel'
 import { CDL_DEFAULT_COMPANY_ID } from '../../../Lib/cdlCompany'
 import type { PackageOptionQueryDebug } from '../../../Lib/fetchPackageOptionGroups'
@@ -1048,9 +1049,10 @@ export default function QuoteWizard({
   >(() => packageOptionGroupItems)
   const [packageOptionQueryDebugState, setPackageOptionQueryDebugState] =
     useState<PackageOptionQueryDebug | null>(() => packageOptionQueryDebug)
+  const uiLocale = useAuthLocaleFromMe()
   const quoteStrings = useMemo(
-    () => getQuoteStrings(state.language),
-    [state.language],
+    () => getQuoteStrings(uiLocale),
+    [uiLocale],
   )
   const wizardSteps = quoteStrings.wizardSteps
 
@@ -2063,7 +2065,7 @@ export default function QuoteWizard({
     <main className="quotes-pscs min-h-screen bg-cdl-bg px-4 py-4 pb-28 text-cdl-fg sm:px-8 sm:py-6 sm:pb-28">
       <div className="mx-auto max-w-6xl">
         <div className="mb-3 flex flex-col gap-2">
-          <AdminCompactMenu language={state.language} />
+          <AdminCompactMenu language={uiLocale} />
           <Link
             href={isEditMode && quoteId ? `/quotes/${quoteId}` : '/quotes'}
             className="inline-flex items-center text-sm text-cdl-muted transition-colors hover:text-cdl-brand"
@@ -2074,7 +2076,7 @@ export default function QuoteWizard({
 
         <QuoteStepHeader
           step={step}
-          language={state.language}
+          language={uiLocale}
           isEditMode={isEditMode}
         />
 
@@ -2082,7 +2084,7 @@ export default function QuoteWizard({
           steps={wizardSteps}
           currentStep={step}
           additionalsCount={additionalsCount}
-          language={state.language}
+          language={uiLocale}
           getStepStatus={(index) => getStepVisualStatus(index, stepStatusCtx)}
           onStepClick={setStep}
         />
@@ -2099,7 +2101,7 @@ export default function QuoteWizard({
           <SectionCard>
             <div className="sm:col-span-2">
               <label className="flex flex-col gap-2">
-                <span className="cdl-eyebrow">Idioma da cotação</span>
+                <span className="cdl-eyebrow">{quoteStrings.documentLanguage}</span>
                 <select
                   value={state.language}
                   onChange={(e) =>
@@ -2117,7 +2119,7 @@ export default function QuoteWizard({
             </div>
             <div className="sm:col-span-2 rounded-xl border border-cdl-border bg-cdl-inset p-5">
               <p className="text-xs font-bold uppercase tracking-wider text-cdl-muted">
-                Cliente atual
+                {quoteStrings.currentCustomer}
               </p>
               <p className="mt-2 text-xl font-black text-cdl-title">
                 {editCustomerDisplayName}
@@ -2134,7 +2136,7 @@ export default function QuoteWizard({
                 </p>
               ) : null}
               <p className="mt-4 text-sm text-cdl-text-secondary">
-                O cliente não pode ser alterado nesta tela.
+                {quoteStrings.customerLocked}
               </p>
             </div>
           </SectionCard>
@@ -2144,7 +2146,7 @@ export default function QuoteWizard({
           <SectionCard>
             <div className="sm:col-span-2">
               <label className="flex flex-col gap-2">
-                <span className="cdl-eyebrow">Idioma da cotação</span>
+                <span className="cdl-eyebrow">{quoteStrings.documentLanguage}</span>
                 <select
                   value={state.language}
                   onChange={(e) =>
@@ -2159,15 +2161,14 @@ export default function QuoteWizard({
                   <option value="es">Español (ES)</option>
                 </select>
                 <p className="text-xs text-cdl-muted">
-                  Usado no PDF, visualização pública e comunicações futuras.
+                  {quoteStrings.documentLanguageHint}
                 </p>
               </label>
             </div>
             {!selectedCustomer ? (
               <div className="sm:col-span-2 rounded-xl border border-cdl-warning-border bg-cdl-warning-soft px-4 py-3">
                 <p className="text-sm leading-relaxed text-cdl-text-secondary">
-                  Cliente ainda não vinculado. A cotação pode ser criada, mas
-                  deverá ser revisada antes do envio final.
+                  {quoteStrings.customerNotLinked}
                 </p>
               </div>
             ) : null}
@@ -2736,6 +2737,7 @@ export default function QuoteWizard({
             saveErrorInfo={saveErrorInfo}
             isEditMode={isEditMode}
             quoteId={quoteId}
+            uiLanguage={uiLocale}
             onGoToStep={setStep}
             onBack={goBack}
             onSave={handleSaveQuote}

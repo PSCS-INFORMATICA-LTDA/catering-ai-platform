@@ -1,4 +1,4 @@
-import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import type { QuoteLanguage } from './quoteWizardTypes.ts'
 
 export const WIZARD_STEP_KEYS = [
   'customer',
@@ -92,8 +92,13 @@ const CATEGORY_SORT_ORDER = [
 type QuoteStrings = {
   newQuoteTitle: string
   editQuoteTitle: string
-  backToQuotes: string
-  backToQuote: string
+    backToQuotes: string
+    backToQuote: string
+    documentLanguage: string
+    documentLanguageHint: string
+    customerLocked: string
+    customerNotLinked: string
+    currentCustomer: string
   stepSubtitles: Record<number, string>
   wizardSteps: string[]
   next: string
@@ -150,6 +155,13 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     editQuoteTitle: 'Editar cotação CDL',
     backToQuotes: '← Voltar às cotações',
     backToQuote: '← Voltar para cotação',
+    documentLanguage: 'Idioma da cotação',
+    documentLanguageHint:
+      'Usado no PDF, visualização pública e comunicações com o cliente — não troca a interface do operador.',
+    customerLocked: 'O cliente não pode ser alterado nesta tela.',
+    customerNotLinked:
+      'Cliente ainda não vinculado. A cotação pode ser criada, mas deverá ser revisada antes do envio final.',
+    currentCustomer: 'Cliente atual',
     stepSubtitles: {
       0: 'Identifique o cliente para começar a cotação.',
       1: 'Informe data, local e detalhes do evento.',
@@ -224,6 +236,13 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     editQuoteTitle: 'Edit CDL quote',
     backToQuotes: '← Back to quotes',
     backToQuote: '← Back to quote',
+    documentLanguage: 'Quote language',
+    documentLanguageHint:
+      'Used for PDF, public proposal and customer messages — does not switch the operator UI.',
+    customerLocked: 'The customer cannot be changed on this screen.',
+    customerNotLinked:
+      'Customer not linked yet. The quote can be created, but must be reviewed before final send.',
+    currentCustomer: 'Current customer',
     stepSubtitles: {
       0: 'Identify the customer to start the quote.',
       1: 'Enter date, location, and event details.',
@@ -296,6 +315,13 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     editQuoteTitle: 'Editar cotización CDL',
     backToQuotes: '← Volver a cotizaciones',
     backToQuote: '← Volver a la cotización',
+    documentLanguage: 'Idioma de la cotización',
+    documentLanguageHint:
+      'Se usa en PDF, propuesta pública y mensajes al cliente — no cambia la interfaz del operador.',
+    customerLocked: 'El cliente no puede cambiarse en esta pantalla.',
+    customerNotLinked:
+      'Cliente aún no vinculado. La cotización puede crearse, pero debe revisarse antes del envío final.',
+    currentCustomer: 'Cliente actual',
     stepSubtitles: {
       0: 'Identifique al cliente para comenzar la cotización.',
       1: 'Indique fecha, lugar y detalles del evento.',
@@ -369,6 +395,55 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
 
 export function getQuoteStrings(language: QuoteLanguage = 'pt'): QuoteStrings {
   return STRINGS[language] ?? STRINGS.pt
+}
+
+function flattenLocaleTree(
+  value: unknown,
+  prefix: string,
+  acc: Record<string, string | '((fn))'>,
+) {
+  if (typeof value === 'function') {
+    acc[prefix] = '((fn))'
+    return
+  }
+  if (typeof value === 'string') {
+    acc[prefix] = value
+    return
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, i) => flattenLocaleTree(item, `${prefix}.${i}`, acc))
+    return
+  }
+  if (value && typeof value === 'object') {
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      flattenLocaleTree(v, prefix ? `${prefix}.${k}` : k, acc)
+    }
+  }
+}
+
+export function listQuoteWizardI18nEntries(): Array<{
+  key: string
+  module: string
+  context: string
+  pt: string
+  en: string
+  es: string
+}> {
+  const pt: Record<string, string | '((fn))'> = {}
+  const en: Record<string, string | '((fn))'> = {}
+  const es: Record<string, string | '((fn))'> = {}
+  flattenLocaleTree(STRINGS.pt, '', pt)
+  flattenLocaleTree(STRINGS.en, '', en)
+  flattenLocaleTree(STRINGS.es, '', es)
+  const keys = new Set([...Object.keys(pt), ...Object.keys(en), ...Object.keys(es)])
+  return [...keys].sort().map((leaf) => ({
+    key: `quotes.wizard.${leaf}`,
+    module: 'quotes',
+    context: leaf.startsWith('review') ? 'document' : 'ui',
+    pt: String(pt[leaf] ?? ''),
+    en: String(en[leaf] ?? ''),
+    es: String(es[leaf] ?? ''),
+  }))
 }
 
 export function normalizeCategoryKey(value: string): string {

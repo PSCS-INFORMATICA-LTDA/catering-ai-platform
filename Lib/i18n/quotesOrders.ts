@@ -1,10 +1,11 @@
-import type { AuthLocale } from '@/Lib/i18n/authUsers'
+import type { AuthLocale } from './authUsers.ts'
 
 export type { AuthLocale }
 
 const dict = {
   pt: {
     quotesTitle: 'Cotações',
+    navDataDictionary: 'Dicionário de dados',
     ordersTitle: 'Ordens de Serviço',
     orderTitle: 'Ordem de Serviço',
     newQuote: 'Nova cotação',
@@ -357,6 +358,7 @@ const dict = {
   },
   en: {
     quotesTitle: 'Quotes',
+    navDataDictionary: 'Data dictionary',
     ordersTitle: 'Service Orders',
     orderTitle: 'Service Order',
     newQuote: 'New quote',
@@ -702,6 +704,7 @@ const dict = {
   },
   es: {
     quotesTitle: 'Presupuestos',
+    navDataDictionary: 'Diccionario de datos',
     ordersTitle: 'Órdenes de Servicio',
     orderTitle: 'Orden de Servicio',
     newQuote: 'Nuevo presupuesto',
@@ -1055,7 +1058,26 @@ export function tQuotesOrders(
 ): string {
   const loc: AuthLocale =
     locale === 'en' || locale === 'es' || locale === 'pt' ? locale : 'pt'
-  return dict[loc][key]
+  const value = dict[loc][key] || dict.pt[key]
+  return value || ''
+}
+
+export function listQuotesOrdersI18nEntries(): Array<{
+  key: string
+  module: string
+  context: string
+  pt: string
+  en: string
+  es: string
+}> {
+  return (Object.keys(dict.pt) as QuotesOrdersMessageKey[]).map((key) => ({
+    key: `quotesOrders.${key}`,
+    module: 'quotes_orders',
+    context: 'ui',
+    pt: dict.pt[key],
+    en: dict.en[key],
+    es: dict.es[key],
+  }))
 }
 
 const QUOTE_STATUS_KEY_MAP: Record<string, QuotesOrdersMessageKey> = {
@@ -1167,6 +1189,7 @@ const NAV_HREF_KEY_MAP: Record<string, QuotesOrdersMessageKey> = {
   '/quotes': 'quotesTitle',
   '/quotes/new': 'newQuote',
   '/orders': 'ordersTitle',
+  '/settings/dictionary': 'navDataDictionary',
 }
 
 /**
