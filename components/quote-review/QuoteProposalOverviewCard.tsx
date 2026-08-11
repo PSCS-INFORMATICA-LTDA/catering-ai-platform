@@ -4,6 +4,13 @@ import type { ReactNode } from 'react'
 import { formatMoneyOrDash } from '@/Lib/readQuoteSnapshot'
 import { formatDate } from '@/app/quotes/[id]/quoteDetailTypes'
 import type { QuoteReviewPackageSummary } from './quoteReviewPackageSummary'
+import { tw } from '@/Lib/quoteTranslations'
+import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+
+function loc(language?: string | null): QuoteLanguage {
+  return language === 'en' || language === 'es' ? language : 'pt'
+}
 
 export type QuoteFinancialLine = {
   label: string
@@ -26,33 +33,35 @@ export function buildQuoteFinancialLines(input: {
   discountAmount?: number | null
   reservationAmount?: number | null
   quoteTotal: number | null
+  language?: QuoteLanguage | string | null
 }): QuoteFinancialLine[] {
+  const language = loc(input.language)
   const lines: QuoteFinancialLine[] = []
   const summary = input.packageSummary
 
   if (summary?.hasGarnish) {
     if ((summary.packageTotalPrice ?? 0) > 0) {
       lines.push({
-        label: 'Pacote',
+        label: tQuotesOrders(language, 'packageLabel'),
         value: formatMoneyOrDash(summary.packageTotalPrice),
       })
     }
     if ((summary.garnishTotalPrice ?? 0) > 0) {
       lines.push({
-        label: 'Guarnições',
+        label: tw(language, 'garnish'),
         value: formatMoneyOrDash(summary.garnishTotalPrice),
       })
     }
   } else if ((input.packageTotal ?? 0) > 0) {
     lines.push({
-      label: 'Pacote',
+      label: tQuotesOrders(language, 'packageLabel'),
       value: formatMoneyOrDash(input.packageTotal),
     })
   }
 
   if ((input.additionalTotal ?? 0) > 0) {
     lines.push({
-      label: 'Extras na cotação',
+      label: tw(language, 'extrasOnQuote'),
       value: formatMoneyOrDash(input.additionalTotal),
     })
   }
@@ -63,50 +72,53 @@ export function buildQuoteFinancialLines(input: {
     lines.push({
       label:
         charged > 0
-          ? `Milhagem (${charged} mi cobradas além de ${free} mi cortesia)`
-          : 'Milhagem',
+          ? tQuotesOrders(language, 'docMileageChargedSummaryLine', {
+              charged,
+              free,
+            })
+          : tQuotesOrders(language, 'mileageLabel'),
       value: formatMoneyOrDash(input.mileageFee),
     })
   }
 
   if ((input.grillRentalTotal ?? 0) > 0) {
     lines.push({
-      label: 'Aluguel de churrasqueira',
+      label: tQuotesOrders(language, 'docGrillRentalLine'),
       value: formatMoneyOrDash(input.grillRentalTotal),
     })
   }
 
   if ((input.holidaySurchargeAmount ?? 0) > 0) {
     lines.push({
-      label: 'Adicional de feriado / data comemorativa (100%)',
+      label: tQuotesOrders(language, 'docHolidaySurchargeLine'),
       value: formatMoneyOrDash(input.holidaySurchargeAmount),
     })
   }
 
   if ((input.minimumOrderAdjustment ?? 0) > 0.009) {
     lines.push({
-      label: 'Ajuste para pedido mínimo',
+      label: tw(language, 'minOrderAdjustment'),
       value: formatMoneyOrDash(input.minimumOrderAdjustment),
     })
   }
 
   if ((input.discountAmount ?? 0) > 0) {
     lines.push({
-      label: 'Desconto',
+      label: tQuotesOrders(language, 'docDiscountLine'),
       value: formatMoneyOrDash(input.discountAmount),
       discount: true,
     })
   }
 
   lines.push({
-    label: 'Total',
+    label: tw(language, 'total'),
     value: formatMoneyOrDash(input.quoteTotal),
     emphasis: true,
   })
 
   if ((input.reservationAmount ?? 0) > 0) {
     lines.push({
-      label: 'Reserva (sinal)',
+      label: tw(language, 'reservationDeposit'),
       value: formatMoneyOrDash(input.reservationAmount),
       subtle: true,
     })
@@ -137,6 +149,7 @@ export default function QuoteProposalOverviewCard({
   additionalsCount = 0,
   grillRentalRequired = false,
   afterClient,
+  language = 'pt',
 }: {
   customerName: string
   eventDate: string | null
@@ -160,7 +173,9 @@ export default function QuoteProposalOverviewCard({
   grillRentalRequired?: boolean | null
   /** Conteúdo logo após o nome do cliente (ex.: regras comerciais). */
   afterClient?: ReactNode
+  language?: QuoteLanguage | string | null
 }) {
+  const locale = loc(language)
   const cityState = [city, state].filter(Boolean).join(', ')
   const streetLine = [addressLine, zipCode].filter(Boolean).join(' · ')
   const financialLines = buildQuoteFinancialLines({
@@ -176,18 +191,23 @@ export default function QuoteProposalOverviewCard({
     discountAmount,
     reservationAmount,
     quoteTotal,
+    language: locale,
   })
 
   return (
     <div className="quote-proposal-overview quote-proposal-overview--enhanced">
       <div className="quote-proposal-overview-top">
         <div className="quote-proposal-overview-item">
-          <span className="quote-proposal-label">Cliente</span>
+          <span className="quote-proposal-label">
+            {tQuotesOrders(locale, 'docCustomer')}
+          </span>
           <p className="quote-proposal-value">{customerName || '—'}</p>
         </div>
         <div className="quote-proposal-overview-item">
-          <span className="quote-proposal-label">Evento</span>
-          <p className="quote-proposal-value">{formatDate(eventDate)}</p>
+          <span className="quote-proposal-label">
+            {tQuotesOrders(locale, 'event')}
+          </span>
+          <p className="quote-proposal-value">{formatDate(eventDate, locale)}</p>
         </div>
       </div>
 
@@ -198,7 +218,9 @@ export default function QuoteProposalOverviewCard({
       ) : null}
 
       <div className="quote-proposal-overview-location">
-        <span className="quote-proposal-label">Local</span>
+        <span className="quote-proposal-label">
+          {tQuotesOrders(locale, 'docLocation')}
+        </span>
         {cityState ? (
           <p className="quote-proposal-location-primary">{cityState}</p>
         ) : null}
@@ -214,23 +236,30 @@ export default function QuoteProposalOverviewCard({
         grillRentalRequired) && (
         <div className="quote-proposal-overview-badges">
           {packageSummary?.hasGarnish ? (
-            <span className="quote-proposal-overview-badge">Com guarnições</span>
+            <span className="quote-proposal-overview-badge">
+              {tw(locale, 'withSides')}
+            </span>
           ) : null}
           {additionalsCount > 0 ? (
             <span className="quote-proposal-overview-badge">
-              {additionalsCount} adicional{additionalsCount !== 1 ? 'is' : ''}
+              {tw(locale, 'additionalCount', {
+                count: additionalsCount,
+                plural: additionalsCount !== 1 ? 's' : '',
+              })}
             </span>
           ) : null}
           {grillRentalRequired ? (
             <span className="quote-proposal-overview-badge">
-              Churrasqueira para alugar
+              {tw(locale, 'grillToRent')}
             </span>
           ) : null}
         </div>
       )}
 
       <div className="quote-proposal-overview-finance">
-        <p className="quote-proposal-label">Resumo financeiro</p>
+        <p className="quote-proposal-label">
+          {tQuotesOrders(locale, 'docFinancialSection')}
+        </p>
         <div className="quote-proposal-finance-lines">
           {financialLines.map((line) => (
             <div

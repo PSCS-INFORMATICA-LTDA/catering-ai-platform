@@ -323,7 +323,10 @@ export default function QuoteDetailView({
     ...(minimumAdjustment > 0.009
       ? [
           {
-            label: `${t('docMinOrderAppliedLine')} (mín. ${formatCurrency(minimumOrderAmount)})`,
+            label: tQuotesOrders(lang, 'minOrderAppliedWithMin', {
+              label: t('docMinOrderAppliedLine'),
+              min: formatCurrency(minimumOrderAmount),
+            }),
             value: formatCurrency(minimumAdjustment),
           },
         ]
@@ -519,6 +522,7 @@ export default function QuoteDetailView({
           quoteTotal={snapshot.quoteTotal}
           additionalsCount={additionalItems.length}
           grillRentalRequired={quote.grill_rental_required}
+          language={lang}
           afterClient={
             <>
               <QuoteCommercialAdjustmentNotice
@@ -527,10 +531,12 @@ export default function QuoteDetailView({
                 minimumOrderAdjustment={minimumAdjustment}
                 minimumOrderAmount={minimumOrderAmount}
                 quoteTotal={snapshot.quoteTotal}
+                language={lang}
               />
               <CdlImportantRulesPanel
                 variant="summary"
                 showReservationText
+                language={lang}
               />
             </>
           }
@@ -551,6 +557,7 @@ export default function QuoteDetailView({
               billableGuestCount={snapshot.billableGuestCount}
               packageTotal={snapshot.packageTotal}
               packageUnitPrice={snapshot.packageUnitPrice}
+              language={lang}
             />
           </ProposalSection>
 
@@ -562,6 +569,7 @@ export default function QuoteDetailView({
                 physicalGuestCount: snapshot.physicalGuestCount,
                 quoteTotal: snapshot.quoteTotal,
               }}
+              language={lang}
             />
           </ProposalSection>
 
@@ -785,7 +793,7 @@ export default function QuoteDetailView({
           </div>
         </section>
 
-        <CdlCancellationPolicySection variant="pdf" />
+        <CdlCancellationPolicySection variant="pdf" language={lang} />
 
         <QuoteDebugPanel
           quote={{

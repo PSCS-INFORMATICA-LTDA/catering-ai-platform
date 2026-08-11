@@ -17,6 +17,9 @@ import {
 } from '@/components/backoffice/BackofficeCardPrimitives'
 import type { OperationalTeam } from '@/Lib/agenda/types'
 import { getCustomerDisplayName } from '@/Lib/getCustomerDisplayName'
+import { tCommon } from '@/Lib/i18n/common'
+import { tTeams } from '@/Lib/i18n/teams'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import { glassField } from '@/Lib/liquidGlass'
 import type { CustomerSearchRecord } from '@/Lib/searchCustomers'
 import TeamMembersPanel from '@/components/teams/TeamMembersPanel'
@@ -41,10 +44,13 @@ const EMPTY: TeamForm = {
   active: true,
 }
 
-function langLabel(code: string | null | undefined) {
-  if (code === 'en') return 'English'
-  if (code === 'es') return 'Español'
-  return 'Português'
+function langLabel(
+  locale: ReturnType<typeof useAuthLocaleFromMe>,
+  code: string | null | undefined,
+) {
+  if (code === 'en') return tCommon(locale, 'english')
+  if (code === 'es') return tCommon(locale, 'spanish')
+  return tCommon(locale, 'portuguese')
 }
 
 export default function TeamsDashboard({
@@ -52,6 +58,7 @@ export default function TeamsDashboard({
 }: {
   initialTeams: OperationalTeam[]
 }) {
+  const locale = useAuthLocaleFromMe()
   const [teams, setTeams] = useState(initialTeams)
   const [people, setPeople] = useState<PersonOption[]>([])
   const [draft, setDraft] = useState<TeamForm>(EMPTY)
@@ -88,14 +95,14 @@ export default function TeamsDashboard({
         data?: OperationalTeam[]
         error?: string
       }
-      if (!res.ok) throw new Error(json.error ?? 'Falha ao carregar equipes')
+      if (!res.ok) throw new Error(json.error ?? tTeams(locale, 'loadError'))
       setTeams(json.data ?? [])
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro')
+      setError(e instanceof Error ? e.message : tTeams(locale, 'genericError'))
     } finally {
       setLoading(false)
     }
-  }, [activeFilter])
+  }, [activeFilter, locale])
 
   function selectedPerson(id: string) {
     return people.find((p) => p.id === id) ?? null
@@ -124,13 +131,13 @@ export default function TeamsDashboard({
         }),
       })
       const json = (await res.json()) as { error?: string }
-      if (!res.ok) throw new Error(json.error ?? 'Falha ao criar')
+      if (!res.ok) throw new Error(json.error ?? tTeams(locale, 'createError'))
       setDraft(EMPTY)
       setCreating(false)
       await reload()
       await loadPeople()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro')
+      setError(e instanceof Error ? e.message : tTeams(locale, 'genericError'))
     } finally {
       setSaving(false)
     }
@@ -149,13 +156,13 @@ export default function TeamsDashboard({
         }),
       })
       const json = (await res.json()) as { error?: string }
-      if (!res.ok) throw new Error(json.error ?? 'Falha ao salvar')
+      if (!res.ok) throw new Error(json.error ?? tTeams(locale, 'saveError'))
       setEditingId(null)
       setDraft(EMPTY)
       await reload()
       await loadPeople()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro')
+      setError(e instanceof Error ? e.message : tTeams(locale, 'genericError'))
     } finally {
       setSaving(false)
     }
@@ -180,13 +187,13 @@ export default function TeamsDashboard({
     const person = selectedPerson(draft.contact_person_id)
     return (
       <>
-        <BackofficeField label="Nome da equipe">
+        <BackofficeField label={tTeams(locale, 'teamName')}>
           <BackofficeInput
             value={draft.name}
             onChange={(v) => setDraft((d) => ({ ...d, name: v }))}
           />
         </BackofficeField>
-        <BackofficeField label="Cor na agenda">
+        <BackofficeField label={tTeams(locale, 'agendaColor')}>
           <input
             type="color"
             value={draft.color}
@@ -194,38 +201,38 @@ export default function TeamsDashboard({
             className={glassField(false, 'h-11 max-w-[6rem] cursor-pointer !p-1')}
           />
         </BackofficeField>
-        <BackofficeField label="Pessoa de contato *" className="sm:col-span-2">
+        <BackofficeField label={tTeams(locale, 'contactPerson')} className="sm:col-span-2">
           <select
             className={glassField()}
             value={draft.contact_person_id}
             onChange={(e) => applyPersonToDraft(e.target.value)}
           >
-            <option value="">Selecione a pessoa (cadastro único)…</option>
+            <option value="">{tTeams(locale, 'selectPerson')}</option>
             {people.map((p) => (
               <option key={p.id} value={p.id}>
                 {getCustomerDisplayName(p)}
                 {p.phone ? ` · ${p.phone}` : ''}
-                {p.is_team ? ' · Equipe' : ''}
+                {p.is_team ? ` · ${tCommon(locale, 'team')}` : ''}
               </option>
             ))}
           </select>
           <p className="mt-1 text-xs text-neutral-500">
-            Cadastre telefone, e-mail, endereço e idioma em{' '}
+            {tTeams(locale, 'contactHintBefore')}{' '}
             <Link href="/customers" className="underline">
-              Pessoas
+              {tTeams(locale, 'peopleLink')}
             </Link>{' '}
-            (marque a flag Equipe). Sem pessoa vinculada não há WhatsApp/SMS/e-mail.
+            {tTeams(locale, 'contactHintAfter')}
           </p>
         </BackofficeField>
         {person ? (
           <>
-            <BackofficeField label="Telefone">
+            <BackofficeField label={tCommon(locale, 'phone')}>
               <BackofficeInput value={person.phone ?? '—'} onChange={() => {}} disabled />
             </BackofficeField>
-            <BackofficeField label="E-mail">
+            <BackofficeField label={tCommon(locale, 'email')}>
               <BackofficeInput value={person.email ?? '—'} onChange={() => {}} disabled />
             </BackofficeField>
-            <BackofficeField label="Endereço" className="sm:col-span-2">
+            <BackofficeField label={tCommon(locale, 'address')} className="sm:col-span-2">
               <BackofficeInput
                 value={
                   [person.address_line, person.city, person.state]
@@ -238,7 +245,7 @@ export default function TeamsDashboard({
             </BackofficeField>
           </>
         ) : null}
-        <BackofficeField label="Idioma das mensagens">
+        <BackofficeField label={tTeams(locale, 'messageLanguage')}>
           <select
             className={glassField()}
             value={draft.preferred_language}
@@ -249,12 +256,12 @@ export default function TeamsDashboard({
               }))
             }
           >
-            <option value="pt">Português</option>
-            <option value="en">English</option>
-            <option value="es">Español</option>
+            <option value="pt">{tCommon(locale, 'portuguese')}</option>
+            <option value="en">{tCommon(locale, 'english')}</option>
+            <option value="es">{tCommon(locale, 'spanish')}</option>
           </select>
         </BackofficeField>
-        <BackofficeField label="Notas" className="sm:col-span-2">
+        <BackofficeField label={tCommon(locale, 'notes')} className="sm:col-span-2">
           <BackofficeInput
             value={draft.notes}
             onChange={(v) => setDraft((d) => ({ ...d, notes: v }))}
@@ -266,11 +273,11 @@ export default function TeamsDashboard({
 
   return (
     <BackofficeTableShell
-      title="Equipes"
-      subtitle="Recurso da agenda. O contato (telefone, e-mail, endereço, idioma) vem do cadastro único de Pessoas."
+      title={tTeams(locale, 'title')}
+      subtitle={tTeams(locale, 'subtitle')}
       search={search}
       onSearchChange={setSearch}
-      searchPlaceholder="Buscar equipe ou contato…"
+      searchPlaceholder={tTeams(locale, 'searchPlaceholder')}
       activeFilter={activeFilter}
       onActiveFilterChange={(v) => {
         setActiveFilter(v)
@@ -295,21 +302,21 @@ export default function TeamsDashboard({
             setDraft(EMPTY)
           }}
         >
-          Nova equipe
+          {tTeams(locale, 'newTeam')}
         </BackofficeBtnPrimary>
       }
     >
       {creating ? (
         <div className="mb-5">
           <BackofficeFormCard
-            title="Nova equipe"
+            title={tTeams(locale, 'newTeam')}
             actions={
               <>
                 <BackofficeBtnPrimary
                   disabled={saving || !draft.name.trim()}
                   onClick={() => void saveCreate()}
                 >
-                  {saving ? 'Salvando…' : 'Cadastrar'}
+                  {saving ? tCommon(locale, 'saving') : tTeams(locale, 'register')}
                 </BackofficeBtnPrimary>
                 <BackofficeBtnSecondary
                   onClick={() => {
@@ -317,7 +324,7 @@ export default function TeamsDashboard({
                     setDraft(EMPTY)
                   }}
                 >
-                  Cancelar
+                  {tCommon(locale, 'cancel')}
                 </BackofficeBtnSecondary>
               </>
             }
@@ -328,7 +335,7 @@ export default function TeamsDashboard({
       ) : null}
 
       {visible.length === 0 ? (
-        <BackofficeEmptyState message="Nenhuma equipe cadastrada. Cadastre a primeira e vincule uma pessoa." />
+        <BackofficeEmptyState message={tTeams(locale, 'empty')} />
       ) : (
         <BackofficeCardGrid>
           {visible.map((team) => {
@@ -337,14 +344,14 @@ export default function TeamsDashboard({
               return (
                 <BackofficeFormCard
                   key={team.id}
-                  title={`Editar · ${team.name}`}
+                  title={tTeams(locale, 'editTeam', { name: team.name })}
                   actions={
                     <>
                       <BackofficeBtnPrimary
                         disabled={saving || !draft.name.trim()}
                         onClick={() => void saveEdit(team.id)}
                       >
-                        {saving ? 'Salvando…' : 'Salvar'}
+                        {saving ? tCommon(locale, 'saving') : tCommon(locale, 'save')}
                       </BackofficeBtnPrimary>
                       <BackofficeBtnSecondary
                         onClick={() => {
@@ -352,7 +359,7 @@ export default function TeamsDashboard({
                           setDraft(EMPTY)
                         }}
                       >
-                        Cancelar
+                        {tCommon(locale, 'cancel')}
                       </BackofficeBtnSecondary>
                       <label className="flex items-center gap-2 text-sm text-neutral-700">
                         <input
@@ -362,7 +369,7 @@ export default function TeamsDashboard({
                             setDraft((d) => ({ ...d, active: e.target.checked }))
                           }
                         />
-                        Ativa
+                        {tTeams(locale, 'activeTeam')}
                       </label>
                     </>
                   }
@@ -374,7 +381,7 @@ export default function TeamsDashboard({
 
             const contactLabel = team.contact
               ? getCustomerDisplayName(team.contact)
-              : 'Sem pessoa vinculada'
+              : tTeams(locale, 'noContact')
             const address = team.contact
               ? [team.contact.address_line, team.contact.city, team.contact.state]
                   .filter(Boolean)
@@ -406,7 +413,7 @@ export default function TeamsDashboard({
                       })
                     }}
                   >
-                    Editar
+                    {tCommon(locale, 'edit')}
                   </BackofficeBtnSecondary>
                 }
               >
@@ -421,24 +428,25 @@ export default function TeamsDashboard({
                   </h3>
                   <BackofficeStatusBadge active={team.active} />
                 </div>
-                <BackofficeMetaRow label="Pessoa" value={contactLabel} />
+                <BackofficeMetaRow label={tCommon(locale, 'person')} value={contactLabel} />
                 <BackofficeMetaRow
-                  label="Telefone"
+                  label={tCommon(locale, 'phone')}
                   value={team.contact?.phone || '—'}
                 />
                 <BackofficeMetaRow
-                  label="E-mail"
+                  label={tCommon(locale, 'email')}
                   value={team.contact?.email || '—'}
                 />
-                <BackofficeMetaRow label="Endereço" value={address || '—'} />
+                <BackofficeMetaRow label={tCommon(locale, 'address')} value={address || '—'} />
                 <BackofficeMetaRow
-                  label="Idioma"
+                  label={tCommon(locale, 'language')}
                   value={langLabel(
+                    locale,
                     team.contact?.preferred_language || team.preferred_language,
                   )}
                 />
-                <BackofficeMetaRow label="Notas" value={team.notes || '—'} />
-                <TeamMembersPanel teamId={team.id} />
+                <BackofficeMetaRow label={tCommon(locale, 'notes')} value={team.notes || '—'} />
+                <TeamMembersPanel teamId={team.id} locale={locale} />
               </BackofficeEntityCard>
             )
           })}

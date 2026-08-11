@@ -28,7 +28,7 @@ export async function GET(_request: Request, { params }: Params) {
   const { data: quote, error } = await db
     .from('quotes')
     .select(
-      'id, company_id, quote_number, quote_status, quote_total, reservation_amount, balance_due, currency_code, adult_count, children_under_3_count, children_4_to_12_count, physical_guest_count, billable_guest_count, proposal_response, proposal_sent_at, customer_id, package_id, event_id, active',
+      'id, company_id, quote_number, quote_status, quote_total, reservation_amount, balance_due, currency_code, language, adult_count, children_under_3_count, children_4_to_12_count, physical_guest_count, billable_guest_count, proposal_response, proposal_sent_at, customer_id, package_id, event_id, active',
     )
     .eq('proposal_token', token.trim())
     .eq('active', true)
@@ -108,6 +108,7 @@ export async function GET(_request: Request, { params }: Params) {
       customer_email: customer?.email ?? null,
       event_name: eventRes.data?.event_name ?? null,
       event_date: eventRes.data?.event_date ?? null,
+      language: quote.language ?? 'pt',
     },
   })
 }

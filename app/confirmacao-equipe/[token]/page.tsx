@@ -1,5 +1,7 @@
 import PublicTeamMemberConfirmClient from './PublicTeamMemberConfirmClient'
 import { GET as getPublicConfirm } from '@/app/api/public/confirmacao-equipe/[token]/route'
+import { headers } from 'next/headers'
+import { resolveBrowserLocale, tPublicOps } from '@/Lib/i18n/publicOps'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -23,15 +25,19 @@ export default async function PublicTeamMemberConfirmPage({
     confirmation?: Record<string, unknown>
   }
 
+  const lang = resolveBrowserLocale(
+    (await headers()).get('accept-language'),
+  )
+
   if (!payload.found || !payload.confirmation) {
     return (
       <main className="mx-auto flex min-h-screen max-w-lg items-center justify-center px-4">
         <div className="liquid-glass-card p-8 text-center">
           <h1 className="text-xl font-bold text-cdl-fg">
-            Confirmação não encontrada
+            {tPublicOps(lang, 'memberConfirmNotFound')}
           </h1>
           <p className="mt-2 text-sm text-cdl-muted">
-            O link pode estar incompleto, expirado ou revogado.
+            {tPublicOps(lang, 'memberConfirmNotFoundHint')}
           </p>
         </div>
       </main>
@@ -42,9 +48,11 @@ export default async function PublicTeamMemberConfirmPage({
     return (
       <main className="mx-auto flex min-h-screen max-w-lg items-center justify-center px-4">
         <div className="liquid-glass-card p-8 text-center">
-          <h1 className="text-xl font-bold text-cdl-fg">Link expirado</h1>
+          <h1 className="text-xl font-bold text-cdl-fg">
+            {tPublicOps(lang, 'linkExpired')}
+          </h1>
           <p className="mt-2 text-sm text-cdl-muted">
-            Solicite um novo convite à operação.
+            {tPublicOps(lang, 'linkExpiredHint')}
           </p>
         </div>
       </main>
@@ -58,6 +66,7 @@ export default async function PublicTeamMemberConfirmPage({
       initialStatus={payload.status || 'pending'}
       canRespond={Boolean(payload.can_respond)}
       confirmation={payload.confirmation as never}
+      language={lang}
     />
   )
 }

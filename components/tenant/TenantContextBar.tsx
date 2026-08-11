@@ -1,14 +1,17 @@
 'use client'
 
+import { tCommon } from '@/Lib/i18n/common'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import { useTenant } from './TenantProvider'
 
 export default function TenantContextBar() {
   const { loading, company, branches, branchId, setBranchId, role } = useTenant()
+  const locale = useAuthLocaleFromMe()
 
   if (loading) {
     return (
       <div className="liquid-glass-panel px-3 py-2 text-xs text-cdl-muted">
-        Carregando empresa…
+        {tCommon(locale, 'loadingCompany')}
       </div>
     )
   }
@@ -16,7 +19,7 @@ export default function TenantContextBar() {
   const companyLabel =
     company?.trade_name?.trim() ||
     company?.company_name?.trim() ||
-    'Empresa ativa'
+    tCommon(locale, 'activeCompany')
 
   return (
     <div className="liquid-glass-panel flex flex-wrap items-center gap-2 px-3 py-2 text-xs">
@@ -34,7 +37,7 @@ export default function TenantContextBar() {
           }
           className="liquid-glass-field min-h-8 !py-1 text-xs font-semibold"
         >
-          <option value="">Selecione a filial</option>
+          <option value="">{tCommon(locale, 'selectBranch')}</option>
           {branches.map((row) => (
             <option key={row.id} value={row.id}>
               {row.name}

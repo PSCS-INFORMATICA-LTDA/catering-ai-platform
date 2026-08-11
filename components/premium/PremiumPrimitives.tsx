@@ -1,6 +1,9 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { tCommon } from '@/Lib/i18n/common'
+import { tCommercialRules } from '@/Lib/i18n/commercialRules'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import { getPackageCascadeFriendlyLabel } from '@/Lib/packageDisplay'
 import {
   getPackageKey,
@@ -109,6 +112,7 @@ export function PackageCodeOption({
   hideTechnical?: boolean
   selectionTone?: 'default' | 'brand'
 }) {
+  const locale = useAuthLocaleFromMe()
   const code = getPackageKey(pkg) || '—'
   const withSides = code.endsWith('+')
   const friendlyLabel = getPackageCascadeFriendlyLabel(pkg)
@@ -135,13 +139,13 @@ export function PackageCodeOption({
           </span>
           {withSides ? (
             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">
-              + guarnições
+              {tCommon(locale, 'plusSides')}
             </span>
           ) : null}
         </div>
       ) : withSides ? (
         <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">
-          Com guarnições
+          {tCommon(locale, 'withSides')}
         </span>
       ) : null}
       <p
@@ -155,12 +159,11 @@ export function PackageCodeOption({
 
 function premiumGroupHasSides(title: string): boolean {
   const normalized = title.toLowerCase()
-  return normalized.includes('with side') || normalized.includes('com guarni')
-}
-
-function premiumGroupUsesEnglish(title: string): boolean {
-  const normalized = title.toLowerCase()
-  return normalized.includes('with') || normalized.includes('without')
+  return (
+    normalized.includes('with side') ||
+    normalized.includes('com guarni') ||
+    normalized.includes('con guarni')
+  )
 }
 
 export function PremiumGroupBlock({
@@ -178,22 +181,13 @@ export function PremiumGroupBlock({
   onClick: () => void
   children?: ReactNode
 }) {
+  const locale = useAuthLocaleFromMe()
   const withSides = premiumGroupHasSides(title)
-  const english = premiumGroupUsesEnglish(title)
-  const countLabel = english
-    ? count === 1
-      ? 'package'
-      : 'packages'
-    : count === 1
-      ? 'pacote'
-      : 'pacotes'
+  const countLabel =
+    count === 1 ? tCommon(locale, 'packageSingular') : tCommon(locale, 'packages')
   const badgeLabel = withSides
-    ? english
-      ? 'With sides'
-      : 'Com guarnições'
-    : english
-      ? 'Without sides'
-      : 'Sem guarnições'
+    ? tCommon(locale, 'withSides')
+    : tCommon(locale, 'withoutSides')
 
   return (
     <button
@@ -271,6 +265,7 @@ export function ExpandableDescription({
   text: string | null | undefined
   emptyLabel?: string
 }) {
+  const locale = useAuthLocaleFromMe()
   const content = text?.trim() || emptyLabel
   const isLong = content.length > 140
 
@@ -286,7 +281,9 @@ export function ExpandableDescription({
       </p>
       {isLong ? (
         <details className="mt-2 text-xs font-bold text-red-600">
-          <summary className="cursor-pointer select-none">Ver texto completo</summary>
+          <summary className="cursor-pointer select-none">
+            {tCommon(locale, 'seeFullText')}
+          </summary>
           <p className="mt-2 text-sm leading-relaxed text-neutral-700">{content}</p>
         </details>
       ) : null}
@@ -317,6 +314,7 @@ export function StatusBadge({
   active: boolean
   label?: string
 }) {
+  const locale = useAuthLocaleFromMe()
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
@@ -325,26 +323,28 @@ export function StatusBadge({
           : 'bg-neutral-100 text-neutral-600 ring-1 ring-neutral-200'
       }`}
     >
-      {label ?? (active ? 'Ativo' : 'Inativo')}
+      {label ?? (active ? tCommon(locale, 'active') : tCommon(locale, 'inactive'))}
     </span>
   )
 }
 
 export function EmptyImagePlaceholder({
-  label = 'Imagem não cadastrada',
+  label,
   className = '',
 }: {
   label?: string
   className?: string
 }) {
+  const locale = useAuthLocaleFromMe()
+  const resolved = label ?? tCommon(locale, 'noImageRegistered')
   return (
     <div
       className={`flex aspect-[4/3] w-full items-center justify-center rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 px-4 text-center ${className}`}
       role="img"
-      aria-label={label}
+      aria-label={resolved}
     >
       <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400 sm:text-xs">
-        {label}
+        {resolved}
       </span>
     </div>
   )
@@ -365,6 +365,7 @@ export function CategoryAccordion({
   onToggle: () => void
   children: ReactNode
 }) {
+  const locale = useAuthLocaleFromMe()
   return (
     <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
       <button
@@ -378,7 +379,10 @@ export function CategoryAccordion({
             <span className="text-lg font-bold text-neutral-900">{title}</span>
             {count != null ? (
               <span className="text-sm text-neutral-500">
-                {count} {count === 1 ? 'item' : 'itens'}
+                {count}{' '}
+                {count === 1
+                  ? tCommon(locale, 'itemSingular')
+                  : tCommon(locale, 'items')}
               </span>
             ) : null}
           </div>
@@ -406,10 +410,15 @@ export function RuleGroupAccordion({
   onToggle: () => void
   children: ReactNode
 }) {
+  const locale = useAuthLocaleFromMe()
+  const label =
+    count === 1
+      ? tCommercialRules(locale, 'ruleSingular')
+      : tCommercialRules(locale, 'rulesPlural')
   return (
     <CategoryAccordion
       title={category}
-      subtitle={`${count} ${count === 1 ? 'regra' : 'regras'}`}
+      subtitle={tCommercialRules(locale, 'rulesCount', { count, label })}
       count={count}
       open={open}
       onToggle={onToggle}

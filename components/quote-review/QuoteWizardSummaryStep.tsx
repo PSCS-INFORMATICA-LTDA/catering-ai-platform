@@ -143,12 +143,14 @@ export default function QuoteWizardSummaryStep({
         optionalWarnings={optionalWarnings}
         ready={quoteReady}
         onGoToStep={onGoToStep}
+        language={uiLanguage ?? state.language}
       />
 
       {saveErrorInfo ? (
         <SaveQuoteTechnicalError
           errorInfo={saveErrorInfo}
           isEditMode={isEditMode}
+          language={uiLanguage ?? state.language}
         />
       ) : null}
 

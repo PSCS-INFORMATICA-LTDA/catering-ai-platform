@@ -31,6 +31,9 @@ import {
   getPackageKey,
   getPackageLabel,
 } from '@/Lib/packageFieldAccess'
+import { tCommon } from '@/Lib/i18n/common'
+import { tPackages } from '@/Lib/i18n/packages'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 type GarnishGroup = 'without' | 'with'
 type MobileStep = 'groups' | 'codes' | 'detail'
@@ -56,6 +59,7 @@ export default function PackageCascadeExplorer({
   onDeactivate: (pkg: PackageListItem) => void
   uploadingId?: string | null
 }) {
+  const locale = useAuthLocaleFromMe()
   const { withoutGarnish, withGarnish } = useMemo(
     () => splitPackagesByGarnish(packages),
     [packages],
@@ -133,25 +137,36 @@ export default function PackageCascadeExplorer({
   return (
     <div className="space-y-6">
       <SectionHeader
-        title="Catálogo de pacotes"
-        subtitle="Navegue por grupo, código e detalhe operacional"
+        title={tPackages(locale, 'catalogTitle')}
+        subtitle={tPackages(locale, 'catalogSubtitle')}
       />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <PremiumMetricCard label="Total" value={metrics.total} accent="red" />
         <PremiumMetricCard
-          label="Sem guarnições"
+          label={tPackages(locale, 'metricTotal')}
+          value={metrics.total}
+          accent="red"
+        />
+        <PremiumMetricCard
+          label={tCommon(locale, 'withoutSides')}
           value={metrics.withoutGarnish}
           hint={getPackageGroupSummaryCodes(withoutGarnish)}
         />
         <PremiumMetricCard
-          label="Com guarnições"
+          label={tCommon(locale, 'withSides')}
           value={metrics.withGarnish}
           hint={getPackageGroupSummaryCodes(withGarnish)}
           accent="gold"
         />
-        <PremiumMetricCard label="Ativos" value={metrics.active} accent="green" />
-        <PremiumMetricCard label="Inativos" value={metrics.inactive} />
+        <PremiumMetricCard
+          label={tCommon(locale, 'actives')}
+          value={metrics.active}
+          accent="green"
+        />
+        <PremiumMetricCard
+          label={tCommon(locale, 'inactives')}
+          value={metrics.inactive}
+        />
       </div>
 
       <BackofficeCascadeLayout>
@@ -160,17 +175,20 @@ export default function PackageCascadeExplorer({
             showGroups ? 'block lg:col-span-3' : 'hidden lg:block lg:col-span-3'
           }
         >
-          <BackofficeCascadePanel title="Grupos" subtitle="Sem ou com guarnições">
+          <BackofficeCascadePanel
+            title={tCommon(locale, 'groups')}
+            subtitle={tPackages(locale, 'groupsSubtitle')}
+          >
             <div className="space-y-3">
               <PremiumGroupBlock
-                title="Sem guarnições"
+                title={tCommon(locale, 'withoutSides')}
                 count={withoutGarnish.length}
                 summary={getPackageGroupSummaryCodes(withoutGarnish)}
                 active={selectedGroup === 'without'}
                 onClick={() => selectGroup('without')}
               />
               <PremiumGroupBlock
-                title="Com guarnições"
+                title={tCommon(locale, 'withSides')}
                 count={withGarnish.length}
                 summary={getPackageGroupSummaryCodes(withGarnish)}
                 active={selectedGroup === 'with'}
@@ -187,9 +205,13 @@ export default function PackageCascadeExplorer({
         >
           <BackofficeCascadePanel
             title={
-              selectedGroup === 'with' ? 'Com guarnições' : 'Sem guarnições'
+              selectedGroup === 'with'
+                ? tCommon(locale, 'withSides')
+                : tCommon(locale, 'withoutSides')
             }
-            subtitle={`${groupPackages.length} códigos`}
+            subtitle={tPackages(locale, 'codesCount', {
+              count: groupPackages.length,
+            })}
             onBack={() => setMobileStep('groups')}
           >
             <div className="mb-4 flex flex-wrap gap-2">
@@ -204,7 +226,7 @@ export default function PackageCascadeExplorer({
                     badge={
                       getPackageHasGarnish(pkg) ? (
                         <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
-                          + guarnições
+                          {tCommon(locale, 'plusSides')}
                         </span>
                       ) : undefined
                     }
@@ -243,7 +265,7 @@ export default function PackageCascadeExplorer({
                 onClick={() => setMobileStep('codes')}
                 className="mb-3 text-xs font-bold uppercase tracking-wider text-red-600 lg:hidden"
               >
-                ← Voltar aos códigos
+                {tPackages(locale, 'backToCodes')}
               </button>
               <PackageDetailCard
                 pkg={selectedPackage}
@@ -266,13 +288,13 @@ export default function PackageCascadeExplorer({
             </div>
           ) : (
             <BackofficeCascadePanel
-              title="Detalhe"
-              subtitle="Selecione um pacote"
+              title={tCommon(locale, 'detail')}
+              subtitle={tPackages(locale, 'selectPackage')}
               className="!col-span-full"
               onBack={() => setMobileStep('codes')}
             >
               <p className="text-sm text-neutral-500">
-                Escolha um grupo e um código para ver o card premium.
+                {tPackages(locale, 'selectPackageHint')}
               </p>
             </BackofficeCascadePanel>
           )}

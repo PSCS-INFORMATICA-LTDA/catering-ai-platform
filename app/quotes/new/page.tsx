@@ -12,6 +12,9 @@ import QuoteWizard, {
   type Customer,
   type Package,
 } from './QuoteWizard'
+import { getAuthSession } from '@/Lib/auth/session'
+import { resolveAuthLocale } from '@/Lib/i18n/authUsers'
+import { tw } from '@/Lib/quoteTranslations'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -67,6 +70,8 @@ export default async function NewQuotePage({
 }) {
   const sp = await searchParams
   const fetchErrors: string[] = []
+  const session = await getAuthSession()
+  const locale = resolveAuthLocale(session?.appUser?.preferred_language)
 
   const [customersRes, packagesRes, catalogRes, commercialRules] =
     await Promise.all([
@@ -86,17 +91,23 @@ export default async function NewQuotePage({
   })
 
   if (customersRes.error) {
-    fetchErrors.push(`Clientes: ${customersRes.error.message}`)
+    fetchErrors.push(
+      `${tw(locale, 'fetchErrorCustomers')}: ${customersRes.error.message}`,
+    )
   }
   if (packagesRes.error) {
-    fetchErrors.push(`Pacotes: ${packagesRes.error.message}`)
+    fetchErrors.push(
+      `${tw(locale, 'fetchErrorPackages')}: ${packagesRes.error.message}`,
+    )
   }
   if (catalogRes.error) {
-    fetchErrors.push(`Catálogo de itens: ${catalogRes.error.message}`)
+    fetchErrors.push(
+      `${tw(locale, 'fetchErrorCatalog')}: ${catalogRes.error.message}`,
+    )
   }
   if (packageConfigurationRes.error) {
     fetchErrors.push(
-      `Configuração do pacote: ${packageConfigurationRes.error.message}`,
+      `${tw(locale, 'fetchErrorPackageConfig')}: ${packageConfigurationRes.error.message}`,
     )
   }
   const optionQueryDebug = packageConfigurationRes.optionQueryDebug
@@ -111,7 +122,7 @@ export default async function NewQuotePage({
     )
   }
   if (!packagesRes.error && packages.length === 0) {
-    fetchErrors.push('Pacotes: nenhum pacote ativo encontrado para a empresa.')
+    fetchErrors.push(tw(locale, 'fetchErrorEmptyPackages'))
   }
 
   const packageConfiguration = packageConfigurationRes.data ?? {

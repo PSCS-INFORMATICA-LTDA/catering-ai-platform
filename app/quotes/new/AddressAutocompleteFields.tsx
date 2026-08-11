@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { parseGooglePlace, type AddressValues } from './googlePlaces'
+import { tw } from '../../../Lib/quoteTranslations'
+import type { QuoteLanguage } from '../../../Lib/quoteWizardTypes'
 
 type FieldCompletion = 'filled' | 'empty'
 
@@ -29,14 +31,14 @@ function FieldCheck({ show }: { show: boolean }) {
   )
 }
 
-function useGooglePlacesReady() {
+function useGooglePlacesReady(language: QuoteLanguage = 'pt') {
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
   useEffect(() => {
     if (!apiKey) {
-      setError('Configure NEXT_PUBLIC_GOOGLE_MAPS_API_KEY para buscar no Google.')
+      setError(tw(language, 'googleApiKeyMissing'))
       return
     }
 
@@ -66,10 +68,9 @@ function useGooglePlacesReady() {
     script.async = true
     script.defer = true
     script.onload = handleReady
-    script.onerror = () =>
-      setError('Não foi possível carregar o Google Places.')
+    script.onerror = () => setError(tw(language, 'googleLoadError'))
     document.head.appendChild(script)
-  }, [apiKey])
+  }, [apiKey, language])
 
   return { ready, error, enabled: Boolean(apiKey) }
 }
@@ -79,20 +80,24 @@ export default function AddressAutocompleteFields({
   onChange,
   className = '',
   fieldCompletions,
+  language = 'pt',
 }: {
   values: AddressValues
   onChange: (patch: Partial<AddressValues>) => void
   className?: string
+  language?: QuoteLanguage | string | null
   fieldCompletions?: {
     city?: FieldCompletion
     state?: FieldCompletion
     zipCode?: FieldCompletion
   }
 }) {
+  const loc: QuoteLanguage =
+    language === 'en' || language === 'es' ? language : 'pt'
   const searchInputRef = useRef<HTMLInputElement>(null)
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
   const onChangeRef = useRef(onChange)
-  const { ready, error, enabled } = useGooglePlacesReady()
+  const { ready, error, enabled } = useGooglePlacesReady(loc)
 
   useEffect(() => {
     onChangeRef.current = onChange
@@ -126,15 +131,15 @@ export default function AddressAutocompleteFields({
     <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${className}`}>
       {enabled && (
         <div className="flex flex-col gap-2 sm:col-span-2">
-          <FieldLabel>Buscar endereço no Google</FieldLabel>
+          <FieldLabel>{tw(loc, 'googleSearchLabel')}</FieldLabel>
           <input
             ref={searchInputRef}
             type="text"
             disabled={!ready}
             placeholder={
               ready
-                ? 'Digite o endereço para autocompletar...'
-                : 'Carregando Google Places...'
+                ? tw(loc, 'googleSearchPlaceholder')
+                : tw(loc, 'googleLoading')
             }
             className={getInputClassName()}
           />
@@ -148,7 +153,7 @@ export default function AddressAutocompleteFields({
           type="text"
           value={values.address}
           onChange={(e) => onChange({ address: e.target.value })}
-          placeholder="Endereço"
+          placeholder={tw(loc, 'addressPlaceholder')}
           className={getInputClassName()}
         />
       </div>
@@ -160,7 +165,7 @@ export default function AddressAutocompleteFields({
             type="text"
             value={values.city}
             onChange={(e) => onChange({ city: e.target.value })}
-            placeholder="Cidade"
+            placeholder={tw(loc, 'cityPlaceholder')}
             className={getInputClassName(fieldCompletions?.city)}
           />
           <FieldCheck show={fieldCompletions?.city === 'filled'} />
@@ -174,7 +179,7 @@ export default function AddressAutocompleteFields({
             type="text"
             value={values.state}
             onChange={(e) => onChange({ state: e.target.value })}
-            placeholder="Estado"
+            placeholder={tw(loc, 'statePlaceholder')}
             className={getInputClassName(fieldCompletions?.state)}
           />
           <FieldCheck show={fieldCompletions?.state === 'filled'} />
@@ -188,7 +193,7 @@ export default function AddressAutocompleteFields({
             type="text"
             value={values.zipCode}
             onChange={(e) => onChange({ zipCode: e.target.value })}
-            placeholder="CEP / ZIP"
+            placeholder={tw(loc, 'zipPlaceholder')}
             className={getInputClassName(fieldCompletions?.zipCode)}
           />
           <FieldCheck show={fieldCompletions?.zipCode === 'filled'} />

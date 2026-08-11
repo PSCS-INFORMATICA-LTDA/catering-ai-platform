@@ -2,6 +2,9 @@
 
 import CatalogImageFrame from '@/components/CatalogImageFrame'
 import type { CatalogItemListItem } from '@/Lib/fetchCatalogItems'
+import { tCommon } from '@/Lib/i18n/common'
+import { tPackages } from '@/Lib/i18n/packages'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -19,6 +22,7 @@ export default function AdditionalItemImageUploadPanel({
 }: {
   items: CatalogItemListItem[]
 }) {
+  const locale = useAuthLocaleFromMe()
   const router = useRouter()
   const [selectedId, setSelectedId] = useState(items[0]?.id ?? '')
   const [previewUrl, setPreviewUrl] = useState<string | null>(
@@ -53,19 +57,19 @@ export default function AdditionalItemImageUploadPanel({
       }
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error ?? 'Falha ao enviar imagem.')
+        throw new Error(result.error ?? tCommon(locale, 'uploadFail'))
       }
 
       setPreviewUrl(
         result.item?.image_url?.trim() || result.image_url?.trim() || null,
       )
-      setSuccess('Imagem atualizada com sucesso.')
+      setSuccess(tCommon(locale, 'uploadSuccess'))
       router.refresh()
     } catch (uploadError) {
       setError(
         uploadError instanceof Error
           ? uploadError.message
-          : 'Falha ao enviar imagem.',
+          : tCommon(locale, 'uploadFail'),
       )
     } finally {
       setUploading(false)
@@ -74,14 +78,14 @@ export default function AdditionalItemImageUploadPanel({
 
   if (items.length === 0) {
     return (
-      <p className="text-sm text-cdl-muted">Nenhum item adicional ativo encontrado.</p>
+      <p className="text-sm text-cdl-muted">{tPackages(locale, 'noActiveItems')}</p>
     )
   }
 
   return (
     <div className="space-y-5">
       <label className="block">
-        <span className="cdl-eyebrow">Item adicional</span>
+        <span className="cdl-eyebrow">{tPackages(locale, 'additionalItem')}</span>
         <select
           value={selectedId}
           onChange={(e) => {
@@ -105,7 +109,7 @@ export default function AdditionalItemImageUploadPanel({
       <div className="overflow-hidden rounded-2xl border border-cdl-border bg-cdl-inset">
         <CatalogImageFrame
           src={previewUrl}
-          alt={selected ? getItemLabel(selected) : 'Item adicional'}
+          alt={selected ? getItemLabel(selected) : tPackages(locale, 'additionalItem')}
           variant="catalogItem"
           itemType={selected?.item_type}
           categoryPt={selected?.category_pt}
@@ -114,7 +118,7 @@ export default function AdditionalItemImageUploadPanel({
       </div>
 
       <label className="block">
-        <span className="cdl-eyebrow">Nova imagem</span>
+        <span className="cdl-eyebrow">{tCommon(locale, 'newImage')}</span>
         <input
           type="file"
           accept="image/jpeg,image/jpg,image/png,image/webp"
@@ -128,12 +132,11 @@ export default function AdditionalItemImageUploadPanel({
       </label>
 
       <p className="text-xs text-cdl-muted">
-        Bucket Supabase: <code>additional-item-images</code> · salva em{' '}
-        <code>catalog_items.image_url</code>
+        {tPackages(locale, 'additionalBucketHint')}
       </p>
 
       {uploading ? (
-        <p className="text-sm text-cdl-muted">Enviando imagem…</p>
+        <p className="text-sm text-cdl-muted">{tPackages(locale, 'uploadingImage')}</p>
       ) : null}
       {error ? <p className="text-sm text-cdl-action">{error}</p> : null}
       {success ? <p className="text-sm text-cdl-success">{success}</p> : null}

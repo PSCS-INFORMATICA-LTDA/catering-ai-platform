@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Catering AI Platform · CDL",
-  description: "Cotações e catering BBQ at Home",
+  description: "Quotes and BBQ at Home catering",
 };
 
 export default function RootLayout({

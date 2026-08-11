@@ -8,6 +8,9 @@ import {
 import { BackofficeFormSectionTitle } from '@/components/backoffice/BackofficeSectionPrimitives'
 import { ADDITIONAL_ITEM_CATEGORY_ORDER } from '@/Lib/additionalItemCatalogAdmin'
 import type { CatalogItemsInsertPayload } from '@/Lib/catalogItemsTableSchema'
+import { tCommon } from '@/Lib/i18n/common'
+import { tPackages } from '@/Lib/i18n/packages'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 export const EMPTY_CATALOG_ITEM_ROW: CatalogItemsInsertPayload = {
   item_key: '',
@@ -98,34 +101,37 @@ export function AdditionalItemAdminFormFields({
   draft: CatalogItemsInsertPayload
   setDraft: React.Dispatch<React.SetStateAction<CatalogItemsInsertPayload>>
 }) {
+  const locale = useAuthLocaleFromMe()
   return (
     <>
-      <BackofficeFormSectionTitle>Dados principais</BackofficeFormSectionTitle>
-      <BackofficeField label="Chave">
+      <BackofficeFormSectionTitle>
+        {tCommon(locale, 'mainData')}
+      </BackofficeFormSectionTitle>
+      <BackofficeField label={tCommon(locale, 'keyLabel')}>
         <BackofficeInput
           value={draft.item_key ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, item_key: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Nome">
+      <BackofficeField label={tCommon(locale, 'name')}>
         <BackofficeInput
           value={draft.item_name ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, item_name: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Nome PT">
+      <BackofficeField label={tPackages(locale, 'namePt')}>
         <BackofficeInput
           value={draft.label_pt ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, label_pt: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Nome EN">
+      <BackofficeField label={tPackages(locale, 'nameEn')}>
         <BackofficeInput
           value={draft.label_en ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, label_en: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Nome ES">
+      <BackofficeField label={tPackages(locale, 'nameEs')}>
         <BackofficeInput
           value={draft.label_es ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, label_es: v }))}
@@ -137,7 +143,7 @@ export function AdditionalItemAdminFormFields({
           onChange={(v) => setDraft((c) => ({ ...c, category_key: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Categoria PT">
+      <BackofficeField label={tPackages(locale, 'categoryPt')}>
         <BackofficeSelect
           value={String(draft.category_pt ?? '')}
           onChange={(v) => setDraft((c) => ({ ...c, category_pt: v }))}
@@ -150,19 +156,19 @@ export function AdditionalItemAdminFormFields({
           ))}
         </BackofficeSelect>
       </BackofficeField>
-      <BackofficeField label="Categoria EN">
+      <BackofficeField label={tPackages(locale, 'categoryEn')}>
         <BackofficeInput
           value={draft.category_en ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, category_en: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Categoria ES">
+      <BackofficeField label={tPackages(locale, 'categoryEs')}>
         <BackofficeInput
           value={draft.category_es ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, category_es: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Preço de venda">
+      <BackofficeField label={tPackages(locale, 'salePrice')}>
         <BackofficeInput
           type="number"
           value={draft.sale_price ?? draft.price ?? 0}
@@ -175,20 +181,20 @@ export function AdditionalItemAdminFormFields({
           }
         />
       </BackofficeField>
-      <BackofficeField label="Custo (futuro)">
+      <BackofficeField label={tPackages(locale, 'costFuture')}>
         <BackofficeInput
           type="number"
           value={draft.cost_price ?? 0}
           onChange={(v) => setDraft((c) => ({ ...c, cost_price: Number(v) }))}
         />
       </BackofficeField>
-      <BackofficeField label="Tipo de cobrança">
+      <BackofficeField label={tPackages(locale, 'chargeType')}>
         <BackofficeSelect
           value={String(draft.pricing_type ?? 'PER_UNIT')}
           onChange={(v) => setDraft((c) => ({ ...c, pricing_type: v }))}
         >
-          <option value="PER_UNIT">Por unidade</option>
-          <option value="PER_PERSON">Por pessoa</option>
+          <option value="PER_UNIT">{tPackages(locale, 'perUnitOption')}</option>
+          <option value="PER_PERSON">{tPackages(locale, 'perPersonOption')}</option>
         </BackofficeSelect>
       </BackofficeField>
       <BackofficeField label="charge_type">
@@ -197,19 +203,19 @@ export function AdditionalItemAdminFormFields({
           onChange={(v) => setDraft((c) => ({ ...c, charge_type: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Unidade">
+      <BackofficeField label={tCommon(locale, 'unit')}>
         <BackofficeInput
           value={draft.unit_label ?? 'UN'}
           onChange={(v) => setDraft((c) => ({ ...c, unit_label: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Moeda">
+      <BackofficeField label={tCommon(locale, 'currency')}>
         <BackofficeInput
           value={draft.currency_code ?? 'USD'}
           onChange={(v) => setDraft((c) => ({ ...c, currency_code: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Ordem">
+      <BackofficeField label={tCommon(locale, 'displayOrder')}>
         <BackofficeInput
           type="number"
           value={draft.display_order ?? 0}
@@ -218,106 +224,108 @@ export function AdditionalItemAdminFormFields({
           }
         />
       </BackofficeField>
-      <BackofficeFormSectionTitle>Uso no sistema</BackofficeFormSectionTitle>
-      <BackofficeField label="Tipo do item">
+      <BackofficeFormSectionTitle>
+        {tPackages(locale, 'systemUsage')}
+      </BackofficeFormSectionTitle>
+      <BackofficeField label={tPackages(locale, 'itemType')}>
         <BackofficeSelect
           value={String(draft.item_type ?? 'PRODUCT')}
           onChange={(v) => setDraft((c) => ({ ...c, item_type: v }))}
         >
-          <option value="PRODUCT">Produto</option>
-          <option value="PACKAGE_ITEM">Item de pacote</option>
-          <option value="SIDE">Guarnição</option>
-          <option value="EQUIPMENT">Equipamento</option>
-          <option value="SUPPLY">Insumo</option>
+          <option value="PRODUCT">{tPackages(locale, 'typeProduct')}</option>
+          <option value="PACKAGE_ITEM">{tPackages(locale, 'typePackageItem')}</option>
+          <option value="SIDE">{tPackages(locale, 'typeSide')}</option>
+          <option value="EQUIPMENT">{tPackages(locale, 'typeEquipment')}</option>
+          <option value="SUPPLY">{tPackages(locale, 'typeSupply')}</option>
         </BackofficeSelect>
       </BackofficeField>
-      <BackofficeField label="Visível para cliente">
+      <BackofficeField label={tCommon(locale, 'visibleToCustomer')}>
         <BackofficeSelect
           value={draft.customer_visible === false ? 'false' : 'true'}
           onChange={(v) =>
             setDraft((c) => ({ ...c, customer_visible: v === 'true' }))
           }
         >
-          <option value="true">Sim</option>
-          <option value="false">Não (interno)</option>
+          <option value="true">{tCommon(locale, 'yes')}</option>
+          <option value="false">{tPackages(locale, 'notInternal')}</option>
         </BackofficeSelect>
       </BackofficeField>
-      <BackofficeField label="Item operacional">
+      <BackofficeField label={tPackages(locale, 'operationalItem')}>
         <BackofficeSelect
           value={draft.operational_item === true ? 'true' : 'false'}
           onChange={(v) =>
             setDraft((c) => ({ ...c, operational_item: v === 'true' }))
           }
         >
-          <option value="false">Não</option>
-          <option value="true">Sim</option>
+          <option value="false">{tCommon(locale, 'no')}</option>
+          <option value="true">{tCommon(locale, 'yes')}</option>
         </BackofficeSelect>
       </BackofficeField>
-      <BackofficeField label="Pode ir em pacote (item fixo)">
+      <BackofficeField label={tPackages(locale, 'canBePackageItem')}>
         <BackofficeSelect
           value={draft.can_be_package_item === false ? 'false' : 'true'}
           onChange={(v) =>
             setDraft((c) => ({ ...c, can_be_package_item: v === 'true' }))
           }
         >
-          <option value="true">Sim</option>
-          <option value="false">Não</option>
+          <option value="true">{tCommon(locale, 'yes')}</option>
+          <option value="false">{tCommon(locale, 'no')}</option>
         </BackofficeSelect>
       </BackofficeField>
-      <BackofficeField label="Pode ser guarnição">
+      <BackofficeField label={tPackages(locale, 'canBeSide')}>
         <BackofficeSelect
           value={draft.can_be_side_item === true ? 'true' : 'false'}
           onChange={(v) =>
             setDraft((c) => ({ ...c, can_be_side_item: v === 'true' }))
           }
         >
-          <option value="true">Sim</option>
-          <option value="false">Não</option>
+          <option value="true">{tCommon(locale, 'yes')}</option>
+          <option value="false">{tCommon(locale, 'no')}</option>
         </BackofficeSelect>
       </BackofficeField>
-      <BackofficeField label="Pode ser adicional na cotação">
+      <BackofficeField label={tPackages(locale, 'canBeAdditional')}>
         <BackofficeSelect
           value={draft.can_be_additional === false ? 'false' : 'true'}
           onChange={(v) =>
             setDraft((c) => ({ ...c, can_be_additional: v === 'true' }))
           }
         >
-          <option value="true">Sim</option>
-          <option value="false">Não</option>
+          <option value="true">{tCommon(locale, 'yes')}</option>
+          <option value="false">{tCommon(locale, 'no')}</option>
         </BackofficeSelect>
       </BackofficeField>
-      <BackofficeField label="Pode ser escolha inclusa">
+      <BackofficeField label={tPackages(locale, 'canBeOption')}>
         <BackofficeSelect
           value={draft.can_be_option_choice === false ? 'false' : 'true'}
           onChange={(v) =>
             setDraft((c) => ({ ...c, can_be_option_choice: v === 'true' }))
           }
         >
-          <option value="true">Sim</option>
-          <option value="false">Não</option>
+          <option value="true">{tCommon(locale, 'yes')}</option>
+          <option value="false">{tCommon(locale, 'no')}</option>
         </BackofficeSelect>
       </BackofficeField>
-      <BackofficeField label="Controla estoque (futuro)">
+      <BackofficeField label={tPackages(locale, 'inventoryFuture')}>
         <BackofficeSelect
           value={draft.inventory_enabled === true ? 'true' : 'false'}
           onChange={(v) =>
             setDraft((c) => ({ ...c, inventory_enabled: v === 'true' }))
           }
         >
-          <option value="false">Não</option>
-          <option value="true">Sim</option>
+          <option value="false">{tCommon(locale, 'no')}</option>
+          <option value="true">{tCommon(locale, 'yes')}</option>
         </BackofficeSelect>
       </BackofficeField>
-      <BackofficeField label="Status">
+      <BackofficeField label={tCommon(locale, 'status')}>
         <BackofficeSelect
           value={draft.active === false ? 'false' : 'true'}
           onChange={(v) => setDraft((c) => ({ ...c, active: v === 'true' }))}
         >
-          <option value="true">Ativo</option>
-          <option value="false">Inativo</option>
+          <option value="true">{tCommon(locale, 'active')}</option>
+          <option value="false">{tCommon(locale, 'inactive')}</option>
         </BackofficeSelect>
       </BackofficeField>
-      <BackofficeField label="Imagem URL" className="sm:col-span-2">
+      <BackofficeField label={tPackages(locale, 'imageUrl')} className="sm:col-span-2">
         <BackofficeInput
           value={draft.image_url ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, image_url: v }))}

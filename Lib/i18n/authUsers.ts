@@ -52,6 +52,11 @@ const dict = {
     page: 'Página',
     allRoles: 'Todos os papéis',
     allStatuses: 'Todos os status',
+    displayNameRequired: 'Nome de exibição é obrigatório',
+    passwordsDoNotMatch: 'Senhas não conferem',
+    profileSaved: 'Perfil salvo',
+    inviteFailed: 'Falha ao convidar',
+    supportError: 'Erro suporte',
   },
   en: {
     loginTitle: 'Sign in',
@@ -104,6 +109,11 @@ const dict = {
     page: 'Page',
     allRoles: 'All roles',
     allStatuses: 'All statuses',
+    displayNameRequired: 'Display name is required',
+    passwordsDoNotMatch: 'Passwords do not match',
+    profileSaved: 'Profile saved',
+    inviteFailed: 'Failed to invite',
+    supportError: 'Support error',
   },
   es: {
     loginTitle: 'Iniciar sesión',
@@ -156,6 +166,11 @@ const dict = {
     page: 'Página',
     allRoles: 'Todos los roles',
     allStatuses: 'Todos los estados',
+    displayNameRequired: 'El nombre es obligatorio',
+    passwordsDoNotMatch: 'Las contraseñas no coinciden',
+    profileSaved: 'Perfil guardado',
+    inviteFailed: 'Error al invitar',
+    supportError: 'Error de soporte',
   },
 } as const
 

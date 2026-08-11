@@ -1,16 +1,20 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { tw } from '@/Lib/quoteTranslations'
+import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 export default function PackageHeroImage({
   src,
   alt,
-  fallbackLabel = 'Imagem do pacote',
+  fallbackLabel,
+  language = 'pt',
   expand = true,
   compact = false,
 }: {
   src?: string | null
   alt: string
+  language?: QuoteLanguage
   fallbackLabel?: string
   /** Expande além do padding do card pai (Etapa 3 / resumo). */
   expand?: boolean
@@ -19,6 +23,7 @@ export default function PackageHeroImage({
 }) {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const normalizedSrc = src?.trim() || null
+  const resolvedFallback = fallbackLabel ?? tw(language, 'packageImage')
 
   useEffect(() => {
     if (!lightboxOpen) return
@@ -60,7 +65,7 @@ export default function PackageHeroImage({
       <div className={frameClass}>
         <div className="flex min-h-[10rem] w-full items-center justify-center rounded-2xl bg-gradient-to-br from-neutral-100 to-neutral-50 px-4 py-10">
           <span className="text-center text-xs font-semibold uppercase tracking-wider text-neutral-500">
-            {fallbackLabel}
+            {resolvedFallback}
           </span>
         </div>
       </div>

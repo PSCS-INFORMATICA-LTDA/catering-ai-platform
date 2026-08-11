@@ -1,4 +1,7 @@
 import { formatCurrency } from '@/app/quotes/[id]/quoteDetailTypes'
+import { tw } from '@/Lib/quoteTranslations'
+import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 /**
  * Aviso antecipado quando pedido mínimo ou acréscimo de feriado alteram o total.
@@ -10,13 +13,17 @@ export default function QuoteCommercialAdjustmentNotice({
   minimumOrderAdjustment = 0,
   minimumOrderAmount = 0,
   quoteTotal,
+  language = 'pt',
 }: {
   baseSubtotal: number
   holidaySurchargeAmount?: number
   minimumOrderAdjustment?: number
   minimumOrderAmount?: number
   quoteTotal: number | null
+  language?: QuoteLanguage | string | null
 }) {
+  const loc: QuoteLanguage =
+    language === 'en' || language === 'es' ? language : 'pt'
   const surcharge = Number(holidaySurchargeAmount) || 0
   const minAdj = Number(minimumOrderAdjustment) || 0
   if (surcharge <= 0 && minAdj <= 0) return null
@@ -27,29 +34,29 @@ export default function QuoteCommercialAdjustmentNotice({
       role="status"
     >
       <p className="font-bold uppercase tracking-wider text-amber-900 dark:text-amber-100">
-        Ajuste comercial aplicado
+        {tw(loc, 'commercialAdjustment')}
       </p>
       <ul className="mt-2 space-y-1.5 leading-relaxed">
         <li>
-          Subtotal (pacote + adicionais + milhagem):{' '}
+          {tw(loc, 'subtotalLine')}:{' '}
           <strong>{formatCurrency(baseSubtotal)}</strong>
         </li>
         {surcharge > 0 ? (
           <li>
-            Adicional de feriado / data comemorativa (100%):{' '}
+            {tQuotesOrders(loc, 'docHolidaySurchargeLine')}:{' '}
             <strong>{formatCurrency(surcharge)}</strong>
           </li>
         ) : null}
         {minAdj > 0 ? (
           <li>
-            Pedido mínimo aplicado (mín.{' '}
-            {formatCurrency(minimumOrderAmount)}): o total foi elevado em{' '}
-            <strong>{formatCurrency(minAdj)}</strong> para cumprir a regra da
-            data do evento.
+            {tw(loc, 'minOrderRaised', {
+              min: formatCurrency(minimumOrderAmount),
+              amount: formatCurrency(minAdj),
+            })}
           </li>
         ) : null}
         <li>
-          Total da cotação:{' '}
+          {tw(loc, 'quoteTotal')}:{' '}
           <strong>{formatCurrency(quoteTotal ?? 0)}</strong>
         </li>
       </ul>

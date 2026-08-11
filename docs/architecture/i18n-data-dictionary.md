@@ -26,6 +26,12 @@ Fontes versionadas (não movidas para banco):
 |-------|-----|
 | `Lib/i18n/authUsers.ts` | login, usuários, perfil |
 | `Lib/i18n/chrome.ts` | shell: grupos do menu, itens, EMPRESA, tema |
+| `Lib/i18n/common.ts` | verbos/labels compartilhados |
+| `Lib/i18n/customers.ts` / `teams.ts` / `agenda.ts` | Pessoas, Equipes, Agenda |
+| `Lib/i18n/packages.ts` / `commercialRules.ts` | Pacotes, itens, regras |
+| `Lib/i18n/inventoryUi.ts` | Labels de estoque (sem campos JDE) |
+| `Lib/i18n/companySettings.ts` / `help.ts` / `share.ts` | Empresa, ajuda, WhatsApp |
+| `Lib/i18n/publicOps.ts` | Páginas públicas (token) |
 | `Lib/i18n/quotesOrders.ts` | OS, materiais, lista de cotações, proposta chrome |
 | `Lib/quoteTranslations.ts` | wizard (chrome da UI vs preview do documento) |
 | `Lib/i18n/dictionaryUi.ts` | tela do dicionário |
@@ -33,7 +39,7 @@ Fontes versionadas (não movidas para banco):
 | `app_users.preferred_language` | **idioma da UI** |
 | `quotes.language` | **idioma do documento** |
 
-Registry: `auth.*`, `chrome.*`, `quotesOrders.*`, `quotes.wizard.*`, `dictionary.*`.
+Registry: `auth.*`, `chrome.*`, `common.*`, módulos de tela, `quotesOrders.*`, `quotes.wizard.*`, `dictionary.*` (~1500 keys PT/EN/ES).
 
 Datas da UI usam `formatUiDate` / `toBcp47Locale` (pt-BR · en-US · es) — não `pt-BR` fixo.
 

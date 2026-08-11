@@ -1,4 +1,5 @@
 import type { AuthLocale } from './authUsers.ts'
+import { fillTemplate } from './makeModule.ts'
 
 export type { AuthLocale }
 
@@ -360,6 +361,119 @@ const dict = {
       'Sinal confirmado. A data pode ser fechada na agenda.',
     editQuoteAction: 'Editar cotação',
     printPdfAction: 'Imprimir / PDF',
+    nextAvailablePrefix: 'Próximo horário disponível:',
+    emailUnavailable: 'E-mail indisponível',
+    emailChooseRecipient: 'E-mail (escolha o destinatário no app)',
+    sendByEmail: 'Enviar por e-mail',
+    materialDispatchPrepareError: 'Falha ao preparar conferência de saída',
+    leaderWhatsApp: 'WhatsApp do líder',
+    teamScaleTitle: 'Equipe / Escala',
+    prepareWhatsAppConfirmations: 'Preparar confirmações WhatsApp',
+    updateWhatsAppPreview: 'Atualizar prévia WhatsApp',
+    teamClosedSelectScale:
+      'EQUIPE FECHADA — selecione a escala e prepare as confirmações',
+    awaitingConfirmations: 'AGUARDANDO CONFIRMAÇÕES',
+    teamConfirmed: 'EQUIPE CONFIRMADA',
+    noTeam: 'SEM EQUIPE',
+    teamIncomplete: 'EQUIPE INCOMPLETA',
+    teamIncompleteAssign: 'EQUIPE INCOMPLETA — designar: {role}',
+    memberDeclined: 'INTEGRANTE RECUSOU',
+    scaleChangedHint:
+      'Escala alterada — clique em “Preparar confirmações WhatsApp” para gerar a mensagem desta pessoa.',
+    samePersonTwoSlots: 'A mesma pessoa não pode ocupar dois slots.',
+    selectAtLeastOneMember: 'Selecione pelo menos um integrante na lista da escala.',
+    extraGrillSlotAdded:
+      'Slot extra de churrasqueiro adicionado — selecione a pessoa e prepare a prévia.',
+    addGrillMaster: '+ Adicionar churrasqueiro',
+    grillMasterN: 'Churrasqueiro {n}',
+    baseTeam: '(equipe base)',
+    onScale: 'na escala',
+    confirmationPreviewTitle:
+      'Prévia da confirmação — revise a mensagem antes de abrir o WhatsApp',
+    confirmationPreviewHint:
+      'Selecione o slot, escolha a pessoa na lista, prepare a prévia e use o botão verde do WhatsApp.',
+    preparePreviewFirst: 'Prepare a prévia antes de enviar.',
+    memberWhatsApp: 'WhatsApp do integrante',
+    confirmationEmailSubject: 'Confirmação de escala — {label}',
+    confirmationLink: 'Link de confirmação: {url}',
+    messagePlaceholderScale:
+      'Selecione a pessoa e prepare a prévia para gerar a mensagem com saudação.',
+    destinationClickWhatsApp:
+      'Destino: {phone} — clique no ícone verde do WhatsApp para abrir o painel de envio.',
+    enterPhoneToSend: 'Informe um telefone válido com DDI para liberar o envio.',
+    summaryConfirmedPendingDeclined:
+      '{confirmed} confirmados · {pending} aguardando · {declined} indisponíveis',
+    scaleChooseHint:
+      'Escala deste evento — escolha churrasqueiro e ajudantes na lista',
+    scaleMinHint:
+      'Mínimo 1 churrasqueiro; pode adicionar mais. Se alguém estiver indisponível, troque pela lista. WhatsApp usa a pessoa selecionada.',
+    prepareConfirmationsHint:
+      'Clique em “Preparar confirmações WhatsApp” para gerar a mensagem com saudação desta pessoa.',
+    loadScaleError: 'Falha ao carregar escala',
+    prepareScaleError: 'Falha ao preparar escala',
+    supplierGarnishTitle: 'Pedido de guarnição (fornecedor)',
+    supplierGarnishSubtitle:
+      'WhatsApp para o restaurante — packing da regra comercial da empresa (kits HC–HK), retirada e confirmação.',
+    supplierWhatsApp: 'WhatsApp fornecedor',
+    confirmedBySupplier: 'Confirmado pelo fornecedor',
+    awaitingConfirmation: 'Aguardando confirmação',
+    notSent: 'Não enviado',
+    sentAt: 'Enviado: {when}',
+    confirmedAt: 'Confirmado: {when}',
+    noSuppliers:
+      'Nenhum fornecedor cadastrado. Em Pessoas, marque a pessoa como Fornecedor e salve o telefone WhatsApp.',
+    pickupTimeLabel: 'Horário de retirada (flexível · padrão 2h antes)',
+    supplierWhatsAppPhone: 'WhatsApp do fornecedor',
+    confirmLinkHint:
+      'O link de confirmação é gerado ao enviar (WhatsApp/SMS) ou ao clicar em Gerar link.',
+    generateLink: 'Gerar link',
+    markSent: 'Marcar enviado',
+    confirmReceipt: 'Confirmar recebimento',
+    garnishEmailSubject: 'Pedido guarnição {order} — BBQ At Home',
+    migrationPending: 'Migration de confirmação do fornecedor pendente no DEV.',
+    loadStatusError: 'Falha ao carregar status',
+    loadSuppliersError: 'Falha ao carregar fornecedores',
+    updateOrderError: 'Falha ao atualizar pedido',
+    sentRegisteredHint: 'Enviado registrado. Link de confirmação na mensagem.',
+    receiptConfirmedHint: 'Recebimento confirmado no sistema.',
+    confirmLinkReady: 'Link de confirmação pronto.',
+    assignmentEmailSubject: 'Designação {code} — BBQ At Home',
+    grillPhotoReceived: 'Recebida',
+    grillPhotoPending: 'Pendente',
+    grillPhotoNotApplicable: 'Não aplica',
+    grillPhotoConfirmed: 'Confirmada',
+    grillPhotoYes: 'Sim',
+    docReservationPaymentText:
+      'Para reservar a data, é necessário pagamento antecipado de 30%. O saldo restante deve ser pago até o término do evento.',
+    docImportantRulesTitle: 'Regras importantes',
+    ruleMinWeekday: 'Segunda a quinta-feira: pedido mínimo de ${amount}.',
+    ruleMinWeekend: 'Sexta a domingo: pedido mínimo de ${amount}.',
+    ruleMileageBase: 'Base de cálculo: {base}.',
+    ruleMileageFree: '{limit} {unit} gratuitos.',
+    ruleMileageRate: '${rate}/{unit} acima do limite gratuito.',
+    ruleReservationPct: '{pct}% antecipado para reservar a data.',
+    ruleBalancePct: '{pct}% restante até o término do evento.',
+    ruleFoodStorage:
+      'Não é permitido armazenar comida para consumir após o serviço.',
+    ruleFoodFine: 'Multa por descumprimento: ${amount}.',
+    ruleLatePayment: 'Multa por atraso no pagamento: ${amount} por dia.',
+    ruleDecJanMin: 'Dezembro e janeiro (fora de feriado): pedido mínimo de ${amount}.',
+    ruleHolidaySurcharge:
+      'Acréscimo de {pct}% e pedido mínimo de ${min} em: 24, 25 e 31 de dezembro, 1º de janeiro, e demais feriados federais dos EUA (MLK, Presidents’ Day, Memorial Day, Juneteenth, Independence Day / 4 de julho, Labor Day, Columbus Day, Veterans Day, Thanksgiving e Christmas).',
+    ruleNoRefundDates:
+      'Em 24, 25 e 31 de dezembro e 1º de janeiro não há reembolso nem reagendamento.',
+    cancelPolicy1:
+      'Cancelamentos e reagendamentos seguem as condições acordadas no momento da reserva.',
+    cancelPolicy2:
+      'Em 24, 25 e 31 de dezembro e 1º de janeiro não há reembolso nem reagendamento.',
+    cancelPolicy3:
+      'Eventos em feriados federais dos EUA e datas comemorativas (24, 25 e 31 de dezembro e 1º de janeiro) têm acréscimo de {pct}% e pedido mínimo de ${min}.',
+    minOrderAppliedWithMin: '{label} (mín. {min})',
+    quoteLoadError: 'Erro ao carregar cotação',
+    conferenceLink: 'Link de conferência: {url}',
+    loadMaterialsError: 'Falha ao carregar materiais',
+    materialAddError: 'Falha ao adicionar',
+    materialUpdateError: 'Falha ao atualizar',
   },
   en: {
     quotesTitle: 'Quotes',
@@ -711,6 +825,117 @@ const dict = {
       'Deposit confirmed. The date can be locked on the calendar.',
     editQuoteAction: 'Edit quote',
     printPdfAction: 'Print / PDF',
+    nextAvailablePrefix: 'Next available:',
+    emailUnavailable: 'Email unavailable',
+    emailChooseRecipient: 'Email (choose the recipient in the app)',
+    sendByEmail: 'Send by email',
+    materialDispatchPrepareError: 'Failed to prepare dispatch check',
+    leaderWhatsApp: "Leader's WhatsApp",
+    teamScaleTitle: 'Team / Roster',
+    prepareWhatsAppConfirmations: 'Prepare WhatsApp confirmations',
+    updateWhatsAppPreview: 'Update WhatsApp preview',
+    teamClosedSelectScale:
+      'TEAM CLOSED — select the roster and prepare confirmations',
+    awaitingConfirmations: 'AWAITING CONFIRMATIONS',
+    teamConfirmed: 'TEAM CONFIRMED',
+    noTeam: 'NO TEAM',
+    teamIncomplete: 'TEAM INCOMPLETE',
+    teamIncompleteAssign: 'TEAM INCOMPLETE — assign: {role}',
+    memberDeclined: 'MEMBER DECLINED',
+    scaleChangedHint:
+      'Roster changed — click “Prepare WhatsApp confirmations” to generate this person’s message.',
+    samePersonTwoSlots: 'The same person cannot occupy two slots.',
+    selectAtLeastOneMember: 'Select at least one person on the roster.',
+    extraGrillSlotAdded:
+      'Extra grill-master slot added — select the person and prepare the preview.',
+    addGrillMaster: '+ Add grill master',
+    grillMasterN: 'Grill master {n}',
+    baseTeam: '(base team)',
+    onScale: 'on roster',
+    confirmationPreviewTitle:
+      'Confirmation preview — review the message before opening WhatsApp',
+    confirmationPreviewHint:
+      'Select the slot, choose the person, prepare the preview and use the green WhatsApp button.',
+    preparePreviewFirst: 'Prepare the preview before sending.',
+    memberWhatsApp: "Member's WhatsApp",
+    confirmationEmailSubject: 'Roster confirmation — {label}',
+    confirmationLink: 'Confirmation link: {url}',
+    messagePlaceholderScale:
+      'Select the person and prepare the preview to generate the greeting message.',
+    destinationClickWhatsApp:
+      'Destination: {phone} — tap the green WhatsApp icon to open the send panel.',
+    enterPhoneToSend: 'Enter a valid phone number with country code to enable send.',
+    summaryConfirmedPendingDeclined:
+      '{confirmed} confirmed · {pending} pending · {declined} unavailable',
+    scaleChooseHint: 'Event roster — choose grill master and assistants from the list',
+    scaleMinHint:
+      'Minimum 1 grill master; you can add more. If someone is unavailable, swap from the list. WhatsApp uses the selected person.',
+    prepareConfirmationsHint:
+      'Click “Prepare WhatsApp confirmations” to generate this person’s greeting message.',
+    loadScaleError: 'Failed to load roster',
+    prepareScaleError: 'Failed to prepare roster',
+    supplierGarnishTitle: 'Sides order (supplier)',
+    supplierGarnishSubtitle:
+      'WhatsApp to the restaurant — packing from the company commercial rule (HC–HK kits), pickup and confirmation.',
+    supplierWhatsApp: 'Supplier WhatsApp',
+    confirmedBySupplier: 'Confirmed by supplier',
+    awaitingConfirmation: 'Awaiting confirmation',
+    notSent: 'Not sent',
+    sentAt: 'Sent: {when}',
+    confirmedAt: 'Confirmed: {when}',
+    noSuppliers:
+      'No supplier registered. In People, mark the person as Supplier and save the WhatsApp phone.',
+    pickupTimeLabel: 'Pickup time (flexible · default 2h before)',
+    supplierWhatsAppPhone: "Supplier's WhatsApp",
+    confirmLinkHint:
+      'The confirmation link is generated when sending (WhatsApp/SMS) or when clicking Generate link.',
+    generateLink: 'Generate link',
+    markSent: 'Mark as sent',
+    confirmReceipt: 'Confirm receipt',
+    garnishEmailSubject: 'Sides order {order} — BBQ At Home',
+    migrationPending: 'Supplier confirmation migration pending in DEV.',
+    loadStatusError: 'Failed to load status',
+    loadSuppliersError: 'Failed to load suppliers',
+    updateOrderError: 'Failed to update order',
+    sentRegisteredHint: 'Send registered. Confirmation link is in the message.',
+    receiptConfirmedHint: 'Receipt confirmed in the system.',
+    confirmLinkReady: 'Confirmation link ready.',
+    assignmentEmailSubject: 'Assignment {code} — BBQ At Home',
+    grillPhotoReceived: 'Received',
+    grillPhotoPending: 'Pending',
+    grillPhotoNotApplicable: 'N/A',
+    grillPhotoConfirmed: 'Confirmed',
+    grillPhotoYes: 'Yes',
+    docReservationPaymentText:
+      'To reserve the date, a 30% advance payment is required. The remaining balance must be paid by the end of the event.',
+    docImportantRulesTitle: 'Important rules',
+    ruleMinWeekday: 'Monday to Thursday: minimum order of ${amount}.',
+    ruleMinWeekend: 'Friday to Sunday: minimum order of ${amount}.',
+    ruleMileageBase: 'Calculation base: {base}.',
+    ruleMileageFree: '{limit} {unit} free.',
+    ruleMileageRate: '${rate}/{unit} above the free limit.',
+    ruleReservationPct: '{pct}% in advance to reserve the date.',
+    ruleBalancePct: '{pct}% remaining by the end of the event.',
+    ruleFoodStorage: 'Food may not be stored to consume after service.',
+    ruleFoodFine: 'Fine for non-compliance: ${amount}.',
+    ruleLatePayment: 'Late payment fee: ${amount} per day.',
+    ruleDecJanMin: 'December and January (non-holiday): minimum order of ${amount}.',
+    ruleHolidaySurcharge:
+      '{pct}% surcharge and ${min} minimum on: Dec 24, 25 and 31, Jan 1, and other US federal holidays (MLK, Presidents’ Day, Memorial Day, Juneteenth, Independence Day / July 4, Labor Day, Columbus Day, Veterans Day, Thanksgiving and Christmas).',
+    ruleNoRefundDates:
+      'On Dec 24, 25 and 31 and Jan 1 there is no refund or reschedule.',
+    cancelPolicy1:
+      'Cancellations and reschedules follow the conditions agreed at the time of the deposit.',
+    cancelPolicy2:
+      'On Dec 24, 25 and 31 and Jan 1 there is no refund or reschedule.',
+    cancelPolicy3:
+      'Events on US federal holidays and commemorative dates (Dec 24, 25 and 31 and Jan 1) have a {pct}% surcharge and a ${min} minimum order.',
+    minOrderAppliedWithMin: '{label} (min. {min})',
+    quoteLoadError: 'Error loading quote',
+    conferenceLink: 'Check link: {url}',
+    loadMaterialsError: 'Failed to load materials',
+    materialAddError: 'Failed to add',
+    materialUpdateError: 'Failed to update',
   },
   es: {
     quotesTitle: 'Presupuestos',
@@ -1062,6 +1287,120 @@ const dict = {
       'Señal confirmada. La fecha puede cerrarse en la agenda.',
     editQuoteAction: 'Editar presupuesto',
     printPdfAction: 'Imprimir / PDF',
+    nextAvailablePrefix: 'Próximo horario:',
+    emailUnavailable: 'Correo no disponible',
+    emailChooseRecipient: 'Correo (elija el destinatario en la app)',
+    sendByEmail: 'Enviar por correo',
+    materialDispatchPrepareError: 'Error al preparar la conferencia de salida',
+    leaderWhatsApp: 'WhatsApp del líder',
+    teamScaleTitle: 'Equipo / Escala',
+    prepareWhatsAppConfirmations: 'Preparar confirmaciones WhatsApp',
+    updateWhatsAppPreview: 'Actualizar previa WhatsApp',
+    teamClosedSelectScale:
+      'EQUIPO CERRADO — seleccione la escala y prepare las confirmaciones',
+    awaitingConfirmations: 'ESPERANDO CONFIRMACIONES',
+    teamConfirmed: 'EQUIPO CONFIRMADO',
+    noTeam: 'SIN EQUIPO',
+    teamIncomplete: 'EQUIPO INCOMPLETO',
+    teamIncompleteAssign: 'EQUIPO INCOMPLETO — designar: {role}',
+    memberDeclined: 'INTEGRANTE RECHAZÓ',
+    scaleChangedHint:
+      'Escala alterada — haga clic en “Preparar confirmaciones WhatsApp” para generar el mensaje de esta persona.',
+    samePersonTwoSlots: 'La misma persona no puede ocupar dos slots.',
+    selectAtLeastOneMember: 'Seleccione al menos un integrante en la lista de la escala.',
+    extraGrillSlotAdded:
+      'Slot extra de parrillero agregado — seleccione la persona y prepare la previa.',
+    addGrillMaster: '+ Agregar parrillero',
+    grillMasterN: 'Parrillero {n}',
+    baseTeam: '(equipo base)',
+    onScale: 'en la escala',
+    confirmationPreviewTitle:
+      'Previa de la confirmación — revise el mensaje antes de abrir WhatsApp',
+    confirmationPreviewHint:
+      'Seleccione el slot, elija la persona, prepare la previa y use el botón verde de WhatsApp.',
+    preparePreviewFirst: 'Prepare la previa antes de enviar.',
+    memberWhatsApp: 'WhatsApp del integrante',
+    confirmationEmailSubject: 'Confirmación de escala — {label}',
+    confirmationLink: 'Enlace de confirmación: {url}',
+    messagePlaceholderScale:
+      'Seleccione la persona y prepare la previa para generar el mensaje con saludo.',
+    destinationClickWhatsApp:
+      'Destino: {phone} — toque el ícono verde de WhatsApp para abrir el panel de envío.',
+    enterPhoneToSend:
+      'Indique un teléfono válido con código de país para habilitar el envío.',
+    summaryConfirmedPendingDeclined:
+      '{confirmed} confirmados · {pending} pendientes · {declined} no disponibles',
+    scaleChooseHint:
+      'Escala de este evento — elija parrillero y ayudantes en la lista',
+    scaleMinHint:
+      'Mínimo 1 parrillero; puede agregar más. Si alguien no está disponible, cámbielo en la lista. WhatsApp usa la persona seleccionada.',
+    prepareConfirmationsHint:
+      'Haga clic en “Preparar confirmaciones WhatsApp” para generar el mensaje con saludo de esta persona.',
+    loadScaleError: 'Error al cargar la escala',
+    prepareScaleError: 'Error al preparar la escala',
+    supplierGarnishTitle: 'Pedido de guarnición (proveedor)',
+    supplierGarnishSubtitle:
+      'WhatsApp al restaurante — packing de la regla comercial de la empresa (kits HC–HK), retiro y confirmación.',
+    supplierWhatsApp: 'WhatsApp proveedor',
+    confirmedBySupplier: 'Confirmado por el proveedor',
+    awaitingConfirmation: 'Esperando confirmación',
+    notSent: 'No enviado',
+    sentAt: 'Enviado: {when}',
+    confirmedAt: 'Confirmado: {when}',
+    noSuppliers:
+      'Ningún proveedor registrado. En Personas, marque a la persona como Proveedor y guarde el teléfono WhatsApp.',
+    pickupTimeLabel: 'Horario de retiro (flexible · estándar 2h antes)',
+    supplierWhatsAppPhone: 'WhatsApp del proveedor',
+    confirmLinkHint:
+      'El enlace de confirmación se genera al enviar (WhatsApp/SMS) o al hacer clic en Generar enlace.',
+    generateLink: 'Generar enlace',
+    markSent: 'Marcar enviado',
+    confirmReceipt: 'Confirmar recepción',
+    garnishEmailSubject: 'Pedido guarnición {order} — BBQ At Home',
+    migrationPending: 'Migración de confirmación del proveedor pendiente en DEV.',
+    loadStatusError: 'Error al cargar el estado',
+    loadSuppliersError: 'Error al cargar proveedores',
+    updateOrderError: 'Error al actualizar el pedido',
+    sentRegisteredHint: 'Envío registrado. El enlace de confirmación está en el mensaje.',
+    receiptConfirmedHint: 'Recepción confirmada en el sistema.',
+    confirmLinkReady: 'Enlace de confirmación listo.',
+    assignmentEmailSubject: 'Designación {code} — BBQ At Home',
+    grillPhotoReceived: 'Recibida',
+    grillPhotoPending: 'Pendiente',
+    grillPhotoNotApplicable: 'No aplica',
+    grillPhotoConfirmed: 'Confirmada',
+    grillPhotoYes: 'Sí',
+    docReservationPaymentText:
+      'Para reservar la fecha, se requiere un pago anticipado del 30%. El saldo restante debe pagarse hasta el final del evento.',
+    docImportantRulesTitle: 'Reglas importantes',
+    ruleMinWeekday: 'Lunes a jueves: pedido mínimo de ${amount}.',
+    ruleMinWeekend: 'Viernes a domingo: pedido mínimo de ${amount}.',
+    ruleMileageBase: 'Base de cálculo: {base}.',
+    ruleMileageFree: '{limit} {unit} gratuitos.',
+    ruleMileageRate: '${rate}/{unit} por encima del límite gratuito.',
+    ruleReservationPct: '{pct}% anticipado para reservar la fecha.',
+    ruleBalancePct: '{pct}% restante hasta el final del evento.',
+    ruleFoodStorage:
+      'No está permitido almacenar comida para consumir después del servicio.',
+    ruleFoodFine: 'Multa por incumplimiento: ${amount}.',
+    ruleLatePayment: 'Multa por atraso en el pago: ${amount} por día.',
+    ruleDecJanMin: 'Diciembre y enero (fuera de feriado): pedido mínimo de ${amount}.',
+    ruleHolidaySurcharge:
+      'Recargo del {pct}% y pedido mínimo de ${min} en: 24, 25 y 31 de diciembre, 1 de enero, y demás feriados federales de EE. UU. (MLK, Presidents’ Day, Memorial Day, Juneteenth, Independence Day / 4 de julio, Labor Day, Columbus Day, Veterans Day, Thanksgiving y Christmas).',
+    ruleNoRefundDates:
+      'El 24, 25 y 31 de diciembre y el 1 de enero no hay reembolso ni reprogramación.',
+    cancelPolicy1:
+      'Las cancelaciones y reprogramaciones siguen las condiciones acordadas en el momento de la reserva.',
+    cancelPolicy2:
+      'El 24, 25 y 31 de diciembre y el 1 de enero no hay reembolso ni reprogramación.',
+    cancelPolicy3:
+      'Los eventos en feriados federales de EE. UU. y fechas conmemorativas (24, 25 y 31 de diciembre y 1 de enero) tienen un recargo del {pct}% y un pedido mínimo de ${min}.',
+    minOrderAppliedWithMin: '{label} (mín. {min})',
+    quoteLoadError: 'Error al cargar el presupuesto',
+    conferenceLink: 'Enlace de conferencia: {url}',
+    loadMaterialsError: 'Error al cargar materiales',
+    materialAddError: 'Error al agregar',
+    materialUpdateError: 'Error al actualizar',
   },
 } as const
 
@@ -1070,11 +1409,13 @@ export type QuotesOrdersMessageKey = keyof (typeof dict)['pt']
 export function tQuotesOrders(
   locale: AuthLocale | string | null | undefined,
   key: QuotesOrdersMessageKey,
+  vars?: Record<string, string | number>,
 ): string {
   const loc: AuthLocale =
     locale === 'en' || locale === 'es' || locale === 'pt' ? locale : 'pt'
   const value = dict[loc][key] || dict.pt[key]
-  return value || ''
+  if (!value) return ''
+  return vars ? fillTemplate(value, vars) : value
 }
 
 export function listQuotesOrdersI18nEntries(): Array<{

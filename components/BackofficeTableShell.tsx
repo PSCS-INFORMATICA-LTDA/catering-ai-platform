@@ -2,6 +2,8 @@
 
 import type { ReactNode } from 'react'
 import BuildVersionBadge from '@/components/BuildVersionBadge'
+import { tCommon } from '@/Lib/i18n/common'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 type ActiveFilter = 'active' | 'all'
 
@@ -11,7 +13,7 @@ export default function BackofficeTableShell({
   actions,
   search,
   onSearchChange,
-  searchPlaceholder = 'Buscar…',
+  searchPlaceholder,
   activeFilter,
   onActiveFilterChange,
   showActiveFilter = true,
@@ -34,6 +36,8 @@ export default function BackofficeTableShell({
   error?: string | null
   children: ReactNode
 }) {
+  const locale = useAuthLocaleFromMe()
+  const placeholder = searchPlaceholder || tCommon(locale, 'searchPlaceholder')
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <BuildVersionBadge className="hidden sm:block" />
@@ -49,18 +53,18 @@ export default function BackofficeTableShell({
         <div className="mb-2 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
             <label className="flex flex-1 flex-col gap-2">
-              <span className="cdl-eyebrow">Buscar</span>
+              <span className="cdl-eyebrow">{tCommon(locale, 'search')}</span>
               <input
                 type="search"
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder={searchPlaceholder}
+                placeholder={placeholder}
                 className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-900 outline-none transition focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100"
               />
             </label>
             {showActiveFilter && onActiveFilterChange ? (
               <label className="flex flex-col gap-2 sm:w-48">
-                <span className="cdl-eyebrow">Status</span>
+                <span className="cdl-eyebrow">{tCommon(locale, 'status')}</span>
                 <select
                   value={activeFilter}
                   onChange={(e) =>
@@ -68,8 +72,8 @@ export default function BackofficeTableShell({
                   }
                   className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-900 outline-none transition focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100"
                 >
-                  <option value="active">Ativos</option>
-                  <option value="all">Todos</option>
+                  <option value="active">{tCommon(locale, 'actives')}</option>
+                  <option value="all">{tCommon(locale, 'all')}</option>
                 </select>
               </label>
             ) : null}
@@ -79,7 +83,9 @@ export default function BackofficeTableShell({
               disabled={loading}
               className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-bold text-neutral-800 shadow-sm transition hover:border-neutral-300 disabled:opacity-50"
             >
-              {loading ? 'Atualizando…' : 'Atualizar'}
+              {loading
+                ? tCommon(locale, 'refreshing')
+                : tCommon(locale, 'refresh')}
             </button>
           </div>
           {error ? <p className="mt-3 text-sm text-cdl-action">{error}</p> : null}

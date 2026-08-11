@@ -3,6 +3,8 @@ import QuoteDetailView from './QuoteDetailView'
 import type { QuoteDetail } from './quoteDetailTypes'
 import { getAuthSession } from '@/Lib/auth/session'
 import { hasPermission } from '@/Lib/auth/permissions'
+import { resolveAuthLocale } from '@/Lib/i18n/authUsers'
+import { tw } from '@/Lib/quoteTranslations'
 
 export default async function QuoteDetailPage({
   params,
@@ -17,10 +19,11 @@ export default async function QuoteDetailPage({
   ])
 
   if (error) {
+    const locale = resolveAuthLocale(session?.appUser?.preferred_language)
     return (
       <main className="min-h-screen bg-cdl-bg p-6 text-cdl-fg sm:p-10">
         <h1 className="text-2xl font-bold text-cdl-title">
-          Erro ao carregar cotação
+          {tw(locale, 'loadQuoteError')}
         </h1>
         <pre className="mt-4 rounded-2xl border border-cdl-border bg-cdl-surface p-4 text-sm text-red-400">
           {error.message}

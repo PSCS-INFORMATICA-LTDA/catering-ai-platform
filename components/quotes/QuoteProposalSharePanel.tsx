@@ -20,6 +20,7 @@ import {
 } from '@/Lib/whatsapp'
 import { glassAction, glassBtn } from '@/Lib/liquidGlass'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import { tCommon } from '@/Lib/i18n/common'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 type ProposalState = {
@@ -469,7 +470,7 @@ export default function QuoteProposalSharePanel({
             message={message}
             className={`${glassAction('sky', true)} ${SHARE_ICON}`}
             title={phoneOk ? `SMS · ${phoneLabel}` : 'SMS'}
-            aria-label="Enviar por SMS"
+            aria-label={tQuotesOrders(uiLocale, 'sendBySms')}
             onOpen={() => {
               void ensureReady()
             }}
@@ -482,8 +483,8 @@ export default function QuoteProposalSharePanel({
             type="button"
             disabled
             className={`${glassAction('sky', true)} ${SHARE_ICON} opacity-50`}
-            title="Cadastre o telefone do cliente"
-            aria-label="SMS indisponível"
+            title={tCommon(uiLocale, 'registerCustomerPhone')}
+            aria-label={tCommon(uiLocale, 'smsUnavailable')}
           >
             <SmsIcon className="h-5 w-5" />
           </button>
@@ -496,9 +497,9 @@ export default function QuoteProposalSharePanel({
             title={
               customerEmail
                 ? `E-mail · ${customerEmail}`
-                : 'E-mail (escolha o destinatário no app)'
+                : tCommon(uiLocale, 'emailChooseRecipient')
             }
-            aria-label="Enviar por e-mail"
+            aria-label={tCommon(uiLocale, 'sendByEmail')}
             onClick={() => {
               void ensureReady()
             }}
@@ -510,8 +511,8 @@ export default function QuoteProposalSharePanel({
             type="button"
             disabled
             className={`${glassAction('sky', true)} ${SHARE_ICON} opacity-50`}
-            title="E-mail indisponível"
-            aria-label="E-mail indisponível"
+            title={tCommon(uiLocale, 'emailUnavailable')}
+            aria-label={tCommon(uiLocale, 'emailUnavailable')}
           >
             <MailIcon className="h-5 w-5" />
           </button>

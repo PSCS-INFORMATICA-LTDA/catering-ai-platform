@@ -11,6 +11,9 @@ import {
   type ScaleMember,
 } from '@/Lib/agenda/teamScale'
 import { getCustomerDisplayName } from '@/Lib/getCustomerDisplayName'
+import type { AuthLocale } from '@/Lib/i18n/authUsers'
+import { tCommon } from '@/Lib/i18n/common'
+import { tTeams } from '@/Lib/i18n/teams'
 import { glassBtn, glassField } from '@/Lib/liquidGlass'
 import type { CustomerSearchRecord } from '@/Lib/searchCustomers'
 
@@ -40,7 +43,13 @@ function personFromJoin(raw: MemberRow['customers']) {
   return Array.isArray(raw) ? raw[0] ?? null : raw
 }
 
-export default function TeamMembersPanel({ teamId }: { teamId: string }) {
+export default function TeamMembersPanel({
+  teamId,
+  locale,
+}: {
+  teamId: string
+  locale: AuthLocale
+}) {
   const [members, setMembers] = useState<MemberRow[]>([])
   const [people, setPeople] = useState<CustomerSearchRecord[]>([])
   const [personId, setPersonId] = useState('')
@@ -52,11 +61,11 @@ export default function TeamMembersPanel({ teamId }: { teamId: string }) {
     const res = await fetch(`/api/teams/${teamId}/members`, { cache: 'no-store' })
     const json = (await res.json()) as { data?: MemberRow[]; error?: string }
     if (!res.ok) {
-      setError(json.error || 'Falha ao carregar membros')
+      setError(json.error || tTeams(locale, 'loadMembersError'))
       return
     }
     setMembers(json.data ?? [])
-  }, [teamId])
+  }, [teamId, locale])
 
   useEffect(() => {
     void reload()
@@ -76,7 +85,7 @@ export default function TeamMembersPanel({ teamId }: { teamId: string }) {
       person_name: p ? getCustomerDisplayName(p) : null,
     }
   })
-  const scale = evaluateTeamScale(scaleMembers)
+  const scale = evaluateTeamScale(scaleMembers, undefined, locale)
 
   useEffect(() => {
     if (scale.nextRole) setRoleKey(scale.nextRole)
@@ -94,7 +103,7 @@ export default function TeamMembersPanel({ teamId }: { teamId: string }) {
       })
       const json = (await res.json()) as { error?: string }
       if (!res.ok) {
-        setError(json.error || 'Falha ao adicionar')
+        setError(json.error || tTeams(locale, 'addMemberError'))
         return
       }
       setPersonId('')
@@ -113,7 +122,7 @@ export default function TeamMembersPanel({ teamId }: { teamId: string }) {
       })
       const json = (await res.json()) as { error?: string }
       if (!res.ok) {
-        setError(json.error || 'Falha ao remover')
+        setError(json.error || tTeams(locale, 'removeMemberError'))
         return
       }
       await reload()
@@ -123,11 +132,19 @@ export default function TeamMembersPanel({ teamId }: { teamId: string }) {
   }
 
   const teamPeople = people.filter((p) => p.is_team || !p.is_supplier)
+  const scaleStatus =
+    scale.members.length === 0
+      ? tTeams(locale, 'scaleNoTeam')
+      : scale.closed
+        ? tTeams(locale, 'scaleClosed')
+        : tTeams(locale, 'scaleIncomplete')
 
   return (
     <div className="mt-3 space-y-2 border-t border-black/5 pt-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-neutral-800">Composição</p>
+        <p className="text-sm font-semibold text-neutral-800">
+          {tTeams(locale, 'composition')}
+        </p>
         <span
           className={`rounded px-2 py-0.5 text-xs font-medium ${
             scale.closed
@@ -135,14 +152,16 @@ export default function TeamMembersPanel({ teamId }: { teamId: string }) {
               : 'bg-amber-50 text-amber-900'
           }`}
         >
-          {scale.alerts[0]}
-          {scale.nextRoleLabel ? ` · próximo: ${scale.nextRoleLabel}` : ''}
+          {scaleStatus}
+          {scale.nextRoleLabel
+            ? ` · ${tTeams(locale, 'nextRole', { label: scale.nextRoleLabel })}`
+            : ''}
         </span>
       </div>
 
       <ul className="space-y-1 text-sm">
         {members.length === 0 ? (
-          <li className="text-neutral-500">Nenhum integrante. Comece pelo churrasqueiro.</li>
+          <li className="text-neutral-500">{tTeams(locale, 'noMembers')}</li>
         ) : (
           members.map((m) => {
             const p = personFromJoin(m.customers)
@@ -152,7 +171,7 @@ export default function TeamMembersPanel({ teamId }: { teamId: string }) {
                 className="flex items-center justify-between gap-2 rounded bg-black/[0.03] px-2 py-1"
               >
                 <span>
-                  <strong>{operationalRoleLabel(m.role_key, 'pt')}</strong>
+                  <strong>{operationalRoleLabel(m.role_key, locale)}</strong>
                   {' · '}
                   {p ? getCustomerDisplayName(p) : m.person_id.slice(0, 8)}
                   {p?.phone ? ` · ${p.phone}` : ''}
@@ -163,7 +182,7 @@ export default function TeamMembersPanel({ teamId }: { teamId: string }) {
                   disabled={busy}
                   onClick={() => void removeMember(m.id)}
                 >
-                  Remover
+                  {tCommon(locale, 'remove')}
                 </button>
               </li>
             )
@@ -177,7 +196,7 @@ export default function TeamMembersPanel({ teamId }: { teamId: string }) {
           value={personId}
           onChange={(e) => setPersonId(e.target.value)}
         >
-          <option value="">Pessoa…</option>
+          <option value="">{tTeams(locale, 'selectPersonShort')}</option>
           {teamPeople.map((p) => (
             <option key={p.id} value={p.id}>
               {getCustomerDisplayName(p)}
@@ -192,7 +211,7 @@ export default function TeamMembersPanel({ teamId }: { teamId: string }) {
         >
           {OPERATIONAL_ROLE_KEYS.map((k) => (
             <option key={k} value={k}>
-              {operationalRoleLabel(k, 'pt')}
+              {operationalRoleLabel(k, locale)}
             </option>
           ))}
         </select>
@@ -202,7 +221,7 @@ export default function TeamMembersPanel({ teamId }: { teamId: string }) {
           disabled={busy || !personId}
           onClick={() => void addMember()}
         >
-          Designar
+          {tTeams(locale, 'designate')}
         </button>
       </div>
       {error ? <p className="text-xs text-red-600">{error}</p> : null}

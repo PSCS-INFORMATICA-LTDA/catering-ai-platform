@@ -1,3 +1,5 @@
+import { formatUiDate, toBcp47Locale } from '@/Lib/i18n/locales'
+
 /** Semana da agenda (segunda → domingo), padrão Logistics / LogRx. */
 
 /** Fuso operacional da agenda (evita dia errado no SSR UTC da Vercel). */
@@ -72,17 +74,10 @@ export function shiftWeek(anchor: Date, weeks: number): Date {
 export function formatWeekRangeLabel(
   anchor: Date,
   todayKey: string = todayDayKey(),
+  locale?: string | null,
 ): string {
   const keys = visibleWeekDayKeys(anchor, todayKey)
-  const first = parseDayKey(keys[0]!)
-  const last = parseDayKey(keys[keys.length - 1]!)
-  const fmt = (dt: Date) =>
-    dt.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    })
-  return `${fmt(first)} — ${fmt(last)}`
+  return `${formatUiDate(keys[0], locale)} — ${formatUiDate(keys[keys.length - 1], locale)}`
 }
 
 /** Deep-link para Nova cotação com data/horário da célula da agenda. */
@@ -102,21 +97,25 @@ export function buildAgendaQuoteHref(opts: {
 }
 
 /** Rótulo no estilo Logistics: weekday curto + dd/mm. */
-export function dayLabelParts(dayKey: string): { weekday: string; date: string } {
+export function dayLabelParts(
+  dayKey: string,
+  locale?: string | null,
+): { weekday: string; date: string } {
   const d = parseDayKey(dayKey)
+  const bcp = toBcp47Locale(locale)
   return {
     weekday: d
-      .toLocaleDateString('pt-BR', { weekday: 'short' })
+      .toLocaleDateString(bcp, { weekday: 'short' })
       .replace('.', ''),
-    date: d.toLocaleDateString('pt-BR', {
+    date: d.toLocaleDateString(bcp, {
       day: '2-digit',
       month: '2-digit',
     }),
   }
 }
 
-export function dayLabel(dayKey: string): string {
-  const { weekday, date } = dayLabelParts(dayKey)
+export function dayLabel(dayKey: string, locale?: string | null): string {
+  const { weekday, date } = dayLabelParts(dayKey, locale)
   return `${weekday} ${date}`
 }
 
@@ -175,28 +174,19 @@ export function inclusiveDaySpan(fromKey: string, toKey: string): number {
   return Math.round((b.getTime() - a.getTime()) / 86_400_000) + 1
 }
 
-export function formatRangeLabel(fromKey: string, toKey: string): string {
+export function formatRangeLabel(
+  fromKey: string,
+  toKey: string,
+  locale?: string | null,
+): string {
   if (!fromKey || !toKey) return ''
-  const fmt = (key: string) =>
-    parseDayKey(key).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    })
-  return `${fmt(fromKey)} — ${fmt(toKey)}`
+  return `${formatUiDate(fromKey, locale)} — ${formatUiDate(toKey, locale)}`
 }
 
-export const AGENDA_MONTH_OPTIONS = [
-  { value: 0, label: 'Janeiro' },
-  { value: 1, label: 'Fevereiro' },
-  { value: 2, label: 'Março' },
-  { value: 3, label: 'Abril' },
-  { value: 4, label: 'Maio' },
-  { value: 5, label: 'Junho' },
-  { value: 6, label: 'Julho' },
-  { value: 7, label: 'Agosto' },
-  { value: 8, label: 'Setembro' },
-  { value: 9, label: 'Outubro' },
-  { value: 10, label: 'Novembro' },
-  { value: 11, label: 'Dezembro' },
-] as const
+export function agendaMonthOptions(locale?: string | null) {
+  const bcp = toBcp47Locale(locale)
+  return Array.from({ length: 12 }, (_, value) => ({
+    value,
+    label: new Date(2024, value, 1).toLocaleDateString(bcp, { month: 'long' }),
+  }))
+}

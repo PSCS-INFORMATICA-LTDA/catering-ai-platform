@@ -45,6 +45,9 @@ import {
   type PackageOptionGroupItem,
   type PackageOptionGroupRecord,
 } from '@/Lib/packageOptionGroups'
+import { tCommon } from '@/Lib/i18n/common'
+import { tPackages } from '@/Lib/i18n/packages'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 function formatPrice(value: number, currency = 'USD') {
   return `${currency === 'USD' ? '$' : ''}${value.toFixed(2)}`
@@ -73,6 +76,7 @@ export default function PackageDetailCard({
   onDeactivate: () => void
   uploading?: boolean
 }) {
+  const locale = useAuthLocaleFromMe()
   const packageKey = getPackageKey(pkg) || '—'
   const displayName = getPackageLabel(pkg)
   const withSides = getPackageHasGarnish(pkg)
@@ -99,7 +103,7 @@ export default function PackageDetailCard({
       packageOptionGroups,
       packageOptionGroupItems,
     ),
-    'pt',
+    locale,
   )
 
   let basePrice = price
@@ -120,7 +124,7 @@ export default function PackageDetailCard({
           src={imageUrl}
           alt={displayName}
           variant="package"
-          fallbackLabel="Sem imagem cadastrada"
+          fallbackLabel={tCommon(locale, 'noImageRegistered')}
           rounded="none"
           className="!h-full !min-h-0 !max-h-none !w-full !rounded-none"
         />
@@ -132,9 +136,9 @@ export default function PackageDetailCard({
             {packageKey}
           </span>
           {withSides ? (
-            <BackofficeAccentBadge>Com guarnições</BackofficeAccentBadge>
+            <BackofficeAccentBadge>{tCommon(locale, 'withSides')}</BackofficeAccentBadge>
           ) : (
-            <BackofficeAccentBadge>Sem guarnições</BackofficeAccentBadge>
+            <BackofficeAccentBadge>{tCommon(locale, 'withoutSides')}</BackofficeAccentBadge>
           )}
           <BackofficeStatusBadge active={pkg.active !== false} />
         </div>
@@ -143,13 +147,15 @@ export default function PackageDetailCard({
           <h3 className="text-2xl font-black text-neutral-900">{displayName}</h3>
           <p className="mt-2 text-3xl font-black text-red-600">
             {formatPrice(price, currency)}
-            <span className="ml-1 text-sm font-semibold text-neutral-500">/ pessoa</span>
+            <span className="ml-1 text-sm font-semibold text-neutral-500">
+              {tPackages(locale, 'perPersonSuffix')}
+            </span>
           </p>
         </div>
 
         {highlightItems.length > 0 ? (
           <div className="package-highlights-box !mt-0">
-            <p className="package-highlights-title">Diferenciais do pacote</p>
+            <p className="package-highlights-title">{tPackages(locale, 'highlights')}</p>
             <div className="package-highlights-list">
               {highlightItems.map((item) => (
                 <span key={item}>• {item}</span>
@@ -159,45 +165,56 @@ export default function PackageDetailCard({
         ) : (
           <div className="rounded-xl border border-neutral-100 bg-neutral-50 px-4 py-3">
             <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-              Diferenciais do pacote
+              {tPackages(locale, 'highlights')}
             </p>
-            <p className="mt-1 text-sm text-neutral-400">Diferenciais não cadastrados</p>
+            <p className="mt-1 text-sm text-neutral-400">
+              {tPackages(locale, 'highlightsEmpty')}
+            </p>
           </div>
         )}
 
         <PriceBreakdownCard
           rows={[
             {
-              label: 'Pacote base',
-              value: `${formatPrice(basePrice, currency)} / pessoa`,
+              label: tPackages(locale, 'basePackage'),
+              value: tPackages(locale, 'pricePerPerson', {
+                price: formatPrice(basePrice, currency),
+              }),
             },
             {
-              label: 'Guarnições',
+              label: tCommon(locale, 'sides'),
               value:
                 garnishAddon > 0
-                  ? `+ ${formatPrice(garnishAddon, currency)} / pessoa`
+                  ? tPackages(locale, 'sidesAddon', {
+                      price: formatPrice(garnishAddon, currency),
+                    })
                   : withSides
-                    ? 'Inclusas no preço'
-                    : 'Não',
+                    ? tPackages(locale, 'sidesIncluded')
+                    : tCommon(locale, 'no'),
             },
             {
-              label: 'Total por pessoa',
-              value: `${formatPrice(price, currency)} / pessoa`,
+              label: tPackages(locale, 'totalPerPerson'),
+              value: tPackages(locale, 'pricePerPerson', {
+                price: formatPrice(price, currency),
+              }),
               emphasis: true,
             },
             {
-              label: 'Moeda',
+              label: tCommon(locale, 'currency'),
               value: currency,
             },
           ]}
         />
 
-        <ExpandableDescription label="Itens do pacote" text={itemsText || '—'} />
-        <ExpandableDescription label="Guarnições" text={garnishText} />
+        <ExpandableDescription
+          label={tPackages(locale, 'packageItems')}
+          text={itemsText || '—'}
+        />
+        <ExpandableDescription label={tCommon(locale, 'sides')} text={garnishText} />
         {optionGroupSummaries.length > 0 ? (
           <div className="rounded-xl border border-amber-100 bg-amber-50/50 px-4 py-3">
             <p className="text-xs font-bold uppercase tracking-wide text-amber-900">
-              Escolhas inclusas
+              {tPackages(locale, 'includedChoices')}
             </p>
             <ul className="mt-2 space-y-1 text-sm text-neutral-800">
               {optionGroupSummaries.map((line) => (
@@ -209,28 +226,42 @@ export default function PackageDetailCard({
 
         <div className="rounded-xl border border-neutral-100 bg-white p-4">
           <p className="text-xs font-bold uppercase tracking-wider text-red-600">
-            Operação
+            {tPackages(locale, 'operation')}
           </p>
           <div className="mt-3 space-y-1">
-            <BackofficeMetaRow label="Ordem" value={getPackageDisplayOrder(pkg)} />
-            <BackofficeMetaRow label="Status" value={pkg.active === false ? 'Inativo' : 'Ativo'} />
+            <BackofficeMetaRow
+              label={tCommon(locale, 'displayOrder')}
+              value={getPackageDisplayOrder(pkg)}
+            />
+            <BackofficeMetaRow
+              label={tCommon(locale, 'status')}
+              value={
+                pkg.active === false
+                  ? tCommon(locale, 'inactive')
+                  : tCommon(locale, 'active')
+              }
+            />
           </div>
         </div>
 
         <div className="flex flex-wrap gap-2 border-t border-neutral-100 pt-4">
-          <BackofficeBtnSecondary onClick={onEdit}>Editar</BackofficeBtnSecondary>
+          <BackofficeBtnSecondary onClick={onEdit}>
+            {tCommon(locale, 'edit')}
+          </BackofficeBtnSecondary>
           <BackofficeBtnOutline accent onClick={onPhoto} disabled={uploading}>
-            {uploading ? 'Enviando…' : 'Foto'}
+            {uploading ? tCommon(locale, 'uploading') : tCommon(locale, 'photo')}
           </BackofficeBtnOutline>
           <Link
             href="/commercial-rules"
             className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm font-bold text-neutral-800 transition hover:bg-neutral-50"
           >
-            Regras
+            {tPackages(locale, 'rules')}
           </Link>
           <BackofficeInventoryButton source="package" id={pkg.id} />
           {pkg.active !== false ? (
-            <BackofficeBtnDanger onClick={onDeactivate}>Inativar</BackofficeBtnDanger>
+            <BackofficeBtnDanger onClick={onDeactivate}>
+              {tCommon(locale, 'deactivate')}
+            </BackofficeBtnDanger>
           ) : null}
         </div>
       </div>

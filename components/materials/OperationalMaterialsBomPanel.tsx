@@ -8,6 +8,9 @@ import {
   BackofficeInput,
 } from '@/components/backoffice/BackofficeCardPrimitives'
 import { BackofficeFormSectionTitle } from '@/components/backoffice/BackofficeSectionPrimitives'
+import { tCommon } from '@/Lib/i18n/common'
+import { tInventoryUi } from '@/Lib/i18n/inventoryUi'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import {
   BOM_CALCULATION_TYPES,
   BOM_GUEST_BASES,
@@ -90,6 +93,7 @@ export default function OperationalMaterialsBomPanel({
   sourceId: string
   canManage: boolean
 }) {
+  const locale = useAuthLocaleFromMe()
   const [rows, setRows] = useState<RuleRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -104,12 +108,12 @@ export default function OperationalMaterialsBomPanel({
     const res = await fetch(`/api/materials/rules?${qs}`, { cache: 'no-store' })
     const json = (await res.json()) as { data?: RuleRow[]; error?: string }
     if (!res.ok) {
-      setError(json.error || 'Falha ao carregar BOM')
+      setError(json.error || tInventoryUi(locale, 'loadBomFailed'))
       return
     }
     setRows(json.data ?? [])
     setError(null)
-  }, [sourceType, sourceId])
+  }, [sourceType, sourceId, locale])
 
   useEffect(() => {
     void reload()
@@ -148,7 +152,7 @@ export default function OperationalMaterialsBomPanel({
       })
       const json = (await res.json()) as { error?: string }
       if (!res.ok) {
-        setError(json.error || 'Falha ao criar')
+        setError(json.error || tInventoryUi(locale, 'createFailed'))
         return
       }
       setShowAdd(false)
@@ -169,7 +173,7 @@ export default function OperationalMaterialsBomPanel({
       })
       const json = (await res.json()) as { error?: string }
       if (!res.ok) {
-        setError(json.error || 'Falha ao atualizar')
+        setError(json.error || tInventoryUi(locale, 'updateFailed'))
         return
       }
       await reload()
@@ -180,39 +184,40 @@ export default function OperationalMaterialsBomPanel({
 
   function methodLabel(r: RuleRow): string {
     if (r.calculation_type === 'fixed') {
-      return `fixo: ${r.fixed_quantity ?? 0}`
+      return tInventoryUi(locale, 'methodFixed', { qty: r.fixed_quantity ?? 0 })
     }
     if (r.calculation_type === 'per_guest') {
       return `${r.quantity_per_guest ?? 0}/${r.guest_basis ?? 'billable_guests'} (${r.rounding_rule})`
     }
-    return `Faixa (${(r.tier_json ?? []).length} bandas)`
+    return tInventoryUi(locale, 'methodTier', {
+      count: (r.tier_json ?? []).length,
+    })
   }
 
   return (
     <section className="mt-6 space-y-3 rounded-xl border border-neutral-200 bg-neutral-50/80 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <BackofficeFormSectionTitle>
-          Materiais operacionais (BOM)
+          {tInventoryUi(locale, 'bomTitle')}
         </BackofficeFormSectionTitle>
         {canManage ? (
           <BackofficeBtnPrimary
             disabled={busy}
             onClick={() => setShowAdd((v) => !v)}
           >
-            Adicionar material
+            {tInventoryUi(locale, 'addMaterial')}
           </BackofficeBtnPrimary>
         ) : null}
       </div>
       <p className="text-xs text-neutral-500">
-        Regras por empresa. Na conversão da cotação, viram snapshot na OS (não
-        alteram ordens antigas).
+        {tInventoryUi(locale, 'bomHint')}
       </p>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       {showAdd ? (
         <div className="grid gap-3 rounded-lg border border-neutral-200 bg-white p-3 sm:grid-cols-2">
-          <BackofficeField label="Material" className="sm:col-span-2">
+          <BackofficeField label={tInventoryUi(locale, 'material')} className="sm:col-span-2">
             <BackofficeInput
               value={form.material_description_snapshot}
               onChange={(v) =>
@@ -223,7 +228,7 @@ export default function OperationalMaterialsBomPanel({
               }
             />
           </BackofficeField>
-          <BackofficeField label="Tipo">
+          <BackofficeField label={tInventoryUi(locale, 'type')}>
             <select
               className={selectClass}
               value={form.material_type}
@@ -241,13 +246,13 @@ export default function OperationalMaterialsBomPanel({
               ))}
             </select>
           </BackofficeField>
-          <BackofficeField label="Unidade">
+          <BackofficeField label={tCommon(locale, 'unit')}>
             <BackofficeInput
               value={form.unit}
               onChange={(v) => setForm((f) => ({ ...f, unit: v }))}
             />
           </BackofficeField>
-          <BackofficeField label="Método">
+          <BackofficeField label={tInventoryUi(locale, 'method')}>
             <select
               className={selectClass}
               value={form.calculation_type}
@@ -265,7 +270,7 @@ export default function OperationalMaterialsBomPanel({
               ))}
             </select>
           </BackofficeField>
-          <BackofficeField label="Arredondamento">
+          <BackofficeField label={tInventoryUi(locale, 'rounding')}>
             <select
               className={selectClass}
               value={form.rounding_rule}
@@ -284,7 +289,7 @@ export default function OperationalMaterialsBomPanel({
             </select>
           </BackofficeField>
           {form.calculation_type === 'fixed' ? (
-            <BackofficeField label="Qtd fixa">
+            <BackofficeField label={tInventoryUi(locale, 'fixedQty')}>
               <BackofficeInput
                 type="number"
                 value={form.fixed_quantity}
@@ -296,7 +301,7 @@ export default function OperationalMaterialsBomPanel({
           ) : null}
           {form.calculation_type === 'per_guest' ? (
             <>
-              <BackofficeField label="Qtd / convidado">
+              <BackofficeField label={tInventoryUi(locale, 'qtyPerGuest')}>
                 <BackofficeInput
                   type="number"
                   value={form.quantity_per_guest}
@@ -305,7 +310,7 @@ export default function OperationalMaterialsBomPanel({
                   }
                 />
               </BackofficeField>
-              <BackofficeField label="Base">
+              <BackofficeField label={tInventoryUi(locale, 'basis')}>
                 <select
                   className={selectClass}
                   value={form.guest_basis}
@@ -326,7 +331,7 @@ export default function OperationalMaterialsBomPanel({
             </>
           ) : null}
           {form.calculation_type === 'tier' ? (
-            <BackofficeField label="Faixas (1-30=1)" className="sm:col-span-2">
+            <BackofficeField label={tInventoryUi(locale, 'tiers')} className="sm:col-span-2">
               <textarea
                 className={`${selectClass} min-h-[88px]`}
                 value={form.tier_text}
@@ -341,17 +346,17 @@ export default function OperationalMaterialsBomPanel({
               disabled={busy || !form.material_description_snapshot.trim()}
               onClick={() => void createRule()}
             >
-              Salvar regra
+              {tInventoryUi(locale, 'saveRule')}
             </BackofficeBtnPrimary>
             <BackofficeBtnOutline onClick={() => setShowAdd(false)}>
-              Fechar
+              {tCommon(locale, 'close')}
             </BackofficeBtnOutline>
           </div>
         </div>
       ) : null}
 
       {rows.length === 0 ? (
-        <p className="text-sm text-neutral-500">Nenhuma regra BOM neste item.</p>
+        <p className="text-sm text-neutral-500">{tInventoryUi(locale, 'emptyBom')}</p>
       ) : (
         <ul className="space-y-2">
           {rows.map((r) => (
@@ -377,7 +382,9 @@ export default function OperationalMaterialsBomPanel({
                   disabled={busy}
                   onClick={() => void toggleEnabled(r)}
                 >
-                  {r.enabled ? 'Desativar' : 'Ativar'}
+                  {r.enabled
+                    ? tCommon(locale, 'deactivate')
+                    : tCommon(locale, 'activate')}
                 </BackofficeBtnOutline>
               ) : null}
             </li>

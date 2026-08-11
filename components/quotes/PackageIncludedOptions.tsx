@@ -6,6 +6,8 @@ import {
 } from '@/Lib/packageQuoteDisplay'
 import { isRequiredOptionGroup, type PackageOptionGroup } from '@/Lib/packageOptionGroups'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import { tw } from '@/Lib/quoteTranslations'
+import { pickLocalizedText } from '@/Lib/i18n/locales'
 
 const SELECTED_OPTION_CLASS =
   'border-[var(--brand-primary-2)] bg-[color-mix(in_srgb,var(--brand-primary)_10%,white)] text-[var(--brand-primary)] ring-1 ring-[color-mix(in_srgb,var(--brand-primary-2)_35%,transparent)]'
@@ -48,8 +50,14 @@ export default function PackageIncludedOptions({
           const selectedId = selections[group.id]?.trim()
           const item = group.items.find((row) => row.id === selectedId)
           if (!item) return null
-          const label = item.label_pt?.trim() || item.option_item_key || '—'
-          const groupLabel = getCommercialOptionGroupLabel(group)
+          const label =
+            pickLocalizedText(
+              { pt: item.label_pt, en: item.label_en, es: item.label_es },
+              language,
+            ) ||
+            item.option_item_key ||
+            '—'
+          const groupLabel = getCommercialOptionGroupLabel(group, language)
           return (
             <p key={group.id} className="text-sm text-neutral-800">
               <span className="font-semibold text-neutral-900">{groupLabel}:</span>{' '}
@@ -64,7 +72,7 @@ export default function PackageIncludedOptions({
   return (
     <div className="space-y-2.5">
       {activeGroups.map((group) => {
-        const groupLabel = getCommercialOptionGroupLabel(group)
+        const groupLabel = getCommercialOptionGroupLabel(group, language)
         const required = isRequiredOptionGroup(group)
         const selectedItemId = selections[group.id] ?? null
         const isPending = pendingGroupIds.includes(group.id)
@@ -83,19 +91,21 @@ export default function PackageIncludedOptions({
               <p className="text-sm font-bold text-neutral-900">{groupLabel}</p>
               {required ? (
                 <span className="text-[10px] font-medium text-neutral-500">
-                  obrigatório
+                  {tw(language, 'required')}
                 </span>
               ) : null}
             </div>
 
             {isPending ? (
               <p className="mb-2 text-xs text-[var(--brand-primary)]">
-                Escolha uma opção para continuar.
+                {tw(language, 'chooseOption')}
               </p>
             ) : null}
 
             {items.length === 0 ? (
-              <p className="text-xs text-neutral-500">Opções indisponíveis.</p>
+              <p className="text-xs text-neutral-500">
+                {tw(language, 'optionsUnavailable')}
+              </p>
             ) : (
               <div
                 className="grid grid-cols-2 gap-2"
@@ -105,7 +115,16 @@ export default function PackageIncludedOptions({
                 {items.map((item) => {
                   const active = selectedItemId === item.id
                   const itemLabel =
-                    item.label_pt?.trim() || item.option_item_key?.trim() || '—'
+                    pickLocalizedText(
+                      {
+                        pt: item.label_pt,
+                        en: item.label_en,
+                        es: item.label_es,
+                      },
+                      language,
+                    ) ||
+                    item.option_item_key?.trim() ||
+                    '—'
                   return (
                     <button
                       key={`${group.id}-${item.id}`}

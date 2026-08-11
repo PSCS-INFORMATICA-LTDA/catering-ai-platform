@@ -14,6 +14,7 @@ import {
   type PackageCatalogFields,
 } from '@/Lib/packageCatalogVisual'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import { tw } from '@/Lib/quoteTranslations'
 
 export type QuoteReviewPackageFields = PackageCatalogFields & {
   description_pt?: string | null
@@ -423,7 +424,7 @@ export function buildQuoteReviewPackageSummary(
   return {
     hasGarnish: garnish,
     packageItemsDescription: packageItemsDescription(input.pkg, language),
-    garnishDescription: garnish ? (garnishItems ?? '—') : 'Não',
+    garnishDescription: garnish ? (garnishItems ?? '—') : tw(language, 'no'),
     packageUnitPrice: basePerPerson,
     garnishUnitPrice: garnish ? garnishPerPerson : 0,
     totalUnitPrice: totalPerPerson,

@@ -9,6 +9,7 @@ import {
   tQuotesOrders,
 } from '@/Lib/i18n/quotesOrders'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
+import { tCommon } from '@/Lib/i18n/common'
 import { glassAction, glassBtn, glassField } from '@/Lib/liquidGlass'
 import type {
   MaterialStatus,
@@ -198,12 +199,12 @@ export default function OrderMaterialsPanel({
       error?: string
     }
     if (!res.ok) {
-      setError(json.error || 'Falha ao carregar materiais')
+      setError(json.error || tQuotesOrders(locale, 'loadMaterialsError'))
       return
     }
     setRows(json.data ?? [])
     setError(null)
-  }, [orderId])
+  }, [orderId, locale])
 
   useEffect(() => {
     void refresh()
@@ -227,7 +228,7 @@ export default function OrderMaterialsPanel({
       })
       const json = (await res.json()) as { error?: string }
       if (!res.ok) {
-        setError(json.error || 'Falha ao adicionar')
+        setError(json.error || tQuotesOrders(locale, 'materialAddError'))
         return
       }
       setShowAdd(false)
@@ -261,7 +262,7 @@ export default function OrderMaterialsPanel({
       )
       const json = (await res.json()) as { error?: string }
       if (!res.ok) {
-        setError(json.error || 'Falha ao atualizar')
+        setError(json.error || tQuotesOrders(locale, 'materialUpdateError'))
         return
       }
       await refresh()
@@ -297,7 +298,9 @@ export default function OrderMaterialsPanel({
         return
       }
       if (!res.ok) {
-        setError(json.error || 'Falha ao preparar conferência de saída')
+        setError(
+          json.error || tQuotesOrders(locale, 'materialDispatchPrepareError'),
+        )
         return
       }
       if (revokeOnly) {
@@ -528,7 +531,7 @@ export default function OrderMaterialsPanel({
 
           <label className="block space-y-1">
             <span className="text-xs font-medium text-cdl-muted">
-              WhatsApp do líder
+              {tQuotesOrders(locale, 'leaderWhatsApp')}
             </span>
             <input
               className={glassField()}
@@ -550,10 +553,10 @@ export default function OrderMaterialsPanel({
               title={
                 dispatchPhoneOk
                   ? `WhatsApp · ${formatWhatsAppPhoneDisplay(dispatchPhone)}`
-                  : 'Informe um telefone válido com DDI.'
+                  : tQuotesOrders(locale, 'enterPhoneToSend')
               }
               onInvalidPhone={() =>
-                setHint('Informe um telefone válido com DDI.')
+                setHint(tQuotesOrders(locale, 'enterPhoneToSend'))
               }
             />
             <button
@@ -569,26 +572,27 @@ export default function OrderMaterialsPanel({
               className={glassBtn('ghost')}
               onClick={() => setDispatchPreviewOpen(false)}
             >
-              Fechar prévia
+              {tCommon(locale, 'closePreview')}
             </button>
           </div>
 
           {dispatchWhatsappText.trim() ? (
             dispatchPhoneOk ? (
               <p className="text-xs text-cdl-muted">
-                Destino: {formatWhatsAppPhoneDisplay(dispatchPhone)} — clique no
-                ícone verde do WhatsApp para abrir o painel de envio.
+                {tQuotesOrders(locale, 'destinationClickWhatsApp', {
+                  phone: formatWhatsAppPhoneDisplay(dispatchPhone),
+                })}
               </p>
             ) : (
               <p className="text-xs text-amber-700 dark:text-amber-200">
-                Informe um telefone válido com DDI para liberar o envio.
+                {tQuotesOrders(locale, 'enterPhoneToSend')}
               </p>
             )
           ) : null}
 
           <label className="block space-y-1">
             <span className="text-xs font-medium text-cdl-muted">
-              Mensagem (editável)
+              {tQuotesOrders(locale, 'editableMessageLabel')}
             </span>
             <textarea
               className="min-h-[14rem] w-full whitespace-pre-wrap rounded-lg border border-cdl-border bg-cdl-surface p-3 font-sans text-sm leading-relaxed text-cdl-fg"
@@ -599,7 +603,9 @@ export default function OrderMaterialsPanel({
 
           {dispatchConfirmUrl ? (
             <p className="break-all text-xs text-cdl-muted">
-              Link de conferência: {dispatchConfirmUrl}
+              {tQuotesOrders(locale, 'conferenceLink', {
+                url: dispatchConfirmUrl,
+              })}
             </p>
           ) : null}
         </div>

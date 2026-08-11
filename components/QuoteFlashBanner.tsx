@@ -2,10 +2,13 @@
 
 import { useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
+import { tw } from '@/Lib/quoteTranslations'
 
 export default function QuoteFlashBanner() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const locale = useAuthLocaleFromMe()
   const created = searchParams.get('created') === '1'
   const updated = searchParams.get('updated') === '1'
 
@@ -22,9 +25,7 @@ export default function QuoteFlashBanner() {
 
   return (
     <div className="no-print mb-4 rounded-xl border border-cdl-success-border bg-cdl-success-soft px-4 py-3 text-sm font-semibold text-cdl-success">
-      {created
-        ? 'Cotação criada com sucesso.'
-        : 'Cotação atualizada com sucesso.'}
+      {created ? tw(locale, 'quoteCreated') : tw(locale, 'quoteUpdated')}
     </div>
   )
 }

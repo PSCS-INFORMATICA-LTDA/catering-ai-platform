@@ -10,6 +10,9 @@ import {
 import { createPortal } from 'react-dom'
 import { WhatsAppIcon } from '@/components/icons/ShareIcons'
 import { glassAction, glassBtn } from '@/Lib/liquidGlass'
+import { tCommon } from '@/Lib/i18n/common'
+import { tShare } from '@/Lib/i18n/share'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import {
   copyWhatsAppMessageSync,
   formatWhatsAppPhoneDisplay,
@@ -50,6 +53,7 @@ export default function WhatsAppButton({
   onOpenRequested?: (meta?: { copied: boolean; mode: string }) => void
   onInvalidPhone?: () => void
 }) {
+  const locale = useAuthLocaleFromMe()
   const [busy, setBusy] = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)
   const [copiedHint, setCopiedHint] = useState<string | null>(null)
@@ -73,8 +77,8 @@ export default function WhatsAppButton({
     const copied = message.trim() ? copyWhatsAppMessageSync(message) : false
     setCopiedHint(
       copied
-        ? 'Mensagem copiada. No WhatsApp use Ctrl+V.'
-        : 'Não foi possível copiar automaticamente — selecione o texto abaixo e copie.',
+        ? tCommon(locale, 'messageCopied')
+        : tShare(locale, 'copyManual'),
     )
     setPanelOpen(true)
     onOpenRequested?.({ copied, mode: 'compose-panel' })
@@ -87,8 +91,8 @@ export default function WhatsAppButton({
     const result = openWhatsApp({ phone: phoneDigits, message })
     setCopiedHint(
       result.copied
-        ? 'Pedimos ao Windows abrir o app. Se não aparecer, clique no WhatsApp na barra de tarefas e use Ctrl+V.'
-        : 'Pedimos ao Windows abrir o app. Se não aparecer, use a barra de tarefas.',
+        ? tShare(locale, 'askedWindowsPaste')
+        : tShare(locale, 'askedWindowsTaskbar'),
     )
     onOpenRequested?.({ copied: result.copied, mode: 'native' })
     window.setTimeout(() => {
@@ -114,9 +118,7 @@ export default function WhatsAppButton({
   const handleCopy = () => {
     const ok = copyWhatsAppMessageSync(message)
     setCopiedHint(
-      ok
-        ? 'Mensagem copiada de novo.'
-        : 'Falha ao copiar — selecione o texto manualmente.',
+      ok ? tShare(locale, 'copiedAgain') : tShare(locale, 'copyFailed'),
     )
   }
 
@@ -137,16 +139,13 @@ export default function WhatsAppButton({
                 id="wa-compose-title"
                 className="text-lg font-semibold text-slate-900 dark:text-slate-100"
               >
-                Enviar no WhatsApp
+                {tShare(locale, 'sendTitle')}
               </h2>
               <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                Destino: <strong>{phoneLabel}</strong>
+                {tShare(locale, 'destination')} <strong>{phoneLabel}</strong>
               </p>
               <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                No Windows o app da Store muitas vezes{' '}
-                <strong>não vem para frente</strong>. O Web só funciona se este
-                navegador já estiver logado (senão aparece QR). Use o caminho
-                que funcionar aí.
+                {tShare(locale, 'windowsHint')}
               </p>
 
               <textarea
@@ -168,12 +167,12 @@ export default function WhatsAppButton({
                   type="button"
                   disabled={busy}
                   className={glassAction('green')}
-                  title="Abre o link padrão do WhatsApp (wa.me)"
+                  title={tShare(locale, 'openWaMe')}
                   onClick={handleWeb}
                 >
                   <span className="inline-flex items-center gap-2">
                     <WhatsAppIcon className="h-4 w-4" />
-                    Abrir WhatsApp
+                    {tCommon(locale, 'openWhatsApp')}
                   </span>
                 </button>
                 <button
@@ -182,7 +181,7 @@ export default function WhatsAppButton({
                   className={glassBtn('secondary')}
                   onClick={handleCopy}
                 >
-                  Copiar mensagem
+                  {tCommon(locale, 'copyMessage')}
                 </button>
                 <button
                   type="button"
@@ -190,7 +189,7 @@ export default function WhatsAppButton({
                   className={glassBtn('secondary')}
                   onClick={handleDesktop}
                 >
-                  Abrir app Desktop
+                  {tShare(locale, 'openDesktop')}
                 </button>
                 <button
                   type="button"
@@ -198,7 +197,7 @@ export default function WhatsAppButton({
                   className={glassBtn('ghost')}
                   onClick={() => setPanelOpen(false)}
                 >
-                  Fechar
+                  {tCommon(locale, 'close')}
                 </button>
               </div>
             </div>
@@ -222,10 +221,15 @@ export default function WhatsAppButton({
           type="button"
           title={
             title ??
-            (phoneOk ? 'Preparar envio no WhatsApp' : 'Cadastre o telefone')
+            (phoneOk
+              ? tShare(locale, 'prepareSend')
+              : tCommon(locale, 'registerPhone'))
           }
           aria-label={
-            ariaLabel ?? (phoneOk ? 'Abrir WhatsApp' : 'WhatsApp indisponível')
+            ariaLabel ??
+            (phoneOk
+              ? tCommon(locale, 'openWhatsApp')
+              : tShare(locale, 'unavailable'))
           }
           disabled={disabled || busy}
           className={[

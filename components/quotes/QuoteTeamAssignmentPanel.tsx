@@ -308,7 +308,7 @@ export default function QuoteTeamAssignmentPanel({
           msgByLocale || json.error || tQuotesOrders(locale, 'designateError')
         throw new Error(
           next
-            ? `${base} ${locale === 'en' ? 'Next available:' : locale === 'es' ? 'Próximo horario:' : 'Próximo horário disponível:'} ${next}`
+            ? `${base} ${tQuotesOrders(locale, 'nextAvailablePrefix')} ${next}`
             : base,
         )
       }
@@ -584,7 +584,9 @@ export default function QuoteTeamAssignmentPanel({
             {(() => {
               const mailHref = buildMailtoHref({
                 email: selectedTeam?.contact?.email,
-                subject: `Designação ${data.assignment.code} — BBQ At Home`,
+                subject: tQuotesOrders(locale, 'assignmentEmailSubject', {
+                  code: data.assignment.code ?? '',
+                }),
                 body: message,
               })
               return mailHref ? (

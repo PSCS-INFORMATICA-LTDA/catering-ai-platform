@@ -8,6 +8,9 @@ import {
   BackofficeFormCard,
   BackofficeInput,
 } from '@/components/backoffice/BackofficeCardPrimitives'
+import { tCommon } from '@/Lib/i18n/common'
+import { tCompanySettings } from '@/Lib/i18n/companySettings'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import { fetchAddressByCep, formatCep } from '@/Lib/cep'
 import { glassBtn } from '@/Lib/liquidGlass'
 
@@ -78,6 +81,7 @@ export default function CompanySettingsDashboard({
 }: {
   initialCompany: CompanyRow | null
 }) {
+  const locale = useAuthLocaleFromMe()
   const [form, setForm] = useState<FormState>(() => toForm(initialCompany))
   const [logoUrl, setLogoUrl] = useState(
     initialCompany?.logo_url || initialCompany?.brand_logo_url || '',
@@ -108,11 +112,11 @@ export default function CompanySettingsDashboard({
         }),
       })
       const json = (await res.json()) as { error?: string; data?: CompanyRow }
-      if (!res.ok) throw new Error(json.error ?? 'Falha ao salvar')
+      if (!res.ok) throw new Error(json.error ?? tCompanySettings(locale, 'saveFailed'))
       setForm(toForm(json.data ?? null))
-      setMessage('Dados da empresa salvos.')
+      setMessage(tCompanySettings(locale, 'saved'))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro')
+      setError(err instanceof Error ? err.message : tCommon(locale, 'error'))
     } finally {
       setSaving(false)
     }
@@ -133,7 +137,7 @@ export default function CompanySettingsDashboard({
         address: addr.formatted,
       }))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'CEP inválido')
+      setError(err instanceof Error ? err.message : tCompanySettings(locale, 'invalidCep'))
     } finally {
       setCepLoading(false)
     }
@@ -152,11 +156,11 @@ export default function CompanySettingsDashboard({
         error?: string
         data?: { logo_url?: string }
       }
-      if (!res.ok) throw new Error(json.error ?? 'Falha no upload')
+      if (!res.ok) throw new Error(json.error ?? tCompanySettings(locale, 'uploadFailed'))
       setLogoUrl(json.data?.logo_url ?? '')
-      setMessage('Logo atualizado. Ele pode aparecer nas propostas/cotações.')
+      setMessage(tCompanySettings(locale, 'logoUpdated'))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro no logo')
+      setError(err instanceof Error ? err.message : tCompanySettings(locale, 'logoError'))
     } finally {
       setUploading(false)
     }
@@ -168,11 +172,11 @@ export default function CompanySettingsDashboard({
     try {
       const res = await fetch('/api/company/logo', { method: 'DELETE' })
       const json = (await res.json()) as { error?: string }
-      if (!res.ok) throw new Error(json.error ?? 'Falha ao remover')
+      if (!res.ok) throw new Error(json.error ?? tCompanySettings(locale, 'removeFailed'))
       setLogoUrl('')
-      setMessage('Logo removido.')
+      setMessage(tCompanySettings(locale, 'logoRemoved'))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro')
+      setError(err instanceof Error ? err.message : tCommon(locale, 'error'))
     } finally {
       setUploading(false)
     }
@@ -181,10 +185,11 @@ export default function CompanySettingsDashboard({
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
       <div>
-        <h1 className="text-3xl font-bold text-red-600">Empresa</h1>
+        <h1 className="text-3xl font-bold text-red-600">
+          {tCompanySettings(locale, 'title')}
+        </h1>
         <p className="mt-1 text-sm text-neutral-500">
-          Cadastro da empresa do tenant (como no Logistics). O nome e o logo
-          aparecem no sistema e nas propostas — não use marca de terceiros.
+          {tCompanySettings(locale, 'subtitle')}
         </p>
       </div>
 
@@ -193,38 +198,40 @@ export default function CompanySettingsDashboard({
 
       <form onSubmit={onSave}>
         <BackofficeFormCard
-          title="Dados cadastrais"
+          title={tCompanySettings(locale, 'registrationTitle')}
           actions={
             <BackofficeBtnPrimary type="submit" disabled={saving}>
-              {saving ? 'Salvando…' : 'Salvar dados'}
+              {saving
+                ? tCommon(locale, 'saving')
+                : tCompanySettings(locale, 'saveData')}
             </BackofficeBtnPrimary>
           }
         >
-          <BackofficeField label="Razão social / legal name">
+          <BackofficeField label={tCompanySettings(locale, 'legalName')}>
             <BackofficeInput
               value={form.legal_name}
               onChange={(v) => setForm((f) => ({ ...f, legal_name: v }))}
             />
           </BackofficeField>
-          <BackofficeField label="Nome fantasia">
+          <BackofficeField label={tCompanySettings(locale, 'tradeName')}>
             <BackofficeInput
               value={form.trade_name}
               onChange={(v) => setForm((f) => ({ ...f, trade_name: v }))}
             />
           </BackofficeField>
-          <BackofficeField label="Nome exibição (company_name)">
+          <BackofficeField label={tCompanySettings(locale, 'displayName')}>
             <BackofficeInput
               value={form.company_name}
               onChange={(v) => setForm((f) => ({ ...f, company_name: v }))}
             />
           </BackofficeField>
-          <BackofficeField label="CNPJ / documento">
+          <BackofficeField label={tCompanySettings(locale, 'document')}>
             <BackofficeInput
               value={form.document}
               onChange={(v) => setForm((f) => ({ ...f, document: v }))}
             />
           </BackofficeField>
-          <BackofficeField label="Inscrição estadual">
+          <BackofficeField label={tCompanySettings(locale, 'stateRegistration')}>
             <BackofficeInput
               value={form.state_registration}
               onChange={(v) =>
@@ -232,19 +239,19 @@ export default function CompanySettingsDashboard({
               }
             />
           </BackofficeField>
-          <BackofficeField label="Telefone">
+          <BackofficeField label={tCommon(locale, 'phone')}>
             <BackofficeInput
               value={form.phone}
               onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
             />
           </BackofficeField>
-          <BackofficeField label="E-mail financeiro">
+          <BackofficeField label={tCompanySettings(locale, 'billingEmail')}>
             <BackofficeInput
               value={form.billing_email}
               onChange={(v) => setForm((f) => ({ ...f, billing_email: v }))}
             />
           </BackofficeField>
-          <BackofficeField label="Website">
+          <BackofficeField label={tCompanySettings(locale, 'website')}>
             <BackofficeInput
               value={form.website}
               onChange={(v) => setForm((f) => ({ ...f, website: v }))}
@@ -254,17 +261,19 @@ export default function CompanySettingsDashboard({
       </form>
 
       <BackofficeFormCard
-        title="Endereço"
+        title={tCommon(locale, 'address')}
         actions={
           <BackofficeBtnSecondary
             disabled={cepLoading}
             onClick={() => void lookupCep()}
           >
-            {cepLoading ? 'Buscando CEP…' : 'Buscar CEP'}
+            {cepLoading
+              ? tCompanySettings(locale, 'searchingCep')
+              : tCompanySettings(locale, 'lookupCep')}
           </BackofficeBtnSecondary>
         }
       >
-        <BackofficeField label="CEP">
+        <BackofficeField label={tCompanySettings(locale, 'postalCode')}>
           <BackofficeInput
             value={form.postal_code}
             onChange={(v) =>
@@ -272,43 +281,43 @@ export default function CompanySettingsDashboard({
             }
           />
         </BackofficeField>
-        <BackofficeField label="UF">
+        <BackofficeField label={tCompanySettings(locale, 'stateUf')}>
           <BackofficeInput
             value={form.state}
             onChange={(v) => setForm((f) => ({ ...f, state: v.toUpperCase() }))}
           />
         </BackofficeField>
-        <BackofficeField label="Logradouro" className="sm:col-span-2">
+        <BackofficeField label={tCompanySettings(locale, 'street')} className="sm:col-span-2">
           <BackofficeInput
             value={form.street}
             onChange={(v) => setForm((f) => ({ ...f, street: v }))}
           />
         </BackofficeField>
-        <BackofficeField label="Número">
+        <BackofficeField label={tCompanySettings(locale, 'number')}>
           <BackofficeInput
             value={form.address_number}
             onChange={(v) => setForm((f) => ({ ...f, address_number: v }))}
           />
         </BackofficeField>
-        <BackofficeField label="Complemento">
+        <BackofficeField label={tCompanySettings(locale, 'complement')}>
           <BackofficeInput
             value={form.address_complement}
             onChange={(v) => setForm((f) => ({ ...f, address_complement: v }))}
           />
         </BackofficeField>
-        <BackofficeField label="Bairro">
+        <BackofficeField label={tCompanySettings(locale, 'neighborhood')}>
           <BackofficeInput
             value={form.neighborhood}
             onChange={(v) => setForm((f) => ({ ...f, neighborhood: v }))}
           />
         </BackofficeField>
-        <BackofficeField label="Cidade">
+        <BackofficeField label={tCommon(locale, 'city')}>
           <BackofficeInput
             value={form.city}
             onChange={(v) => setForm((f) => ({ ...f, city: v }))}
           />
         </BackofficeField>
-        <BackofficeField label="Endereço completo" className="sm:col-span-2 lg:col-span-3">
+        <BackofficeField label={tCompanySettings(locale, 'fullAddress')} className="sm:col-span-2 lg:col-span-3">
           <BackofficeInput
             value={form.address}
             onChange={(v) => setForm((f) => ({ ...f, address: v }))}
@@ -317,23 +326,29 @@ export default function CompanySettingsDashboard({
       </BackofficeFormCard>
 
       <div className="liquid-glass-card space-y-4 p-5">
-        <h2 className="text-lg font-bold text-red-600">Logo da empresa</h2>
+        <h2 className="text-lg font-bold text-red-600">
+          {tCompanySettings(locale, 'logoTitle')}
+        </h2>
         <p className="text-sm text-neutral-500">
-          JPG, PNG ou WEBP · máx. 5 MB · aparece nas propostas (cotações).
+          {tCompanySettings(locale, 'logoHint')}
         </p>
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={logoUrl}
-            alt="Logo da empresa"
+            alt={tCompanySettings(locale, 'logoAlt')}
             className="h-24 w-auto max-w-xs rounded-xl border border-neutral-200 bg-white object-contain p-2"
           />
         ) : (
-          <p className="text-sm text-neutral-500">Nenhum logo enviado.</p>
+          <p className="text-sm text-neutral-500">
+            {tCompanySettings(locale, 'noLogo')}
+          </p>
         )}
         <div className="flex flex-wrap gap-2">
           <label className={glassBtn('primary', 'cursor-pointer')}>
-            {uploading ? 'Enviando…' : 'Enviar logo'}
+            {uploading
+              ? tCommon(locale, 'uploading')
+              : tCompanySettings(locale, 'uploadLogo')}
             <input
               type="file"
               accept="image/png,image/jpeg,image/webp"
@@ -353,7 +368,7 @@ export default function CompanySettingsDashboard({
               disabled={uploading}
               onClick={() => void removeLogo()}
             >
-              Remover logo
+              {tCompanySettings(locale, 'removeLogo')}
             </button>
           ) : null}
         </div>

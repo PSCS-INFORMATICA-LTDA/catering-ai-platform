@@ -20,6 +20,7 @@ import {
 import type { WizardState } from '@/Lib/quoteWizardTypes'
 import type { CommercialRulesSnapshot } from '@/Lib/supabaseCommercialRules'
 import { getGrillPhotoStatusLabel } from '@/Lib/grillPhotoStatus'
+import { tw } from '@/Lib/quoteTranslations'
 import {
   buildQuoteReviewPackageSummary,
   type QuoteReviewPackageFields,
@@ -183,8 +184,8 @@ export function mapWizardToQuoteReview(
     hasGrill: state.grillSetupAnswered ? state.hasGrill : null,
     grillPhotoRequired: state.grillPhotoRequired,
     grillPhotoStatusLabel: state.hasGrill
-      ? getGrillPhotoStatusLabel(state.grillPhotoStatus)
-      : 'Não se aplica',
+      ? getGrillPhotoStatusLabel(state.grillPhotoStatus, state.language)
+      : tw(state.language, 'notApplicable'),
     grillRentalRequired: state.grillRentalRequired,
     grillRentalQty: state.grillRentalRequired ? state.grillRentalQty : null,
     grillRentalTotal: quoteTotals.grillRentalTotal,

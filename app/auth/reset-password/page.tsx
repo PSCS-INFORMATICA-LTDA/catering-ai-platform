@@ -24,13 +24,7 @@ export default function ResetPasswordPage() {
       return
     }
     if (password !== confirm) {
-      setError(
-        locale === 'en'
-          ? 'Passwords do not match'
-          : locale === 'es'
-            ? 'Las contraseñas no coinciden'
-            : 'Senhas não conferem',
-      )
+      setError(tAuth(locale, 'passwordsDoNotMatch'))
       return
     }
     setLoading(true)

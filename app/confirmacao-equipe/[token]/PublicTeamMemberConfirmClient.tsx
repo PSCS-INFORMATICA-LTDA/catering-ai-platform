@@ -3,6 +3,9 @@
 import { useState } from 'react'
 import { operationalRoleLabel } from '@/Lib/agenda/operationalRoles'
 import { glassBtn } from '@/Lib/liquidGlass'
+import { tPublicOps, resolveBrowserLocale } from '@/Lib/i18n/publicOps'
+import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import { formatUiDate } from '@/Lib/i18n/locales'
 
 type Assignment = {
   role_key: string
@@ -26,17 +29,20 @@ export default function PublicTeamMemberConfirmClient({
   initialStatus,
   canRespond,
   confirmation,
+  language = 'pt',
 }: {
   token: string
   companyName: string
   initialStatus: string
   canRespond: boolean
   confirmation: Assignment
+  language?: string | null
 }) {
+  const lang = resolveBrowserLocale(language)
   const [status, setStatus] = useState(initialStatus)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const role = operationalRoleLabel(confirmation.role_key, 'pt')
+  const role = operationalRoleLabel(confirmation.role_key, lang)
 
   async function respond(response: 'confirmed' | 'declined') {
     setBusy(true)
@@ -54,12 +60,12 @@ export default function PublicTeamMemberConfirmClient({
         idempotent?: boolean
       }
       if (!res.ok || !data.ok) {
-        setError(data.error || 'Não foi possível registrar a resposta.')
+        setError(data.error || tPublicOps(lang, 'registerResponseError'))
         return
       }
       setStatus(data.status || response)
     } catch {
-      setError('Falha de rede. Tente novamente.')
+      setError(tPublicOps(lang, 'networkRetry'))
     } finally {
       setBusy(false)
     }
@@ -71,53 +77,63 @@ export default function PublicTeamMemberConfirmClient({
         <p className="text-xs font-semibold uppercase tracking-wide text-cdl-muted">
           {companyName}
         </p>
-        <h1 className="text-2xl font-bold text-cdl-fg">Confirmação de escala</h1>
+        <h1 className="text-2xl font-bold text-cdl-fg">
+          {tPublicOps(lang, 'memberConfirmTitle')}
+        </h1>
         <dl className="space-y-2 text-sm text-cdl-fg">
           <div>
-            <dt className="text-cdl-muted">Data</dt>
-            <dd className="font-medium">{confirmation.event_date}</dd>
+            <dt className="text-cdl-muted">{tQuotesOrders(lang, 'tableDate')}</dt>
+            <dd className="font-medium">
+              {formatUiDate(confirmation.event_date, lang)}
+            </dd>
           </div>
           <div>
-            <dt className="text-cdl-muted">Horário</dt>
+            <dt className="text-cdl-muted">
+              {tQuotesOrders(lang, 'timeLabel')}
+            </dt>
             <dd className="font-medium">
               {fmtTime(confirmation.start_time)}–{fmtTime(confirmation.end_time)}
             </dd>
           </div>
           <div>
-            <dt className="text-cdl-muted">Evento</dt>
+            <dt className="text-cdl-muted">{tQuotesOrders(lang, 'event')}</dt>
             <dd className="font-medium">{confirmation.event_title}</dd>
           </div>
           <div>
-            <dt className="text-cdl-muted">Local</dt>
+            <dt className="text-cdl-muted">
+              {tQuotesOrders(lang, 'locationLabel')}
+            </dt>
             <dd className="font-medium">{confirmation.location || '—'}</dd>
           </div>
           <div>
-            <dt className="text-cdl-muted">Equipe</dt>
+            <dt className="text-cdl-muted">
+              {tQuotesOrders(lang, 'teamFieldLabel').replace(' *', '')}
+            </dt>
             <dd className="font-medium">{confirmation.team_name}</dd>
           </div>
           <div>
-            <dt className="text-cdl-muted">Função</dt>
+            <dt className="text-cdl-muted">{tPublicOps(lang, 'roleLabel')}</dt>
             <dd className="font-medium">{role}</dd>
           </div>
           <div>
-            <dt className="text-cdl-muted">Integrante</dt>
+            <dt className="text-cdl-muted">{tPublicOps(lang, 'memberLabel')}</dt>
             <dd className="font-medium">{confirmation.person_name}</dd>
           </div>
         </dl>
 
         {status === 'confirmed' ? (
           <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-            Participação confirmada. Obrigado!
+            {tPublicOps(lang, 'participationConfirmed')}
           </p>
         ) : null}
         {status === 'declined' ? (
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            Indisponibilidade registrada.
+            {tPublicOps(lang, 'unavailabilityRecorded')}
           </p>
         ) : null}
         {status === 'cancelled' ? (
           <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">
-            Este convite foi cancelado.
+            {tPublicOps(lang, 'inviteCancelled')}
           </p>
         ) : null}
 
@@ -129,7 +145,7 @@ export default function PublicTeamMemberConfirmClient({
               className={glassBtn('primary')}
               onClick={() => void respond('confirmed')}
             >
-              Confirmar participação
+              {tPublicOps(lang, 'confirmParticipation')}
             </button>
             <button
               type="button"
@@ -137,7 +153,7 @@ export default function PublicTeamMemberConfirmClient({
               className={glassBtn('ghost')}
               onClick={() => void respond('declined')}
             >
-              Não posso participar
+              {tPublicOps(lang, 'cannotParticipate')}
             </button>
           </div>
         ) : null}

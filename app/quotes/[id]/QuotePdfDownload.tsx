@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useAuthLocaleFromMe } from '../../../Lib/i18n/useAuthLocaleFromMe'
+import { tw } from '../../../Lib/quoteTranslations'
 import {
   getQuotePdfFilename,
   parseFilenameFromContentDisposition,
@@ -67,6 +69,7 @@ export default function QuotePdfDownload({
   customerName,
   eventDate,
 }: QuotePdfDownloadProps) {
+  const locale = useAuthLocaleFromMe()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -81,7 +84,7 @@ export default function QuotePdfDownload({
       })
 
       if (!response.ok) {
-        throw new Error('Não foi possível gerar o PDF.')
+        throw new Error(tw(locale, 'pdfFailed'))
       }
 
       const blob = await response.blob()
@@ -101,7 +104,7 @@ export default function QuotePdfDownload({
       setError(
         downloadError instanceof Error
           ? downloadError.message
-          : 'Erro ao baixar PDF.',
+          : tw(locale, 'pdfDownloadError'),
       )
     } finally {
       setLoading(false)
@@ -116,7 +119,7 @@ export default function QuotePdfDownload({
         disabled={loading}
         className="cdl-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {loading ? 'Gerando PDF…' : 'Baixar PDF'}
+        {loading ? tw(locale, 'generatingPdf') : tw(locale, 'downloadPdf')}
       </button>
       {error ? (
         <p className="text-center text-xs text-red-400 sm:text-left">{error}</p>

@@ -17,10 +17,13 @@ import { glassBtn } from '@/Lib/liquidGlass'
 import { getCustomerDisplayName } from '@/Lib/getCustomerDisplayName'
 import type { CustomersUpdatePayload } from '@/Lib/customersTableSchema'
 import { glassField } from '@/Lib/liquidGlass'
+import { tCommon } from '@/Lib/i18n/common'
+import { tCustomers } from '@/Lib/i18n/customers'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
+import type { AuthLocale } from '@/Lib/i18n/authUsers'
 import {
   dedupeCustomersList,
   filterCustomersBySearch,
-  personRoleLabels,
   sortCustomersByRecency,
   type CustomerSearchRecord,
 } from '@/Lib/searchCustomers'
@@ -58,10 +61,22 @@ const EMPTY_FORM: CustomerForm = {
   active: true,
 }
 
-function langLabel(code: string | null | undefined) {
-  if (code === 'en') return 'English'
-  if (code === 'es') return 'Español'
-  return 'Português'
+function langLabel(
+  code: string | null | undefined,
+  locale: AuthLocale,
+) {
+  if (code === 'en') return tCommon(locale, 'english')
+  if (code === 'es') return tCommon(locale, 'spanish')
+  return tCommon(locale, 'portuguese')
+}
+
+function roleLabels(person: CustomerRow, locale: AuthLocale) {
+  const labels: string[] = []
+  if (person.is_customer) labels.push(tCommon(locale, 'customer'))
+  if (person.is_supplier) labels.push(tCommon(locale, 'supplier'))
+  if (person.is_team) labels.push(tCommon(locale, 'team'))
+  if (labels.length === 0) labels.push(tCommon(locale, 'customer'))
+  return labels
 }
 
 async function fetchCustomersFromApi(
@@ -94,77 +109,79 @@ function CustomerEditFields({
   draft,
   setDraft,
   abNumber,
+  locale,
 }: {
   draft: CustomerForm
   setDraft: React.Dispatch<React.SetStateAction<CustomerForm>>
   abNumber?: string | null
+  locale: AuthLocale
 }) {
   return (
     <>
       <BackofficeField label="Nº AB">
         <BackofficeInput value={abNumber ?? 'auto'} onChange={() => {}} disabled />
       </BackofficeField>
-      <BackofficeField label="Nome de exibição">
+      <BackofficeField label={tCommon(locale, 'displayName')}>
         <BackofficeInput
           value={draft.ab_name ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, ab_name: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Nome completo">
+      <BackofficeField label={tCustomers(locale, 'fullName')}>
         <BackofficeInput
           value={draft.full_name ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, full_name: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Contato">
+      <BackofficeField label={tCommon(locale, 'contact')}>
         <BackofficeInput
           value={draft.contact_name ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, contact_name: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Empresa">
+      <BackofficeField label={tCommon(locale, 'company')}>
         <BackofficeInput
           value={draft.company_name ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, company_name: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Telefone *">
+      <BackofficeField label={tCustomers(locale, 'phoneRequired')}>
         <BackofficeInput
           value={draft.phone ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, phone: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="E-mail">
+      <BackofficeField label={tCommon(locale, 'email')}>
         <BackofficeInput
           value={draft.email ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, email: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Endereço" className="sm:col-span-2">
+      <BackofficeField label={tCommon(locale, 'address')} className="sm:col-span-2">
         <BackofficeInput
           value={draft.address_line ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, address_line: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Cidade">
+      <BackofficeField label={tCommon(locale, 'city')}>
         <BackofficeInput
           value={draft.city ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, city: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Estado">
+      <BackofficeField label={tCommon(locale, 'state')}>
         <BackofficeInput
           value={draft.state ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, state: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="CEP / ZIP">
+      <BackofficeField label={tCommon(locale, 'postalCode')}>
         <BackofficeInput
           value={draft.postal_code ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, postal_code: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Idioma (WhatsApp / mensagens)">
+      <BackofficeField label={tCommon(locale, 'langMessages')}>
         <select
           className={glassField()}
           value={draft.preferred_language ?? 'pt'}
@@ -172,12 +189,12 @@ function CustomerEditFields({
             setDraft((c) => ({ ...c, preferred_language: e.target.value }))
           }
         >
-          <option value="pt">Português</option>
-          <option value="en">English</option>
-          <option value="es">Español</option>
+          <option value="pt">{tCommon(locale, 'portuguese')}</option>
+          <option value="en">{tCommon(locale, 'english')}</option>
+          <option value="es">{tCommon(locale, 'spanish')}</option>
         </select>
       </BackofficeField>
-      <BackofficeField label="Papéis" className="sm:col-span-2">
+      <BackofficeField label={tCustomers(locale, 'roles')} className="sm:col-span-2">
         <div className="flex flex-wrap gap-4 rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm text-neutral-800">
           <label className="inline-flex items-center gap-2">
             <input
@@ -187,7 +204,7 @@ function CustomerEditFields({
                 setDraft((c) => ({ ...c, is_customer: e.target.checked }))
               }
             />
-            Cliente
+            {tCommon(locale, 'customer')}
           </label>
           <label className="inline-flex items-center gap-2">
             <input
@@ -197,7 +214,7 @@ function CustomerEditFields({
                 setDraft((c) => ({ ...c, is_supplier: e.target.checked }))
               }
             />
-            Fornecedor
+            {tCommon(locale, 'supplier')}
           </label>
           <label className="inline-flex items-center gap-2">
             <input
@@ -207,15 +224,14 @@ function CustomerEditFields({
                 setDraft((c) => ({ ...c, is_team: e.target.checked }))
               }
             />
-            Equipe
+            {tCommon(locale, 'team')}
           </label>
         </div>
         <p className="mt-1 text-xs text-neutral-500">
-          Cadastro único: a mesma pessoa pode ser cliente, fornecedor e/ou
-          contato de equipe.
+          {tCustomers(locale, 'rolesHint')}
         </p>
       </BackofficeField>
-      <BackofficeField label="Origem">
+      <BackofficeField label={tCommon(locale, 'source')}>
         <BackofficeInput
           value={draft.source ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, source: v }))}
@@ -230,6 +246,7 @@ export default function CustomersDashboard({
 }: {
   initialCustomers: CustomerRow[]
 }) {
+  const locale = useAuthLocaleFromMe()
   const [customers, setCustomers] = useState<CustomerRow[]>(() =>
     dedupeCustomersList(sortCustomersByRecency(initialCustomers)),
   )
@@ -270,12 +287,12 @@ export default function CustomersDashboard({
       setError(
         refreshError instanceof Error
           ? refreshError.message
-          : 'Erro ao atualizar clientes.',
+          : tCustomers(locale, 'refreshError'),
       )
     } finally {
       setLoading(false)
     }
-  }, [search, activeFilter])
+  }, [search, activeFilter, locale])
 
   useEffect(() => {
     void refreshCustomers()
@@ -336,7 +353,7 @@ export default function CustomersDashboard({
       })
       const result = (await response.json()) as { error?: string }
       if (!response.ok) {
-        throw new Error(result.error ?? 'Não foi possível salvar cadastro.')
+        throw new Error(result.error ?? tCustomers(locale, 'saveError'))
       }
       cancelEdit()
       await refreshCustomers()
@@ -344,7 +361,7 @@ export default function CustomersDashboard({
       setError(
         saveError instanceof Error
           ? saveError.message
-          : 'Erro ao salvar cadastro.',
+          : tCustomers(locale, 'saveError'),
       )
     } finally {
       setSaving(false)
@@ -355,7 +372,7 @@ export default function CustomersDashboard({
     const openCount = openQuoteCounts[customer.id] ?? 0
     if (openCount > 0) {
       setError(
-        `Não é possível excluir este cadastro porque existem ${openCount} cotação(ões) em aberto vinculadas a ele.`,
+        tCustomers(locale, 'cannotDeleteOpenQuotes', { count: openCount }),
       )
       return
     }
@@ -363,7 +380,7 @@ export default function CustomersDashboard({
     const label = getCustomerDisplayName(customer)
     if (
       !window.confirm(
-        `Excluir cadastro de "${label}"?\n\nO cliente será desativado (soft delete).`,
+        tCustomers(locale, 'deleteConfirm', { label }),
       )
     ) {
       return
@@ -382,7 +399,7 @@ export default function CustomersDashboard({
     if (!response.ok) {
       setError(
         result.error ??
-          'Não é possível excluir este cadastro porque existem cotações em aberto vinculadas a ele.',
+          tCustomers(locale, 'cannotDeleteOpenQuotesGeneric'),
       )
       return
     }
@@ -400,13 +417,13 @@ export default function CustomersDashboard({
     const displayName = getCustomerDisplayName(customer)
     const openCount = openQuoteCounts[customer.id] ?? 0
     const location = [customer.city, customer.state].filter(Boolean).join(', ')
-    const roles = personRoleLabels(customer)
+    const roles = roleLabels(customer, locale)
 
     if (isEditing) {
       return (
         <li key={customer.id} className="border-b border-neutral-100 last:border-b-0">
           <BackofficeFormCard
-            title={`Editar cadastro · ${displayName}`}
+            title={`${tCustomers(locale, 'editPerson')} · ${displayName}`}
             actions={
               <>
                 <button
@@ -415,14 +432,14 @@ export default function CustomersDashboard({
                   disabled={saving}
                   className={glassBtn('primary', '!min-h-[36px] !px-4 !text-xs')}
                 >
-                  {saving ? 'Salvando…' : 'Salvar'}
+                  {saving ? tCommon(locale, 'saving') : tCommon(locale, 'save')}
                 </button>
                 <button
                   type="button"
                   onClick={cancelEdit}
                   className={glassBtn('secondary', '!min-h-[36px] !px-4 !text-xs')}
                 >
-                  Cancelar
+                  {tCommon(locale, 'cancel')}
                 </button>
               </>
             }
@@ -431,6 +448,7 @@ export default function CustomersDashboard({
               draft={draft}
               setDraft={setDraft}
               abNumber={customer.ab_number}
+              locale={locale}
             />
           </BackofficeFormCard>
         </li>
@@ -454,7 +472,7 @@ export default function CustomersDashboard({
 
           <div className="min-w-0">
             <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 sm:hidden">
-              Papel
+              {tCommon(locale, 'role')}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {roles.map((role) => (
@@ -467,7 +485,7 @@ export default function CustomersDashboard({
               ))}
               {roles.length > 1 ? (
                 <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-800">
-                  Múltiplos
+                  {tCustomers(locale, 'multipleRoles')}
                 </span>
               ) : null}
             </div>
@@ -489,7 +507,7 @@ export default function CustomersDashboard({
                 '!min-h-[32px] !px-3 !py-1.5 !text-[11px] !font-bold uppercase tracking-wide',
               )}
             >
-              Editar
+              {tCommon(locale, 'edit')}
             </button>
             <button
               type="button"
@@ -499,7 +517,7 @@ export default function CustomersDashboard({
                 '!min-h-[32px] !px-3 !py-1.5 !text-[11px] !font-bold uppercase tracking-wide',
               )}
             >
-              {isAnalyzing ? 'Fechar' : 'Analisar'}
+              {isAnalyzing ? tCommon(locale, 'close') : tCommon(locale, 'analyze')}
             </button>
             <button
               type="button"
@@ -509,36 +527,36 @@ export default function CustomersDashboard({
                 '!min-h-[32px] !px-3 !py-1.5 !text-[11px] !font-bold uppercase tracking-wide',
               )}
             >
-              Excluir
+              {tCommon(locale, 'delete')}
             </button>
           </div>
         </div>
 
         {isAnalyzing ? (
           <div className="grid gap-2 border-t border-neutral-100 bg-neutral-50/70 px-4 py-4 sm:grid-cols-2 lg:grid-cols-3">
-            <BackofficeMetaRow label="Papéis" value={roles.join(', ')} />
+            <BackofficeMetaRow label={tCustomers(locale, 'roles')} value={roles.join(', ')} />
             {customer.contact_name ? (
-              <BackofficeMetaRow label="Contato" value={customer.contact_name} />
+              <BackofficeMetaRow label={tCommon(locale, 'contact')} value={customer.contact_name} />
             ) : null}
-            <BackofficeMetaRow label="Telefone" value={customer.phone ?? '—'} />
-            <BackofficeMetaRow label="E-mail" value={customer.email ?? '—'} />
+            <BackofficeMetaRow label={tCommon(locale, 'phone')} value={customer.phone ?? '—'} />
+            <BackofficeMetaRow label={tCommon(locale, 'email')} value={customer.email ?? '—'} />
             <BackofficeMetaRow
-              label="Endereço"
+              label={tCommon(locale, 'address')}
               value={customer.address_line || location || '—'}
             />
             <BackofficeMetaRow
-              label="Idioma"
-              value={langLabel(customer.preferred_language)}
+              label={tCommon(locale, 'language')}
+              value={langLabel(customer.preferred_language, locale)}
             />
-            <BackofficeMetaRow label="Local" value={location || '—'} />
+            <BackofficeMetaRow label={tCommon(locale, 'location')} value={location || '—'} />
             {customer.ab_number ? (
               <BackofficeMetaRow label="AB" value={customer.ab_number} />
             ) : null}
             {customer.company_name ? (
-              <BackofficeMetaRow label="Empresa" value={customer.company_name} />
+              <BackofficeMetaRow label={tCommon(locale, 'company')} value={customer.company_name} />
             ) : null}
             {customer.source ? (
-              <BackofficeMetaRow label="Origem" value={customer.source} />
+              <BackofficeMetaRow label={tCommon(locale, 'source')} value={customer.source} />
             ) : null}
           </div>
         ) : null}
@@ -548,11 +566,11 @@ export default function CustomersDashboard({
 
   return (
     <BackofficeTableShell
-      title="Pessoas"
-      subtitle="Cadastro único (Address Book): cliente, fornecedor e equipe — o que muda é a flag de papel."
+      title={tCustomers(locale, 'title')}
+      subtitle={tCustomers(locale, 'subtitle')}
       search={search}
       onSearchChange={setSearch}
-      searchPlaceholder="Nome, telefone, e-mail ou AB number"
+      searchPlaceholder={tCustomers(locale, 'searchPlaceholder')}
       activeFilter={activeFilter}
       onActiveFilterChange={setActiveFilter}
       onRefresh={() => void refreshCustomers()}
@@ -564,19 +582,19 @@ export default function CustomersDashboard({
             className="min-h-[44px] rounded-xl border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-800"
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
-            aria-label="Filtrar por papel"
+            aria-label={tCustomers(locale, 'filterRole')}
           >
-            <option value="all">Todos os papéis</option>
-            <option value="customer">Clientes</option>
-            <option value="supplier">Fornecedores</option>
-            <option value="team">Equipe</option>
+            <option value="all">{tCustomers(locale, 'allRoles')}</option>
+            <option value="customer">{tCustomers(locale, 'customers')}</option>
+            <option value="supplier">{tCustomers(locale, 'suppliers')}</option>
+            <option value="team">{tCommon(locale, 'team')}</option>
           </select>
           <button
             type="button"
             onClick={startNew}
             className={glassBtn('primary', 'min-h-[44px] px-5 py-3 text-sm font-bold')}
           >
-            Nova pessoa
+            {tCustomers(locale, 'newPerson')}
           </button>
         </>
       }
@@ -584,7 +602,7 @@ export default function CustomersDashboard({
       <div className="space-y-4">
         {editingId === 'new' ? (
           <BackofficeFormCard
-            title="Nova pessoa"
+            title={tCustomers(locale, 'newPerson')}
             actions={
               <>
                 <button
@@ -593,34 +611,34 @@ export default function CustomersDashboard({
                   disabled={saving}
                   className={glassBtn('primary', '!min-h-[36px] !px-4 !text-xs')}
                 >
-                  {saving ? 'Salvando…' : 'Salvar'}
+                  {saving ? tCommon(locale, 'saving') : tCommon(locale, 'save')}
                 </button>
                 <button
                   type="button"
                   onClick={cancelEdit}
                   className={glassBtn('secondary', '!min-h-[36px] !px-4 !text-xs')}
                 >
-                  Cancelar
+                  {tCommon(locale, 'cancel')}
                 </button>
               </>
             }
           >
-            <CustomerEditFields draft={draft} setDraft={setDraft} />
+            <CustomerEditFields draft={draft} setDraft={setDraft} locale={locale} />
           </BackofficeFormCard>
         ) : null}
 
         {filteredCustomers.length === 0 && editingId !== 'new' ? (
           <BackofficeEmptyState
             loading={loading}
-            message="Nenhuma pessoa encontrada."
+            message={tCustomers(locale, 'empty')}
           />
         ) : (
           <ul className="max-h-[min(70vh,52rem)] overflow-auto rounded-2xl border border-neutral-200 bg-white shadow-sm">
             <li className="sticky top-0 z-10 hidden border-b border-neutral-100 bg-neutral-50 px-4 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-neutral-500 sm:grid sm:grid-cols-[minmax(0,1.4fr)_minmax(9rem,0.9fr)_minmax(0,1.2fr)_auto] sm:gap-4">
-              <span>Pessoa</span>
-              <span>Papel</span>
-              <span>Contato</span>
-              <span>Ações</span>
+              <span>{tCommon(locale, 'person')}</span>
+              <span>{tCommon(locale, 'role')}</span>
+              <span>{tCommon(locale, 'contact')}</span>
+              <span>{tCommon(locale, 'actions')}</span>
             </li>
             {filteredCustomers.map((customer) => renderPersonRow(customer))}
           </ul>

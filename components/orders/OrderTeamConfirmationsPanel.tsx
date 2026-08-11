@@ -22,6 +22,9 @@ import {
 import { MailIcon, SmsIcon, WhatsAppIcon } from '@/components/icons/ShareIcons'
 import SmsShareAnchor from '@/components/share/SmsShareAnchor'
 import WhatsAppButton from '@/components/share/WhatsAppButton'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
+import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import { tCommon } from '@/Lib/i18n/common'
 
 type Summary = {
   confirmed: number
@@ -121,6 +124,7 @@ export default function OrderTeamConfirmationsPanel({
   orderId: string
   canManage: boolean
 }) {
+  const locale = useAuthLocaleFromMe()
   const [summary, setSummary] = useState<Summary | null>(null)
   const [confirmations, setConfirmations] = useState<Confirmation[]>([])
   const [members, setMembers] = useState<Member[]>([])
@@ -151,7 +155,7 @@ export default function OrderTeamConfirmationsPanel({
       error?: string
     }
     if (!res.ok) {
-      setError(json.error || 'Falha ao carregar escala')
+      setError(json.error || tQuotesOrders(locale, 'loadScaleError'))
       return
     }
     const memberList = json.data?.members ?? []
@@ -186,20 +190,24 @@ export default function OrderTeamConfirmationsPanel({
         confs.some((c) => c.person_id === m.person_id && c.status === 'confirmed'),
       )
 
-    if (!json.data?.event) setAlert('SEM EQUIPE')
+    if (!json.data?.event) setAlert(tQuotesOrders(locale, 'noTeam'))
     else if (!scale.closed) {
       setAlert(
         scale.nextRoleLabel
-          ? `EQUIPE INCOMPLETA — designar: ${scale.nextRoleLabel}`
-          : 'EQUIPE INCOMPLETA',
+          ? tQuotesOrders(locale, 'teamIncompleteAssign', {
+              role: scale.nextRoleLabel,
+            })
+          : tQuotesOrders(locale, 'teamIncomplete'),
       )
-    } else if ((json.data.summary?.declined ?? 0) > 0) setAlert('INTEGRANTE RECUSOU')
+    } else if ((json.data.summary?.declined ?? 0) > 0)
+      setAlert(tQuotesOrders(locale, 'memberDeclined'))
     else if (!allMembersHaveActive)
-      setAlert('EQUIPE FECHADA — selecione a escala e prepare as confirmações')
-    else if ((json.data.summary?.pending ?? 0) > 0) setAlert('AGUARDANDO CONFIRMAÇÕES')
-    else if (allConfirmed) setAlert('EQUIPE CONFIRMADA')
+      setAlert(tQuotesOrders(locale, 'teamClosedSelectScale'))
+    else if ((json.data.summary?.pending ?? 0) > 0)
+      setAlert(tQuotesOrders(locale, 'awaitingConfirmations'))
+    else if (allConfirmed) setAlert(tQuotesOrders(locale, 'teamConfirmed'))
     else setAlert(null)
-  }, [orderId])
+  }, [orderId, locale])
 
   useEffect(() => {
     void refresh()
@@ -242,7 +250,7 @@ export default function OrderTeamConfirmationsPanel({
       }))
     }
     setHint(
-      'Escala alterada — clique em “Preparar confirmações WhatsApp” para gerar a mensagem desta pessoa.',
+      tQuotesOrders(locale, 'scaleChangedHint'),
     )
   }
 
@@ -252,14 +260,14 @@ export default function OrderTeamConfirmationsPanel({
       .map((s) => ({ person_id: s.person_id, role_key: s.role_key }))
 
     if (!selectedMembers.length) {
-      setError('Selecione pelo menos um integrante na lista da escala.')
+      setError(tQuotesOrders(locale, 'selectAtLeastOneMember'))
       return
     }
 
     const dup = new Set<string>()
     for (const m of selectedMembers) {
       if (dup.has(m.person_id)) {
-        setError('A mesma pessoa não pode ocupar dois slots.')
+        setError(tQuotesOrders(locale, 'samePersonTwoSlots'))
         return
       }
       dup.add(m.person_id)
@@ -284,9 +292,15 @@ export default function OrderTeamConfirmationsPanel({
       }
       if (!res.ok) {
         const base =
-          json.conflict?.message_pt || json.error || 'Falha ao preparar escala'
+          json.conflict?.message_pt ||
+          json.error ||
+          tQuotesOrders(locale, 'prepareScaleError')
         const next = json.conflict?.next_available_start
-        setError(next ? `${base} Próximo horário disponível: ${next}` : base)
+        setError(
+          next
+            ? `${base} ${tQuotesOrders(locale, 'nextAvailablePrefix')} ${next}`
+            : base,
+        )
         return
       }
       const nextShares = json.data?.shares ?? []
@@ -359,8 +373,8 @@ export default function OrderTeamConfirmationsPanel({
             <span className="inline-flex items-center gap-2">
               <WhatsAppIcon className="h-5 w-5 text-white" />
               {previewOpen
-                ? 'Atualizar prévia WhatsApp'
-                : 'Preparar confirmações WhatsApp'}
+                ? tQuotesOrders(locale, 'updateWhatsAppPreview')
+                : tQuotesOrders(locale, 'prepareWhatsAppConfirmations')}
             </span>
           </button>
         ) : null}
@@ -374,18 +388,20 @@ export default function OrderTeamConfirmationsPanel({
 
       {summary ? (
         <p className="text-sm text-cdl-muted">
-          {summary.confirmed} confirmados · {summary.pending} aguardando ·{' '}
-          {summary.declined} indisponíveis
+          {tQuotesOrders(locale, 'summaryConfirmedPendingDeclined', {
+            confirmed: summary.confirmed,
+            pending: summary.pending,
+            declined: summary.declined,
+          })}
         </p>
       ) : null}
 
       <div className="space-y-2">
         <p className="text-sm font-medium text-cdl-fg">
-          Escala deste evento — escolha churrasqueiro e ajudantes na lista
+          {tQuotesOrders(locale, 'scaleChooseHint')}
         </p>
         <p className="text-xs text-cdl-muted">
-          Mínimo 1 churrasqueiro; pode adicionar mais. Se alguém estiver
-          indisponível, troque pela lista. WhatsApp usa a pessoa selecionada.
+          {tQuotesOrders(locale, 'scaleMinHint')}
         </p>
         <div className="grid gap-2 sm:grid-cols-2">
           {slots.map((slot) => {
@@ -444,7 +460,7 @@ export default function OrderTeamConfirmationsPanel({
                 ]
               })
               setHint(
-                'Slot extra de churrasqueiro adicionado — selecione a pessoa e prepare a prévia.',
+                tQuotesOrders(locale, 'extraGrillSlotAdded'),
               )
             }}
           >
@@ -477,11 +493,10 @@ export default function OrderTeamConfirmationsPanel({
           className="space-y-3 rounded-xl border border-emerald-300/40 bg-emerald-50/80 p-4 text-sm dark:border-emerald-500/30 dark:bg-emerald-500/10"
         >
           <p className="font-semibold text-emerald-900 dark:text-emerald-100">
-            Prévia da confirmação — revise a mensagem antes de abrir o WhatsApp
+            {tQuotesOrders(locale, 'confirmationPreviewTitle')}
           </p>
           <p className="text-xs text-cdl-muted">
-            Selecione o slot, escolha a pessoa na lista, prepare a prévia e use o
-            botão verde do WhatsApp.
+            {tQuotesOrders(locale, 'confirmationPreviewHint')}
           </p>
 
           <div className="flex flex-wrap gap-2">
@@ -513,14 +528,13 @@ export default function OrderTeamConfirmationsPanel({
 
           {!selectedShare ? (
             <p className="text-xs text-amber-800 dark:text-amber-100">
-              Clique em “Preparar confirmações WhatsApp” para gerar a mensagem
-              com saudação desta pessoa.
+              {tQuotesOrders(locale, 'prepareConfirmationsHint')}
             </p>
           ) : null}
 
           <label className="block space-y-1">
             <span className="text-xs font-medium text-cdl-muted">
-              WhatsApp do integrante
+              {tQuotesOrders(locale, 'memberWhatsApp')}
             </span>
             <input
               className={glassField()}
@@ -554,13 +568,13 @@ export default function OrderTeamConfirmationsPanel({
               className={SHARE_ICON}
               title={
                 !selectedShare
-                  ? 'Prepare a prévia antes de enviar.'
+                  ? tQuotesOrders(locale, 'preparePreviewFirst')
                   : phoneOk
                     ? `WhatsApp · ${formatWhatsAppPhoneDisplay(selectedPhone)}`
-                    : 'Informe um telefone válido com DDI.'
+                    : tQuotesOrders(locale, 'enterPhoneToSend')
               }
               onInvalidPhone={() =>
-                setHint('Informe um telefone válido com DDI.')
+                setHint(tQuotesOrders(locale, 'enterPhoneToSend'))
               }
             />
 
@@ -569,11 +583,11 @@ export default function OrderTeamConfirmationsPanel({
                 href={buildSmsShareHref(selectedPhone, selectedMessage)!}
                 message={selectedMessage}
                 className={`${glassAction('sky', true)} ${SHARE_ICON}`}
-                title="Enviar por SMS"
-                aria-label="Enviar por SMS"
+                title={tQuotesOrders(locale, 'sendBySms')}
+                aria-label={tQuotesOrders(locale, 'sendBySms')}
                 onDesktopHint={() =>
                   setHint(
-                    'Mensagem SMS copiada. No PC use Phone Link se disponível.',
+                    tQuotesOrders(locale, 'smsCopiedHint'),
                   )
                 }
               >
@@ -584,8 +598,8 @@ export default function OrderTeamConfirmationsPanel({
                 type="button"
                 disabled
                 className={`${glassAction('sky', true)} ${SHARE_ICON} opacity-50`}
-                title="SMS indisponível"
-                aria-label="SMS indisponível"
+                title={tCommon(locale, 'smsUnavailable')}
+                aria-label={tCommon(locale, 'smsUnavailable')}
               >
                 <SmsIcon className="h-5 w-5" />
               </button>
@@ -596,15 +610,17 @@ export default function OrderTeamConfirmationsPanel({
                 selectedShare &&
                 buildMailtoHref({
                   email: null,
-                  subject: `Confirmação de escala — ${selectedSlot.label}`,
+                  subject: tQuotesOrders(locale, 'confirmationEmailSubject', {
+                    label: selectedSlot.label,
+                  }),
                   body: selectedMessage,
                 })
               return mailHref ? (
                 <a
                   href={mailHref}
                   className={`${glassAction('sky', true)} ${SHARE_ICON}`}
-                  title="E-mail"
-                  aria-label="E-mail"
+                  title={tQuotesOrders(locale, 'emailLabel')}
+                  aria-label={tQuotesOrders(locale, 'emailLabel')}
                 >
                   <MailIcon className="h-5 w-5" />
                 </a>
@@ -613,8 +629,8 @@ export default function OrderTeamConfirmationsPanel({
                   type="button"
                   disabled
                   className={`${glassAction('sky', true)} ${SHARE_ICON} opacity-50`}
-                  title="E-mail indisponível"
-                  aria-label="E-mail indisponível"
+                  title={tCommon(locale, 'emailUnavailable')}
+                  aria-label={tCommon(locale, 'emailUnavailable')}
                 >
                   <MailIcon className="h-5 w-5" />
                 </button>
@@ -633,33 +649,34 @@ export default function OrderTeamConfirmationsPanel({
                 }))
               }}
             >
-              Restaurar texto padrão
+              {tQuotesOrders(locale, 'restoreDefaultText')}
             </button>
             <button
               type="button"
               className={glassBtn('ghost')}
               onClick={() => setPreviewOpen(false)}
             >
-              Fechar prévia
+              {tCommon(locale, 'closePreview')}
             </button>
           </div>
 
           {selectedShare ? (
             phoneOk ? (
               <p className="text-xs text-cdl-muted">
-                Destino: {formatWhatsAppPhoneDisplay(selectedPhone)} — clique no
-                ícone verde do WhatsApp para abrir o painel de envio.
+                {tQuotesOrders(locale, 'destinationClickWhatsApp', {
+                  phone: formatWhatsAppPhoneDisplay(selectedPhone),
+                })}
               </p>
             ) : (
               <p className="text-xs text-amber-700 dark:text-amber-200">
-                Informe um telefone válido com DDI para liberar o envio.
+                {tQuotesOrders(locale, 'enterPhoneToSend')}
               </p>
             )
           ) : null}
 
           <label className="block space-y-1">
             <span className="text-xs font-medium text-cdl-muted">
-              Mensagem (editável)
+              {tQuotesOrders(locale, 'editableMessageLabel')}
             </span>
             <textarea
               className="min-h-[14rem] w-full whitespace-pre-wrap rounded-lg border border-cdl-border bg-cdl-surface p-3 font-sans text-sm leading-relaxed text-cdl-fg"
@@ -672,13 +689,15 @@ export default function OrderTeamConfirmationsPanel({
                   [selectedShare.person_id]: e.target.value,
                 }))
               }}
-              placeholder="Selecione a pessoa e prepare a prévia para gerar a mensagem com saudação."
+              placeholder={tQuotesOrders(locale, 'messagePlaceholderScale')}
             />
           </label>
 
           {selectedShare?.confirmUrl ? (
             <p className="break-all text-xs text-cdl-muted">
-              Link de confirmação: {selectedShare.confirmUrl}
+              {tQuotesOrders(locale, 'confirmationLink', {
+                url: selectedShare.confirmUrl,
+              })}
             </p>
           ) : null}
         </div>

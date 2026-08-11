@@ -49,7 +49,11 @@ export function formatUiDate(
  * requested → pt → en → es → string vazia.
  */
 export function pickLocalizedText(
-  values: { pt?: string; en?: string; es?: string },
+  values: {
+    pt?: string | null
+    en?: string | null
+    es?: string | null
+  },
   locale: string | null | undefined,
 ): string {
   const loc = resolveUiLocale(locale)

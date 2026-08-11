@@ -12,7 +12,6 @@ import QuoteCommercialAdjustmentNotice from '@/components/quote-review/QuoteComm
 import GuestBreakdownPanel from '@/components/GuestBreakdownPanel'
 import {
   BALANCE_PERCENTAGE,
-  RESERVATION_PAYMENT_TEXT,
   RESERVATION_PERCENTAGE,
 } from '@/Lib/cdlCommercialRules'
 import { formatMoneyOrDash } from '@/Lib/readQuoteSnapshot'
@@ -26,7 +25,8 @@ import {
 import { IconCalendar, IconClock, IconLocation } from './QuoteReviewIcons'
 import QuoteProposalOverviewCard from './QuoteProposalOverviewCard'
 import type { QuoteReviewAdditional, QuoteReviewData } from './quoteReviewTypes'
-import { getQuoteStrings } from '@/Lib/quoteTranslations'
+import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
+import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
 
 function ProposalSection({
   title,
@@ -103,7 +103,9 @@ export default function QuoteReviewLayout({
   afterBody?: ReactNode
   showFooter?: boolean
 }) {
-  const t = getQuoteStrings(data.language ?? 'pt')
+  const lang = data.language ?? 'pt'
+  const t = getQuoteStrings(lang)
+  const w = t.wizard
   const cityState = [data.city, data.state].filter(Boolean).join(', ')
   const eventLocation = [data.addressLine, cityState, data.zipCode]
     .filter(Boolean)
@@ -125,16 +127,22 @@ export default function QuoteReviewLayout({
   const grillRentalQty = Number(data.grillRentalQty ?? 0)
 
   const pricingLines = [
-    { label: 'Pacote', value: formatMoneyOrDash(data.packageTotal) },
     {
-      label: 'Adicionais',
+      label: tQuotesOrders(lang, 'packageLabel'),
+      value: formatMoneyOrDash(data.packageTotal),
+    },
+    {
+      label: tQuotesOrders(lang, 'additionalsLabel'),
       value: formatMoneyOrDash(data.additionalTotal),
     },
     {
       label:
         (chargedMiles ?? 0) > 0
-          ? `Milhagem (${chargedMiles} mi cobradas além de ${Number(data.mileageFreeLimit ?? 20)} mi cortesia)`
-          : 'Milhagem',
+          ? tQuotesOrders(lang, 'docMileageChargedSummaryLine', {
+              charged: chargedMiles ?? 0,
+              free: Number(data.mileageFreeLimit ?? 20),
+            })
+          : tQuotesOrders(lang, 'mileageLabel'),
       value: formatMoneyOrDash(data.mileageFee),
     },
     ...(grillRentalTotal > 0
@@ -142,8 +150,10 @@ export default function QuoteReviewLayout({
           {
             label:
               grillRentalQty > 1
-                ? `Aluguel de churrasqueira (${grillRentalQty}×)`
-                : 'Aluguel de churrasqueira',
+                ? tQuotesOrders(lang, 'docGrillRentalLineQty', {
+                    qty: grillRentalQty,
+                  })
+                : tQuotesOrders(lang, 'docGrillRentalLine'),
             value: formatCurrency(grillRentalTotal),
           },
         ]
@@ -151,7 +161,7 @@ export default function QuoteReviewLayout({
     ...(holidaySurcharge > 0
       ? [
           {
-            label: 'Adicional de feriado / data comemorativa (100%)',
+            label: tQuotesOrders(lang, 'docHolidaySurchargeLine'),
             value: formatCurrency(holidaySurcharge),
           },
         ]
@@ -159,20 +169,29 @@ export default function QuoteReviewLayout({
     ...(minimumAdjustment > 0
       ? [
           {
-            label: `Pedido mínimo aplicado (mín. ${formatCurrency(data.minimumOrderAmount ?? 0)})`,
+            label: tQuotesOrders(lang, 'minOrderAppliedWithMin', {
+              label: tQuotesOrders(lang, 'docMinOrderAppliedLine'),
+              min: formatCurrency(data.minimumOrderAmount ?? 0),
+            }),
             value: formatCurrency(minimumAdjustment),
           },
         ]
       : []),
     ...(discount > 0
-      ? [{ label: 'Desconto', value: formatCurrency(discount), discount: true }]
+      ? [
+          {
+            label: tQuotesOrders(lang, 'docDiscountLine'),
+            value: formatCurrency(discount),
+            discount: true,
+          },
+        ]
       : []),
     {
-      label: 'Reserva',
+      label: tQuotesOrders(lang, 'reservationLabel'),
       value: formatMoneyOrDash(data.reservationAmount),
     },
     {
-      label: 'Saldo a pagar',
+      label: tQuotesOrders(lang, 'docBalanceDueLine'),
       value: formatMoneyOrDash(data.balanceDue),
       highlight: true,
     },
@@ -180,17 +199,36 @@ export default function QuoteReviewLayout({
 
   const heroMeta = data.preview
     ? [
-        { label: 'Prévia', value: 'Antes de salvar' },
-        { label: 'Data do evento', value: formatDate(data.eventDate) },
-        { label: 'Horário', value: eventTimeLabel },
-        { label: 'Status', value: 'Rascunho', status: true },
+        { label: w.preview, value: w.beforeSave },
+        {
+          label: tQuotesOrders(lang, 'docEventDateLabel'),
+          value: formatDate(data.eventDate, lang),
+        },
+        { label: t.review.time, value: eventTimeLabel },
+        {
+          label: tQuotesOrders(lang, 'status'),
+          value: w.draft,
+          status: true,
+        },
       ]
     : [
-        { label: 'Cotação', value: data.quoteNumber ?? '—' },
-        { label: 'Data do evento', value: formatDate(data.eventDate) },
-        { label: 'Horário', value: eventTimeLabel },
+        {
+          label: tQuotesOrders(lang, 'linkedQuote'),
+          value: data.quoteNumber ?? '—',
+        },
+        {
+          label: tQuotesOrders(lang, 'docEventDateLabel'),
+          value: formatDate(data.eventDate, lang),
+        },
+        { label: t.review.time, value: eventTimeLabel },
         ...(data.quoteStatus
-          ? [{ label: 'Status', value: data.quoteStatus, status: true }]
+          ? [
+              {
+                label: tQuotesOrders(lang, 'status'),
+                value: data.quoteStatus,
+                status: true,
+              },
+            ]
           : []),
       ]
 
@@ -254,6 +292,7 @@ export default function QuoteReviewLayout({
           quoteTotal={data.quoteTotal}
           additionalsCount={data.additionals.length}
           grillRentalRequired={data.grillRentalRequired}
+          language={lang}
           afterClient={
             <>
               <QuoteCommercialAdjustmentNotice
@@ -266,10 +305,12 @@ export default function QuoteReviewLayout({
                 minimumOrderAdjustment={minimumAdjustment}
                 minimumOrderAmount={Number(data.minimumOrderAmount ?? 0)}
                 quoteTotal={data.quoteTotal}
+                language={lang}
               />
               <CdlImportantRulesPanel
                 variant="summary"
                 showReservationText
+                language={lang}
               />
             </>
           }
@@ -292,6 +333,7 @@ export default function QuoteReviewLayout({
               billableGuestCount={data.billableGuestCount}
               packageTotal={data.packageTotal}
               packageUnitPrice={data.packageUnitPrice}
+              language={lang}
             />
           </ProposalSection>
 
@@ -303,6 +345,7 @@ export default function QuoteReviewLayout({
                 physicalGuestCount: data.physicalGuestCount,
                 quoteTotal: data.quoteTotal,
               }}
+              language={lang}
             />
           </ProposalSection>
 
@@ -314,7 +357,7 @@ export default function QuoteReviewLayout({
               <EventRow
                 icon={<IconCalendar />}
                 label={t.review.date}
-                value={formatDate(data.eventDate)}
+                value={formatDate(data.eventDate, lang)}
               />
               <EventRow
                 icon={<IconClock />}
@@ -334,26 +377,34 @@ export default function QuoteReviewLayout({
           <ProposalSection title={t.review.bbqSection}>
             <div className="quote-proposal-info-grid">
               <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">Cliente tem churrasqueira?</span>
-                <p className="quote-proposal-value">{formatBool(data.hasGrill)}</p>
-              </div>
-              <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">Foto da churrasqueira</span>
+                <span className="quote-proposal-label">{w.hasGrill}</span>
                 <p className="quote-proposal-value">
-                  {data.grillPhotoStatusLabel ??
-                    (data.hasGrill === false ? 'Não se aplica' : 'Pendente')}
+                  {formatBool(data.hasGrill, lang)}
                 </p>
               </div>
               <div className="quote-proposal-info-cell">
                 <span className="quote-proposal-label">
-                  Necessário alugar churrasqueira?
+                  {tQuotesOrders(lang, 'docGrillPhoto')}
                 </span>
                 <p className="quote-proposal-value">
-                  {formatBool(data.grillRentalRequired)}
+                  {data.grillPhotoStatusLabel ??
+                    (data.hasGrill === false
+                      ? w.notApplicable
+                      : w.pending)}
                 </p>
               </div>
               <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">Quantidade para aluguel</span>
+                <span className="quote-proposal-label">
+                  {w.grillRentalRequired}
+                </span>
+                <p className="quote-proposal-value">
+                  {formatBool(data.grillRentalRequired, lang)}
+                </p>
+              </div>
+              <div className="quote-proposal-info-cell">
+                <span className="quote-proposal-label">
+                  {tQuotesOrders(lang, 'docGrillRentalQty')}
+                </span>
                 <p className="quote-proposal-value">
                   {data.grillRentalRequired
                     ? displayValue(data.grillRentalQty)
@@ -362,7 +413,7 @@ export default function QuoteReviewLayout({
               </div>
               {data.grillNotes ? (
                 <div className="quote-proposal-info-cell quote-proposal-info-cell--wide">
-                  <span className="quote-proposal-label">Observações</span>
+                  <span className="quote-proposal-label">{w.notes}</span>
                   <p className="quote-proposal-value">{data.grillNotes}</p>
                 </div>
               ) : null}
@@ -372,7 +423,7 @@ export default function QuoteReviewLayout({
           <ProposalSection title={t.review.reservationSection}>
             <div className="quote-proposal-info-grid">
               <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">Percentual de reserva</span>
+                <span className="quote-proposal-label">{w.reservationPctLabel}</span>
                 <p className="quote-proposal-value">
                   {data.reservationPercentage != null
                     ? `${data.reservationPercentage}%`
@@ -380,13 +431,15 @@ export default function QuoteReviewLayout({
                 </p>
               </div>
               <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">Valor da reserva</span>
+                <span className="quote-proposal-label">{w.reservationAmountLabel}</span>
                 <p className="quote-proposal-value">
                   {formatMoneyOrDash(data.reservationAmount)}
                 </p>
               </div>
               <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">Saldo a pagar</span>
+                <span className="quote-proposal-label">
+                  {tQuotesOrders(lang, 'docBalanceDueLine')}
+                </span>
                 <p className="quote-proposal-value">
                   {formatMoneyOrDash(data.balanceDue)}
                 </p>
@@ -398,13 +451,15 @@ export default function QuoteReviewLayout({
         <ProposalSection title={t.review.mileageSection} className="quote-proposal-section--compact">
           <div className="quote-proposal-mileage-grid">
             <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">Local base</span>
+              <span className="quote-proposal-label">{w.baseLocation}</span>
               <p className="quote-proposal-value">
                 {displayValue(data.mileageBaseLocation)}
               </p>
             </div>
             <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">Distância</span>
+              <span className="quote-proposal-label">
+                {tQuotesOrders(lang, 'docMileageDistance')}
+              </span>
               <p className="quote-proposal-value">
                 {data.mileageDistance != null
                   ? `${data.mileageDistance} mi`
@@ -412,7 +467,7 @@ export default function QuoteReviewLayout({
               </p>
             </div>
             <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">Milhas inclusas</span>
+              <span className="quote-proposal-label">{w.includedMiles}</span>
               <p className="quote-proposal-value">
                 {data.mileageFreeLimit != null
                   ? `${data.mileageFreeLimit} mi`
@@ -420,13 +475,15 @@ export default function QuoteReviewLayout({
               </p>
             </div>
             <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">Milhas cobradas</span>
+              <span className="quote-proposal-label">{w.chargedMiles}</span>
               <p className="quote-proposal-value">
                 {chargedMiles != null ? `${chargedMiles} mi` : '—'}
               </p>
             </div>
             <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">Taxa</span>
+              <span className="quote-proposal-label">
+                {tQuotesOrders(lang, 'docMileageRate')}
+              </span>
               <p className="quote-proposal-value">
                 {data.mileageRate != null
                   ? `${formatCurrency(data.mileageRate)}/mi`
@@ -434,7 +491,9 @@ export default function QuoteReviewLayout({
               </p>
             </div>
             <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">Taxa de milhagem</span>
+              <span className="quote-proposal-label">
+                {tQuotesOrders(lang, 'docMileageFeeLabel')}
+              </span>
               <p className="quote-proposal-value">
                 {formatMoneyOrDash(data.mileageFee)}
               </p>
@@ -469,20 +528,26 @@ export default function QuoteReviewLayout({
                           <h4 className="quote-proposal-additional-name">{item.label}</h4>
                           <div className="quote-proposal-additional-metrics">
                             <div>
-                              <span className="quote-proposal-label">Qtd.</span>
+                              <span className="quote-proposal-label">
+                                {tQuotesOrders(lang, 'docQtyLabel')}
+                              </span>
                               <p className="quote-proposal-additional-metric">
                                 {displayValue(item.quantity)}
                               </p>
                             </div>
                             <div>
-                              <span className="quote-proposal-label">Unit.</span>
+                              <span className="quote-proposal-label">
+                                {tQuotesOrders(lang, 'docUnitPriceLabel')}
+                              </span>
                               <p className="quote-proposal-additional-metric">
                                 {formatCurrency(item.unitPrice)}
                               </p>
                             </div>
                           </div>
                           <div className="quote-print-additional-total quote-proposal-additional-total">
-                            <span className="quote-proposal-label">Total</span>
+                            <span className="quote-proposal-label">
+                              {w.total}
+                            </span>
                             <p className="quote-proposal-additional-price">
                               {formatCurrency(item.totalPrice)}
                             </p>
@@ -498,7 +563,9 @@ export default function QuoteReviewLayout({
         </ProposalSection>
 
         <section className="quote-proposal-pricing quote-print-section quote-print-keep">
-          <h2 className="quote-proposal-section-title">Resumo financeiro</h2>
+          <h2 className="quote-proposal-section-title">
+            {tQuotesOrders(lang, 'docFinancialSection')}
+          </h2>
           <div className="quote-proposal-pricing-card">
             <div className="quote-proposal-pricing-lines">
               {pricingLines.map((line) => (
@@ -520,28 +587,29 @@ export default function QuoteReviewLayout({
               ))}
             </div>
             <div className="quote-print-total-box quote-proposal-total-box">
-              <span className="quote-proposal-total-label">Total da cotação</span>
+              <span className="quote-proposal-total-label">
+                {w.quoteTotal}
+              </span>
               <span className="quote-print-total-value quote-proposal-total-value">
                 {formatMoneyOrDash(data.quoteTotal)}
               </span>
             </div>
             <div className="quote-proposal-reservation-note">
-              <p>{RESERVATION_PAYMENT_TEXT}</p>
+              <p>{tQuotesOrders(lang, 'docReservationPaymentText')}</p>
               <p>
-                Reserva: {RESERVATION_PERCENTAGE}% · Saldo: {BALANCE_PERCENTAGE}%
+                {tw(lang, 'reservationBalanceLine', {
+                  reservation: RESERVATION_PERCENTAGE,
+                  balance: BALANCE_PERCENTAGE,
+                })}
               </p>
               {minimumAdjustment > 0 ? (
                 <p className="mt-2 font-medium text-cdl-action">
-                  Pedido mínimo aplicado: o total foi elevado para atingir o
-                  mínimo comercial da data do evento.
+                  {w.minOrderAppliedNote}
                 </p>
               ) : null}
               {holidaySurcharge > 0 ? (
                 <p className="mt-2 font-medium text-cdl-action">
-                  Adicional de feriado / data comemorativa: acréscimo de 100%
-                  aplicado sobre o subtotal (pacote + adicionais + milhagem) —
-                  feriados federais dos EUA e datas 24, 25 e 31/dez e 1º de
-                  janeiro.
+                  {w.holidaySurchargeNote}
                 </p>
               ) : null}
             </div>
@@ -550,6 +618,7 @@ export default function QuoteReviewLayout({
 
         <CdlCancellationPolicySection
           variant={rulesVariant === 'pdf' ? 'pdf' : 'summary'}
+          language={lang}
         />
 
         {afterBody}

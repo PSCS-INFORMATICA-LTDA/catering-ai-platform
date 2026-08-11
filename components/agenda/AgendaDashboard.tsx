@@ -6,7 +6,7 @@ import type { AgendaEvent, OperationalTeam } from '@/Lib/agenda/types'
 import { eventsToSegments } from '@/Lib/agenda/segments'
 import { teamHasBookingOnDate } from '@/Lib/agenda/teamAvailability'
 import {
-  AGENDA_MONTH_OPTIONS,
+  agendaMonthOptions,
   buildAgendaQuoteHref,
   dayLabel,
   dayLabelParts,
@@ -23,12 +23,23 @@ import {
   visibleWeekDayKeys,
   weekDayKeys,
 } from '@/Lib/agenda/week'
+import { tAgenda } from '@/Lib/i18n/agenda'
+import type { AuthLocale } from '@/Lib/i18n/authUsers'
+import { tCommon } from '@/Lib/i18n/common'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import { glassBtn, glassField, glassTabLink } from '@/Lib/liquidGlass'
 import TeamAvailabilitySharePanel from '@/components/agenda/TeamAvailabilitySharePanel'
 import { buildPublicTeamAssignmentUrl } from '@/Lib/teamAssignment'
 
 type Selection = { teamId: string; dayKey: string } | null
 type RangeMode = 'week' | 'custom'
+
+function eventStatusLabel(locale: AuthLocale, status: string) {
+  if (status === 'scheduled') return tAgenda(locale, 'statusScheduled')
+  if (status === 'completed') return tAgenda(locale, 'statusCompleted')
+  if (status === 'cancelled') return tAgenda(locale, 'statusCancelled')
+  return status
+}
 
 export default function AgendaDashboard({
   initialTeams,
@@ -39,6 +50,7 @@ export default function AgendaDashboard({
   initialEvents: AgendaEvent[]
   initialWeekStart: string
 }) {
+  const locale = useAuthLocaleFromMe()
   const [teams] = useState(initialTeams)
   const [events, setEvents] = useState(initialEvents)
   /** Âncora da semana (qualquer dia), como no Logistics — weekDayKeys normaliza p/ segunda. */
@@ -66,6 +78,7 @@ export default function AgendaDashboard({
     [weekAnchor, todayKey],
   )
   const segments = useMemo(() => eventsToSegments(events), [events])
+  const monthOptions = useMemo(() => agendaMonthOptions(locale), [locale])
 
   const visibleTeams = useMemo(() => {
     if (!teamFilter) return teams
@@ -101,10 +114,10 @@ export default function AgendaDashboard({
       if (teamId) params.set('team_id', teamId)
       const res = await fetch(`/api/agenda/events?${params}`, { cache: 'no-store' })
       const json = (await res.json()) as { data?: AgendaEvent[]; error?: string }
-      if (!res.ok) throw new Error(json.error ?? 'Falha ao carregar agenda')
+      if (!res.ok) throw new Error(json.error ?? tAgenda(locale, 'loadError'))
       return json.data ?? []
     },
-    [],
+    [locale],
   )
 
   /** Navegação semanal — volta ao modo semana. */
@@ -125,23 +138,23 @@ export default function AgendaDashboard({
         setFilterYear(nextAnchor.getFullYear())
         setFilterMonth(nextAnchor.getMonth())
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Erro')
+        setError(e instanceof Error ? e.message : tAgenda(locale, 'genericError'))
       } finally {
         setLoading(false)
       }
     },
-    [fetchEvents, teamFilter],
+    [fetchEvents, teamFilter, locale],
   )
 
   /** Intervalo customizado (mês / de–até). Quadro mostra a semana do início. */
   const reloadCustom = useCallback(
     async (from: string, to: string, teamId = teamFilter) => {
       if (!from || !to || from > to) {
-        setError('Informe um intervalo válido (De ≤ Até).')
+        setError(tAgenda(locale, 'invalidRange'))
         return
       }
       if (inclusiveDaySpan(from, to) > 366) {
-        setError('Intervalo máximo: 366 dias.')
+        setError(tAgenda(locale, 'maxRange'))
         return
       }
       setLoading(true)
@@ -157,12 +170,12 @@ export default function AgendaDashboard({
         setFilterYear(anchor.getFullYear())
         setFilterMonth(anchor.getMonth())
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Erro')
+        setError(e instanceof Error ? e.message : tAgenda(locale, 'genericError'))
       } finally {
         setLoading(false)
       }
     },
-    [fetchEvents, teamFilter],
+    [fetchEvents, teamFilter, locale],
   )
 
   async function markStatus(id: string, status: 'completed' | 'cancelled' | 'scheduled') {
@@ -180,9 +193,13 @@ export default function AgendaDashboard({
       }
     }
     if (!res.ok) {
-      const base = json.conflict?.message_pt || json.error || 'Falha ao atualizar'
+      const base = json.conflict?.message_pt || json.error || tAgenda(locale, 'updateError')
       const next = json.conflict?.next_available_start
-      setError(next ? `${base} Próximo horário disponível: ${next}` : base)
+      setError(
+        next
+          ? `${base} ${tAgenda(locale, 'nextAvailable', { time: next })}`
+          : base,
+      )
       return
     }
     if (rangeMode === 'custom') {
@@ -214,44 +231,49 @@ export default function AgendaDashboard({
     endTime: '14:00',
   })
 
+  const rangeLabel =
+    rangeMode === 'custom'
+      ? formatRangeLabel(rangeFrom, rangeTo, locale)
+      : formatWeekRangeLabel(weekAnchor, todayKey, locale)
+  const rangeModeLabel =
+    rangeMode === 'custom' ? tCommon(locale, 'period') : tCommon(locale, 'week')
+
   return (
     <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-red-600 sm:text-4xl">
-              Agenda de eventos
+              {tAgenda(locale, 'title')}
             </h1>
             <p className="mt-1 text-sm text-neutral-500">
-              Quadro semanal por equipe — análogo à Agenda da Frota do Logistics.
-              Eventos entram aqui após aceite do cliente e confirmação do sinal (30%) na cotação.
+              {tAgenda(locale, 'subtitle')}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href="/teams" className={glassBtn('secondary')}>
-              Gerenciar equipes
+              {tAgenda(locale, 'manageTeams')}
             </Link>
             <Link href={newQuoteHref} className={glassBtn('primary')}>
-              Nova cotação
+              {tAgenda(locale, 'newQuote')}
             </Link>
           </div>
         </div>
 
         <div className="liquid-glass-card px-4 py-3 text-sm text-cdl-muted">
-          Não crie evento “na mão” na agenda. Use{' '}
+          {tAgenda(locale, 'workflowHintBefore')}{' '}
           <Link href="/quotes/new" className="font-medium underline">
-            Nova cotação
+            {tAgenda(locale, 'newQuote')}
           </Link>
-          : cliente → evento (adultos/crianças) → pacote → adicionais → resumo.
-          Com aceite do cliente e confirmação do sinal (30%) na cotação, a data fecha aqui ao designar a equipe.
+          {tAgenda(locale, 'workflowHintAfter')}
         </div>
 
         {teams.length === 0 ? (
           <div className="liquid-glass-card p-6 text-sm text-cdl-muted">
-            Cadastre ao menos uma equipe em{' '}
+            {tAgenda(locale, 'noTeamsBefore')}{' '}
             <Link href="/teams" className="underline">
-              Equipes
+              {tAgenda(locale, 'teamsLink')}
             </Link>{' '}
-            para montar a agenda.
+            {tAgenda(locale, 'noTeamsAfter')}
           </div>
         ) : null}
 
@@ -265,7 +287,7 @@ export default function AgendaDashboard({
                 void reloadWeek(shiftWeek(weekAnchor, -1))
               }}
             >
-              ← Semana anterior
+              {tAgenda(locale, 'prevWeek')}
             </button>
             <button
               type="button"
@@ -275,7 +297,7 @@ export default function AgendaDashboard({
                 void reloadWeek(parseDayKey(todayDayKey()))
               }}
             >
-              Hoje
+              {tAgenda(locale, 'today')}
             </button>
             <button
               type="button"
@@ -285,10 +307,10 @@ export default function AgendaDashboard({
                 void reloadWeek(shiftWeek(weekAnchor, 1))
               }}
             >
-              Próxima semana →
+              {tAgenda(locale, 'nextWeek')}
             </button>
             <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-wider text-cdl-muted">
-              Equipe
+              {tCommon(locale, 'team')}
               <select
                 className={glassField(false)}
                 value={teamFilter}
@@ -302,7 +324,7 @@ export default function AgendaDashboard({
                   }
                 }}
               >
-                <option value="">Todas</option>
+                <option value="">{tAgenda(locale, 'allTeams')}</option>
                 {teams.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
@@ -311,7 +333,7 @@ export default function AgendaDashboard({
               </select>
             </label>
             <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-wider text-cdl-muted">
-              Ano
+              {tCommon(locale, 'year')}
               <select
                 className={glassField(false)}
                 value={filterYear}
@@ -325,13 +347,13 @@ export default function AgendaDashboard({
               </select>
             </label>
             <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-wider text-cdl-muted">
-              Mês
+              {tCommon(locale, 'month')}
               <select
                 className={glassField(false)}
                 value={filterMonth}
                 onChange={(e) => setFilterMonth(Number(e.target.value))}
               >
-                {AGENDA_MONTH_OPTIONS.map((m) => (
+                {monthOptions.map((m) => (
                   <option key={m.value} value={m.value}>
                     {m.label}
                   </option>
@@ -348,19 +370,18 @@ export default function AgendaDashboard({
                 void reloadCustom(from, to)
               }}
             >
-              Ver mês
+              {tAgenda(locale, 'viewMonth')}
             </button>
             <span className="pb-2 text-sm font-medium capitalize text-cdl-muted">
-              {rangeMode === 'custom'
-                ? formatRangeLabel(rangeFrom, rangeTo)
-                : formatWeekRangeLabel(weekAnchor, todayKey)}
-              {rangeMode === 'custom' ? ' · período' : ' · semana'}
-              {loading ? ' · atualizando…' : ''}
+              {rangeLabel}
+              {' · '}
+              {rangeModeLabel}
+              {loading ? ` · ${tCommon(locale, 'refreshing')}` : ''}
             </span>
           </div>
           <div className="flex flex-wrap items-end gap-3 border-t border-cdl-border/60 pt-3">
             <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-wider text-cdl-muted">
-              De
+              {tAgenda(locale, 'from')}
               <input
                 type="date"
                 className={glassField(false)}
@@ -369,7 +390,7 @@ export default function AgendaDashboard({
               />
             </label>
             <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-wider text-cdl-muted">
-              Até
+              {tAgenda(locale, 'to')}
               <input
                 type="date"
                 className={glassField(false)}
@@ -385,7 +406,7 @@ export default function AgendaDashboard({
                 void reloadCustom(rangeFrom, rangeTo)
               }}
             >
-              Aplicar período
+              {tAgenda(locale, 'applyPeriod')}
             </button>
           </div>
         </div>
@@ -395,27 +416,26 @@ export default function AgendaDashboard({
         {showPeriodList ? (
           <div className="liquid-glass-card space-y-3 p-4">
             <h2 className="text-base font-bold text-cdl-fg">
-              Eventos no período ({periodEvents.length})
+              {tAgenda(locale, 'periodEventsTitle', { count: periodEvents.length })}
             </h2>
             <p className="text-xs text-cdl-muted">
-              Lista do intervalo selecionado. O quadro abaixo continua semanal
-              (semana do início do período).
+              {tAgenda(locale, 'periodEventsHint')}
             </p>
             {periodEvents.length === 0 ? (
               <p className="text-sm text-cdl-muted">
-                Nenhum evento neste período.
+                {tAgenda(locale, 'noPeriodEvents')}
               </p>
             ) : (
               <div className="overflow-x-auto rounded-xl border border-cdl-border">
                 <table className="w-full min-w-[640px] border-collapse text-sm">
                   <thead>
                     <tr className="bg-cdl-inset text-left text-[11px] uppercase tracking-wider text-cdl-muted">
-                      <th className="px-3 py-2">Data</th>
-                      <th className="px-3 py-2">Horário</th>
-                      <th className="px-3 py-2">Equipe</th>
-                      <th className="px-3 py-2">Código</th>
-                      <th className="px-3 py-2">Evento</th>
-                      <th className="px-3 py-2">Status</th>
+                      <th className="px-3 py-2">{tCommon(locale, 'date')}</th>
+                      <th className="px-3 py-2">{tCommon(locale, 'time')}</th>
+                      <th className="px-3 py-2">{tCommon(locale, 'team')}</th>
+                      <th className="px-3 py-2">{tCommon(locale, 'code')}</th>
+                      <th className="px-3 py-2">{tCommon(locale, 'event')}</th>
+                      <th className="px-3 py-2">{tCommon(locale, 'status')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -425,7 +445,7 @@ export default function AgendaDashboard({
                         className="border-t border-cdl-border text-cdl-fg"
                       >
                         <td className="px-3 py-2 whitespace-nowrap">
-                          {dayLabel(ev.event_date)}
+                          {dayLabel(ev.event_date, locale)}
                         </td>
                         <td className="px-3 py-2 tabular-nums whitespace-nowrap">
                           {String(ev.start_time).slice(0, 5)}–
@@ -455,7 +475,9 @@ export default function AgendaDashboard({
                             </span>
                           ) : null}
                         </td>
-                        <td className="px-3 py-2 capitalize">{ev.status}</td>
+                        <td className="px-3 py-2">
+                          {eventStatusLabel(locale, ev.status)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -468,20 +490,19 @@ export default function AgendaDashboard({
         <div className="flex flex-wrap gap-3 text-xs text-cdl-muted">
           <span className="inline-flex items-center gap-1.5">
             <span className="h-3 w-6 rounded border border-sky-300 bg-sky-100" />
-            Agendado (dia fechado)
+            {tAgenda(locale, 'legendScheduled')}
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="h-3 w-6 rounded border border-dashed border-slate-300 bg-slate-100" />
-            Concluído (dia fechado)
+            {tAgenda(locale, 'legendCompleted')}
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="h-3 w-6 rounded border border-emerald-200 bg-emerald-50" />
-            Livre — pode agendar
+            {tAgenda(locale, 'legendFree')}
           </span>
         </div>
         <p className="text-xs text-cdl-muted">
-          Uma equipe só pode ter um evento por data. Se sábado estiver fechado,
-          use domingo (se livre), dia útil ou feriado.
+          {tAgenda(locale, 'oneEventRule')}
         </p>
 
         <div className="schedule-day-board max-h-[min(70vh,52rem)] overflow-auto rounded-2xl border border-cdl-border bg-cdl-surface">
@@ -489,10 +510,10 @@ export default function AgendaDashboard({
             <thead>
               <tr>
                 <th className="sticky left-0 top-0 z-30 w-[6.5rem] max-w-[6.5rem] border-b border-r border-cdl-border bg-cdl-surface px-2 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-cdl-muted">
-                  Equipe
+                  {tCommon(locale, 'team')}
                 </th>
                 {weekKeys.map((key) => {
-                  const { weekday, date } = dayLabelParts(key)
+                  const { weekday, date } = dayLabelParts(key, locale)
                   const isToday = key === todayKey
                   const isPast = key < todayKey
                   return (
@@ -570,7 +591,7 @@ export default function AgendaDashboard({
                         >
                           {cellSegs.length === 0 ? (
                             <span className="rounded-md border border-emerald-200/60 bg-emerald-50/80 px-2 py-1 text-[0.7rem] font-medium text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
-                              Livre o dia
+                              {tAgenda(locale, 'dayFree')}
                             </span>
                           ) : (
                             cellSegs.map((seg) =>
@@ -583,7 +604,9 @@ export default function AgendaDashboard({
                                       ? 'border-dashed border-slate-300 bg-slate-100 text-slate-600'
                                       : 'border-sky-300 bg-sky-100 text-sky-900'
                                   }`}
-                                  title={`${seg.title} — abrir cotação`}
+                                  title={tAgenda(locale, 'openQuoteTitle', {
+                                    title: seg.title,
+                                  })}
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <span className="block font-semibold tabular-nums">
@@ -628,10 +651,12 @@ export default function AgendaDashboard({
         {selection && selectedTeam ? (
           <div className="liquid-glass-card space-y-3 p-5">
             <h2 className="text-lg font-bold text-cdl-fg">
-              {selectedTeam.name} · {dayLabel(selection.dayKey)}
+              {selectedTeam.name} · {dayLabel(selection.dayKey, locale)}
             </h2>
             {selectedSegs.length === 0 ? (
-              <p className="text-sm text-cdl-muted">Nenhum evento neste dia.</p>
+              <p className="text-sm text-cdl-muted">
+                {tAgenda(locale, 'noEventsThisDay')}
+              </p>
             ) : (
               <ul className="space-y-2">
                 {selectedSegs.map((seg) => (
@@ -667,8 +692,8 @@ export default function AgendaDashboard({
                       )}
                       <p className="mt-0.5 text-xs text-cdl-muted">
                         {seg.quoteId
-                          ? 'Clique para abrir a cotação (pacote, convidados, adicionais e total).'
-                          : 'Sem cotação vinculada — use Nova cotação (fluxo completo).'}
+                          ? tAgenda(locale, 'openQuoteHint')
+                          : tAgenda(locale, 'noQuoteHint')}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -677,7 +702,7 @@ export default function AgendaDashboard({
                           href={`/quotes/${seg.quoteId}`}
                           className={glassBtn('primary', 'liquid-glass-tab-link--plain')}
                         >
-                          Ver cotação
+                          {tAgenda(locale, 'viewQuote')}
                         </Link>
                       ) : (
                         <Link
@@ -689,7 +714,7 @@ export default function AgendaDashboard({
                           })}
                           className={glassBtn('primary', 'liquid-glass-tab-link--plain')}
                         >
-                          Criar cotação
+                          {tAgenda(locale, 'createQuote')}
                         </Link>
                       )}
                       {seg.status === 'scheduled' ? (
@@ -699,14 +724,14 @@ export default function AgendaDashboard({
                             className={glassBtn('secondary', 'liquid-glass-tab-link--plain')}
                             onClick={() => void markStatus(seg.eventId, 'completed')}
                           >
-                            Concluir
+                            {tAgenda(locale, 'complete')}
                           </button>
                           <button
                             type="button"
                             className={glassBtn('ghost', 'liquid-glass-tab-link--plain')}
                             onClick={() => void markStatus(seg.eventId, 'cancelled')}
                           >
-                            Cancelar
+                            {tCommon(locale, 'cancel')}
                           </button>
                         </>
                       ) : null}
@@ -714,6 +739,7 @@ export default function AgendaDashboard({
                     </div>
                     {seg.status === 'scheduled' ? (
                       <TeamAvailabilitySharePanel
+                        locale={locale}
                         teamId={selectedTeam.id}
                         teamName={selectedTeam.name}
                         teamNotes={selectedTeam.notes}
@@ -746,8 +772,7 @@ export default function AgendaDashboard({
             )}
             {selectionDayBusy ? (
               <p className="rounded-xl border border-amber-300/50 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
-                Dia fechado para esta equipe. Escolha outra data livre (domingo,
-                dia útil ou feriado) ou outra equipe disponível.
+                {tAgenda(locale, 'dayClosed')}
               </p>
             ) : (
               <Link
@@ -758,7 +783,7 @@ export default function AgendaDashboard({
                 })}
                 className={glassBtn('primary')}
               >
-                Nova cotação nesta data
+                {tAgenda(locale, 'newQuoteOnDate')}
               </Link>
             )}
           </div>

@@ -1,6 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { tCommon } from '@/Lib/i18n/common'
+import {
+  INVENTORY_MOVEMENT_TYPE_KEYS,
+  inventoryMovementTypeLabel,
+  tInventoryUi,
+} from '@/Lib/i18n/inventoryUi'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 type BalanceRow = {
   id: string
@@ -41,15 +48,6 @@ type CatalogOption = {
   unit: string
 }
 
-const TYPE_LABEL: Record<string, string> = {
-  initial_balance: 'Saldo inicial',
-  event_dispatch: 'Saída OS',
-  event_return: 'Retorno OS',
-  event_leftover_return: 'Sobra OS',
-  adjustment_in: 'Ajuste entrada',
-  adjustment_out: 'Ajuste saída',
-}
-
 export default function InventoryDashboard({
   canManage,
   canAdjust,
@@ -57,6 +55,7 @@ export default function InventoryDashboard({
   canManage: boolean
   canAdjust: boolean
 }) {
+  const locale = useAuthLocaleFromMe()
   const [balances, setBalances] = useState<BalanceRow[]>([])
   const [movements, setMovements] = useState<MovementRow[]>([])
   const [locations, setLocations] = useState<LocationRow[]>([])
@@ -120,7 +119,7 @@ export default function InventoryDashboard({
 
   async function submitPost() {
     if (!postItemId) {
-      setError('Selecione um item.')
+      setError(tInventoryUi(locale, 'selectItem'))
       return
     }
     setBusy(true)
@@ -139,7 +138,7 @@ export default function InventoryDashboard({
     const json = await res.json()
     setBusy(false)
     if (!res.ok) {
-      setError(json.error || 'Falha no posting.')
+      setError(json.error || tInventoryUi(locale, 'postFailed'))
       return
     }
     setPostNotes('')
@@ -157,7 +156,7 @@ export default function InventoryDashboard({
     setBusy(false)
     if (!res.ok) {
       const j = await res.json()
-      setError(j.error || 'Falha ao criar local.')
+      setError(j.error || tInventoryUi(locale, 'createLocationFailed'))
       return
     }
     await load()
@@ -169,7 +168,7 @@ export default function InventoryDashboard({
     setBusy(false)
     if (!res.ok) {
       const j = await res.json()
-      setError(j.error || 'Falha no rebuild.')
+      setError(j.error || tInventoryUi(locale, 'rebuildFailed'))
       return
     }
     await load()
@@ -178,10 +177,11 @@ export default function InventoryDashboard({
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 text-cdl-fg sm:px-6">
       <header className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Estoque</h1>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+          {tInventoryUi(locale, 'title')}
+        </h1>
         <p className="max-w-2xl text-sm text-cdl-muted">
-          Saldos físicos por local. Ledger é a fonte de verdade — sem custo ou
-          valuation nesta versão.
+          {tInventoryUi(locale, 'subtitle')}
         </p>
       </header>
 
@@ -193,41 +193,41 @@ export default function InventoryDashboard({
 
       <section className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-cdl-muted">
-          Item / categoria
+          {tInventoryUi(locale, 'itemCategory')}
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             className="rounded-xl border border-cdl-border bg-cdl-surface px-3 py-2 text-sm font-normal normal-case text-cdl-fg"
-            placeholder="Buscar…"
+            placeholder={tCommon(locale, 'searchPlaceholder')}
           />
         </label>
         <label className="flex min-w-[10rem] flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-cdl-muted">
-          Local
+          {tCommon(locale, 'location')}
           <select
             value={locationFilter}
             onChange={(e) => setLocationFilter(e.target.value)}
             className="rounded-xl border border-cdl-border bg-cdl-surface px-3 py-2 text-sm font-normal normal-case text-cdl-fg"
           >
-            <option value="">Todos</option>
+            <option value="">{tCommon(locale, 'all')}</option>
             {locations.map((l) => (
               <option key={l.id} value={l.id}>
                 {l.name}
-                {l.is_default ? ' (padrão)' : ''}
+                {l.is_default ? ` ${tInventoryUi(locale, 'defaultSuffix')}` : ''}
               </option>
             ))}
           </select>
         </label>
         <label className="flex min-w-[10rem] flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-cdl-muted">
-          Tipo movimento
+          {tInventoryUi(locale, 'movementType')}
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             className="rounded-xl border border-cdl-border bg-cdl-surface px-3 py-2 text-sm font-normal normal-case text-cdl-fg"
           >
-            <option value="">Todos</option>
-            {Object.entries(TYPE_LABEL).map(([k, v]) => (
+            <option value="">{tCommon(locale, 'all')}</option>
+            {INVENTORY_MOVEMENT_TYPE_KEYS.map((k) => (
               <option key={k} value={k}>
-                {v}
+                {inventoryMovementTypeLabel(locale, k)}
               </option>
             ))}
           </select>
@@ -240,7 +240,7 @@ export default function InventoryDashboard({
               onClick={() => void ensureDefault()}
               className="cdl-btn-secondary rounded-xl px-4 py-2 text-sm"
             >
-              Garantir local padrão
+              {tInventoryUi(locale, 'ensureDefaultLocation')}
             </button>
             <button
               type="button"
@@ -248,7 +248,7 @@ export default function InventoryDashboard({
               onClick={() => void rebuild()}
               className="cdl-btn-secondary rounded-xl px-4 py-2 text-sm"
             >
-              Rebuild saldos
+              {tInventoryUi(locale, 'rebuildBalances')}
             </button>
           </div>
         ) : null}
@@ -256,10 +256,10 @@ export default function InventoryDashboard({
 
       {(canManage || canAdjust) && (
         <section className="space-y-3 rounded-2xl border border-cdl-border bg-cdl-surface p-4">
-          <h2 className="text-lg font-semibold">Lançamento manual</h2>
+          <h2 className="text-lg font-semibold">{tInventoryUi(locale, 'manualPost')}</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label className="flex flex-col gap-1 text-xs font-semibold text-cdl-muted">
-              Tipo
+              {tInventoryUi(locale, 'type')}
               <select
                 value={postType}
                 onChange={(e) =>
@@ -268,24 +268,30 @@ export default function InventoryDashboard({
                 className="rounded-xl border border-cdl-border bg-cdl-bg px-3 py-2 text-sm text-cdl-fg"
               >
                 {canManage ? (
-                  <option value="initial_balance">Saldo inicial</option>
+                  <option value="initial_balance">
+                    {inventoryMovementTypeLabel(locale, 'initial_balance')}
+                  </option>
                 ) : null}
                 {canAdjust ? (
                   <>
-                    <option value="adjustment_in">Ajuste entrada</option>
-                    <option value="adjustment_out">Ajuste saída</option>
+                    <option value="adjustment_in">
+                      {inventoryMovementTypeLabel(locale, 'adjustment_in')}
+                    </option>
+                    <option value="adjustment_out">
+                      {inventoryMovementTypeLabel(locale, 'adjustment_out')}
+                    </option>
                   </>
                 ) : null}
               </select>
             </label>
             <label className="flex flex-col gap-1 text-xs font-semibold text-cdl-muted sm:col-span-2">
-              Item
+              {tInventoryUi(locale, 'item')}
               <select
                 value={postItemId}
                 onChange={(e) => setPostItemId(e.target.value)}
                 className="rounded-xl border border-cdl-border bg-cdl-bg px-3 py-2 text-sm text-cdl-fg"
               >
-                <option value="">Selecione…</option>
+                <option value="">{tInventoryUi(locale, 'selectEllipsis')}</option>
                 {catalog.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.label} ({c.unit})
@@ -294,7 +300,7 @@ export default function InventoryDashboard({
               </select>
             </label>
             <label className="flex flex-col gap-1 text-xs font-semibold text-cdl-muted">
-              Quantidade
+              {tCommon(locale, 'quantity')}
               <input
                 type="number"
                 min={0.0001}
@@ -305,15 +311,15 @@ export default function InventoryDashboard({
               />
             </label>
             <label className="flex flex-col gap-1 text-xs font-semibold text-cdl-muted sm:col-span-2 lg:col-span-3">
-              Motivo / notas
+              {tInventoryUi(locale, 'notesReason')}
               <input
                 value={postNotes}
                 onChange={(e) => setPostNotes(e.target.value)}
                 className="rounded-xl border border-cdl-border bg-cdl-bg px-3 py-2 text-sm text-cdl-fg"
                 placeholder={
                   postType.startsWith('adjustment')
-                    ? 'Obrigatório para ajuste'
-                    : 'Opcional'
+                    ? tInventoryUi(locale, 'notesRequiredAdjustment')
+                    : tCommon(locale, 'optional')
                 }
               />
             </label>
@@ -324,7 +330,7 @@ export default function InventoryDashboard({
                 onClick={() => void submitPost()}
                 className="cdl-btn-primary w-full rounded-xl px-4 py-2 text-sm font-bold"
               >
-                Postar
+                {tInventoryUi(locale, 'post')}
               </button>
             </div>
           </div>
@@ -332,17 +338,17 @@ export default function InventoryDashboard({
       )}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Resumo de saldo</h2>
+        <h2 className="text-lg font-semibold">{tInventoryUi(locale, 'balanceSummary')}</h2>
         <div className="hidden overflow-x-auto rounded-2xl border border-cdl-border md:block">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-cdl-surface text-xs uppercase tracking-wide text-cdl-muted">
               <tr>
-                <th className="px-4 py-3">Item</th>
-                <th className="px-4 py-3">Categoria</th>
-                <th className="px-4 py-3">Unidade</th>
-                <th className="px-4 py-3">Local</th>
-                <th className="px-4 py-3">Saldo</th>
-                <th className="px-4 py-3">Último movimento</th>
+                <th className="px-4 py-3">{tInventoryUi(locale, 'item')}</th>
+                <th className="px-4 py-3">{tInventoryUi(locale, 'colCategory')}</th>
+                <th className="px-4 py-3">{tInventoryUi(locale, 'colUnit')}</th>
+                <th className="px-4 py-3">{tInventoryUi(locale, 'colLocation')}</th>
+                <th className="px-4 py-3">{tInventoryUi(locale, 'colBalance')}</th>
+                <th className="px-4 py-3">{tInventoryUi(locale, 'colLastMovement')}</th>
               </tr>
             </thead>
             <tbody>
@@ -371,7 +377,7 @@ export default function InventoryDashboard({
               {!balances.length ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-cdl-muted">
-                    Nenhum saldo. Lance um saldo inicial ou rode o seed DEV.
+                    {tInventoryUi(locale, 'emptyBalances')}
                   </td>
                 </tr>
               ) : null}
@@ -402,7 +408,7 @@ export default function InventoryDashboard({
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">
-            Movimentos
+            {tInventoryUi(locale, 'movements')}
             {selectedName ? (
               <span className="ml-2 text-sm font-normal text-cdl-muted">
                 · {selectedName}
@@ -415,7 +421,7 @@ export default function InventoryDashboard({
               className="text-sm text-cdl-muted underline"
               onClick={() => setSelectedItemId(null)}
             >
-              Limpar filtro item
+              {tInventoryUi(locale, 'clearItemFilter')}
             </button>
           ) : null}
         </div>
@@ -423,12 +429,12 @@ export default function InventoryDashboard({
           <table className="min-w-full text-left text-sm">
             <thead className="bg-cdl-surface text-xs uppercase tracking-wide text-cdl-muted">
               <tr>
-                <th className="px-4 py-3">Data</th>
-                <th className="px-4 py-3">Tipo</th>
-                <th className="px-4 py-3">Qtd</th>
-                <th className="px-4 py-3">Item</th>
-                <th className="px-4 py-3">Origem / OS</th>
-                <th className="px-4 py-3">Notas</th>
+                <th className="px-4 py-3">{tCommon(locale, 'date')}</th>
+                <th className="px-4 py-3">{tInventoryUi(locale, 'type')}</th>
+                <th className="px-4 py-3">{tInventoryUi(locale, 'colQty')}</th>
+                <th className="px-4 py-3">{tInventoryUi(locale, 'item')}</th>
+                <th className="px-4 py-3">{tInventoryUi(locale, 'colOriginOs')}</th>
+                <th className="px-4 py-3">{tInventoryUi(locale, 'colNotes')}</th>
               </tr>
             </thead>
             <tbody>
@@ -438,7 +444,7 @@ export default function InventoryDashboard({
                     {new Date(m.occurred_at).toLocaleString()}
                   </td>
                   <td className="px-4 py-3">
-                    {TYPE_LABEL[m.movement_type] || m.movement_type}
+                    {inventoryMovementTypeLabel(locale, m.movement_type)}
                   </td>
                   <td className="px-4 py-3 font-semibold tabular-nums">
                     {m.quantity > 0 ? '+' : ''}
@@ -454,7 +460,7 @@ export default function InventoryDashboard({
               {!movements.length ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-cdl-muted">
-                    Sem movimentos para o filtro atual.
+                    {tInventoryUi(locale, 'emptyMovements')}
                   </td>
                 </tr>
               ) : null}

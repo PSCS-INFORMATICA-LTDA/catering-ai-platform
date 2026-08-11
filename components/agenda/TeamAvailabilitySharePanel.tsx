@@ -14,6 +14,9 @@ import {
   formatWhatsAppPhoneDisplay,
   normalizeWhatsAppPhone,
 } from '@/Lib/whatsapp'
+import { tAgenda } from '@/Lib/i18n/agenda'
+import type { AuthLocale } from '@/Lib/i18n/authUsers'
+import { tCommon } from '@/Lib/i18n/common'
 import { glassAction, glassBtn, glassField } from '@/Lib/liquidGlass'
 
 const TEAM_PHONE_STORAGE_KEY = 'catering.teamWhatsAppPhones'
@@ -46,6 +49,7 @@ function saveStoredPhone(teamId: string, phone: string) {
 }
 
 export default function TeamAvailabilitySharePanel({
+  locale,
   teamId,
   teamName,
   teamNotes,
@@ -66,6 +70,7 @@ export default function TeamAvailabilitySharePanel({
   packageLabel,
   companyName = 'BBQ At Home',
 }: {
+  locale: AuthLocale
   teamId: string
   teamName: string
   teamNotes?: string | null
@@ -165,6 +170,9 @@ export default function TeamAvailabilitySharePanel({
     }
   }
 
+  const assignmentLabel = tAgenda(locale, 'assignmentTitle', { team: teamName })
+  const leaderSuffix = leaderName ? ` (${leaderName})` : ''
+
   return (
     <div className="mt-2 w-full space-y-2">
       <button
@@ -176,11 +184,11 @@ export default function TeamAvailabilitySharePanel({
         }}
       >
         {open ? (
-          'Fechar WhatsApp equipe'
+          tAgenda(locale, 'closeTeamWhatsApp')
         ) : (
           <span className="inline-flex items-center gap-2">
             <WhatsAppIcon className="h-5 w-5 text-white" />
-            WhatsApp equipe
+            {tAgenda(locale, 'teamWhatsApp')}
           </span>
         )}
       </button>
@@ -188,33 +196,32 @@ export default function TeamAvailabilitySharePanel({
       {open ? (
         <div className="space-y-3 rounded-xl border border-emerald-300/40 bg-emerald-50/80 p-4 text-sm dark:border-emerald-500/30 dark:bg-emerald-500/10">
           <p className="font-semibold text-emerald-900 dark:text-emerald-100">
-            Designação da equipe — {teamName}
-            {leaderName ? ` (${leaderName})` : ''}
+            {assignmentLabel}
+            {leaderSuffix}
           </p>
           {presentationTime ? (
             <p className="text-xs text-cdl-muted">
-              Apresentação no local: <strong>{presentationTime}</strong>
+              {tAgenda(locale, 'presentationAt')} <strong>{presentationTime}</strong>
             </p>
           ) : (
             <p className="text-xs text-amber-700 dark:text-amber-200">
-              Defina o horário de apresentação na cotação (após aceite do
-              cliente) para incluir na mensagem.
+              {tAgenda(locale, 'presentationMissing')}
             </p>
           )}
           {confirmUrl ? (
             <p className="break-all text-xs text-cdl-muted">{confirmUrl}</p>
           ) : null}
           <p className="text-xs text-cdl-muted">
-            Edite o texto antes de enviar. O telefone fica salvo neste navegador.
+            {tAgenda(locale, 'editBeforeSend')}
           </p>
           <label className="block space-y-1">
             <span className="text-xs font-medium text-cdl-muted">
-              WhatsApp da equipe / líder
+              {tAgenda(locale, 'teamWhatsAppPhone')}
             </span>
             <input
               className={glassField()}
               type="tel"
-              placeholder="+1 407 … ou (11) 9… "
+              placeholder={tAgenda(locale, 'phonePlaceholder')}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               onBlur={() => {
@@ -224,7 +231,7 @@ export default function TeamAvailabilitySharePanel({
           </label>
           <label className="block space-y-1">
             <span className="text-xs font-medium text-cdl-muted">
-              Mensagem (editável)
+              {tCommon(locale, 'editableMessage')}
             </span>
             <textarea
               className="min-h-[10rem] w-full rounded-lg border border-cdl-border bg-cdl-surface p-3 text-xs text-cdl-fg"
@@ -237,7 +244,7 @@ export default function TeamAvailabilitySharePanel({
             className={glassBtn('ghost')}
             onClick={() => setMessage(defaultMessage)}
           >
-            Restaurar texto padrão
+            {tCommon(locale, 'restoreDefault')}
           </button>
           <div className="proposal-toolbar flex flex-wrap items-center gap-2">
             <WhatsAppButton
@@ -249,14 +256,14 @@ export default function TeamAvailabilitySharePanel({
               title={
                 phoneOk
                   ? `WhatsApp · ${formatWhatsAppPhoneDisplay(phone)}`
-                  : 'Informe um telefone válido com DDI.'
+                  : tCommon(locale, 'invalidPhone')
               }
               onOpenRequested={() => {
                 void ensureAssignmentSent()
                 if (phone.trim()) saveStoredPhone(teamId, phone.trim())
               }}
               onInvalidPhone={() =>
-                setHint('Informe um telefone válido com DDI.')
+                setHint(tCommon(locale, 'invalidPhone'))
               }
             />
             {buildSmsShareHref(phone, message) ? (
@@ -264,14 +271,14 @@ export default function TeamAvailabilitySharePanel({
                 href={buildSmsShareHref(phone, message)!}
                 message={message}
                 className={`${glassAction('sky', true)} ${SHARE_ICON}`}
-                title="Enviar por SMS"
-                aria-label="Enviar por SMS"
+                title={tCommon(locale, 'sendSms')}
+                aria-label={tCommon(locale, 'sendSms')}
                 onOpen={() => {
                   void ensureAssignmentSent()
                   if (phone.trim()) saveStoredPhone(teamId, phone.trim())
                 }}
                 onDesktopHint={() =>
-                  setHint('Mensagem SMS copiada. No PC use Phone Link se disponível.')
+                  setHint(tAgenda(locale, 'smsCopiedHint'))
                 }
               >
                 <SmsIcon className="h-5 w-5" />
@@ -281,8 +288,8 @@ export default function TeamAvailabilitySharePanel({
                 type="button"
                 disabled
                 className={`${glassAction('sky', true)} ${SHARE_ICON} opacity-50`}
-                title="SMS indisponível"
-                aria-label="SMS indisponível"
+                title={tCommon(locale, 'smsUnavailable')}
+                aria-label={tCommon(locale, 'smsUnavailable')}
               >
                 <SmsIcon className="h-5 w-5" />
               </button>
@@ -290,15 +297,18 @@ export default function TeamAvailabilitySharePanel({
             {(() => {
               const mailHref = buildMailtoHref({
                 email: null,
-                subject: `Designação ${eventCode} — BBQ At Home`,
+                subject: tAgenda(locale, 'emailSubject', {
+                  code: eventCode,
+                  company: companyName || 'BBQ At Home',
+                }),
                 body: message,
               })
               return mailHref ? (
                 <a
                   href={mailHref}
                   className={`${glassAction('sky', true)} ${SHARE_ICON}`}
-                  title="E-mail"
-                  aria-label="E-mail"
+                  title={tCommon(locale, 'email')}
+                  aria-label={tCommon(locale, 'email')}
                   onClick={() => {
                     void ensureAssignmentSent()
                   }}
@@ -310,8 +320,8 @@ export default function TeamAvailabilitySharePanel({
                   type="button"
                   disabled
                   className={`${glassAction('sky', true)} ${SHARE_ICON} opacity-50`}
-                  title="E-mail indisponível"
-                  aria-label="E-mail indisponível"
+                  title={tAgenda(locale, 'emailUnavailable')}
+                  aria-label={tAgenda(locale, 'emailUnavailable')}
                 >
                   <MailIcon className="h-5 w-5" />
                 </button>
@@ -320,11 +330,11 @@ export default function TeamAvailabilitySharePanel({
           </div>
           {phoneOk ? (
             <p className="text-xs text-cdl-muted">
-              Destino: {formatWhatsAppPhoneDisplay(phone)}
+              {tAgenda(locale, 'destination')}: {formatWhatsAppPhoneDisplay(phone)}
             </p>
           ) : (
             <p className="text-xs text-amber-700 dark:text-amber-200">
-              Informe um telefone válido com DDI para liberar o envio.
+              {tAgenda(locale, 'phoneToEnableSend')}
             </p>
           )}
           {hint ? (

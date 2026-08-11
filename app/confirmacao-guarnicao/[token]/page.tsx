@@ -1,5 +1,7 @@
 import PublicSupplierGarnishClient from './PublicSupplierGarnishClient'
 import { GET as getPublicSupplierGarnish } from '@/app/api/public/confirmacao-guarnicao/[token]/route'
+import { headers } from 'next/headers'
+import { resolveBrowserLocale, tPublicOps } from '@/Lib/i18n/publicOps'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -22,15 +24,19 @@ export default async function PublicSupplierGarnishPage({
     order?: Record<string, unknown>
   }
 
+  const lang = resolveBrowserLocale(
+    (await headers()).get('accept-language'),
+  )
+
   if (!payload.found || !payload.order) {
     return (
       <main className="mx-auto flex min-h-screen max-w-lg items-center justify-center px-4">
         <div className="liquid-glass-card p-8 text-center">
           <h1 className="text-xl font-bold text-cdl-fg">
-            Pedido não encontrado
+            {tPublicOps(lang, 'garnishOrderNotFound')}
           </h1>
           <p className="mt-2 text-sm text-cdl-muted">
-            O link pode estar incompleto ou o pedido foi cancelado.
+            {tPublicOps(lang, 'garnishOrderNotFoundHint')}
           </p>
         </div>
       </main>
@@ -44,6 +50,7 @@ export default async function PublicSupplierGarnishPage({
       initialResponse={payload.supplier_garnish_response || 'pending'}
       canRespond={Boolean(payload.can_respond)}
       order={payload.order as never}
+      language={lang}
     />
   )
 }

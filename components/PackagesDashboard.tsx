@@ -37,12 +37,17 @@ import {
   mapPackageDraftToDeployed,
 } from '@/Lib/packageFieldAccess'
 import type { PackagesInsertPayload } from '@/Lib/packagesTableSchema'
+import type { AuthLocale } from '@/Lib/i18n/authUsers'
+import { tCommon } from '@/Lib/i18n/common'
+import { tPackages } from '@/Lib/i18n/packages'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 type ActiveFilter = 'active' | 'all'
 
 async function fetchPackagesFromApi(
   query: string,
   activeFilter: ActiveFilter,
+  locale: AuthLocale,
 ): Promise<PackageListItem[]> {
   const params = new URLSearchParams({ _: String(Date.now()) })
   if (query.trim()) params.set('q', query.trim())
@@ -57,7 +62,7 @@ async function fetchPackagesFromApi(
     error?: string
   }
   if (!response.ok) {
-    throw new Error(result.error ?? 'Não foi possível buscar pacotes.')
+    throw new Error(result.error ?? tPackages(locale, 'fetchError'))
   }
   return result.data ?? []
 }
@@ -80,6 +85,7 @@ export default function PackagesDashboard({
   /** @deprecated Use itemCatalog */
   additionalItems?: AdditionalItemOption[]
 }) {
+  const locale = useAuthLocaleFromMe()
   const catalogItems = itemCatalog ?? additionalItems
   const router = useRouter()
   const [packages, setPackages] = useState<PackageListItem[]>(initialPackages)
@@ -129,17 +135,17 @@ export default function PackagesDashboard({
     setLoading(true)
     setError(null)
     try {
-      setPackages(await fetchPackagesFromApi(search, activeFilter))
+      setPackages(await fetchPackagesFromApi(search, activeFilter, locale))
     } catch (refreshError) {
       setError(
         refreshError instanceof Error
           ? refreshError.message
-          : 'Erro ao atualizar pacotes.',
+          : tPackages(locale, 'refreshError'),
       )
     } finally {
       setLoading(false)
     }
-  }, [search, activeFilter])
+  }, [search, activeFilter, locale])
 
   useEffect(() => {
     void refreshPackages()
@@ -175,13 +181,15 @@ export default function PackagesDashboard({
       })
       const result = (await response.json()) as { error?: string }
       if (!response.ok) {
-        throw new Error(result.error ?? 'Não foi possível salvar pacote.')
+        throw new Error(result.error ?? tPackages(locale, 'saveError'))
       }
       cancelEdit()
       await refreshPackages()
     } catch (saveError) {
       setError(
-        saveError instanceof Error ? saveError.message : 'Erro ao salvar pacote.',
+        saveError instanceof Error
+          ? saveError.message
+          : tPackages(locale, 'saveErrorGeneric'),
       )
     } finally {
       setSaving(false)
@@ -190,7 +198,7 @@ export default function PackagesDashboard({
 
   async function deactivate(pkg: PackageListItem) {
     const label = getPackageLabel(pkg)
-    if (!window.confirm(`Inativar "${label}"?`)) return
+    if (!window.confirm(tPackages(locale, 'deactivateConfirm', { label }))) return
 
     setError(null)
     const response = await fetch(`/api/packages/${pkg.id}`, {
@@ -200,7 +208,7 @@ export default function PackagesDashboard({
     })
     const result = (await response.json()) as { error?: string }
     if (!response.ok) {
-      setError(result.error ?? 'Não foi possível inativar pacote.')
+      setError(result.error ?? tPackages(locale, 'deactivateError'))
       return
     }
     setPackages((current) => current.filter((row) => row.id !== pkg.id))
@@ -229,7 +237,7 @@ export default function PackagesDashboard({
         error?: string
       }
       if (!response.ok) {
-        throw new Error(result.error ?? 'Falha no upload da imagem.')
+        throw new Error(result.error ?? tPackages(locale, 'uploadError'))
       }
       if (editingId === pkgId && result.image_url) {
         setDraft((current) => ({ ...current, image_url: result.image_url }))
@@ -239,7 +247,7 @@ export default function PackagesDashboard({
       setError(
         uploadError instanceof Error
           ? uploadError.message
-          : 'Erro ao enviar imagem.',
+          : tPackages(locale, 'uploadErrorGeneric'),
       )
     } finally {
       setUploadingId(null)
@@ -255,11 +263,11 @@ export default function PackagesDashboard({
 
   return (
     <BackofficeTableShell
-      title="Pacotes"
-      subtitle="Catálogo de pacotes · Catering AI"
+      title={tPackages(locale, 'title')}
+      subtitle={tPackages(locale, 'subtitle')}
       search={search}
       onSearchChange={setSearch}
-      searchPlaceholder="Nome, chave ou rótulo"
+      searchPlaceholder={tPackages(locale, 'searchPlaceholder')}
       activeFilter={activeFilter}
       onActiveFilterChange={setActiveFilter}
       onRefresh={() => void refreshPackages()}
@@ -272,13 +280,13 @@ export default function PackagesDashboard({
             onClick={startNew}
             className="cdl-btn-primary inline-flex min-h-[44px] items-center justify-center rounded-xl px-5 py-3 text-sm font-bold"
           >
-            Novo pacote
+            {tPackages(locale, 'newPackage')}
           </button>
           <Link
             href="/packages/images#pacotes"
             className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-bold text-neutral-800 shadow-sm"
           >
-            Imagens
+            {tCommon(locale, 'images')}
           </Link>
         </>
       }
@@ -296,8 +304,10 @@ export default function PackagesDashboard({
           <BackofficeFormCard
             title={
               editingId === 'new'
-                ? 'Novo pacote'
-                : `Editar pacote · ${getPackageKey(editingPackage ?? {}) || '—'}`
+                ? tPackages(locale, 'newPackage')
+                : tPackages(locale, 'editPackage', {
+                    key: getPackageKey(editingPackage ?? {}) || '—',
+                  })
             }
             actions={
               <>
@@ -305,10 +315,10 @@ export default function PackagesDashboard({
                   onClick={() => void saveRow()}
                   disabled={saving}
                 >
-                  {saving ? 'Salvando…' : 'Salvar'}
+                  {saving ? tCommon(locale, 'saving') : tCommon(locale, 'save')}
                 </BackofficeBtnPrimary>
                 <BackofficeBtnSecondary onClick={cancelEdit}>
-                  Cancelar
+                  {tCommon(locale, 'cancel')}
                 </BackofficeBtnSecondary>
                 {editingPackage ? (
                   <BackofficeBtnOutline
@@ -316,7 +326,9 @@ export default function PackagesDashboard({
                     onClick={() => triggerUpload(editingPackage)}
                     disabled={uploadingId === editingPackage.id}
                   >
-                    {uploadingId === editingPackage.id ? 'Enviando…' : 'Enviar foto'}
+                    {uploadingId === editingPackage.id
+                      ? tCommon(locale, 'uploading')
+                      : tCommon(locale, 'upload')}
                   </BackofficeBtnOutline>
                 ) : null}
               </>
@@ -331,7 +343,7 @@ export default function PackagesDashboard({
                   }
                   alt={getPackageLabel(editingPackage)}
                   variant="package"
-                  fallbackLabel="Sem imagem cadastrada"
+                  fallbackLabel={tCommon(locale, 'noImageRegistered')}
                   rounded="all"
                   className="!aspect-[4/3] !min-h-0 !max-h-none"
                 />
@@ -355,7 +367,10 @@ export default function PackagesDashboard({
         ) : null}
 
         {filteredPackages.length === 0 && editingId !== 'new' ? (
-          <BackofficeEmptyState loading={loading} message="Nenhum pacote encontrado." />
+          <BackofficeEmptyState
+            loading={loading}
+            message={tPackages(locale, 'empty')}
+          />
         ) : (
           <PackageCascadeExplorer
             packages={filteredPackages}

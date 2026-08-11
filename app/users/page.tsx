@@ -3,6 +3,7 @@
 import { FormEvent, Suspense, useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { resolveAuthLocale, tAuth } from '@/Lib/i18n/authUsers'
+import { tCommon } from '@/Lib/i18n/common'
 import { useAuthLocale } from '@/Lib/i18n/useAuthLocale'
 
 type Row = {
@@ -95,7 +96,7 @@ function UsersPageInner() {
         const json = await res.json()
         if (cancelled) return
         if (!res.ok) {
-          setError(json.error || 'Erro')
+          setError(json.error || tCommon(locale, 'error'))
           setRows([])
           return
         }
@@ -106,7 +107,7 @@ function UsersPageInner() {
         setTotal(Number(json.total) || 0)
         setTotalPages(Number(json.totalPages) || 1)
       } catch {
-        if (!cancelled) setError('Erro')
+        if (!cancelled) setError(tCommon(locale, 'error'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -115,7 +116,7 @@ function UsersPageInner() {
     return () => {
       cancelled = true
     }
-  }, [reloadToken, q, roleFilter, statusFilter, page])
+  }, [reloadToken, q, roleFilter, statusFilter, page, locale])
 
   useEffect(() => {
     if (!isPlatformAdmin) return
@@ -154,7 +155,7 @@ function UsersPageInner() {
     })
     const json = await res.json()
     if (!res.ok) {
-      setError(json.error || 'Falha ao convidar')
+      setError(json.error || tAuth(locale, 'inviteFailed'))
       return
     }
     setEmail('')
@@ -175,7 +176,7 @@ function UsersPageInner() {
           ? tAuth(locale, 'lastOwnerBlocked')
           : json.error === 'self_role_change_blocked'
             ? tAuth(locale, 'selfDeleteBlocked')
-            : json.error || 'Erro',
+            : json.error || tCommon(locale, 'error'),
       )
       return
     }
@@ -197,7 +198,7 @@ function UsersPageInner() {
           ? tAuth(locale, 'lastOwnerBlocked')
           : json.error === 'self_delete_blocked'
             ? tAuth(locale, 'selfDeleteBlocked')
-            : json.error || 'Erro',
+            : json.error || tCommon(locale, 'error'),
       )
       return
     }
@@ -225,7 +226,7 @@ function UsersPageInner() {
               })
               const json = await res.json()
               if (!res.ok) {
-                setError(json.error || 'Erro suporte')
+                setError(json.error || tAuth(locale, 'supportError'))
                 return
               }
               window.location.reload()
@@ -237,7 +238,7 @@ function UsersPageInner() {
               onChange={(e) => setSupportCompanyId(e.target.value)}
               className="rounded-xl border border-cdl-border bg-cdl-bg px-3 py-2"
             >
-              <option value="">Empresa…</option>
+              <option value="">{tCommon(locale, 'company')}…</option>
               {companies.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -353,11 +354,13 @@ function UsersPageInner() {
         <table className="min-w-full text-left text-sm">
           <thead className="bg-cdl-surface text-cdl-muted">
             <tr>
-              <th className="px-3 py-2">Nome</th>
+              <th className="px-3 py-2">{tCommon(locale, 'name')}</th>
               <th className="px-3 py-2">{tAuth(locale, 'email')}</th>
               <th className="px-3 py-2">{tAuth(locale, 'role')}</th>
               <th className="px-3 py-2">{tAuth(locale, 'status')}</th>
-              {canManage ? <th className="px-3 py-2">Ações</th> : null}
+              {canManage ? (
+                <th className="px-3 py-2">{tCommon(locale, 'actions')}</th>
+              ) : null}
             </tr>
           </thead>
           <tbody>

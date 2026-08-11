@@ -1,8 +1,12 @@
+'use client'
+
 import {
   getGarnishBadgeClasses,
   getPackageBadgeClasses,
   resolvePackageBadgeTheme,
 } from '@/Lib/packageBadgeTheme'
+import { tPackages } from '@/Lib/i18n/packages'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 export default function PackageBadge({
   name,
@@ -13,6 +17,7 @@ export default function PackageBadge({
   compact?: boolean
   className?: string
 }) {
+  const locale = useAuthLocaleFromMe()
   const theme = resolvePackageBadgeTheme(name)
   const styles = getPackageBadgeClasses(theme.tier)
   const garnish = getGarnishBadgeClasses()
@@ -26,7 +31,9 @@ export default function PackageBadge({
             : 'px-3 py-1.5 text-[0.65rem]'
         }`}
       >
-        <span className="truncate">Pacote: {theme.displayLabel}</span>
+        <span className="truncate">
+          {tPackages(locale, 'packagePrefix', { label: theme.displayLabel })}
+        </span>
       </span>
       {theme.hasSides ? (
         <span
@@ -34,7 +41,7 @@ export default function PackageBadge({
             compact ? 'px-2 py-0.5 text-[0.52rem]' : 'px-2.5 py-1 text-[0.58rem]'
           }`}
         >
-          Com guarnição
+          {tPackages(locale, 'withGarnish')}
         </span>
       ) : null}
     </span>

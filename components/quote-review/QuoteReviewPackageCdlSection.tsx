@@ -10,6 +10,8 @@ import {
 import { displayValue, formatCurrency } from '@/app/quotes/[id]/quoteDetailTypes'
 import type { PackageSelectionLabel } from '@/Lib/packageOptionGroups'
 import type { QuoteReviewPackageSummary } from './quoteReviewPackageSummary'
+import { tw } from '@/Lib/quoteTranslations'
+import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 function PackageDetailLine({
   label,
@@ -65,6 +67,7 @@ export default function QuoteReviewPackageCdlSection({
   billableGuestCount,
   packageTotal,
   packageUnitPrice,
+  language = 'pt',
 }: {
   packageName: string | null
   packageImageUrl?: string | null
@@ -75,9 +78,13 @@ export default function QuoteReviewPackageCdlSection({
   billableGuestCount: number | null
   packageTotal: number | null
   packageUnitPrice: number | null
+  language?: QuoteLanguage | string | null
 }) {
+  const loc: QuoteLanguage =
+    language === 'en' || language === 'es' ? language : 'pt'
   const itemsText = packageSummary?.packageItemsDescription?.trim() || '—'
-  const garnishText = packageSummary?.garnishDescription?.trim() || 'Não inclusas'
+  const garnishText =
+    packageSummary?.garnishDescription?.trim() || tw(loc, 'notIncluded')
   const additionalsText =
     additionalItems.length > 0
       ? additionalItems
@@ -86,7 +93,7 @@ export default function QuoteReviewPackageCdlSection({
               `${item.label} (${formatCurrency(item.amount)})`,
           )
           .join(' · ')
-      : 'Nenhum'
+      : tw(loc, 'none')
 
   const chargedPeople = packageSummary?.chargedPeople ?? billableGuestCount
   const baseUnit = packageSummary?.packageUnitPrice ?? packageUnitPrice
@@ -106,17 +113,20 @@ export default function QuoteReviewPackageCdlSection({
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="Pacote CDL" subtitle={displayValue(packageName)} />
+      <SectionHeader
+        title={tw(loc, 'packageSummary')}
+        subtitle={displayValue(packageName)}
+      />
       <PackageHeroImage
         src={packageImageUrl}
-        alt={packageName ?? 'Pacote'}
-        fallbackLabel="Imagem do pacote não cadastrada"
+        alt={packageName ?? tw(loc, 'packageSummary')}
+        fallbackLabel={tw(loc, 'packageImageMissing')}
       />
       {packageSelections.length > 0 ? (
         <div className="space-y-1">
           <p className="quote-proposal-package-detail">
             <span className="quote-proposal-package-detail-label font-bold">
-              Escolhas inclusas:
+              {tw(loc, 'includedChoices')}
             </span>
           </p>
           <ul className="ml-4 list-disc text-sm text-neutral-700">
@@ -128,20 +138,20 @@ export default function QuoteReviewPackageCdlSection({
           </ul>
         </div>
       ) : null}
-      <PackageDetailLine label="Itens do pacote:" value={itemsText} />
-      <PackageDetailLine label="Guarnições:" value={garnishText} />
-      <PackageDetailLine label="Itens adicionais:" value={additionalsText} />
+      <PackageDetailLine label={tw(loc, 'packageItems')} value={itemsText} />
+      <PackageDetailLine label={tw(loc, 'garnish')} value={garnishText} />
+      <PackageDetailLine label={tw(loc, 'additionalItems')} value={additionalsText} />
       <div className="quote-proposal-highlight-grid">
         <PackageValueCard
-          label="Convidados físicos"
+          label={tw(loc, 'physicalGuests')}
           value={formatCountOrDash(physicalGuestCount)}
         />
         <PackageValueCard
-          label="Pessoas cobradas"
+          label={tw(loc, 'billedPeople')}
           value={formatCountOrDash(chargedPeople)}
         />
         <PackageValueCard
-          label="Valor pacote base"
+          label={tw(loc, 'basePackageValue')}
           value={formatMoneyOrDash(baseTotal)}
           subValue={
             baseUnit != null && chargedPeople != null && chargedPeople > 0
@@ -151,7 +161,7 @@ export default function QuoteReviewPackageCdlSection({
           variant="price"
         />
         <PackageValueCard
-          label="Valor guarnições"
+          label={tw(loc, 'garnishValue')}
           value={
             packageSummary?.hasGarnish
               ? formatMoneyOrDash(garnishTotal)
@@ -162,19 +172,19 @@ export default function QuoteReviewPackageCdlSection({
               ? garnishUnit > 0 && chargedPeople != null && chargedPeople > 0
                 ? `${formatCurrency(garnishUnit)} × ${chargedPeople}`
                 : undefined
-              : 'Não'
+              : tw(loc, 'no')
           }
           variant="price"
         />
         <PackageValueCard
-          label="Total por pessoa"
+          label={tw(loc, 'totalPerPerson')}
           value={
-            totalUnit != null ? `${formatCurrency(totalUnit)} / pessoa` : '—'
+            totalUnit != null ? formatCurrency(totalUnit) : '—'
           }
           variant="price"
         />
         <PackageValueCard
-          label="Total pacote"
+          label={tw(loc, 'packageTotal')}
           value={formatMoneyOrDash(grandTotal)}
           variant="grand-total"
         />

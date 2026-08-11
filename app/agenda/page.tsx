@@ -8,6 +8,8 @@ import {
   toDayKey,
   weekDayKeys,
 } from '@/Lib/agenda/week'
+import { tAgenda } from '@/Lib/i18n/agenda'
+import { resolveAuthLocale } from '@/Lib/i18n/authUsers'
 import { hydrateTeamsWithContacts } from '@/Lib/teamContacts'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { redirect } from 'next/navigation'
@@ -43,16 +45,21 @@ export default async function AgendaPage() {
   ])
 
   if (teamsRes.error || eventsRes.error) {
-    const message = teamsRes.error?.message || eventsRes.error?.message || 'Erro'
+    const locale = resolveAuthLocale(session.appUser?.preferred_language)
+    const message =
+      teamsRes.error?.message ||
+      eventsRes.error?.message ||
+      tAgenda(locale, 'genericError')
     return (
       <main className="min-h-screen bg-cdl-bg p-10 text-cdl-fg">
-        <h1 className="text-2xl font-bold text-red-400">Erro ao carregar agenda</h1>
+        <h1 className="text-2xl font-bold text-red-400">
+          {tAgenda(locale, 'pageLoadError')}
+        </h1>
         <pre className="mt-4 rounded-3xl bg-cdl-surface p-4 text-sm text-red-400">
           {message}
         </pre>
         <p className="mt-4 text-sm text-cdl-muted">
-          Aplique a migration DEV `20260804120000_agenda_teams_events.sql` se ainda
-          não existir.
+          {tAgenda(locale, 'migrationHint')}
         </p>
       </main>
     )

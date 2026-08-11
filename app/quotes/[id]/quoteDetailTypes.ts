@@ -126,12 +126,17 @@ export function formatCurrency(value: number | null | undefined) {
   return `$${Number(value ?? 0).toFixed(2)}`
 }
 
-export function formatDate(value: string | null | undefined) {
+export function formatDate(
+  value: string | null | undefined,
+  locale: string | null | undefined = 'pt',
+) {
   if (!value) return '—'
   const normalized = value.includes('T') ? value : `${value}T00:00:00`
   const date = new Date(normalized)
   if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString('pt-BR', {
+  const bcp =
+    locale === 'en' ? 'en-US' : locale === 'es' ? 'es' : 'pt-BR'
+  return date.toLocaleDateString(bcp, {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
@@ -145,8 +150,13 @@ export function formatTime(value: string | null | undefined) {
   return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`
 }
 
-export function formatBool(value: boolean | null | undefined) {
+export function formatBool(
+  value: boolean | null | undefined,
+  locale: string | null | undefined = 'pt',
+) {
   if (value === null || value === undefined) return '—'
+  if (locale === 'en') return value ? 'Yes' : 'No'
+  if (locale === 'es') return value ? 'Sí' : 'No'
   return value ? 'Sim' : 'Não'
 }
 

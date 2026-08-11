@@ -17,6 +17,7 @@ import { parsePackageHighlightsText } from '@/Lib/packageDisplay'
 import { hasPackageIncludedChoices, type PackageOptionGroup } from '@/Lib/packageOptionGroups'
 import type { PackageSideItem } from '@/Lib/packageConfiguration'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 
 function formatCurrency(value: number) {
   return `$${value.toFixed(2)}`
@@ -61,7 +62,7 @@ function PackagePriceSummary({
     return (
       <div className="rounded-xl border border-[color-mix(in_srgb,var(--brand-primary-2)_22%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_6%,white)] px-4 py-3">
         <p className="text-sm font-bold text-[var(--brand-primary)]">
-          Resumo do pacote
+          {tw(language, 'packageSummary')}
         </p>
         <p className="mt-2 text-sm text-neutral-700">
           {formatPackageCatalogPriceLabel(pkg, language, formatCurrency)}
@@ -78,42 +79,44 @@ function PackagePriceSummary({
   return (
     <div className="rounded-xl border border-[color-mix(in_srgb,var(--brand-primary-2)_22%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_6%,white)] px-4 py-3">
       <p className="text-sm font-bold text-[var(--brand-primary)]">
-        Resumo do pacote
+        {tw(language, 'packageSummary')}
       </p>
       <div className="mt-2 space-y-1 text-sm text-neutral-700">
         {showBreakdown ? (
           <>
             <p>
-              Preço do pacote:{' '}
+              {tw(language, 'packagePriceLabel')}:{' '}
               <span className="font-semibold text-neutral-900">
-                {formatCurrency(sidesPricing.basePricePerPerson!)} / pessoa
+                {formatCurrency(sidesPricing.basePricePerPerson!)}
               </span>
             </p>
             <p>
-              Preço da guarnição:{' '}
+              {tw(language, 'garnishPriceLabel')}:{' '}
               <span className="font-semibold text-neutral-900">
-                {formatCurrency(sidesPricing.sidesPricePerPerson)} / pessoa
+                {formatCurrency(sidesPricing.sidesPricePerPerson)}
               </span>
             </p>
           </>
         ) : (
           <>
             <p>
-              Preço do pacote:{' '}
+              {tw(language, 'packagePriceLabel')}:{' '}
               <span className="font-semibold text-neutral-900">
-                {formatCurrency(packagePrice)} / pessoa
+                {formatCurrency(packagePrice)}
               </span>
             </p>
             {variant === 'with_sides' ? (
               <p>
-                Guarnições:{' '}
-                <span className="font-semibold text-neutral-900">inclusas</span>
+                {tw(language, 'garnish')}:{' '}
+                <span className="font-semibold text-neutral-900">
+                  {tw(language, 'garnishIncluded')}
+                </span>
               </p>
             ) : null}
           </>
         )}
         <p className="pt-1 text-lg font-black text-[var(--brand-primary)] sm:text-xl">
-          Total: {formatCurrency(totalPerPerson)} / pessoa
+          {tw(language, 'total')}: {formatCurrency(totalPerPerson)}
         </p>
       </div>
     </div>
@@ -176,8 +179,8 @@ export default function SelectedPackageDetails({
         <div className="md:col-span-5 lg:col-span-5">
           <PackageHeroImage
             src={image}
-            alt={pkg.label_pt?.trim() || pkg.package_key || 'Pacote'}
-            fallbackLabel="Imagem do pacote"
+            alt={pkg.label_pt?.trim() || pkg.package_key || tw(language, 'packageImage')}
+            fallbackLabel={tw(language, 'packageImage')}
             compact
           />
         </div>
@@ -249,7 +252,7 @@ export default function SelectedPackageDetails({
                 {nextDisabled && onNextBlockedClick ? (
                   <button
                     type="button"
-                    aria-label="Próximo — complete as opções obrigatórias"
+                    aria-label={tw(language, 'nextCompleteOptions')}
                     className="absolute inset-0 z-10 cursor-not-allowed rounded-xl"
                     onClick={onNextBlockedClick}
                   />
@@ -260,7 +263,7 @@ export default function SelectedPackageDetails({
                   disabled={nextDisabled}
                   className="cdl-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Próximo
+                  {getQuoteStrings(language).next}
                 </button>
               </div>
             </div>

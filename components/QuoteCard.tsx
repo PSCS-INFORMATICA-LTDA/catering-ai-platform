@@ -10,22 +10,21 @@ import {
 import type { QuoteListItem } from '@/Lib/fetchQuoteList'
 import { QuoteBoolBadge, QuoteGrillPhotoBadge } from './QuoteStatusBadge'
 import QuoteStatusBadge from './QuoteStatusBadge'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
+import { formatUiDate } from '@/Lib/i18n/locales'
+import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import { tw } from '@/Lib/quoteTranslations'
 
 function formatMoney(value: number | null | undefined) {
   if (value == null) return '—'
   return `$${Number(value).toFixed(2)}`
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return '—'
-  const normalized = value.includes('T') ? value : `${value}T00:00:00`
-  const date = new Date(normalized)
-  if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
+function formatDate(
+  value: string | null | undefined,
+  locale: string | null | undefined,
+) {
+  return formatUiDate(value, locale)
 }
 
 function formatLocation(city: string | null, state: string | null) {
@@ -99,12 +98,15 @@ function CompactIndicator({
   )
 }
 
-function getCompactPhotoIndicator(quote: QuoteListItem) {
+function getCompactPhotoIndicator(
+  quote: QuoteListItem,
+  locale: string | null | undefined,
+) {
   const status = deriveGrillPhotoStatus({
     hasGrill: quote.has_grill,
     grillPhotoRequired: quote.grill_photo_required,
   })
-  const label = getGrillPhotoBadgeLabel(status)
+  const label = getGrillPhotoBadgeLabel(status, locale)
   const tone =
     status === 'received'
       ? 'success'
@@ -164,7 +166,8 @@ function QuoteCardCompactSummary({
   quote: QuoteListItem
   onToggle: () => void
 }) {
-  const photo = getCompactPhotoIndicator(quote)
+  const locale = useAuthLocaleFromMe()
+  const photo = getCompactPhotoIndicator(quote, locale)
 
   return (
     <button
@@ -178,13 +181,13 @@ function QuoteCardCompactSummary({
             {quote.customer_name}
           </h2>
           <p className="mt-1 text-sm text-cdl-text-secondary">
-            {formatDate(quote.event_date)}
+            {formatDate(quote.event_date, locale)}
           </p>
           <p className="mt-0.5 truncate text-xs text-cdl-muted">
             {formatShortLocation(quote.city, quote.state)}
           </p>
         </div>
-        <QuoteStatusBadge status={quote.quote_status} />
+        <QuoteStatusBadge status={quote.quote_status} locale={locale} />
       </div>
 
       <div className="mt-2.5 flex flex-wrap items-center gap-2">
@@ -196,15 +199,15 @@ function QuoteCardCompactSummary({
 
       <div className="mt-2.5 flex flex-wrap gap-1.5">
         <CompactIndicator
-          label="Adicional"
-          value={quote.has_additionals ? 'Sim' : 'Não'}
+          label={tw(locale, 'additionalShort')}
+          value={quote.has_additionals ? tw(locale, 'yes') : tw(locale, 'no')}
         />
         <CompactIndicator
-          label="Churrasqueira"
-          value={quote.has_grill ? 'Sim' : 'Não'}
+          label={tw(locale, 'grillShort')}
+          value={quote.has_grill ? tw(locale, 'yes') : tw(locale, 'no')}
         />
         <CompactIndicator
-          label="Foto"
+          label={tw(locale, 'photoShort')}
           value={photo.label}
           tone={photo.tone}
         />
@@ -226,6 +229,7 @@ export default function QuoteCard({
   onToggleExpand?: () => void
   mobileCompact?: boolean
 }) {
+  const locale = useAuthLocaleFromMe()
   const showCompact = mobileCompact && !expanded
 
   if (showCompact) {
@@ -237,7 +241,7 @@ export default function QuoteCard({
           onClick={() => onToggleExpand?.()}
           className="mt-3 w-full min-h-[44px] rounded-xl border border-[var(--brand-border)] bg-[#f6f7f9] px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--brand-primary-2)] transition-colors hover:border-[var(--brand-primary)]"
         >
-          Detalhes
+          {tw(locale, 'details')}
         </button>
       </article>
     )
@@ -259,7 +263,7 @@ export default function QuoteCard({
             onClick={() => onToggleExpand?.()}
             className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold uppercase tracking-wider text-cdl-brand"
           >
-            Menos detalhes
+            {tw(locale, 'lessDetails')}
           </button>
         </div>
       ) : (
@@ -267,7 +271,7 @@ export default function QuoteCard({
           <p className="truncate text-[0.65rem] font-bold uppercase tracking-wider text-cdl-muted">
             {quote.quote_number}
           </p>
-          <QuoteStatusBadge status={quote.quote_status} />
+          <QuoteStatusBadge status={quote.quote_status} locale={locale} />
         </div>
       )}
 
@@ -289,28 +293,38 @@ export default function QuoteCard({
                 <PackageBadge name={quote.package_name} />
               </div>
             </div>
-            <QuoteStatusBadge status={quote.quote_status} />
+            <QuoteStatusBadge status={quote.quote_status} locale={locale} />
           </div>
         </>
       )}
 
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <Metric label="Data" value={formatDate(quote.event_date)} />
-        <Metric label="Local" value={formatLocation(quote.city, quote.state)} />
         <Metric
-          label="Total"
+          label={tQuotesOrders(locale, 'tableDate')}
+          value={formatDate(quote.event_date, locale)}
+        />
+        <Metric
+          label={tQuotesOrders(locale, 'locationLabel')}
+          value={formatLocation(quote.city, quote.state)}
+        />
+        <Metric
+          label={tw(locale, 'total')}
           value={formatMoney(quote.quote_total)}
           money
           highlight
         />
         <Metric
-          label="Reserva"
+          label={tQuotesOrders(locale, 'reservationLabel')}
           value={formatMoney(quote.reservation_amount)}
           money
         />
-        <Metric label="Saldo" value={formatMoney(quote.balance_due)} money />
         <Metric
-          label="Convidados"
+          label={tQuotesOrders(locale, 'docBalanceDueLine')}
+          value={formatMoney(quote.balance_due)}
+          money
+        />
+        <Metric
+          label={tw(locale, 'physicalGuests')}
           value={
             quote.physical_guest_count != null
               ? String(quote.physical_guest_count)
@@ -318,27 +332,39 @@ export default function QuoteCard({
           }
         />
         <Metric
-          label="Cobradas"
+          label={tw(locale, 'billed')}
           value={
             quote.billable_guest_count != null
               ? String(quote.billable_guest_count)
               : '—'
           }
         />
-        <Metric label="Milhas" value={formatMiles(quote.mileage_distance)} />
         <Metric
-          label="Taxa milhagem"
+          label={tw(locale, 'miles')}
+          value={formatMiles(quote.mileage_distance)}
+        />
+        <Metric
+          label={tw(locale, 'mileageFeeShort')}
           value={formatMoney(quote.mileage_fee)}
           money
         />
       </div>
 
       <div className="mt-4 flex flex-wrap gap-1.5">
-        <QuoteBoolBadge label="Adicional" value={quote.has_additionals} />
-        <QuoteBoolBadge label="Churrasqueira" value={quote.has_grill} />
+        <QuoteBoolBadge
+          label={tw(locale, 'additionalShort')}
+          value={quote.has_additionals}
+          locale={locale}
+        />
+        <QuoteBoolBadge
+          label={tw(locale, 'grillShort')}
+          value={quote.has_grill}
+          locale={locale}
+        />
         <QuoteGrillPhotoBadge
           hasGrill={quote.has_grill}
           grillPhotoRequired={quote.grill_photo_required}
+          locale={locale}
         />
       </div>
 

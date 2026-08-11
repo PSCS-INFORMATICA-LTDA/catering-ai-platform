@@ -4,10 +4,12 @@ import type { CompanyBrand } from '@/Lib/help/companyBranding'
 import CompanyHelpAvatar from '@/components/help/CompanyHelpAvatar'
 import type { HelpRouteContext } from '@/components/help/helpContext'
 import {
-  HELP_ACTION_LABELS,
+  getHelpActionLabels,
   type HelpAction,
   buildHelpActionResponse,
 } from '@/components/help/helpHints'
+import { tHelp } from '@/Lib/i18n/help'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 function IconClose({ className = 'h-4 w-4' }: { className?: string }) {
   return (
@@ -47,6 +49,8 @@ export default function HelpPanel({
   onAction: (action: HelpAction) => void
   onClose: () => void
 }) {
+  const locale = useAuthLocaleFromMe()
+  const actionLabels = getHelpActionLabels(locale)
   const displayResponse =
     responseText ??
     buildHelpActionResponse('explain', pathname, routeContext, brand.displayName)
@@ -55,7 +59,7 @@ export default function HelpPanel({
     <div
       className="flex max-h-[min(70vh,32rem)] flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.22)] dark:border-neutral-700 dark:bg-neutral-900"
       role="dialog"
-      aria-label="Central de ajuda"
+      aria-label={tHelp(locale, 'helpCenter')}
     >
       <div className="flex items-start gap-3 border-b border-neutral-100 px-4 py-3 dark:border-neutral-800">
         <CompanyHelpAvatar brand={brand} size="md" />
@@ -64,17 +68,17 @@ export default function HelpPanel({
             {brand.displayName}
           </p>
           <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-            Central de ajuda
+            {tHelp(locale, 'helpCenter')}
           </p>
           <p className="mt-0.5 text-[11px] text-neutral-400 dark:text-neutral-500">
-            Ajuda contextual para esta tela
+            {tHelp(locale, 'contextualHelp')}
           </p>
         </div>
         <button
           type="button"
           onClick={onClose}
           className="shrink-0 rounded-full p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-          aria-label="Fechar ajuda"
+          aria-label={tHelp(locale, 'closeHelp')}
         >
           <IconClose />
         </button>
@@ -102,7 +106,7 @@ export default function HelpPanel({
                   : 'border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:hover:bg-neutral-800'
               }`}
             >
-              {HELP_ACTION_LABELS[action]}
+              {actionLabels[action]}
             </button>
           ))}
         </div>
@@ -119,14 +123,14 @@ export default function HelpPanel({
                   : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-400'
               }`}
             >
-              {HELP_ACTION_LABELS[action]}
+              {actionLabels[action]}
             </button>
           ))}
         </div>
 
         <div className="rounded-xl border border-neutral-100 bg-white px-3 py-3 dark:border-neutral-800 dark:bg-neutral-900/50">
           <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-            Resposta
+            {tHelp(locale, 'response')}
           </p>
           <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-neutral-700 dark:text-neutral-200">
             {displayResponse}
@@ -135,7 +139,7 @@ export default function HelpPanel({
 
         <div className="rounded-xl border border-neutral-100 px-3 py-2 dark:border-neutral-800">
           <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400">
-            Checklist rápido
+            {tHelp(locale, 'quickChecklist')}
           </p>
           <ul className="mt-2 space-y-1 text-xs text-neutral-600 dark:text-neutral-300">
             {routeContext.quickTips.map((tip) => (

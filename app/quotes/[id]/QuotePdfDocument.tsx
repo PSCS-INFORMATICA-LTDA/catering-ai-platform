@@ -633,7 +633,10 @@ export function QuotePdfDocument({
     ...(minimumAdjustment > 0.009
       ? [
           {
-            label: `${t('docMinOrderAppliedLine')} (mín. ${formatCurrency(minimumOrderAmount)})`,
+            label: tQuotesOrders(lang, 'minOrderAppliedWithMin', {
+              label: t('docMinOrderAppliedLine'),
+              min: formatCurrency(minimumOrderAmount),
+            }),
             value: formatCurrency(minimumAdjustment),
           },
         ]

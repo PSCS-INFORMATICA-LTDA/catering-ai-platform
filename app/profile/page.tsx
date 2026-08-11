@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react'
 import { resolveAuthLocale, tAuth } from '@/Lib/i18n/authUsers'
+import { tCommon } from '@/Lib/i18n/common'
 import { useAuthLocale } from '@/Lib/i18n/useAuthLocale'
 
 export default function ProfilePage() {
@@ -41,23 +42,11 @@ export default function ProfilePage() {
     setMessage(null)
     const nextName = displayName.trim()
     if (!nextName) {
-      setError(
-        locale === 'en'
-          ? 'Display name is required'
-          : locale === 'es'
-            ? 'El nombre es obligatorio'
-            : 'Nome de exibição é obrigatório',
-      )
+      setError(tAuth(locale, 'displayNameRequired'))
       return
     }
     if (newPassword && newPassword !== confirm) {
-      setError(
-        locale === 'en'
-          ? 'Passwords do not match'
-          : locale === 'es'
-            ? 'Las contraseñas no coinciden'
-            : 'Senhas não conferem',
-      )
+      setError(tAuth(locale, 'passwordsDoNotMatch'))
       return
     }
     if (newPassword && !currentPassword) {
@@ -76,7 +65,7 @@ export default function ProfilePage() {
     })
     const json = await res.json()
     if (!res.ok) {
-      setError(json.error || 'Erro')
+      setError(json.error || tCommon(locale, 'error'))
       return
     }
     setDisplayName(nextName)
@@ -87,11 +76,7 @@ export default function ProfilePage() {
     setMessage(
       newPassword
         ? tAuth(locale, 'passwordUpdated')
-        : locale === 'en'
-          ? 'Profile saved'
-          : locale === 'es'
-            ? 'Perfil guardado'
-            : 'Perfil salvo',
+        : tAuth(locale, 'profileSaved'),
     )
   }
 
@@ -120,9 +105,9 @@ export default function ProfilePage() {
             }}
             className="w-full rounded-xl border border-cdl-border bg-cdl-bg px-3 py-2.5"
           >
-            <option value="pt">Português</option>
-            <option value="en">English</option>
-            <option value="es">Español</option>
+            <option value="pt">{tCommon(locale, 'portuguese')}</option>
+            <option value="en">{tCommon(locale, 'english')}</option>
+            <option value="es">{tCommon(locale, 'spanish')}</option>
           </select>
         </label>
         <fieldset className="space-y-3 border-t border-cdl-border pt-4">

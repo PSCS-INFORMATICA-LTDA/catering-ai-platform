@@ -21,6 +21,10 @@ import {
 } from '@/Lib/whatsapp'
 import { getCustomerDisplayName } from '@/Lib/getCustomerDisplayName'
 import { glassAction, glassBtn, glassField } from '@/Lib/liquidGlass'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
+import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import { tCommon } from '@/Lib/i18n/common'
+import { toBcp47Locale } from '@/Lib/i18n/locales'
 
 const SUPPLIER_PHONE_STORAGE_KEY = 'catering.supplierWhatsAppPhones'
 const LAST_SUPPLIER_STORAGE_KEY = 'catering.lastGarnishSupplierId'
@@ -112,6 +116,7 @@ export default function SupplierGarnishSharePanel({
   const [hint, setHint] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const uiLocale = useAuthLocaleFromMe()
   const [garnish, setGarnish] = useState<GarnishState | null>(null)
 
   const selectedSupplier = useMemo(
@@ -198,11 +203,11 @@ export default function SupplierGarnishSharePanel({
       if (!res.ok) {
         if (json.error === 'migration_required') {
           setLoadError(
-            'Migration de confirmação do fornecedor pendente no DEV.',
+            tQuotesOrders(uiLocale, 'migrationPending'),
           )
           return
         }
-        throw new Error(json.error ?? 'Falha ao carregar status')
+        throw new Error(json.error ?? tQuotesOrders(uiLocale, 'loadStatusError'))
       }
       setGarnish(json.data ?? null)
       if (json.data?.pickup_time) {
@@ -212,9 +217,9 @@ export default function SupplierGarnishSharePanel({
         setSupplierId(json.data.supplier_customer_id)
       }
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : 'Erro')
+      setLoadError(e instanceof Error ? e.message : tCommon(uiLocale, 'error'))
     }
-  }, [orderId])
+  }, [orderId, uiLocale])
 
   const loadSuppliers = useCallback(async () => {
     setLoadError(null)
@@ -226,7 +231,9 @@ export default function SupplierGarnishSharePanel({
         data?: SupplierRow[]
         error?: string
       }
-      if (!res.ok) throw new Error(json.error ?? 'Falha ao carregar fornecedores')
+      if (!res.ok) {
+        throw new Error(json.error ?? tQuotesOrders(uiLocale, 'loadSuppliersError'))
+      }
       const rows = (json.data ?? []).filter((row) => row.is_supplier !== false)
       setSuppliers(rows)
       const last =
@@ -240,10 +247,10 @@ export default function SupplierGarnishSharePanel({
         )
       })
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : 'Erro')
+      setLoadError(e instanceof Error ? e.message : tCommon(uiLocale, 'error'))
       setSuppliers([])
     }
-  }, [])
+  }, [uiLocale])
 
   useEffect(() => {
     if (!open) return
@@ -296,19 +303,19 @@ export default function SupplierGarnishSharePanel({
         error?: string
       }
       if (!res.ok) {
-        throw new Error(json.error ?? 'Falha ao atualizar pedido')
+        throw new Error(json.error ?? tQuotesOrders(uiLocale, 'updateOrderError'))
       }
       setGarnish(json.data ?? null)
       if (action === 'mark_sent') {
-        setHint('Enviado registrado. Link de confirmação na mensagem.')
+        setHint(tQuotesOrders(uiLocale, 'sentRegisteredHint'))
       } else if (action === 'mark_confirmed') {
-        setHint('Recebimento confirmado no sistema.')
+        setHint(tQuotesOrders(uiLocale, 'receiptConfirmedHint'))
       } else {
-        setHint('Link de confirmação pronto.')
+        setHint(tQuotesOrders(uiLocale, 'confirmLinkReady'))
       }
       return json.data ?? null
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : 'Erro')
+      setLoadError(e instanceof Error ? e.message : tCommon(uiLocale, 'error'))
       return null
     } finally {
       setBusy(false)
@@ -325,21 +332,20 @@ export default function SupplierGarnishSharePanel({
 
   const responseLabel =
     garnish?.supplier_garnish_response === 'confirmed'
-      ? 'Confirmado pelo fornecedor'
+      ? tQuotesOrders(uiLocale, 'confirmedBySupplier')
       : garnish?.supplier_garnish_sent_at
-        ? 'Aguardando confirmação'
-        : 'Não enviado'
+        ? tQuotesOrders(uiLocale, 'awaitingConfirmation')
+        : tQuotesOrders(uiLocale, 'notSent')
 
   return (
     <section className="liquid-glass-card space-y-3 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold text-cdl-fg">
-            Pedido de guarnição (fornecedor)
+            {tQuotesOrders(uiLocale, 'supplierGarnishTitle')}
           </h2>
           <p className="text-xs text-cdl-muted">
-            WhatsApp para o restaurante — packing da regra comercial da
-            empresa (kits HC–HK), retirada e confirmação.
+            {tQuotesOrders(uiLocale, 'supplierGarnishSubtitle')}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -359,11 +365,11 @@ export default function SupplierGarnishSharePanel({
             }}
           >
             {open ? (
-              'Fechar'
+              tCommon(uiLocale, 'close')
             ) : (
               <span className="inline-flex items-center gap-2">
                 <WhatsAppIcon className="h-5 w-5 text-white" />
-                WhatsApp fornecedor
+                {tQuotesOrders(uiLocale, 'supplierWhatsApp')}
               </span>
             )}
           </button>
@@ -375,14 +381,34 @@ export default function SupplierGarnishSharePanel({
       !open ? (
         <p className="text-xs text-cdl-muted">
           {garnish.supplier_garnish_sent_at
-            ? `Enviado: ${new Date(garnish.supplier_garnish_sent_at).toLocaleString('pt-BR')}`
+            ? tQuotesOrders(uiLocale, 'sentAt', {
+                when: new Date(
+                  garnish.supplier_garnish_sent_at,
+                ).toLocaleString(toBcp47Locale(uiLocale), {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+              })
             : null}
           {garnish.supplier_garnish_sent_at &&
           garnish.supplier_garnish_confirmed_at
             ? ' · '
             : null}
           {garnish.supplier_garnish_confirmed_at
-            ? `Confirmado: ${new Date(garnish.supplier_garnish_confirmed_at).toLocaleString('pt-BR')}`
+            ? tQuotesOrders(uiLocale, 'confirmedAt', {
+                when: new Date(
+                  garnish.supplier_garnish_confirmed_at,
+                ).toLocaleString(toBcp47Locale(uiLocale), {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+              })
             : null}
         </p>
       ) : null}
@@ -394,21 +420,22 @@ export default function SupplierGarnishSharePanel({
           ) : null}
           {suppliers.length === 0 && !loadError ? (
             <p className="text-xs text-amber-800 dark:text-amber-100">
-              Nenhum fornecedor cadastrado. Em Clientes, marque a pessoa como
-              Fornecedor e salve o telefone WhatsApp.
+              {tQuotesOrders(uiLocale, 'noSuppliers')}
             </p>
           ) : null}
 
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-cdl-muted">
-              Fornecedor
+              {tCommon(uiLocale, 'supplier')}
             </span>
             <select
               className={glassField(false)}
               value={supplierId}
               onChange={(e) => setSupplierId(e.target.value)}
             >
-              <option value="">Selecione…</option>
+              <option value="">
+                {tQuotesOrders(uiLocale, 'selectPlaceholder')}
+              </option>
               {suppliers.map((s) => (
                 <option key={s.id} value={s.id}>
                   {getCustomerDisplayName(s)}
@@ -419,7 +446,7 @@ export default function SupplierGarnishSharePanel({
 
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-cdl-muted">
-              Horário de retirada (flexível · padrão 2h antes)
+              {tQuotesOrders(uiLocale, 'pickupTimeLabel')}
             </span>
             <input
               type="time"
@@ -431,7 +458,7 @@ export default function SupplierGarnishSharePanel({
 
           <label className="block space-y-1">
             <span className="text-xs font-medium text-cdl-muted">
-              WhatsApp do fornecedor
+              {tQuotesOrders(uiLocale, 'supplierWhatsAppPhone')}
             </span>
             <input
               className={glassField()}
@@ -453,14 +480,13 @@ export default function SupplierGarnishSharePanel({
             </p>
           ) : (
             <p className="text-xs text-cdl-muted">
-              O link de confirmação é gerado ao enviar (WhatsApp/SMS) ou ao
-              clicar em Gerar link.
+              {tQuotesOrders(uiLocale, 'confirmLinkHint')}
             </p>
           )}
 
           <label className="block space-y-1">
             <span className="text-xs font-medium text-cdl-muted">
-              Mensagem (editável)
+              {tQuotesOrders(uiLocale, 'editableMessageLabel')}
             </span>
             <textarea
               className="min-h-[12rem] w-full rounded-lg border border-cdl-border bg-cdl-surface p-3 text-xs text-cdl-fg"
@@ -476,7 +502,7 @@ export default function SupplierGarnishSharePanel({
               disabled={busy}
               onClick={() => setMessage(defaultMessage)}
             >
-              Restaurar texto padrão
+              {tQuotesOrders(uiLocale, 'restoreDefaultText')}
             </button>
             <button
               type="button"
@@ -484,7 +510,7 @@ export default function SupplierGarnishSharePanel({
               disabled={busy || !supplierId}
               onClick={() => void postAction('ensure_token')}
             >
-              Gerar link
+              {tQuotesOrders(uiLocale, 'generateLink')}
             </button>
           </div>
 
@@ -498,13 +524,13 @@ export default function SupplierGarnishSharePanel({
               title={
                 phoneOk
                   ? `WhatsApp · ${formatWhatsAppPhoneDisplay(phone)}`
-                  : 'Informe um telefone válido com DDI.'
+                  : tQuotesOrders(uiLocale, 'enterPhoneToSend')
               }
               onOpenRequested={() => {
                 void ensureReadyForSend()
               }}
               onInvalidPhone={() =>
-                setHint('Informe um telefone válido com DDI.')
+                setHint(tQuotesOrders(uiLocale, 'enterPhoneToSend'))
               }
             />
             {buildSmsShareHref(phone, message) ? (
@@ -513,13 +539,13 @@ export default function SupplierGarnishSharePanel({
                 message={message}
                 className={`${glassAction('sky', true)} ${SHARE_ICON}`}
                 title="Enviar por SMS"
-                aria-label="Enviar por SMS"
+                aria-label={tQuotesOrders(uiLocale, 'sendBySms')}
                 onOpen={() => {
                   void ensureReadyForSend()
                 }}
                 onDesktopHint={() =>
                   setHint(
-                    'Mensagem SMS copiada. No PC use Phone Link se disponível.',
+                    tQuotesOrders(uiLocale, 'smsCopiedHint'),
                   )
                 }
               >
@@ -530,8 +556,8 @@ export default function SupplierGarnishSharePanel({
                 type="button"
                 disabled
                 className={`${glassAction('sky', true)} ${SHARE_ICON} opacity-50`}
-                title="SMS indisponível"
-                aria-label="SMS indisponível"
+                title={tCommon(uiLocale, 'smsUnavailable')}
+                aria-label={tCommon(uiLocale, 'smsUnavailable')}
               >
                 <SmsIcon className="h-5 w-5" />
               </button>
@@ -539,7 +565,9 @@ export default function SupplierGarnishSharePanel({
             {(() => {
               const mailHref = buildMailtoHref({
                 email: null,
-                subject: `Pedido guarnição ${orderNumber} — BBQ At Home`,
+                subject: tQuotesOrders(uiLocale, 'garnishEmailSubject', {
+                  order: orderNumber,
+                }),
                 body: message,
               })
               return mailHref ? (
@@ -547,7 +575,7 @@ export default function SupplierGarnishSharePanel({
                   href={mailHref}
                   className={`${glassAction('sky', true)} ${SHARE_ICON}`}
                   title="E-mail"
-                  aria-label="E-mail"
+                  aria-label={tQuotesOrders(uiLocale, 'emailLabel')}
                   onClick={() => {
                     void ensureReadyForSend()
                   }}
@@ -559,8 +587,8 @@ export default function SupplierGarnishSharePanel({
                   type="button"
                   disabled
                   className={`${glassAction('sky', true)} ${SHARE_ICON} opacity-50`}
-                  title="E-mail indisponível"
-                  aria-label="E-mail indisponível"
+                  title={tCommon(uiLocale, 'emailUnavailable')}
+                  aria-label={tCommon(uiLocale, 'emailUnavailable')}
                 >
                   <MailIcon className="h-5 w-5" />
                 </button>
@@ -575,7 +603,7 @@ export default function SupplierGarnishSharePanel({
               disabled={busy}
               onClick={() => void postAction('mark_sent')}
             >
-              Marcar enviado
+              {tQuotesOrders(uiLocale, 'markSent')}
             </button>
             <button
               type="button"
@@ -583,17 +611,18 @@ export default function SupplierGarnishSharePanel({
               disabled={busy}
               onClick={() => void postAction('mark_confirmed')}
             >
-              Confirmar recebimento
+              {tQuotesOrders(uiLocale, 'confirmReceipt')}
             </button>
           </div>
 
           {phoneOk ? (
             <p className="text-xs text-cdl-muted">
-              Destino: {formatWhatsAppPhoneDisplay(phone)}
+              {tQuotesOrders(uiLocale, 'destinationLabel')}:{' '}
+              {formatWhatsAppPhoneDisplay(phone)}
             </p>
           ) : (
             <p className="text-xs text-amber-700 dark:text-amber-200">
-              Informe um telefone válido com DDI para liberar o envio.
+              {tQuotesOrders(uiLocale, 'enterPhoneToSend')}
             </p>
           )}
           {hint ? (

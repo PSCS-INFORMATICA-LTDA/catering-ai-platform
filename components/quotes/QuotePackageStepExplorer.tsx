@@ -10,6 +10,7 @@ import type { PackageItem, PackageSideItem } from '@/Lib/packageConfiguration'
 import type { PackageOptionGroup } from '@/Lib/packageOptionGroups'
 import type { CatalogItemListItem } from '@/Lib/itemCatalog'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import { tw } from '@/Lib/quoteTranslations'
 
 type PackageRow = PackageCatalogFields & { id: string }
 type GarnishGroup = 'with' | 'without'
@@ -36,7 +37,7 @@ function PackageGroupToggle({
       <div className="min-w-0">
         <p className="text-base font-bold text-cdl-title">{title}</p>
         <p className="text-xs text-cdl-muted">
-          {count} {count === 1 ? 'pacote' : 'pacotes'} · {badge}
+          {count} · {badge}
         </p>
       </div>
       <span
@@ -231,7 +232,9 @@ export default function QuotePackageStepExplorer({
 
   const totalCount = packagesWithoutSides.length + packagesWithSides.length
   if (totalCount === 0) {
-    return <p className="text-sm text-cdl-muted">Nenhum pacote disponível.</p>
+    return (
+      <p className="text-sm text-cdl-muted">{tw(language, 'noPackages')}</p>
+    )
   }
 
   const showBothGroups =
@@ -250,9 +253,9 @@ export default function QuotePackageStepExplorer({
       {sortedWithSides.length > 0 ? (
         <section>
           <PackageGroupToggle
-            title="Com guarnições"
+            title={tw(language, 'withSides')}
             count={sortedWithSides.length}
-            badge="Com guarnições"
+            badge={tw(language, 'withSides')}
             expanded={expandedGroup === 'with'}
             onClick={() => {
               if (selectedInWithSides && expandedGroup === 'with') return
@@ -273,9 +276,9 @@ export default function QuotePackageStepExplorer({
       {sortedWithoutSides.length > 0 ? (
         <section>
           <PackageGroupToggle
-            title="Sem guarnições"
+            title={tw(language, 'withoutSides')}
             count={sortedWithoutSides.length}
-            badge="Sem guarnições"
+            badge={tw(language, 'withoutSides')}
             expanded={expandedGroup === 'without'}
             onClick={() => {
               if (selectedInWithoutSides && expandedGroup === 'without') return

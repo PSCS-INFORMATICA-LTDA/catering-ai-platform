@@ -2,7 +2,6 @@ import {
   getPackageOptionGroupsForPackage,
   isCustomPackage,
   validatePackageSelections,
-  type PackageOptionGroup,
 } from '@/Lib/packageOptionGroups'
 import {
   getFallbackCommercialRules,
@@ -10,6 +9,8 @@ import {
 } from '@/Lib/supabaseCommercialRules'
 import type { GrillPhotoStatus } from '@/Lib/grillPhotoStatus'
 import { isUsablePhone } from '@/Lib/normalizePhone'
+import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
+import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 export const WIZARD_STEP_LABELS = [
   'Cliente',
@@ -21,6 +22,18 @@ export const WIZARD_STEP_LABELS = [
   'Reserva',
   'Resumo',
 ] as const
+
+function loc(ctx: { language?: QuoteLanguage | string | null }): QuoteLanguage {
+  const l = ctx.language
+  return l === 'en' || l === 'es' || l === 'pt' ? l : 'pt'
+}
+
+function stepLabel(
+  ctx: { language?: QuoteLanguage | string | null },
+  stepIndex: number,
+): string {
+  return getQuoteStrings(loc(ctx)).wizardSteps[stepIndex] ?? WIZARD_STEP_LABELS[stepIndex]
+}
 
 export const STEPS_COUNT = WIZARD_STEP_LABELS.length
 
@@ -75,6 +88,7 @@ export type StepStatusContext = {
   >
   commercialRules?: CommercialRulesSnapshot
   isEditMode?: boolean
+  language?: QuoteLanguage | string | null
 }
 
 export type PendingStepIssue = {
@@ -106,6 +120,12 @@ function hasLinkedCustomer(ctx: StepStatusContext): boolean {
 export const GRILL_PHOTO_PENDING_WARNING =
   'Foto da churrasqueira pendente. Pode ser confirmada posteriormente.'
 
+export function grillPhotoPendingWarning(
+  language?: QuoteLanguage | string | null,
+): string {
+  return tw(language, 'grillPhotoPendingWarning')
+}
+
 export function isGrillPhotoOperationallyPending(
   state: WizardStateSnapshot,
 ): boolean {
@@ -122,8 +142,8 @@ export function getOperationalStepWarnings(
   if (isGrillPhotoOperationallyPending(ctx.state)) {
     warnings.push({
       stepIndex: 4,
-      label: 'Churrasqueira',
-      issues: [GRILL_PHOTO_PENDING_WARNING],
+      label: stepLabel(ctx, 4),
+      issues: [grillPhotoPendingWarning(ctx.language)],
     })
   }
 
@@ -138,10 +158,8 @@ export function getOptionalStepWarnings(
   if (!ctx.isEditMode && !hasLinkedCustomer(ctx)) {
     warnings.push({
       stepIndex: 0,
-      label: 'Cliente',
-      issues: [
-        'Cliente ainda não vinculado. A cotação pode ser criada, mas deverá ser revisada antes do envio final.',
-      ],
+      label: stepLabel(ctx, 0),
+      issues: [getQuoteStrings(loc(ctx)).customerNotLinked],
     })
   }
 
@@ -161,25 +179,27 @@ export function getStepIssues(
   const rules = ctx.commercialRules ?? getFallbackCommercialRules()
   const issues: string[] = []
 
+  const language = loc(ctx)
+
   switch (stepIndex) {
     case 0:
       break
     case 1:
-      if (!isFilled(state.eventName)) issues.push('Informe o nome do evento.')
-      if (!isFilled(state.eventDate)) issues.push('Informe a data do evento.')
-      if (!isFilled(state.startTime)) issues.push('Informe o horário de início.')
-      if (!isFilled(state.endTime)) issues.push('Informe o horário de término.')
-      if (!isFilled(state.address)) issues.push('Informe o endereço.')
-      if (!isFilled(state.city)) issues.push('Informe a cidade.')
-      if (!isFilled(state.state)) issues.push('Informe o estado.')
-      if (!isFilled(state.zipCode)) issues.push('Informe o CEP / zip code.')
+      if (!isFilled(state.eventName)) issues.push(tw(language, 'issueEventName'))
+      if (!isFilled(state.eventDate)) issues.push(tw(language, 'issueEventDate'))
+      if (!isFilled(state.startTime)) issues.push(tw(language, 'issueStartTime'))
+      if (!isFilled(state.endTime)) issues.push(tw(language, 'issueEndTime'))
+      if (!isFilled(state.address)) issues.push(tw(language, 'issueAddress'))
+      if (!isFilled(state.city)) issues.push(tw(language, 'issueCity'))
+      if (!isFilled(state.state)) issues.push(tw(language, 'issueState'))
+      if (!isFilled(state.zipCode)) issues.push(tw(language, 'issueZip'))
       if (!(state.adultCount > 0)) {
-        issues.push('Informe o número de adultos (mínimo 1).')
+        issues.push(tw(language, 'issueAdults'))
       }
       break
     case 2: {
       if (!hasValidPackage(ctx)) {
-        issues.push('Selecione um pacote.')
+        issues.push(tw(language, 'issueSelectPackage'))
         break
       }
       const packageId = ctx.state.packageId?.trim()
@@ -195,34 +215,40 @@ export function getStepIssues(
           ctx.packageOptionGroupItems,
         )
         issues.push(
-          ...validatePackageSelections(groups, ctx.state.packageSelections),
+          ...validatePackageSelections(
+            groups,
+            ctx.state.packageSelections,
+            language,
+          ),
         )
       }
       break
     }
     case 3:
       if (ctx.additionalsCount === 0) {
-        issues.push('Nenhum adicional selecionado (opcional).')
+        issues.push(tw(language, 'issueNoAdditionals'))
       }
       break
     case 4:
       if (!state.grillSetupAnswered) {
-        issues.push('Informe se o cliente possui churrasqueira.')
+        issues.push(tw(language, 'issueHasGrill'))
       }
       if (state.grillRentalRequired && state.grillRentalQty <= 0) {
-        issues.push('Informe a quantidade de churrasqueiras para aluguel.')
+        issues.push(tw(language, 'issueGrillQty'))
       }
       break
     case 5:
       if (state.baseLocation.trim() !== rules.mileageBaseLocation) {
-        issues.push(`Base deve ser ${rules.mileageBaseLocation}.`)
+        issues.push(tw(language, 'issueBase', { base: rules.mileageBaseLocation }))
       }
-      if (!(state.distance > 0)) issues.push('Informe a distância (mi).')
+      if (!(state.distance > 0)) issues.push(tw(language, 'issueDistance'))
       if (state.freeLimit !== rules.mileageFreeLimit) {
-        issues.push(`Limite gratuito deve ser ${rules.mileageFreeLimit} mi.`)
+        issues.push(
+          tw(language, 'issueFreeLimit', { limit: rules.mileageFreeLimit }),
+        )
       }
       if (state.rate !== rules.mileageRate) {
-        issues.push(`Taxa deve ser $${rules.mileageRate}/mi.`)
+        issues.push(tw(language, 'issueRate', { rate: rules.mileageRate }))
       }
       break
     case 6:
@@ -232,15 +258,19 @@ export function getStepIssues(
           rules.reservationPercentage,
         )
       ) {
-        issues.push(`Reserva deve ser ${rules.reservationPercentage}%.`)
+        issues.push(
+          tw(language, 'issueReservationPct', {
+            pct: rules.reservationPercentage,
+          }),
+        )
       }
       if (!(reservationAmount > 0)) {
-        issues.push('Calcule o valor da reserva.')
+        issues.push(tw(language, 'issueReservationAmount'))
       }
       break
     case 7:
       if (!areMandatoryStepsComplete(ctx)) {
-        issues.push('Existem etapas obrigatórias incompletas.')
+        issues.push(tw(language, 'issueIncompleteSteps'))
       }
       break
     default:
@@ -270,7 +300,7 @@ export function getMandatoryPendingSteps(
     (stepIndex) => !isMandatoryStepComplete(stepIndex, ctx),
   ).map((stepIndex) => ({
     stepIndex,
-    label: WIZARD_STEP_LABELS[stepIndex],
+    label: stepLabel(ctx, stepIndex),
     issues: getStepIssues(stepIndex, ctx),
   }))
 }
