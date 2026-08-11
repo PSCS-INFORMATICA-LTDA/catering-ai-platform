@@ -158,10 +158,11 @@ export default function OrderTeamConfirmationsPanel({
       setError(json.error || tQuotesOrders(locale, 'loadScaleError'))
       return
     }
-    const memberList = json.data?.members ?? []
-    const candidateList = json.data?.candidates ?? []
-    setSummary(json.data?.summary ?? null)
-    setConfirmations(json.data?.confirmations ?? [])
+    const data = json.data
+    const memberList = data?.members ?? []
+    const candidateList = data?.candidates ?? []
+    setSummary(data?.summary ?? null)
+    setConfirmations(data?.confirmations ?? [])
     setMembers(memberList)
     setCandidates(candidateList)
     setSlots((prev) => {
@@ -177,7 +178,7 @@ export default function OrderTeamConfirmationsPanel({
       })),
     )
 
-    const confs = json.data?.confirmations ?? []
+    const confs = data?.confirmations ?? []
     const activeConfs = confs.filter(
       (c) => c.status === 'pending' || c.status === 'confirmed',
     )
@@ -190,7 +191,7 @@ export default function OrderTeamConfirmationsPanel({
         confs.some((c) => c.person_id === m.person_id && c.status === 'confirmed'),
       )
 
-    if (!json.data?.event && !candidateList.length)
+    if (!data?.event && !candidateList.length)
       setAlert(tQuotesOrders(locale, 'noTeam'))
     else if (!scale.closed) {
       setAlert(
@@ -200,11 +201,11 @@ export default function OrderTeamConfirmationsPanel({
             })
           : tQuotesOrders(locale, 'teamIncomplete'),
       )
-    } else if ((json.data.summary?.declined ?? 0) > 0)
+    } else if ((data?.summary?.declined ?? 0) > 0)
       setAlert(tQuotesOrders(locale, 'memberDeclined'))
     else if (!allMembersHaveActive)
       setAlert(tQuotesOrders(locale, 'teamClosedSelectScale'))
-    else if ((json.data.summary?.pending ?? 0) > 0)
+    else if ((data?.summary?.pending ?? 0) > 0)
       setAlert(tQuotesOrders(locale, 'awaitingConfirmations'))
     else if (allConfirmed) setAlert(tQuotesOrders(locale, 'teamConfirmed'))
     else setAlert(null)
