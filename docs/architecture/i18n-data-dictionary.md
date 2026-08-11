@@ -1,176 +1,96 @@
 # i18n + dicionário de dados / textos
 
-**Ambiente:** DEV only  
-**Status:** discovery + recomendação — **não mover traduções para banco nesta rodada**  
-**Idiomas do produto:** `pt` · `en` · `es`
+**Ambiente:** DEV only (`yasprgtlqclwsjcshtls`)
+**Status:** fundação implementada (Git + registry + export + UI read-only)
+**Idiomas:** `pt` · `en` · `es`
 
 ---
 
-## 1. Sistema atual
+## 1. Três conceitos
 
-Traduções **versionadas em TypeScript**, espalhadas por módulo:
+| A. Data Dictionary | B. Translation Dictionary | C. Business data |
+|--------------------|---------------------------|------------------|
+| Entidades/campos/schema | Textos da aplicação | Nomes cadastrados pelo cliente |
+| `Lib/dictionary/*` | `Lib/i18n/registry.ts` | `label_pt/en/es` (pacote/item) |
+| Plataforma PSCS | Default Git; override tenant **futuro** | Sem autotradução |
+
+Não misturar os três. Não há `company_id` no dicionário global.
+
+---
+
+## 2. Sistema de tradução (estado)
+
+Fontes versionadas (não movidas para banco):
 
 | Fonte | Uso |
 |-------|-----|
 | `Lib/i18n/authUsers.ts` | login, usuários, perfil |
-| `Lib/i18n/quotesOrders.ts` | OS, materiais, proposta chrome, conferência pública |
-| `Lib/quoteTranslations.ts` | wizard de cotação (`getQuoteStrings(language)`) |
-| `Lib/i18n/useAuthLocaleFromMe.ts` | locale da UI via `/api/auth/me` → `app_users.preferred_language` |
-| Colunas `label_pt` / `label_en` / `label_es` | pacotes, permissões, alguns cadastros |
-| `quotes.language` | idioma do **documento** (proposta/PDF/e-mail) |
-| `customers.preferred_language` / equipe | idioma de contato/mensagem |
+| `Lib/i18n/quotesOrders.ts` | OS, materiais, nav, proposta chrome |
+| `Lib/quoteTranslations.ts` | wizard (chrome da UI vs preview do documento) |
+| `Lib/i18n/dictionaryUi.ts` | tela do dicionário |
+| `Lib/i18n/registry.ts` | índice central das chaves |
+| `app_users.preferred_language` | **idioma da UI** |
+| `quotes.language` | **idioma do documento** |
 
-Não há dicionário central, metadata (`max_length`, `display_order`, `integration_name`) nem API de export/import.
-
----
-
-## 2. Gaps
-
-- Chaves duplicadas / naming inconsistente entre arquivos.
-- Wizard usa `quote.language` (documento) também na UI do operador — mistura os dois eixos.
-- Sem `max_length` para integração (WhatsApp, PDF, ERP).
-- Sem override por tenant (franquia quer label própria).
-- Nomes cadastrados (pacote, item, cliente) às vezes têm `label_*`, às vezes um único nome.
-- Sem data dictionary para integradores (tabela/coluna/API name).
+Registry: `auth.*`, `quotesOrders.*`, `quotes.wizard.*`, `dictionary.*`.
 
 ---
 
-## 3. Idioma da UI vs idioma do documento
+## 3. Idioma UI vs documento vs OS
 
-| Eixo | Fonte hoje | Deve ser |
-|------------------|----------|
-| Idioma do usuário (UI) | `app_users.preferred_language` | chrome do backoffice, menus, erros |
-| Idioma do cliente/cotação | `quotes.language` | proposta, PDF, e-mail, mensagem compartilhada |
+| Eixo | Fonte | Comportamento |
+|------|--------|----------------|
+| Usuário / UI | `preferred_language` via `/api/auth/me` | menus, botões, stepper do wizard, dicionário |
+| Cotação / PDF | `quotes.language` | proposta, PDF, e-mail, labels de pacote no documento |
+| OS operacional | **A — idioma do usuário** para UI | não troca o backoffice |
+| OS documento | **B — preserva `quote.language` no snapshot** | histórico comercial |
 
-**Requisito Philippe:** operador em PT + cliente recebe cotação em EN, **sem** trocar a UI inteira.
+Wizard: chrome usa `useAuthLocaleFromMe()`; seletor “Idioma da cotação” grava `quotes.language` sem mudar a UI do operador.
 
-Estado: o wizard ainda pinta steps com `state.language` (= documento). Evolução: UI do wizard no locale do usuário; preview/PDF no `quote.language`.
+Fallback: locale pedido → pt → en → es → string vazia (**nunca** a chave).
 
-Fluxo futuro:
+---
+
+## 4. Data Dictionary
+
+- Entidades em `Lib/dictionary/entities.ts`.
+- Campos = **colunas reais** via OpenAPI PostgREST (DEV). `max_length` só se o schema tiver (`varchar(n)`). `text`/`numeric` sem precisão no OpenAPI → `null`.
+- Semântica (sensitive/financial/translatable) em `fieldSemantics.ts`.
+- `INVENTORY_MOVEMENT`: entidade inativa, **0 campos**. **PENDENTE DE MAPEAMENTO JDE.**
+
+Export: `npm.cmd run export:data-dictionary` → `scripts/dev/reports/` (gitignored).
+
+UI: `/settings/dictionary` read-only. Não edita schema.
+
+---
+
+## 5. RBAC / RLS
+
+Permissões: `data_dictionary.view`, `translation_dictionary.view` (owner/admin + platform admin).
+
+**Decisão:** dictionary = **platform metadata**, não tenant-owned. Sem tabela Postgres, sem RLS, sem `company_id` artificial.
+
+Override futuro (não implementado):
 
 ```
-quote.language → proposal → PDF → e-mail → mensagem compartilhada
-independentemente do locale do operador
+translation_overrides (company_id, translation_key, locale, value)
+resolução: tenant override → default Git → fallback pt
 ```
 
-Já parcialmente verdadeiro no PDF (`QuotePdfDocument` usa `quote.language`). Completar na UI do wizard.
+---
+
+## 6. Business data
+
+Não traduzir automaticamente nome de cliente/pacote/item.
+
+Pacotes já têm `label_pt/en/es`. Futuro (não criar agora): `catalog_item_translations`, `package_translations`.
 
 ---
 
-## 4. Nomes cadastrados pelo cliente
+## 7. Fora de escopo
 
-**Não traduzir automaticamente:**
-
-- nome do pacote
-- nome do item
-- nome do cliente
-
-Só se houver tradução **explícita** (`label_en` já cadastrado, etc.).
-
-Preparar (não criar agora):
-
-- `catalog_item_translations (company_id, item_id, locale, name, description)`
-- `package_translations` (ou continuar colunas `label_pt/en/es` no pacote — suficiente para 3 locales)
-
-Fallback: locale pedido → `pt` → nome canônico.
-
----
-
-## 5. Dicionário de TEXTOS / i18n (não confundir com schema)
-
-Entidade conceitual `translation_dictionary`:
-
-| Campo | Papel |
-|-------|--------|
-| id | |
-| key | código estável (`quotes.materialLeftoverLabel`) |
-| module | `auth` \| `quotes` \| `orders` \| `inventory` \| `agenda` … |
-| context | UI, PDF, WhatsApp, email |
-| pt_br / en_us / es | valores |
-| max_length | integração |
-| display_order | telas/export |
-| data_type | `label` \| `help` \| `error` \| `message` |
-| active | |
-| description | para tradutor |
-| created_at / updated_at | |
-
-Opcional futuro: `integration_name`, `required`.
-
-### Onde viver as traduções?
-
-| Opção | Prós | Contras |
-|-------|------|---------|
-| A. só banco | editável em runtime | deploy sem review; drift; cold start |
-| B. só arquivos versionados | PR/review, i18n type-safe | franquia não customiza |
-| **C. híbrido (recomendado)** | git = default PSCS; banco = override por `company_id` | dois lugares para olhar |
-
-**Recomendação SaaS:** **C — arquivos versionados + override opcional por empresa.**
-
-- Default: TS/JSON no repo (fonte PSCS).
-- Override: `translation_overrides (company_id, key, locale, value)` — futuro.
-- Resolução: override tenant → arquivo → fallback `pt`.
-- Não migrar as chaves atuais para banco nesta fase.
-
-Versionamento: git (chaves novas = PR). Banco só override. Export/import futuro: CSV/JSON das chaves + overrides.
-
----
-
-## 6. Dicionário de DADOS / schema (separado)
-
-Não misturar com textos de UI.
-
-Conceito (documentação/integradores — **não criar tudo no banco ainda**):
-
-### `data_dictionary_entities`
-
-Quote, ServiceOrder, CatalogItem, InventoryMovement, Event, …
-
-Campos: `code`, `db_table`, `api_name`, `description`, `module`, `sensitive`, `financial`.
-
-### `data_dictionary_fields`
-
-| Campo | Papel |
-|-------|--------|
-| entity_code | |
-| code / field_name | |
-| db_table / db_column | |
-| API name | |
-| description | |
-| type / length / precision / scale | |
-| required | |
-| PK / FK | |
-| display_order | |
-| sensitive / financial / translatable | |
-| integration notes | |
-
-Podem **relacionar** (`translatable=true` → chave no dicionário de textos), mas são catálogos distintos.
-
-Entrega inicial recomendada: Markdown/YAML versionado em `docs/dictionary/` gerado a partir do schema — não tabela obrigatória.
-
----
-
-## 7. Metadata para integração
-
-Cada chave/campo (quando aplicável):
-
-`code/key`, `description`, `module`, `field_name`, `data_type`, `max_length`, `decimal_places`, `display_order`, `required`, `locale`, `translation`, `integration_name`, `active`.
-
----
-
-## 8. Recomendação de arquitetura (decisão Philippe)
-
-1. **Manter** dicts TS como fonte da UI/PDF.
-2. **Separar** locale do usuário × `quote.language` no wizard (quando for implementar).
-3. **Não** criar `translation_dictionary` no Postgres agora.
-4. Quando houver integrador: YAML de data dictionary + CSV de chaves i18n com `max_length`.
-5. Override por tenant só quando houver segunda empresa real além de CDL.
-6. Traduções de catálogo só com cadastro explícito.
-
----
-
-## 9. Fora de escopo agora
-
-- Mover todas as strings para banco
-- Criar tabelas definitivas por suposição
-- Autotraduzir nomes de cliente/pacote/item
+- CMS de tradução
+- Mover strings para banco
+- Clone F4111 / P41202 / reservation
+- Remodelar `operational_material_rules`
 - Production / main
