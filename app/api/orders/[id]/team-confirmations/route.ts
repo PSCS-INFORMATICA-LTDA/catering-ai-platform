@@ -8,6 +8,11 @@ import {
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
 import { getCustomerDisplayName } from '@/Lib/getCustomerDisplayName'
+import {
+  ensureAgendaEventForOrder,
+  loadOrderScaleCandidates,
+  resolveAgendaEventForOrder,
+} from '@/Lib/orders/orderScale'
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import {
@@ -23,24 +28,9 @@ export const revalidate = 0
 
 type Ctx = { params: Promise<{ id: string }> }
 
-type PersonRow = {
-  id: string
-  full_name?: string | null
-  ab_name?: string | null
-  phone?: string | null
-  preferred_language?: string | null
-  is_team?: boolean | null
-  active?: boolean | null
-}
-
 type SelectedMember = {
   person_id: string
   role_key: string
-}
-
-function asPerson(raw: unknown): PersonRow | null {
-  if (!raw) return null
-  return (Array.isArray(raw) ? raw[0] : raw) as PersonRow
 }
 
 export async function GET(_request: Request, context: Ctx) {
@@ -53,7 +43,7 @@ export async function GET(_request: Request, context: Ctx) {
 
   const { data: order } = await db
     .from('service_orders')
-    .select('id, company_id')
+    .select('id, company_id, quote_id')
     .eq('id', orderId)
     .eq('company_id', companyId)
     .maybeSingle()
@@ -61,35 +51,24 @@ export async function GET(_request: Request, context: Ctx) {
     return Response.json({ error: 'OS não encontrada.' }, { status: 404 })
   }
 
-  const { data: evt } = await db
-    .from('agenda_events')
-    .select(
-      'id, team_id, event_date, start_time, end_time, title, client_name, status',
-    )
-    .eq('company_id', companyId)
-    .eq('service_order_id', orderId)
-    .maybeSingle()
+  const evt = await resolveAgendaEventForOrder(db, companyId, order)
+  const { candidates, members } = await loadOrderScaleCandidates(
+    db,
+    companyId,
+    evt?.team_id ?? null,
+  )
 
   if (!evt) {
     return Response.json({
       data: {
         event: null,
-        members: [],
+        members,
         confirmations: [],
         summary: null,
-        candidates: [],
+        candidates,
       },
     })
   }
-
-  const { data: members } = await db
-    .from('operational_team_members')
-    .select(
-      'id, person_id, role_key, customers:person_id(id, full_name, ab_name, phone, preferred_language)',
-    )
-    .eq('company_id', companyId)
-    .eq('team_id', evt.team_id)
-    .eq('active', true)
 
   const { data: confirmations } = await db
     .from('agenda_event_member_confirmations')
@@ -108,65 +87,10 @@ export async function GET(_request: Request, context: Ctx) {
     cancelled: list.filter((c) => c.status === 'cancelled').length,
   }
 
-  const { data: roleRows } = await db
-    .from('customer_operational_roles')
-    .select('person_id, role_key')
-    .eq('company_id', companyId)
-    .eq('active', true)
-
-  const { data: teamPeople } = await db
-    .from('customers')
-    .select('id, full_name, ab_name, phone, preferred_language, is_team, active')
-    .eq('company_id', companyId)
-    .eq('active', true)
-
-  const rolesByPerson = new Map<string, string[]>()
-  for (const row of roleRows ?? []) {
-    if (!isOperationalRoleKey(row.role_key)) continue
-    const cur = rolesByPerson.get(row.person_id) ?? []
-    if (!cur.includes(row.role_key)) cur.push(row.role_key)
-    rolesByPerson.set(row.person_id, cur)
-  }
-  for (const m of members ?? []) {
-    if (!isOperationalRoleKey(m.role_key)) continue
-    const cur = rolesByPerson.get(m.person_id) ?? []
-    if (!cur.includes(m.role_key)) cur.push(m.role_key)
-    rolesByPerson.set(m.person_id, cur)
-  }
-
-  const memberPersonIds = new Set((members ?? []).map((m) => m.person_id))
-  const peopleById = new Map<string, PersonRow>()
-  for (const p of teamPeople ?? []) {
-    if (
-      p.is_team ||
-      rolesByPerson.has(p.id) ||
-      memberPersonIds.has(p.id)
-    ) {
-      peopleById.set(p.id, p)
-    }
-  }
-  for (const m of members ?? []) {
-    const person = asPerson(m.customers)
-    if (person?.id) peopleById.set(person.id, person)
-  }
-
-  const candidates = [...peopleById.values()]
-    .filter((p) => p.active !== false)
-    .map((p) => ({
-      id: p.id,
-      full_name: p.full_name ?? null,
-      ab_name: p.ab_name ?? null,
-      phone: p.phone?.trim() || null,
-      preferred_language: p.preferred_language ?? null,
-      display_name: getCustomerDisplayName(p),
-      role_keys: rolesByPerson.get(p.id) ?? [],
-    }))
-    .sort((a, b) => a.display_name.localeCompare(b.display_name, 'pt'))
-
   return Response.json({
     data: {
       event: evt,
-      members: members ?? [],
+      members,
       confirmations: list,
       summary,
       candidates,
@@ -198,51 +122,15 @@ export async function POST(request: Request, context: Ctx) {
   const db = getSupabaseServerClient()
   const { data: order } = await db
     .from('service_orders')
-    .select('id, company_id')
+    .select(
+      'id, company_id, quote_id, event_date, start_time, end_time, service_order_number',
+    )
     .eq('id', orderId)
     .eq('company_id', companyId)
     .maybeSingle()
   if (!order) {
     return Response.json({ error: 'OS não encontrada.' }, { status: 404 })
   }
-
-  const { data: evt } = await db
-    .from('agenda_events')
-    .select(
-      'id, team_id, event_date, start_time, end_time, title, client_name, status, quote_id',
-    )
-    .eq('company_id', companyId)
-    .eq('service_order_id', orderId)
-    .maybeSingle()
-
-  if (!evt || evt.status !== 'scheduled') {
-    return Response.json(
-      { error: 'Evento da agenda não encontrado ou não agendado.' },
-      { status: 400 },
-    )
-  }
-
-  const { data: team } = await db
-    .from('operational_teams')
-    .select('id, name')
-    .eq('id', evt.team_id)
-    .eq('company_id', companyId)
-    .maybeSingle()
-
-  const { data: company } = await db
-    .from('companies')
-    .select('company_name, trade_name')
-    .eq('id', companyId)
-    .maybeSingle()
-
-  const { data: defaultMembers } = await db
-    .from('operational_team_members')
-    .select(
-      'person_id, role_key, customers:person_id(id, full_name, ab_name, phone, preferred_language)',
-    )
-    .eq('company_id', companyId)
-    .eq('team_id', evt.team_id)
-    .eq('active', true)
 
   const requested = Array.isArray(body.members) ? body.members : null
   let selected: SelectedMember[] = []
@@ -267,7 +155,44 @@ export async function POST(request: Request, context: Ctx) {
       seenPeople.add(personId)
       selected.push({ person_id: personId, role_key: roleKey })
     }
-  } else {
+  }
+
+  let evt = await ensureAgendaEventForOrder(
+    db,
+    companyId,
+    order,
+    selected.map((m) => m.person_id),
+  )
+
+  if (!evt || evt.status !== 'scheduled') {
+    return Response.json(
+      { error: 'Evento da agenda não encontrado ou não agendado.' },
+      { status: 400 },
+    )
+  }
+
+  const { data: team } = await db
+    .from('operational_teams')
+    .select('id, name')
+    .eq('id', evt.team_id)
+    .eq('company_id', companyId)
+    .maybeSingle()
+
+  const { data: company } = await db
+    .from('companies')
+    .select('company_name, trade_name')
+    .eq('id', companyId)
+    .maybeSingle()
+
+  if (!selected.length) {
+    const { data: defaultMembers } = await db
+      .from('operational_team_members')
+      .select(
+        'person_id, role_key, customers:person_id(id, full_name, ab_name, phone, preferred_language)',
+      )
+      .eq('company_id', companyId)
+      .eq('team_id', evt.team_id)
+      .eq('active', true)
     selected = (defaultMembers ?? []).map((m) => ({
       person_id: m.person_id,
       role_key: m.role_key,

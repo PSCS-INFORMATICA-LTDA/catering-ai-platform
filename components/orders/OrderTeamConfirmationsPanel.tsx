@@ -190,7 +190,8 @@ export default function OrderTeamConfirmationsPanel({
         confs.some((c) => c.person_id === m.person_id && c.status === 'confirmed'),
       )
 
-    if (!json.data?.event) setAlert(tQuotesOrders(locale, 'noTeam'))
+    if (!json.data?.event && !candidateList.length)
+      setAlert(tQuotesOrders(locale, 'noTeam'))
     else if (!scale.closed) {
       setAlert(
         scale.nextRoleLabel
@@ -223,13 +224,13 @@ export default function OrderTeamConfirmationsPanel({
     const taken = new Set(
       slots.filter((s) => s.slotKey !== slot.slotKey && s.person_id).map((s) => s.person_id),
     )
-    const preferred = candidates.filter(
+    const available = candidates.filter((c) => !taken.has(c.id))
+    const preferred = available.filter(
       (c) =>
-        !taken.has(c.id) &&
-        (c.role_keys.includes(slot.role_key) || c.role_keys.length === 0),
+        c.role_keys.includes(slot.role_key) || c.role_keys.length === 0,
     )
-    const fallback = candidates.filter((c) => !taken.has(c.id))
-    const list = preferred.length ? preferred : fallback
+    const rest = available.filter((c) => !preferred.some((p) => p.id === c.id))
+    const list = [...preferred, ...rest]
     const selected = slot.person_id ? candidateById.get(slot.person_id) : null
     if (selected && !list.some((c) => c.id === selected.id)) {
       return [selected, ...list]
@@ -426,10 +427,17 @@ export default function OrderTeamConfirmationsPanel({
                   onChange={(e) => updateSlotPerson(slot.slotKey, e.target.value)}
                   onFocus={() => setSelectedSlotKey(slot.slotKey)}
                 >
-                  <option value="">Selecionar…</option>
+                  <option value="">
+                    {tCommon(locale, 'select')}…
+                  </option>
                   {options.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.display_name}
+                      {c.role_keys.length
+                        ? ` · ${c.role_keys
+                            .map((k) => operationalRoleLabel(k, locale))
+                            .join(', ')}`
+                        : ''}
                       {c.phone ? ` · ${c.phone}` : ''}
                     </option>
                   ))}

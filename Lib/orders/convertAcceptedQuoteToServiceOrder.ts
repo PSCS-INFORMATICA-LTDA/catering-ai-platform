@@ -1,4 +1,5 @@
 import { generateOrderMaterialsFromBom } from '@/Lib/orders/generateOrderMaterialsFromBom'
+import { linkAgendaEventToServiceOrder } from '@/Lib/orders/orderScale'
 import { canConvertQuote } from '@/Lib/quotes/statusMachine'
 import { ensureAcceptedQuoteVersion } from '@/Lib/quotes/versions'
 import { getNextServiceOrderNumber } from '@/Lib/getNextDocumentNumber'
@@ -239,6 +240,12 @@ export async function convertAcceptedQuoteToServiceOrder(input: {
       return { data: null, error: { message: existingError.message, status: 500 } }
     }
     if (existing) {
+      await linkAgendaEventToServiceOrder(
+        supabase,
+        companyId,
+        quoteId,
+        existing.id,
+      )
       return { data: { ...(existing as ServiceOrderRow), already_existed: true }, error: null }
     }
   }
@@ -277,6 +284,12 @@ export async function convertAcceptedQuoteToServiceOrder(input: {
         .eq('id', quoteId)
         .eq('company_id', companyId)
     }
+    await linkAgendaEventToServiceOrder(
+      supabase,
+      companyId,
+      quoteId,
+      existingByVersion.id,
+    )
     return { data: { ...existingByVersion, already_existed: true }, error: null }
   }
 
@@ -399,6 +412,13 @@ export async function convertAcceptedQuoteToServiceOrder(input: {
     .update({ converted_service_order_id: serviceOrder.id, quote_status: 'converted' })
     .eq('id', quoteId)
     .eq('company_id', companyId)
+
+  await linkAgendaEventToServiceOrder(
+    supabase,
+    companyId,
+    quoteId,
+    serviceOrder.id,
+  )
 
   await writeAuditLog({
     companyId,
