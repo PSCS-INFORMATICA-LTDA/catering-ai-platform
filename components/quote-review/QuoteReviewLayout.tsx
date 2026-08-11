@@ -347,6 +347,8 @@ export default function QuoteReviewLayout({
               billableGuestCount={data.billableGuestCount}
               packageTotal={data.packageTotal}
               packageUnitPrice={data.packageUnitPrice}
+              additionalTotal={data.additionalTotal}
+              mileageFee={data.mileageFee}
               language={lang}
             />
           </ProposalSection>

@@ -443,6 +443,18 @@
   margin-top: 1.25rem;
 }
 
+.quote-proposal-highlight-grid--dense {
+  gap: 0.55rem;
+}
+
+.quote-proposal-highlight-grid--dense .quote-proposal-highlight-card {
+  padding: 0.7rem 0.55rem;
+}
+
+.quote-proposal-highlight-grid--dense .quote-proposal-highlight-value {
+  font-size: clamp(0.85rem, 12cqi, 1.45rem);
+}
+
 .quote-proposal-highlight-card {
   container-type: inline-size;
   display: flex;

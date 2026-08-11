@@ -63,6 +63,8 @@ type PackageValueCardsProps = {
   billableGuestCount: number | null
   packageTotal: number | null
   packageUnitPrice: number | null
+  additionalTotal?: number | null
+  mileageFee?: number | null
   language?: QuoteLanguage | string | null
 }
 
@@ -72,6 +74,8 @@ export function QuoteReviewPackageValueCards({
   billableGuestCount,
   packageTotal,
   packageUnitPrice,
+  additionalTotal = null,
+  mileageFee = null,
   language = 'pt',
 }: PackageValueCardsProps) {
   const loc: QuoteLanguage =
@@ -91,9 +95,16 @@ export function QuoteReviewPackageValueCards({
     : 0
   const totalUnit = packageSummary?.totalUnitPrice ?? packageUnitPrice
   const grandTotal = packageSummary?.grandTotalPrice ?? packageTotal
+  const additionalAmount = Number(additionalTotal ?? 0)
+  const mileageAmount = Number(mileageFee ?? 0)
+  const showMileage = mileageAmount > 0
 
   return (
-    <div className="quote-proposal-highlight-grid">
+    <div
+      className={`quote-proposal-highlight-grid${
+        showMileage ? ' quote-proposal-highlight-grid--dense' : ''
+      }`}
+    >
       <PackageValueCard
         label={tw(loc, 'physicalGuests')}
         value={formatCountOrDash(physicalGuestCount)}
@@ -129,10 +140,22 @@ export function QuoteReviewPackageValueCards({
         variant="price"
       />
       <PackageValueCard
+        label={tw(loc, 'additionalValue')}
+        value={formatMoneyOrDash(additionalAmount)}
+        variant="price"
+      />
+      <PackageValueCard
         label={tw(loc, 'totalPerPerson')}
         value={totalUnit != null ? formatCurrency(totalUnit) : '—'}
         variant="price"
       />
+      {showMileage ? (
+        <PackageValueCard
+          label={tw(loc, 'mileageValue')}
+          value={formatMoneyOrDash(mileageAmount)}
+          variant="price"
+        />
+      ) : null}
       <PackageValueCard
         label={tw(loc, 'packageTotal')}
         value={formatMoneyOrDash(grandTotal)}
@@ -152,6 +175,8 @@ export default function QuoteReviewPackageCdlSection({
   billableGuestCount,
   packageTotal,
   packageUnitPrice,
+  additionalTotal = null,
+  mileageFee = null,
   language = 'pt',
   showHeroImage = true,
   showValueCards = true,
@@ -165,6 +190,8 @@ export default function QuoteReviewPackageCdlSection({
   billableGuestCount: number | null
   packageTotal: number | null
   packageUnitPrice: number | null
+  additionalTotal?: number | null
+  mileageFee?: number | null
   language?: QuoteLanguage | string | null
   showHeroImage?: boolean
   showValueCards?: boolean
@@ -220,6 +247,10 @@ export default function QuoteReviewPackageCdlSection({
     </div>
   )
 
+  const resolvedAdditionalTotal =
+    additionalTotal ??
+    additionalItems.reduce((sum, item) => sum + Number(item.amount ?? 0), 0)
+
   const valueCards = (
     <QuoteReviewPackageValueCards
       packageSummary={packageSummary}
@@ -227,6 +258,8 @@ export default function QuoteReviewPackageCdlSection({
       billableGuestCount={billableGuestCount}
       packageTotal={packageTotal}
       packageUnitPrice={packageUnitPrice}
+      additionalTotal={resolvedAdditionalTotal}
+      mileageFee={mileageFee}
       language={loc}
     />
   )

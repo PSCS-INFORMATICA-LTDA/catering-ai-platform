@@ -363,6 +363,8 @@ type QuoteStrings = {
     refreshing: string
     physicalGuests: string
     financialTotal: string
+    additionalValue: string
+    mileageValue: string
     importantRules: string
     cancellationPolicy: string
     extrasCount: string
@@ -679,7 +681,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       refresh: 'Atualizar',
       refreshing: 'Atualizando…',
       physicalGuests: 'Convidados físicos',
-      financialTotal: 'Total financeiro',
+      financialTotal: 'Total a pagar',
+      additionalValue: 'Valor adicional',
+      mileageValue: 'Valor milhagem',
       importantRules: 'Regras importantes',
       cancellationPolicy: 'Política de cancelamento',
       extrasCount: '{count} adicional{plural}',
@@ -990,7 +994,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       refresh: 'Refresh',
       refreshing: 'Refreshing…',
       physicalGuests: 'Physical guests',
-      financialTotal: 'Financial total',
+      financialTotal: 'Total due',
+      additionalValue: 'Additional value',
+      mileageValue: 'Mileage value',
       importantRules: 'Important rules',
       cancellationPolicy: 'Cancellation policy',
       extrasCount: '{count} extra{plural}',
@@ -1305,7 +1311,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       refresh: 'Actualizar',
       refreshing: 'Actualizando…',
       physicalGuests: 'Invitados físicos',
-      financialTotal: 'Total financiero',
+      financialTotal: 'Total a pagar',
+      additionalValue: 'Valor adicional',
+      mileageValue: 'Valor de millaje',
       importantRules: 'Reglas importantes',
       cancellationPolicy: 'Política de cancelación',
       extrasCount: '{count} adicional{plural}',

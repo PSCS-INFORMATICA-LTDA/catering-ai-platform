@@ -338,11 +338,15 @@ export default function QuoteDetailView({
           },
         ]
       : []),
-    {
-      label: t('docDiscountLine'),
-      value: formatCurrency(discount),
-      discount: discount > 0,
-    },
+    ...(discount > 0
+      ? [
+          {
+            label: t('docDiscountLine'),
+            value: formatCurrency(discount),
+            discount: true,
+          },
+        ]
+      : []),
     {
       label: t('reservationLabel'),
       value: formatMoneyOrDash(snapshot.reservationAmount),
@@ -580,6 +584,8 @@ export default function QuoteDetailView({
               billableGuestCount={snapshot.billableGuestCount}
               packageTotal={snapshot.packageTotal}
               packageUnitPrice={snapshot.packageUnitPrice}
+              additionalTotal={snapshot.additionalTotal}
+              mileageFee={snapshot.mileageFee}
               language={lang}
             />
           </ProposalSection>

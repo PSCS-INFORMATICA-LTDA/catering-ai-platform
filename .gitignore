@@ -60,6 +60,7 @@ scripts/dev/_audit-rls-out.json
 
 .tmp-video-frames-5/
 .tmp-philippe-ii/
+.tmp-quote-ii/
 
 # Local video review extractions (not product assets)
 assets/_video_review/
