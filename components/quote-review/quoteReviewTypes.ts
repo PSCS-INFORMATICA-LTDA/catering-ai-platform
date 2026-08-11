@@ -41,6 +41,7 @@ export type QuoteReviewData = {
   hasGrill: boolean | null
   grillPhotoRequired: boolean | null
   grillPhotoStatusLabel?: string | null
+  grillPhotoUrl?: string | null
   grillRentalRequired: boolean | null
   grillRentalQty: number | null
   grillRentalTotal?: number | null

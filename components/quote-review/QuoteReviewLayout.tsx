@@ -3,7 +3,10 @@
 import type { ReactNode } from 'react'
 import CatalogImageFrame from '@/components/CatalogImageFrame'
 import CdlBrandLogo from '@/components/CdlBrandLogo'
-import QuoteReviewPackageCdlSection from '@/components/quote-review/QuoteReviewPackageCdlSection'
+import QuoteGrillPhotoFrame from '@/components/quote-review/QuoteGrillPhotoFrame'
+import QuoteReviewPackageCdlSection, {
+  QuoteReviewPackageValueCards,
+} from '@/components/quote-review/QuoteReviewPackageCdlSection'
 import {
   CdlCancellationPolicySection,
   CdlImportantRulesPanel,
@@ -327,6 +330,7 @@ export default function QuoteReviewLayout({
               packageTotal={data.packageTotal}
               packageUnitPrice={data.packageUnitPrice}
               language={lang}
+              showValueCards={false}
             />
           </ProposalSection>
 
@@ -340,8 +344,18 @@ export default function QuoteReviewLayout({
               }}
               language={lang}
             />
+            <QuoteReviewPackageValueCards
+              packageSummary={data.packageSummary}
+              physicalGuestCount={data.physicalGuestCount}
+              billableGuestCount={data.billableGuestCount}
+              packageTotal={data.packageTotal}
+              packageUnitPrice={data.packageUnitPrice}
+              language={lang}
+            />
           </ProposalSection>
+        </div>
 
+        <div className="quote-proposal-grid-2">
           <ProposalSection title={t.review.eventSection}>
             <p className="quote-proposal-event-name">
               {displayValue(data.eventName || data.customerName)}
@@ -364,9 +378,34 @@ export default function QuoteReviewLayout({
               />
             </div>
           </ProposalSection>
-        </div>
 
-        <div className="quote-proposal-grid-2">
+          <ProposalSection title={t.review.reservationSection}>
+            <div className="quote-proposal-info-grid">
+              <div className="quote-proposal-info-cell">
+                <span className="quote-proposal-label">{w.reservationPctLabel}</span>
+                <p className="quote-proposal-value">
+                  {data.reservationPercentage != null
+                    ? `${data.reservationPercentage}%`
+                    : '—'}
+                </p>
+              </div>
+              <div className="quote-proposal-info-cell">
+                <span className="quote-proposal-label">{w.reservationAmountLabel}</span>
+                <p className="quote-proposal-value">
+                  {formatMoneyOrDash(data.reservationAmount)}
+                </p>
+              </div>
+              <div className="quote-proposal-info-cell">
+                <span className="quote-proposal-label">
+                  {tQuotesOrders(lang, 'docBalanceDueLine')}
+                </span>
+                <p className="quote-proposal-value">
+                  {formatMoneyOrDash(data.balanceDue)}
+                </p>
+              </div>
+            </div>
+          </ProposalSection>
+
           <ProposalSection title={t.review.bbqSection}>
             <div className="quote-proposal-info-grid">
               <div className="quote-proposal-info-cell">
@@ -413,31 +452,15 @@ export default function QuoteReviewLayout({
             </div>
           </ProposalSection>
 
-          <ProposalSection title={t.review.reservationSection}>
-            <div className="quote-proposal-info-grid">
-              <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">{w.reservationPctLabel}</span>
-                <p className="quote-proposal-value">
-                  {data.reservationPercentage != null
-                    ? `${data.reservationPercentage}%`
-                    : '—'}
-                </p>
-              </div>
-              <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">{w.reservationAmountLabel}</span>
-                <p className="quote-proposal-value">
-                  {formatMoneyOrDash(data.reservationAmount)}
-                </p>
-              </div>
-              <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">
-                  {tQuotesOrders(lang, 'docBalanceDueLine')}
-                </span>
-                <p className="quote-proposal-value">
-                  {formatMoneyOrDash(data.balanceDue)}
-                </p>
-              </div>
-            </div>
+          <ProposalSection title={tQuotesOrders(lang, 'docGrillPhoto')}>
+            <QuoteGrillPhotoFrame
+              src={data.grillPhotoUrl}
+              alt={tQuotesOrders(lang, 'docGrillPhoto')}
+              emptyLabel={
+                data.grillPhotoStatusLabel ??
+                (data.hasGrill === false ? w.notApplicable : w.pending)
+              }
+            />
           </ProposalSection>
         </div>
 

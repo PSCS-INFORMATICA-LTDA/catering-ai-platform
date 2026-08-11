@@ -186,6 +186,7 @@ export function mapWizardToQuoteReview(
     grillPhotoStatusLabel: state.hasGrill
       ? getGrillPhotoStatusLabel(state.grillPhotoStatus, state.language)
       : tw(state.language, 'notApplicable'),
+    grillPhotoUrl: state.grillPhotoUrl,
     grillRentalRequired: state.grillRentalRequired,
     grillRentalQty: state.grillRentalRequired ? state.grillRentalQty : null,
     grillRentalTotal: quoteTotals.grillRentalTotal,

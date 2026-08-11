@@ -7,7 +7,10 @@ import {
   resolveQuoteDetailPackageImageUrl,
 } from '@/components/quote-review/mapQuoteDetailToQuoteReview'
 import QuoteProposalOverviewCard from '@/components/quote-review/QuoteProposalOverviewCard'
-import QuoteReviewPackageCdlSection from '@/components/quote-review/QuoteReviewPackageCdlSection'
+import QuoteGrillPhotoFrame from '@/components/quote-review/QuoteGrillPhotoFrame'
+import QuoteReviewPackageCdlSection, {
+  QuoteReviewPackageValueCards,
+} from '@/components/quote-review/QuoteReviewPackageCdlSection'
 import {
   type QuoteDetail,
   displayValue,
@@ -551,6 +554,7 @@ export default function QuoteDetailView({
               packageTotal={snapshot.packageTotal}
               packageUnitPrice={snapshot.packageUnitPrice}
               language={lang}
+              showValueCards={false}
             />
           </ProposalSection>
 
@@ -564,8 +568,18 @@ export default function QuoteDetailView({
               }}
               language={lang}
             />
+            <QuoteReviewPackageValueCards
+              packageSummary={packageSummary}
+              physicalGuestCount={snapshot.physicalGuestCount}
+              billableGuestCount={snapshot.billableGuestCount}
+              packageTotal={snapshot.packageTotal}
+              packageUnitPrice={snapshot.packageUnitPrice}
+              language={lang}
+            />
           </ProposalSection>
+        </div>
 
+        <div className="quote-proposal-grid-2">
           <ProposalSection title={t('docEventSection')}>
             <p className="quote-proposal-event-name">
               {displayValue(quote.event_name ?? customerDisplayName)}
@@ -588,9 +602,22 @@ export default function QuoteDetailView({
               />
             </div>
           </ProposalSection>
-        </div>
 
-        <div className="quote-proposal-grid-2">
+          <ProposalSection title={t('docTeamSection')}>
+            <div className="quote-proposal-team-grid">
+              <TeamCard
+                icon={<IconChef />}
+                label={t('docGrillMasters')}
+                value={quote.grill_masters_qty}
+              />
+              <TeamCard
+                icon={<IconTeam />}
+                label={t('docAssistants')}
+                value={quote.assistants_qty}
+              />
+            </div>
+          </ProposalSection>
+
           <ProposalSection title={t('docGrillSection')}>
             <div className="quote-proposal-info-grid">
               <div className="quote-proposal-info-cell">
@@ -631,19 +658,17 @@ export default function QuoteDetailView({
             </div>
           </ProposalSection>
 
-          <ProposalSection title={t('docTeamSection')}>
-            <div className="quote-proposal-team-grid">
-              <TeamCard
-                icon={<IconChef />}
-                label={t('docGrillMasters')}
-                value={quote.grill_masters_qty}
-              />
-              <TeamCard
-                icon={<IconTeam />}
-                label={t('docAssistants')}
-                value={quote.assistants_qty}
-              />
-            </div>
+          <ProposalSection title={t('docGrillPhoto')}>
+            <QuoteGrillPhotoFrame
+              src={quote.grill_photo_url}
+              alt={t('docGrillPhoto')}
+              emptyLabel={getGrillPhotoDetailLabel({
+                hasGrill: quote.has_grill,
+                grillPhotoRequired: quote.grill_photo_required,
+                grillPhotoUrl: quote.grill_photo_url,
+                grillPhotoMediaId: quote.grill_photo_media_id,
+              })}
+            />
           </ProposalSection>
         </div>
 
