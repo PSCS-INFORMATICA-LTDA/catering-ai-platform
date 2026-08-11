@@ -38,7 +38,7 @@ export async function updateQuote(
     return { data: null, error: errorInfo }
   }
 
-  const eventPayload = buildEventSavePayload(input)
+  const eventPayload = buildEventSavePayload(input, { mode: 'update' })
   let eventId = existingQuote?.event_id as string | null | undefined
 
   if (eventId) {

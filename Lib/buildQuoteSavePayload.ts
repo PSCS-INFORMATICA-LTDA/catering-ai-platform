@@ -108,7 +108,10 @@ function calcAdditionalBreakdown(
 }
 
 /** Dados do evento — apenas colunas reais de `public.events`. */
-export function buildEventSavePayload(input: QuoteSaveInput) {
+export function buildEventSavePayload(
+  input: QuoteSaveInput,
+  options?: { mode?: 'create' | 'update' },
+) {
   const guestCounts = {
     adultCount: input.adultCount,
     childrenUnder3Count: input.childrenUnder3Count,
@@ -118,6 +121,11 @@ export function buildEventSavePayload(input: QuoteSaveInput) {
   const billableGuestCount = calcBillableGuestCount(guestCounts)
   const childrenCount =
     input.childrenUnder3Count + input.children4To12Count
+
+  const companyId = getCdlCompanyId().trim()
+  if (!companyId) {
+    throw new Error('company_id é obrigatório para gravar events.')
+  }
 
   const row: EventsInsertPayload = {
     event_name: input.eventName.trim(),
@@ -140,6 +148,11 @@ export function buildEventSavePayload(input: QuoteSaveInput) {
     grill_notes: input.grillNotes.trim() || null,
     distance_from_base: input.distance,
     active: true,
+    ...(input.customerId?.trim()
+      ? { customer_id: input.customerId.trim() }
+      : {}),
+    // INSERT exige company_id (RLS). UPDATE não move o tenant.
+    ...(options?.mode === 'update' ? {} : { company_id: companyId }),
   }
 
   const payload = pickEventsInsertPayload(row)

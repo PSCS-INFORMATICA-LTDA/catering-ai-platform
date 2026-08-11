@@ -166,7 +166,18 @@ export async function createQuote(input: QuoteSaveInput): Promise<CreateQuoteRes
     return { data: null, error: errorInfo }
   }
 
-  const eventPayload = buildEventSavePayload(saveInput)
+  const eventPayload = buildEventSavePayload(saveInput, { mode: 'create' })
+  if (!eventPayload.company_id) {
+    const errorInfo = buildSaveQuoteError(
+      'event',
+      new Error(
+        'Insert em events sem company_id. RLS events_insert_member recusa NULL.',
+      ),
+      { eventPayload },
+    )
+    logSaveQuoteError(errorInfo)
+    return { data: null, error: errorInfo }
+  }
 
   const { data: eventData, error: eventError } = await supabase
     .from('events')
