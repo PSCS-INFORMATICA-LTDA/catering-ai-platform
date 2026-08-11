@@ -126,6 +126,18 @@ export async function getAuthSession(): Promise<AuthSessionContext | null> {
         'audit.view',
       ]),
     )
+    const { data: ownerPerms } = await admin
+      .from('role_permissions')
+      .select('permission_key')
+      .eq('role_key', 'owner')
+    if (ownerPerms?.length) {
+      permissions = Array.from(
+        new Set([
+          ...permissions,
+          ...ownerPerms.map((x) => x.permission_key as string),
+        ]),
+      )
+    }
   } else if (activeMembership) {
     const { data: rp } = await admin
       .from('role_permissions')

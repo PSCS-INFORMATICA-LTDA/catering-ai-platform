@@ -31,6 +31,9 @@ const FALLBACK: Record<CompanyRole, string[]> = {
     'audit.view',
     'data_dictionary.view',
     'translation_dictionary.view',
+    'inventory.view',
+    'inventory.manage',
+    'inventory.adjust',
   ],
   admin: [
     'users.view',
@@ -61,6 +64,9 @@ const FALLBACK: Record<CompanyRole, string[]> = {
     'audit.view',
     'data_dictionary.view',
     'translation_dictionary.view',
+    'inventory.view',
+    'inventory.manage',
+    'inventory.adjust',
   ],
   manager: [
     'users.view',
@@ -85,6 +91,8 @@ const FALLBACK: Record<CompanyRole, string[]> = {
     'teams.view',
     'teams.manage',
     'audit.view',
+    'inventory.view',
+    'inventory.manage',
   ],
   sales: [
     'quotes.view',
@@ -99,6 +107,7 @@ const FALLBACK: Record<CompanyRole, string[]> = {
     'catalog.view',
     'agenda.view',
     'teams.view',
+    'inventory.view',
   ],
   operator: [
     'quotes.view',
@@ -115,6 +124,7 @@ const FALLBACK: Record<CompanyRole, string[]> = {
     'agenda.view',
     'agenda.manage',
     'teams.view',
+    'inventory.view',
   ],
   kitchen: [
     'quotes.view',
@@ -122,6 +132,7 @@ const FALLBACK: Record<CompanyRole, string[]> = {
     'orders.materials.view',
     'materials.rules.view',
     'catalog.view',
+    'inventory.view',
   ],
   finance: [
     'quotes.view',
@@ -132,6 +143,7 @@ const FALLBACK: Record<CompanyRole, string[]> = {
     'customers.view',
     'catalog.view',
     'audit.view',
+    'inventory.view',
   ],
   viewer: [
     'quotes.view',
@@ -142,6 +154,7 @@ const FALLBACK: Record<CompanyRole, string[]> = {
     'catalog.view',
     'agenda.view',
     'teams.view',
+    'inventory.view',
   ],
 }
 

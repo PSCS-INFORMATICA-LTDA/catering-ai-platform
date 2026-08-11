@@ -88,7 +88,9 @@ export default function InventoryDashboard({
       fetch(`/api/inventory/balances?${balQs}`).then((r) => r.json()),
       fetch(`/api/inventory/movements?${movQs}`).then((r) => r.json()),
       fetch('/api/inventory/locations').then((r) => r.json()),
-      fetch('/api/additional-items').then((r) => r.json()).catch(() => ({ data: [] })),
+      fetch('/api/additional-items?usage=inventory&audience=admin')
+        .then((r) => r.json())
+        .catch(() => ({ data: [] })),
     ])
     if (b.error) setError(b.error)
     setBalances(b.data ?? [])

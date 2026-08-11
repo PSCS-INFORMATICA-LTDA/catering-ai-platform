@@ -10,14 +10,23 @@ export default async function EstoquePage() {
   const session = await getAuthSession()
   if (!session) redirect('/login?next=/estoque')
 
-  if (!hasPermission(session.permissions, 'inventory.view')) {
+  const canView =
+    session.isPlatformAdmin ||
+    hasPermission(session.permissions, 'inventory.view')
+  if (!canView) {
     redirect('/orders')
   }
 
   return (
     <InventoryDashboard
-      canManage={hasPermission(session.permissions, 'inventory.manage')}
-      canAdjust={hasPermission(session.permissions, 'inventory.adjust')}
+      canManage={
+        session.isPlatformAdmin ||
+        hasPermission(session.permissions, 'inventory.manage')
+      }
+      canAdjust={
+        session.isPlatformAdmin ||
+        hasPermission(session.permissions, 'inventory.adjust')
+      }
     />
   )
 }
