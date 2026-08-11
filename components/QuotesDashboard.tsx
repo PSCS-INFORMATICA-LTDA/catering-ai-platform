@@ -13,6 +13,7 @@ import DeleteQuoteButton from '@/components/DeleteQuoteButton'
 import type { QuoteListItem } from '@/Lib/fetchQuoteList'
 import { glassBtn } from '@/Lib/liquidGlass'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
+import { formatUiDate } from '@/Lib/i18n/locales'
 import {
   quoteStatusLabel,
   tQuotesOrders,
@@ -41,16 +42,11 @@ function formatMoney(value: number | null | undefined) {
   return `$${Number(value).toFixed(2)}`
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return '—'
-  const normalized = value.includes('T') ? value : `${value}T00:00:00`
-  const date = new Date(normalized)
-  if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
+function formatDate(
+  value: string | null | undefined,
+  locale: string | null | undefined,
+) {
+  return formatUiDate(value, locale)
 }
 
 function acceptanceLabel(
@@ -401,7 +397,7 @@ export default function QuotesDashboard({
                       {quote.customer_name}
                     </p>
                     <p className="mt-1 text-xs text-neutral-500">
-                      {formatDate(quote.event_date)}
+                      {formatDate(quote.event_date, locale)}
                     </p>
                   </div>
                   <p className="shrink-0 text-sm font-black text-neutral-900">
@@ -480,7 +476,7 @@ export default function QuotesDashboard({
                       </p>
                     </td>
                     <td className="align-middle whitespace-nowrap px-2 py-2.5 text-xs text-neutral-700">
-                      {formatDate(quote.event_date)}
+                      {formatDate(quote.event_date, locale)}
                     </td>
                     <td className="align-middle px-2 py-2.5">
                       <div className="flex justify-center">

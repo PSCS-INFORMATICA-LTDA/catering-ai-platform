@@ -25,14 +25,17 @@ Fontes versionadas (não movidas para banco):
 | Fonte | Uso |
 |-------|-----|
 | `Lib/i18n/authUsers.ts` | login, usuários, perfil |
-| `Lib/i18n/quotesOrders.ts` | OS, materiais, nav, proposta chrome |
+| `Lib/i18n/chrome.ts` | shell: grupos do menu, itens, EMPRESA, tema |
+| `Lib/i18n/quotesOrders.ts` | OS, materiais, lista de cotações, proposta chrome |
 | `Lib/quoteTranslations.ts` | wizard (chrome da UI vs preview do documento) |
 | `Lib/i18n/dictionaryUi.ts` | tela do dicionário |
 | `Lib/i18n/registry.ts` | índice central das chaves |
 | `app_users.preferred_language` | **idioma da UI** |
 | `quotes.language` | **idioma do documento** |
 
-Registry: `auth.*`, `quotesOrders.*`, `quotes.wizard.*`, `dictionary.*`.
+Registry: `auth.*`, `chrome.*`, `quotesOrders.*`, `quotes.wizard.*`, `dictionary.*`.
+
+Datas da UI usam `formatUiDate` / `toBcp47Locale` (pt-BR · en-US · es) — não `pt-BR` fixo.
 
 ---
 

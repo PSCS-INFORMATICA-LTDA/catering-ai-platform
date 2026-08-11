@@ -1,4 +1,5 @@
 import { listAuthI18nEntries } from './authUsers.ts'
+import { listChromeI18nEntries } from './chrome.ts'
 import { listDictionaryUiI18nEntries } from './dictionaryUi.ts'
 import { listQuotesOrdersI18nEntries } from './quotesOrders.ts'
 import { pickLocalizedText } from './locales.ts'
@@ -19,6 +20,7 @@ export type TranslationRegistryEntry = {
 export function buildTranslationRegistry(): TranslationRegistryEntry[] {
   const rows = [
     ...listAuthI18nEntries(),
+    ...listChromeI18nEntries(),
     ...listQuotesOrdersI18nEntries(),
     ...listQuoteWizardI18nEntries(),
     ...listDictionaryUiI18nEntries(),

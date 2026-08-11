@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { resolveAuthLocale, type AuthLocale } from '@/Lib/i18n/authUsers'
+import { toBcp47Locale } from '@/Lib/i18n/locales'
 import { useAuthLocale } from '@/Lib/i18n/useAuthLocale'
 
 /**
@@ -29,6 +30,11 @@ export function useAuthLocaleFromMe(initial?: string | null): AuthLocale {
       cancelled = true
     }
   }, [setLocale])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    document.documentElement.lang = toBcp47Locale(locale)
+  }, [locale])
 
   return locale
 }

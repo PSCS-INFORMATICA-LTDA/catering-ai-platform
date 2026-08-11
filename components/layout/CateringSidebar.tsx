@@ -4,7 +4,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { CATERING_NAV, isNavHrefActive } from '@/components/layout/navConfig'
-import { getNavLabel } from '@/Lib/i18n/quotesOrders'
+import {
+  getChromeGroupLabel,
+  getChromeNavLabel,
+  tChrome,
+} from '@/Lib/i18n/chrome'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 type Props = {
@@ -54,7 +58,7 @@ export function CateringSidebar({
         className={`catering-sidebar-shell fixed inset-y-0 left-0 z-50 flex flex-col border-r border-white/10 text-white transition-[width,transform] duration-200 ease-out lg:static lg:z-auto lg:h-full lg:min-h-0 lg:translate-x-0 lg:self-stretch ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         } ${collapsed ? 'lg:w-[3.75rem]' : 'w-[min(20.5rem,92vw)] lg:w-80'}`}
-        aria-label="Menu principal"
+        aria-label={tChrome(locale, 'sidebarMainMenu')}
       >
         {/* Desktop recolhido */}
         {collapsed ? (
@@ -77,8 +81,8 @@ export function CateringSidebar({
             <button
               type="button"
               className="catering-sidebar-panel-btn"
-              aria-label="Expandir menu"
-              title="Expandir menu"
+              aria-label={tChrome(locale, 'sidebarExpand')}
+              title={tChrome(locale, 'sidebarExpand')}
               onClick={onToggleCollapsed}
             >
               <SidebarPanelIcon className="h-3 w-3" />
@@ -116,8 +120,8 @@ export function CateringSidebar({
             <button
               type="button"
               className="catering-sidebar-panel-btn catering-sidebar-panel-btn--desktop"
-              aria-label="Recolher menu"
-              title="Recolher menu"
+              aria-label={tChrome(locale, 'sidebarCollapse')}
+              title={tChrome(locale, 'sidebarCollapse')}
               onClick={onToggleCollapsed}
             >
               <SidebarPanelIcon className="h-4 w-4" />
@@ -126,7 +130,7 @@ export function CateringSidebar({
             <button
               type="button"
               className="catering-sidebar-close-btn"
-              aria-label="Fechar menu"
+              aria-label={tChrome(locale, 'sidebarClose')}
               onClick={onClose}
             >
               ✕
@@ -134,43 +138,55 @@ export function CateringSidebar({
           </div>
 
           <nav className="flex-1 overflow-y-auto overscroll-contain px-2 py-3 [-webkit-overflow-scrolling:touch]">
-            {CATERING_NAV.map((group) => (
-              <div
-                key={group.label}
-                className="catering-sidebar-group"
-                aria-label={group.label}
-              >
-                <p className="catering-sidebar-group-label">{group.label}</p>
-                {group.children.map((child) => {
-                  const label = getNavLabel(locale, child.href, child.label)
-                  if (child.soon) {
+            {CATERING_NAV.map((group) => {
+              const groupLabel = getChromeGroupLabel(
+                locale,
+                group.id,
+                group.label,
+              )
+              return (
+                <div
+                  key={group.id}
+                  className="catering-sidebar-group"
+                  aria-label={groupLabel}
+                >
+                  <p className="catering-sidebar-group-label">{groupLabel}</p>
+                  {group.children.map((child) => {
+                    const label = getChromeNavLabel(
+                      locale,
+                      child.href,
+                      child.label,
+                      child.soon,
+                    )
+                    if (child.soon) {
+                      return (
+                        <span
+                          key={`${group.id}-${child.label}`}
+                          className="catering-sidebar-nav-btn catering-sidebar-nav-btn--soon"
+                          title={tChrome(locale, 'navComingSoon')}
+                        >
+                          {label}
+                        </span>
+                      )
+                    }
+                    const active = isNavHrefActive(pathname, child.href)
                     return (
-                      <span
-                        key={`${group.label}-${child.label}`}
-                        className="catering-sidebar-nav-btn catering-sidebar-nav-btn--soon"
-                        title="Em breve"
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        title={label}
+                        onClick={onClose}
+                        className={`catering-sidebar-nav-btn ${
+                          active ? 'catering-sidebar-nav-btn--active' : ''
+                        }`}
                       >
                         {label}
-                      </span>
+                      </Link>
                     )
-                  }
-                  const active = isNavHrefActive(pathname, child.href)
-                  return (
-                    <Link
-                      key={child.href}
-                      href={child.href}
-                      title={label}
-                      onClick={onClose}
-                      className={`catering-sidebar-nav-btn ${
-                        active ? 'catering-sidebar-nav-btn--active' : ''
-                      }`}
-                    >
-                      {label}
-                    </Link>
-                  )
-                })}
-              </div>
-            ))}
+                  })}
+                </div>
+              )
+            })}
           </nav>
 
           <footer className="mt-auto space-y-2 border-t border-white/10 px-3 py-2.5">

@@ -21,6 +21,29 @@ export function resolveDocumentLocale(
   return 'pt'
 }
 
+/** BCP 47 para Intl (datas, números). UI continua pt | en | es. */
+export function toBcp47Locale(locale: string | null | undefined): string {
+  const loc = resolveUiLocale(locale)
+  if (loc === 'en') return 'en-US'
+  if (loc === 'es') return 'es'
+  return 'pt-BR'
+}
+
+export function formatUiDate(
+  value: string | null | undefined,
+  locale: string | null | undefined,
+  options?: Intl.DateTimeFormatOptions,
+): string {
+  if (!value) return '—'
+  const normalized = value.includes('T') ? value : `${value}T00:00:00`
+  const date = new Date(normalized)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleDateString(
+    toBcp47Locale(locale),
+    options ?? { day: '2-digit', month: 'short', year: 'numeric' },
+  )
+}
+
 /**
  * Nunca devolve a chave crua ao usuário.
  * requested → pt → en → es → string vazia.

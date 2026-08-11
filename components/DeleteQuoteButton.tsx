@@ -2,6 +2,8 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
+import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
 import { glassBtn } from '@/Lib/liquidGlass'
 
 export default function DeleteQuoteButton({
@@ -18,13 +20,12 @@ export default function DeleteQuoteButton({
   onDeleted?: (quoteId: string) => void
 }) {
   const router = useRouter()
+  const locale = useAuthLocaleFromMe()
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleDelete() {
-    const confirmed = window.confirm(
-      'Tem certeza que deseja excluir esta cotação?',
-    )
+    const confirmed = window.confirm(tQuotesOrders(locale, 'deleteQuoteConfirm'))
     if (!confirmed) return
 
     setDeleting(true)
@@ -38,7 +39,7 @@ export default function DeleteQuoteButton({
       const result = (await response.json()) as { error?: string }
 
       if (!response.ok) {
-        setError(result.error ?? 'Não foi possível excluir a cotação.')
+        setError(result.error ?? tQuotesOrders(locale, 'deleteQuoteError'))
         return
       }
 
@@ -49,7 +50,7 @@ export default function DeleteQuoteButton({
         router.refresh()
       }
     } catch {
-      setError('Não foi possível excluir a cotação.')
+      setError(tQuotesOrders(locale, 'deleteQuoteError'))
     } finally {
       setDeleting(false)
     }
@@ -73,7 +74,11 @@ export default function DeleteQuoteButton({
             .join(' '),
         )}
       >
-        {deleting ? 'Excluindo…' : compact ? 'Excluir' : 'Excluir Cotação'}
+        {deleting
+          ? tQuotesOrders(locale, 'deleting')
+          : compact
+            ? tQuotesOrders(locale, 'delete')
+            : tQuotesOrders(locale, 'deleteQuote')}
       </button>
       {error ? (
         <p className="mt-1 text-xs text-cdl-action">{error}</p>

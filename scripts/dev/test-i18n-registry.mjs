@@ -4,11 +4,17 @@
 import { readFileSync } from 'fs'
 import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
+import { CATERING_NAV } from '../../components/layout/navConfig.ts'
+import {
+  getChromeGroupLabel,
+  getChromeNavLabel,
+} from '../../Lib/i18n/chrome.ts'
 import {
   buildTranslationRegistry,
   inspectTranslationRegistry,
 } from '../../Lib/i18n/registry.ts'
 import {
+  formatUiDate,
   resolveDocumentLocale,
   resolveUiLocale,
 } from '../../Lib/i18n/locales.ts'
@@ -49,6 +55,27 @@ record(
   resolveUiLocale('en') === 'en' && resolveDocumentLocale('es') === 'es',
   `ui=${resolveUiLocale('en')} quote=${resolveDocumentLocale('es')}`,
 )
+
+{
+  const missing = []
+  for (const group of CATERING_NAV) {
+    if (!getChromeGroupLabel('en', group.id, '')) missing.push(group.id)
+    for (const child of group.children) {
+      const label = getChromeNavLabel('en', child.href, '', child.soon)
+      if (!label) missing.push(child.href || child.label)
+    }
+  }
+  record('T15-chrome-nav', missing.length === 0, missing.join(',') || 'shell nav EN')
+}
+
+{
+  const sample = formatUiDate('2027-12-18', 'en')
+  record(
+    'T15-date',
+    /dec/i.test(sample) && !/dez/i.test(sample),
+    sample,
+  )
+}
 
 const wizard = readFileSync(join(ROOT, 'app/quotes/new/QuoteWizard.tsx'), 'utf8')
 const pdf = readFileSync(join(ROOT, 'app/quotes/[id]/QuotePdfDocument.tsx'), 'utf8')

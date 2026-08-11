@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { orderStatusLabel, tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import { formatUiDate } from '@/Lib/i18n/locales'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import type { ServiceOrderListItem } from '@/Lib/orders/fetchServiceOrderList'
 import { SERVICE_ORDER_STATUSES } from '@/Lib/orders/statusMachine'
@@ -25,16 +26,11 @@ function formatMoney(value: number | null | undefined) {
   return `$${Number(value).toFixed(2)}`
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return '—'
-  const normalized = value.includes('T') ? value : `${value}T00:00:00`
-  const date = new Date(normalized)
-  if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
+function formatDate(
+  value: string | null | undefined,
+  locale: string | null | undefined,
+) {
+  return formatUiDate(value, locale)
 }
 
 export default function OrdersDashboard({
@@ -200,7 +196,7 @@ export default function OrdersDashboard({
                         : ''}
                     </p>
                   </div>
-                  <p className="text-sm text-neutral-700">{formatDate(order.event_date)}</p>
+                  <p className="text-sm text-neutral-700">{formatDate(order.event_date, locale)}</p>
                   <div>
                     <span
                       className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wider ${

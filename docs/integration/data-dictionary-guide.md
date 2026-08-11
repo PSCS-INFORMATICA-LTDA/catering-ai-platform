@@ -63,7 +63,7 @@ CSV: Module, EntityCode, Table, Column, APIName, DataType, MaxLength, Precision,
 
 | Eixo | Fonte | Controla |
 |------|--------|----------|
-| UI do usuário | `app_users.preferred_language` | menus, botões, labels, erros |
+| UI do usuário | `app_users.preferred_language` | menus (grupos e itens), EMPRESA, tema, botões, labels, datas, erros |
 | Documento | `quotes.language` | proposta, PDF, e-mail, mensagem ao cliente |
 | OS (UI) | idioma do usuário | backoffice da OS |
 | OS (histórico) | snapshot da quote | metadata do evento/documento |

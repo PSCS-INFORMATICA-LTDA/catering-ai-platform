@@ -4,7 +4,16 @@ export type NavChild = {
   soon?: boolean
 }
 
+export type NavGroupId =
+  | 'operational'
+  | 'masterData'
+  | 'dre'
+  | 'financial'
+  | 'parameters'
+  | 'settings'
+
 export type NavGroup = {
+  id: NavGroupId
   label: string
   children: NavChild[]
 }
@@ -12,6 +21,7 @@ export type NavGroup = {
 /** Menu lateral agrupado (espelho Logistics — domínio catering). */
 export const CATERING_NAV: NavGroup[] = [
   {
+    id: 'operational',
     label: 'Operacional',
     children: [
       { href: '/agenda', label: 'Agenda de eventos' },
@@ -22,6 +32,7 @@ export const CATERING_NAV: NavGroup[] = [
     ],
   },
   {
+    id: 'masterData',
     label: 'Cadastros',
     children: [
       { href: '/teams', label: 'Equipes' },
@@ -32,18 +43,22 @@ export const CATERING_NAV: NavGroup[] = [
     ],
   },
   {
+    id: 'dre',
     label: 'DRE',
     children: [{ href: '#', label: 'Em breve', soon: true }],
   },
   {
+    id: 'financial',
     label: 'Financeiro',
     children: [{ href: '#', label: 'Em breve', soon: true }],
   },
   {
+    id: 'parameters',
     label: 'Parâmetros',
     children: [{ href: '/commercial-rules', label: 'Regras comerciais' }],
   },
   {
+    id: 'settings',
     label: 'Configurações',
     children: [
       { href: '/settings/company', label: 'Empresa' },
