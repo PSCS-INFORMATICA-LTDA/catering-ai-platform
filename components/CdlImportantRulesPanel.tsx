@@ -114,8 +114,8 @@ export function CdlImportantRulesPanel({
   const rules = importantRuleItems(locale)
   const wrapperClass =
     variant === 'pdf'
-      ? 'quote-proposal-rules quote-print-section quote-print-keep'
-      : 'rounded-2xl border border-cdl-border bg-cdl-surface p-7 shadow-cdl sm:p-9'
+      ? 'quote-proposal-rules quote-print-section quote-print-rules'
+      : 'quote-print-rules rounded-2xl border border-cdl-border bg-cdl-surface p-7 shadow-cdl sm:p-9'
 
   const titleClass =
     variant === 'pdf'
@@ -210,7 +210,7 @@ export function CdlCancellationPolicySection({
   }
 
   return (
-    <section className="quote-proposal-rules quote-print-section quote-print-keep">
+    <section className="quote-proposal-rules quote-print-section">
       <h2 className="quote-proposal-section-title">
         {tw(locale, 'cancellationPolicy')}
       </h2>

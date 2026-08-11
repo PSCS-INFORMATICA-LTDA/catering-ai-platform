@@ -457,7 +457,7 @@ function InfoCell({
   wide?: boolean
 }) {
   return (
-    <View style={wide ? styles.gridItemWide : styles.gridItem}>
+    <View wrap={false} style={wide ? styles.gridItemWide : styles.gridItem}>
       <Text style={styles.cellLabel}>{label}</Text>
       <Text style={styles.cellValue}>{value}</Text>
     </View>
@@ -472,7 +472,7 @@ function RulesBlock({
   items: readonly string[]
 }) {
   return (
-    <View style={styles.rulesBlock}>
+    <View minPresenceAhead={36} style={styles.rulesBlock}>
       <Text style={styles.rulesSubtitle}>{title}</Text>
       {items.map((item) => (
         <Text key={item} style={styles.rulesItem}>
@@ -544,6 +544,24 @@ function PdfCompactHeader({
         </Text>
       </View>
     </View>
+  )
+}
+
+function PdfDocumentPage({
+  quoteNumber,
+  logoSrc,
+  children,
+}: {
+  quoteNumber: string
+  logoSrc: string | null
+  children: React.ReactNode
+}) {
+  return (
+    <Page size="A4" style={styles.contentPage} wrap>
+      <PdfCompactHeader quoteNumber={quoteNumber} logoSrc={logoSrc} />
+      <PdfPageFooter />
+      {children}
+    </Page>
   )
 }
 
@@ -641,11 +659,15 @@ export function QuotePdfDocument({
           },
         ]
       : []),
-    {
-      label: t('docDiscountLine'),
-      value: formatCurrency(discount),
-      discount: discount > 0,
-    },
+    ...(discount > 0
+      ? [
+          {
+            label: t('docDiscountLine'),
+            value: formatCurrency(discount),
+            discount: true,
+          },
+        ]
+      : []),
     {
       label: t('reservationLabel'),
       value: formatMoneyOrDash(snapshot.reservationAmount),
@@ -693,11 +715,8 @@ export function QuotePdfDocument({
         </View>
       </Page>
 
-      <Page size="A4" style={styles.contentPage} wrap>
-        <PdfCompactHeader quoteNumber={quoteNumber} logoSrc={logoSrc} />
-        <PdfPageFooter />
-
-        <View style={styles.overview}>
+      <PdfDocumentPage quoteNumber={quoteNumber} logoSrc={logoSrc}>
+        <View wrap={false} style={styles.overview}>
           <View style={styles.overviewItem}>
             <Text style={styles.overviewLabel}>{t('docCustomer')}</Text>
             <Text style={styles.overviewValue}>{customerName}</Text>
@@ -883,7 +902,7 @@ export function QuotePdfDocument({
           )}
         </View>
 
-        <View style={styles.section}>
+        <View wrap={false} style={styles.section}>
           <Text style={styles.sectionTitle}>{t('docFinancialSection')}</Text>
           <View style={styles.pricingCard}>
             {pricingLines.map((line) => (
@@ -919,7 +938,9 @@ export function QuotePdfDocument({
             </Text>
           </View>
         </View>
+      </PdfDocumentPage>
 
+      <PdfDocumentPage quoteNumber={quoteNumber} logoSrc={logoSrc}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('docRulesSectionTitle')}</Text>
           <RulesBlock title={t('docMinOrderRuleTitle')} items={IMPORTANT_RULES.minimumOrder} />
@@ -936,7 +957,7 @@ export function QuotePdfDocument({
             items={CANCELLATION_POLICY_SUMMARY}
           />
         </View>
-      </Page>
+      </PdfDocumentPage>
     </Document>
   )
 }

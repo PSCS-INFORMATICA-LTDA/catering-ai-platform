@@ -884,6 +884,34 @@
     size: A4 portrait;
   }
 
+  html,
+  body {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .app-shell,
+  .app-shell-column,
+  .app-shell-main {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .app-shell-main {
+    padding: 0 !important;
+  }
+
+  .catering-sidebar-shell,
+  .catering-app-header {
+    display: none !important;
+  }
+
   @page {
     @top-left {
       content: none;
@@ -926,6 +954,9 @@
     background: var(--proposal-light) !important;
     color: var(--proposal-dark) !important;
     padding: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   .quote-proposal-hero {
@@ -1246,6 +1277,20 @@
   .quote-print-keep {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  .quote-print-rules {
+    break-before: page;
+    page-break-before: always;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    box-shadow: none !important;
+    margin-top: 0 !important;
+  }
+
+  .quote-proposal-rules {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
   }
 
   .quote-print-footer,

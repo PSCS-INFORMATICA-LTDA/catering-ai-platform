@@ -46,16 +46,20 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden bg-cdl-bg">
-      <CateringSidebar
-        collapsed={collapsed}
-        mobileOpen={mobileOpen}
-        onClose={() => setMobileOpen(false)}
-        onToggleCollapsed={toggleCollapsed}
-      />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <AppHeader onMenuClick={() => setMobileOpen(true)} />
-        <main className="min-h-0 flex-1 overflow-auto p-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5">
+    <div className="app-shell flex h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden bg-cdl-bg print:block print:h-auto print:max-h-none print:overflow-visible">
+      <div className="print:hidden">
+        <CateringSidebar
+          collapsed={collapsed}
+          mobileOpen={mobileOpen}
+          onClose={() => setMobileOpen(false)}
+          onToggleCollapsed={toggleCollapsed}
+        />
+      </div>
+      <div className="app-shell-column flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden print:block print:h-auto print:max-h-none print:overflow-visible">
+        <div className="print:hidden">
+          <AppHeader onMenuClick={() => setMobileOpen(true)} />
+        </div>
+        <main className="app-shell-main min-h-0 flex-1 overflow-auto p-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5 print:h-auto print:max-h-none print:overflow-visible print:p-0">
           {children}
         </main>
       </div>
