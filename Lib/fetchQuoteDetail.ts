@@ -147,6 +147,7 @@ export async function fetchQuoteDetail(id: string) {
   const packageCatalog = await fetchQuoteLinkedPackageCatalog({
     packageId: quote.package_id,
     packageKey: quote.package_key,
+    companyId,
   })
 
   const linkedPackage = packageCatalog.linkedPackage

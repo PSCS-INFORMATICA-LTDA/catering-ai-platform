@@ -562,7 +562,7 @@ export default function QuoteDetailView({
               packageTotal={snapshot.packageTotal}
               packageUnitPrice={snapshot.packageUnitPrice}
               language={lang}
-              showHeroImage={!packageImageUrl?.trim()}
+              showHeroImage={false}
             />
           </ProposalSection>
 

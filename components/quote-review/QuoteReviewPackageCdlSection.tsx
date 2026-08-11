@@ -119,7 +119,7 @@ export default function QuoteReviewPackageCdlSection({
         title={tw(loc, 'packageSummary')}
         subtitle={displayValue(packageName)}
       />
-      {showHeroImage ? (
+      {showHeroImage && packageImageUrl?.trim() ? (
         <PackageHeroImage
           src={packageImageUrl}
           alt={packageName ?? tw(loc, 'packageSummary')}

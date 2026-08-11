@@ -337,7 +337,7 @@ export default function QuoteReviewLayout({
               packageTotal={data.packageTotal}
               packageUnitPrice={data.packageUnitPrice}
               language={lang}
-              showHeroImage={!data.packageImageUrl?.trim()}
+              showHeroImage={false}
             />
           </ProposalSection>
 
