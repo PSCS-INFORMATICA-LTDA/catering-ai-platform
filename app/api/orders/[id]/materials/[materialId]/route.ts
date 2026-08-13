@@ -10,6 +10,11 @@ import {
   type MaterialStatus,
   type MaterialType,
 } from '@/Lib/orders/orderMaterials'
+import {
+  postInventoryReturnForMaterial,
+  syncInventoryCommitmentAfterMaterialCancel,
+  syncInventoryCommitmentAfterMaterialCheck,
+} from '@/Lib/inventory/inventoryOsIntegration'
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
@@ -22,6 +27,7 @@ type MaterialRow = {
   id: string
   company_id: string
   service_order_id: string
+  catalog_item_id: string | null
   description_snapshot: string
   material_type: MaterialType
   unit: string
@@ -40,6 +46,7 @@ type MaterialRow = {
   checked_at: string | null
   dispatched_at: string | null
   returned_at: string | null
+  stock_posting_status?: string | null
 }
 
 async function loadMaterial(
@@ -338,15 +345,75 @@ export async function PATCH(request: Request, { params }: Params) {
     },
   })
 
-  if (action === 'return') {
-    const { postInventoryForMaterialReturn } = await import(
-      '@/Lib/inventory/postInventory'
-    )
-    const inv = await postInventoryForMaterialReturn({
+  let inventoryHook: Record<string, unknown> | null = null
+
+  if (action === 'check') {
+    const hook = await syncInventoryCommitmentAfterMaterialCheck({
+      companyId,
+      material: {
+        id: materialId,
+        catalog_item_id: data.catalog_item_id,
+        material_type: data.material_type,
+        checked_quantity: Number(data.checked_quantity),
+        status: data.status,
+        stock_posting_status: data.stock_posting_status,
+      },
+      actorUserId: auth.session.userId,
+    })
+    inventoryHook = hook
+    if (hook.commitment?.ok === true && !hook.skipped) {
+      await writeOperationalAudit({
+        companyId,
+        actorUserId: auth.session.userId,
+        entityType: 'inventory_commitment',
+        entityId: String(hook.commitment.commitment_id || materialId),
+        action: 'inventory_commitment_created',
+        newData: {
+          service_order_material_id: materialId,
+          gate: 'checked',
+          quantity: data.checked_quantity,
+          idempotent: hook.commitment.idempotent ?? false,
+        },
+      })
+    }
+    if (hook.release?.ok === true && hook.reason === 'divergence_no_reserve') {
+      await writeOperationalAudit({
+        companyId,
+        actorUserId: auth.session.userId,
+        entityType: 'inventory_commitment',
+        entityId: materialId,
+        action: 'inventory_commitment_released',
+        newData: { reason: 'divergence', service_order_material_id: materialId },
+      })
+    }
+  }
+
+  if (action === 'cancel') {
+    const hook = await syncInventoryCommitmentAfterMaterialCancel({
       companyId,
       materialId,
       actorUserId: auth.session.userId,
     })
+    inventoryHook = hook
+    if (hook.release?.ok === true && !hook.skipped) {
+      await writeOperationalAudit({
+        companyId,
+        actorUserId: auth.session.userId,
+        entityType: 'inventory_commitment',
+        entityId: materialId,
+        action: 'inventory_commitment_released',
+        newData: { reason: 'material_cancelled', service_order_material_id: materialId },
+      })
+    }
+  }
+
+  if (action === 'return') {
+    const inv = await postInventoryReturnForMaterial({
+      companyId,
+      materialId,
+      actorUserId: auth.session.userId,
+    })
+    inventoryHook = { returnPosting: inv }
     if (inv.ok === false) {
       await writeOperationalAudit({
         companyId,
@@ -372,17 +439,20 @@ export async function PATCH(request: Request, { params }: Params) {
     await writeOperationalAudit({
       companyId,
       actorUserId: auth.session.userId,
-      entityType: 'inventory_movement',
+      entityType: 'inventory_document',
       entityId: materialId,
-      action: 'inventory_movement_posted',
+      action: 'inventory_document_posted',
       newData: {
         service_order_id: orderId,
         phase: 'return',
-        results: inv.results ?? null,
+        results: inv.results ?? inv,
       },
     })
-    return Response.json({ data, inventory: inv })
+    return Response.json({ data, inventory: inv, inventory_hook: inventoryHook })
   }
 
-  return Response.json({ data })
+  return Response.json({
+    data,
+    ...(inventoryHook ? { inventory_hook: inventoryHook } : {}),
+  })
 }

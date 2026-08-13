@@ -116,23 +116,23 @@ Regra: **saída e retorno são documentos diferentes** — nunca mutar o documen
 
 ---
 
-## 8. Integração OS / materials (planejada — Fase D)
+## 8. Integração OS / materials (Fase D — implementado)
 
-Fluxo alvo:
+Gate de **commitment:** conferência interna (`action=check`) quando `status=checked` e item com `inventory_enabled`.
 
-```
-service_order_material → commitment → separation → dispatch document → return document → leftover
-```
-
-Hoje (v1): dispatch/return via RPCs diretos em `inventory_movements` + `stock_posting_status`.  
-Não alterado nesta fase — apenas schema preparado.
-
-| Momento | Gate sugerido |
+| Momento | Implementação |
 |---------|----------------|
-| Criar commitment | separação / checked (a definir com Philippe) |
-| Release | cancel OS / qty reduzida |
-| Post físico | dispatch confirmado |
-| Retorno | novo documento EVENT_RETURN |
+| **A** Criar commitment | `syncInventoryCommitmentAfterMaterialCheck` → RPC `create_inventory_commitment` |
+| **B** Release | cancel → `cancelled`; divergência → `released`; qty check=0 → `released` |
+| **C** Post físico dispatch | `confirm_public_material_dispatch` → `post_inventory_for_order_dispatch` (documento ED) |
+| **D** In event | bucket `quantity_in_event` no RPC movement |
+| **E** Retorno | PATCH `action=return` → `postEventReturnDocuments` (ER/LR separados) |
+| **F** Leftover | mesmo RPC return (documento LR independente) |
+| **G** Divergência/perda | fora escopo posting final |
+
+`stock_posting_status` na criação de material: `not_applicable` se item sem `inventory_enabled` ou descartável.
+
+Código: `Lib/inventory/inventoryOsIntegration.ts` + hooks em `app/api/orders/[id]/materials/[materialId]/route.ts`.
 
 ---
 

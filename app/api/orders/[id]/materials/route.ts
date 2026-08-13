@@ -3,7 +3,9 @@ import {
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
 import {
-  defaultStockPostingStatus,
+  resolveStockPostingStatusForCatalogItem,
+} from '@/Lib/inventory/inventoryOsIntegration'
+import {
   deriveMaterialStatus,
   inferMaterialTypeFromCatalog,
   isMaterialSourceType,
@@ -131,6 +133,12 @@ export async function POST(request: Request, { params }: Params) {
     hasChecked: false,
   })
 
+  const stockPostingStatus = await resolveStockPostingStatusForCatalogItem({
+    companyId,
+    catalogItemId,
+    materialType,
+  })
+
   const { data, error } = await db
     .from('service_order_materials')
     .insert({
@@ -148,7 +156,7 @@ export async function POST(request: Request, { params }: Params) {
       dispatched_quantity: 0,
       returned_quantity: 0,
       leftover_quantity: 0,
-      stock_posting_status: defaultStockPostingStatus(materialType),
+      stock_posting_status: stockPostingStatus,
       status,
       notes: body.notes?.trim() || null,
       created_by: auth.session.userId,
