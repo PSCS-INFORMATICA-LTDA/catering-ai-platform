@@ -62,6 +62,18 @@ Matriz do plano 12/08 §61–65:
 - `/estoque`, `/estoque/disponibilidade`, `/estoque/reservas`
 - `/estoque/kardex`, `/estoque/documentos`, `/estoque/locais`, `/estoque/lotes`
 
+### Preview DEV (smoke 2026-08-13)
+
+| Item | Valor |
+|------|--------|
+| Branch | `feat/inventory-jde-foundation-dev` @ `b9d9386` (+ hotfix `posted_at`) |
+| Preview | https://catering-ai-platform-cc05n5gbx-pscs-informatica-ltda-s-projects.vercel.app |
+| Deploy | `vercel deploy` (sem `--prod`) |
+| Smoke script | `QA_BASE_URL=<preview> node scripts/dev/validate-preview-inventory-ui.mjs` |
+| Resultado | **PASS** — 7 pages + 8 APIs |
+
+**Hotfix durante smoke:** `GET /api/inventory/documents` retornava 500 — coluna `posted_at` inexistente; corrigido para derivar de `created_at` quando `status=posted`.
+
 ---
 
 ## E. Regressões 11/08
