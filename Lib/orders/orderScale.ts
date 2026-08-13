@@ -268,13 +268,16 @@ export async function linkAgendaEventToServiceOrder(
   quoteId: string,
   serviceOrderId: string,
 ) {
+  // Idempotente: vincula OS ao evento já reservado no sinal.
+  // reserved → scheduled; não cria segundo agenda_event.
   await db
     .from('agenda_events')
     .update({
       service_order_id: serviceOrderId,
+      status: 'scheduled',
       updated_at: new Date().toISOString(),
     })
     .eq('company_id', companyId)
     .eq('quote_id', quoteId)
-    .neq('status', 'cancelled')
+    .in('status', ['reserved', 'scheduled'])
 }

@@ -10,7 +10,7 @@ import {
 
 /** Eventos que ocupam a equipe (conflito por overlap + janela operacional). */
 export function statusBlocksTeamDay(status: AgendaEventStatus | string): boolean {
-  return status === 'scheduled' || status === 'completed'
+  return status === 'reserved' || status === 'scheduled' || status === 'completed'
 }
 
 export function teamHasBookingOnDate(

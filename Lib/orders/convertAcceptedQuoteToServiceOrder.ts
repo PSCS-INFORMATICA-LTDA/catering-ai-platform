@@ -1,7 +1,12 @@
 import { generateOrderMaterialsFromBom } from '@/Lib/orders/generateOrderMaterialsFromBom'
-import { linkAgendaEventToServiceOrder } from '@/Lib/orders/orderScale'
+import {
+  ensureAgendaEventForOrder,
+  linkAgendaEventToServiceOrder,
+} from '@/Lib/orders/orderScale'
+import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 import { canConvertQuote } from '@/Lib/quotes/statusMachine'
 import { ensureAcceptedQuoteVersion } from '@/Lib/quotes/versions'
+import { syncReservedAgendaEventForQuote } from '@/Lib/quotes/confirmQuoteDepositAndReserveSchedule'
 import { getNextServiceOrderNumber } from '@/Lib/getNextDocumentNumber'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
@@ -200,6 +205,103 @@ async function writeAuditLog(input: {
 }
 
 /**
+ * Vincula agenda_event existente (sinal) à OS.
+ * Se não existir (exceção), cria via sync/fallback e audita.
+ */
+async function attachAgendaToConvertedOrder(input: {
+  companyId: string
+  quoteId: string
+  serviceOrderId: string
+  actorUserId: string | null
+  order: {
+    id: string
+    quote_id?: string | null
+    event_date?: string | null
+    start_time?: string | null
+    end_time?: string | null
+    service_order_number?: string | null
+  }
+}) {
+  const db = getSupabaseServerClient()
+  await linkAgendaEventToServiceOrder(
+    db,
+    input.companyId,
+    input.quoteId,
+    input.serviceOrderId,
+  )
+
+  const { data: existing } = await db
+    .from('agenda_events')
+    .select('id, status, service_order_id')
+    .eq('company_id', input.companyId)
+    .eq('quote_id', input.quoteId)
+    .neq('status', 'cancelled')
+    .maybeSingle()
+
+  if (existing?.id) {
+    await writeOperationalAudit({
+      companyId: input.companyId,
+      actorUserId: input.actorUserId,
+      entityType: 'agenda_event',
+      entityId: existing.id,
+      action: 'agenda_linked_on_convert',
+      newData: {
+        quote_id: input.quoteId,
+        service_order_id: input.serviceOrderId,
+        status: existing.status,
+      },
+    })
+    return
+  }
+
+  // Fallback seguro: tentar reservar a partir do evento da cotação, depois linkar.
+  await syncReservedAgendaEventForQuote({
+    companyId: input.companyId,
+    quoteId: input.quoteId,
+    actorUserId: input.actorUserId,
+    requireConfirmed: false,
+  })
+  await linkAgendaEventToServiceOrder(
+    db,
+    input.companyId,
+    input.quoteId,
+    input.serviceOrderId,
+  )
+
+  let { data: afterSync } = await db
+    .from('agenda_events')
+    .select('id, status')
+    .eq('company_id', input.companyId)
+    .eq('quote_id', input.quoteId)
+    .neq('status', 'cancelled')
+    .maybeSingle()
+
+  if (!afterSync) {
+    const created = await ensureAgendaEventForOrder(
+      db,
+      input.companyId,
+      input.order,
+    )
+    afterSync = created
+      ? { id: created.id, status: created.status }
+      : null
+  }
+
+  await writeOperationalAudit({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId,
+    entityType: 'agenda_event',
+    entityId: afterSync?.id ?? input.serviceOrderId,
+    action: 'agenda_created_on_convert_fallback',
+    newData: {
+      quote_id: input.quoteId,
+      service_order_id: input.serviceOrderId,
+      note: 'Nenhum agenda_event no sinal; criado no convert (exceção).',
+    },
+  })
+}
+
+/**
  * Converte uma cotação aceita em Ordem de Serviço.
  *
  * Idempotente: chamadas repetidas para a mesma cotação/versão retornam a
@@ -240,12 +342,13 @@ export async function convertAcceptedQuoteToServiceOrder(input: {
       return { data: null, error: { message: existingError.message, status: 500 } }
     }
     if (existing) {
-      await linkAgendaEventToServiceOrder(
-        supabase,
+      await attachAgendaToConvertedOrder({
         companyId,
         quoteId,
-        existing.id,
-      )
+        serviceOrderId: existing.id,
+        actorUserId,
+        order: existing as ServiceOrderRow,
+      })
       return { data: { ...(existing as ServiceOrderRow), already_existed: true }, error: null }
     }
   }
@@ -284,12 +387,13 @@ export async function convertAcceptedQuoteToServiceOrder(input: {
         .eq('id', quoteId)
         .eq('company_id', companyId)
     }
-    await linkAgendaEventToServiceOrder(
-      supabase,
+    await attachAgendaToConvertedOrder({
       companyId,
       quoteId,
-      existingByVersion.id,
-    )
+      serviceOrderId: existingByVersion.id,
+      actorUserId,
+      order: existingByVersion,
+    })
     return { data: { ...existingByVersion, already_existed: true }, error: null }
   }
 
@@ -413,12 +517,13 @@ export async function convertAcceptedQuoteToServiceOrder(input: {
     .eq('id', quoteId)
     .eq('company_id', companyId)
 
-  await linkAgendaEventToServiceOrder(
-    supabase,
+  await attachAgendaToConvertedOrder({
     companyId,
     quoteId,
-    serviceOrder.id,
-  )
+    serviceOrderId: serviceOrder.id,
+    actorUserId,
+    order: serviceOrder,
+  })
 
   await writeAuditLog({
     companyId,

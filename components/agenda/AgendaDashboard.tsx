@@ -35,10 +35,23 @@ type Selection = { teamId: string; dayKey: string } | null
 type RangeMode = 'week' | 'custom'
 
 function eventStatusLabel(locale: AuthLocale, status: string) {
+  if (status === 'reserved') return tAgenda(locale, 'statusReserved')
   if (status === 'scheduled') return tAgenda(locale, 'statusScheduled')
   if (status === 'completed') return tAgenda(locale, 'statusCompleted')
   if (status === 'cancelled') return tAgenda(locale, 'statusCancelled')
   return status
+}
+
+const UNASSIGNED_TEAM_ID = '__unassigned__'
+
+function segmentToneClass(status: string, isHistorical: boolean) {
+  if (isHistorical) {
+    return 'border-dashed border-slate-300 bg-slate-100 text-slate-600'
+  }
+  if (status === 'reserved') {
+    return 'border-amber-300 bg-amber-100 text-amber-950'
+  }
+  return 'border-sky-300 bg-sky-100 text-sky-900'
 }
 
 export default function AgendaDashboard({
@@ -212,17 +225,28 @@ export default function AgendaDashboard({
   const selectedSegs = useMemo(() => {
     if (!selection) return []
     return segments
-      .filter((s) => s.teamId === selection.teamId && s.dayKey === selection.dayKey)
+      .filter((s) => {
+        if (selection.teamId === UNASSIGNED_TEAM_ID) {
+          return !s.teamId && s.dayKey === selection.dayKey
+        }
+        return s.teamId === selection.teamId && s.dayKey === selection.dayKey
+      })
       .sort((a, b) => a.startMin - b.startMin)
   }, [segments, selection])
 
-  const selectedTeam = selection
-    ? teams.find((t) => t.id === selection.teamId)
-    : null
+  const selectedTeam =
+    selection && selection.teamId !== UNASSIGNED_TEAM_ID
+      ? teams.find((t) => t.id === selection.teamId)
+      : null
+  const isUnassignedSelection = selection?.teamId === UNASSIGNED_TEAM_ID
 
   const selectionDayBusy = Boolean(
     selection &&
-      teamHasBookingOnDate(events, selection.teamId, selection.dayKey),
+      (isUnassignedSelection
+        ? segments.some(
+            (s) => !s.teamId && s.dayKey === selection.dayKey && s.blocksAvailability,
+          )
+        : teamHasBookingOnDate(events, selection.teamId, selection.dayKey)),
   )
 
   const newQuoteHref = buildAgendaQuoteHref({
@@ -452,7 +476,9 @@ export default function AgendaDashboard({
                           {String(ev.end_time).slice(0, 5)}
                         </td>
                         <td className="px-3 py-2">
-                          {teamNameById.get(ev.team_id) ?? '—'}
+                          {ev.team_id
+                            ? (teamNameById.get(ev.team_id) ?? '—')
+                            : tAgenda(locale, 'unassignedRow')}
                         </td>
                         <td className="px-3 py-2 font-medium">
                           {ev.quote_id ? (
@@ -488,6 +514,10 @@ export default function AgendaDashboard({
         ) : null}
 
         <div className="flex flex-wrap gap-3 text-xs text-cdl-muted">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-3 w-6 rounded border border-amber-300 bg-amber-100" />
+            {tAgenda(locale, 'legendReserved')}
+          </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="h-3 w-6 rounded border border-sky-300 bg-sky-100" />
             {tAgenda(locale, 'legendScheduled')}
@@ -543,6 +573,109 @@ export default function AgendaDashboard({
               </tr>
             </thead>
             <tbody>
+              {!teamFilter &&
+              segments.some((s) => !s.teamId) ? (
+                <tr key={UNASSIGNED_TEAM_ID}>
+                  <td className="sticky left-0 z-10 w-[6.5rem] max-w-[6.5rem] border-b border-r border-cdl-border bg-cdl-surface px-2 py-2 align-top">
+                    <div className="text-center text-[11px] font-semibold leading-tight text-amber-800">
+                      {tAgenda(locale, 'unassignedRow')}
+                    </div>
+                  </td>
+                  {weekKeys.map((dayKey) => {
+                    const cellSegs = segments
+                      .filter((s) => !s.teamId && s.dayKey === dayKey)
+                      .sort((a, b) => a.startMin - b.startMin)
+                    const selected =
+                      selection?.teamId === UNASSIGNED_TEAM_ID &&
+                      selection.dayKey === dayKey
+                    const isToday = dayKey === todayKey
+                    const isPast = dayKey < todayKey
+                    return (
+                      <td
+                        key={dayKey}
+                        className={`border-b border-cdl-border p-1 align-top ${
+                          selected
+                            ? 'bg-amber-500/10 ring-2 ring-inset ring-amber-400/50'
+                            : isToday
+                              ? 'bg-sky-500/5'
+                              : isPast
+                                ? 'bg-cdl-inset/40'
+                                : ''
+                        }`}
+                      >
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          className="flex min-h-[4.5rem] w-full cursor-pointer flex-col gap-1 rounded-lg p-1 text-left hover:bg-cdl-hover"
+                          onClick={() => {
+                            setSelection({
+                              teamId: UNASSIGNED_TEAM_ID,
+                              dayKey,
+                            })
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              setSelection({
+                                teamId: UNASSIGNED_TEAM_ID,
+                                dayKey,
+                              })
+                            }
+                          }}
+                        >
+                          {cellSegs.length === 0 ? (
+                            <span className="rounded-md border border-emerald-200/60 bg-emerald-50/80 px-2 py-1 text-[0.7rem] font-medium text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
+                              {tAgenda(locale, 'dayFree')}
+                            </span>
+                          ) : (
+                            cellSegs.map((seg) =>
+                              seg.quoteId ? (
+                                <Link
+                                  key={seg.eventId}
+                                  href={`/quotes/${seg.quoteId}`}
+                                  className={`block rounded-md border px-1.5 py-1 text-[0.68rem] leading-tight underline-offset-2 hover:underline ${segmentToneClass(
+                                    seg.status,
+                                    seg.isHistorical,
+                                  )}`}
+                                  title={tAgenda(locale, 'openQuoteTitle', {
+                                    title: seg.title,
+                                  })}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <span className="block font-semibold tabular-nums">
+                                    {formatMinutes(seg.startMin)}–
+                                    {formatMinutes(seg.endMin)}
+                                  </span>
+                                  <span className="block truncate font-medium">
+                                    {seg.code}
+                                  </span>
+                                </Link>
+                              ) : (
+                                <span
+                                  key={seg.eventId}
+                                  className={`block rounded-md border px-1.5 py-1 text-[0.68rem] leading-tight ${segmentToneClass(
+                                    seg.status,
+                                    seg.isHistorical,
+                                  )}`}
+                                  title={seg.title}
+                                >
+                                  <span className="block font-semibold tabular-nums">
+                                    {formatMinutes(seg.startMin)}–
+                                    {formatMinutes(seg.endMin)}
+                                  </span>
+                                  <span className="block truncate font-medium">
+                                    {seg.code}
+                                  </span>
+                                </span>
+                              ),
+                            )
+                          )}
+                        </div>
+                      </td>
+                    )
+                  })}
+                </tr>
+              ) : null}
               {visibleTeams.map((team) => (
                 <tr key={team.id}>
                   <td className="sticky left-0 z-10 w-[6.5rem] max-w-[6.5rem] border-b border-r border-cdl-border bg-cdl-surface px-2 py-2 align-top">
@@ -599,11 +732,10 @@ export default function AgendaDashboard({
                                 <Link
                                   key={seg.eventId}
                                   href={`/quotes/${seg.quoteId}`}
-                                  className={`block rounded-md border px-1.5 py-1 text-[0.68rem] leading-tight underline-offset-2 hover:underline ${
-                                    seg.isHistorical
-                                      ? 'border-dashed border-slate-300 bg-slate-100 text-slate-600'
-                                      : 'border-sky-300 bg-sky-100 text-sky-900'
-                                  }`}
+                                  className={`block rounded-md border px-1.5 py-1 text-[0.68rem] leading-tight underline-offset-2 hover:underline ${segmentToneClass(
+                                    seg.status,
+                                    seg.isHistorical,
+                                  )}`}
                                   title={tAgenda(locale, 'openQuoteTitle', {
                                     title: seg.title,
                                   })}
@@ -620,11 +752,10 @@ export default function AgendaDashboard({
                               ) : (
                                 <span
                                   key={seg.eventId}
-                                  className={`block rounded-md border px-1.5 py-1 text-[0.68rem] leading-tight ${
-                                    seg.isHistorical
-                                      ? 'border-dashed border-slate-300 bg-slate-100 text-slate-600'
-                                      : 'border-sky-300 bg-sky-100 text-sky-900'
-                                  }`}
+                                  className={`block rounded-md border px-1.5 py-1 text-[0.68rem] leading-tight ${segmentToneClass(
+                                    seg.status,
+                                    seg.isHistorical,
+                                  )}`}
                                   title={seg.title}
                                 >
                                   <span className="block font-semibold tabular-nums">
@@ -648,10 +779,13 @@ export default function AgendaDashboard({
           </table>
         </div>
 
-        {selection && selectedTeam ? (
+        {selection && (selectedTeam || isUnassignedSelection) ? (
           <div className="liquid-glass-card space-y-3 p-5">
             <h2 className="text-lg font-bold text-cdl-fg">
-              {selectedTeam.name} · {dayLabel(selection.dayKey, locale)}
+              {isUnassignedSelection
+                ? tAgenda(locale, 'unassignedRow')
+                : selectedTeam!.name}{' '}
+              · {dayLabel(selection.dayKey, locale)}
             </h2>
             {selectedSegs.length === 0 ? (
               <p className="text-sm text-cdl-muted">
@@ -717,15 +851,17 @@ export default function AgendaDashboard({
                           {tAgenda(locale, 'createQuote')}
                         </Link>
                       )}
-                      {seg.status === 'scheduled' ? (
+                      {seg.status === 'scheduled' || seg.status === 'reserved' ? (
                         <>
-                          <button
-                            type="button"
-                            className={glassBtn('secondary', 'liquid-glass-tab-link--plain')}
-                            onClick={() => void markStatus(seg.eventId, 'completed')}
-                          >
-                            {tAgenda(locale, 'complete')}
-                          </button>
+                          {seg.status === 'scheduled' ? (
+                            <button
+                              type="button"
+                              className={glassBtn('secondary', 'liquid-glass-tab-link--plain')}
+                              onClick={() => void markStatus(seg.eventId, 'completed')}
+                            >
+                              {tAgenda(locale, 'complete')}
+                            </button>
+                          ) : null}
                           <button
                             type="button"
                             className={glassBtn('ghost', 'liquid-glass-tab-link--plain')}
@@ -737,7 +873,7 @@ export default function AgendaDashboard({
                       ) : null}
                     </div>
                     </div>
-                    {seg.status === 'scheduled' ? (
+                    {seg.status === 'scheduled' && selectedTeam ? (
                       <TeamAvailabilitySharePanel
                         locale={locale}
                         teamId={selectedTeam.id}

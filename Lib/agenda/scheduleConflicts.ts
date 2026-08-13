@@ -7,7 +7,7 @@ import {
 
 export type ScheduleEventLike = {
   id: string
-  team_id: string
+  team_id: string | null
   event_date: string
   start_time: string
   end_time: string
@@ -34,7 +34,7 @@ export type PersonScheduleConflict = {
 }
 
 function statusBlocksSchedule(status: string): boolean {
-  return status === 'scheduled' || status === 'completed'
+  return status === 'reserved' || status === 'scheduled' || status === 'completed'
 }
 
 function confirmationBlocksPerson(status: string): boolean {

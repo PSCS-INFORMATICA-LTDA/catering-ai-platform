@@ -131,22 +131,56 @@ export async function GET(_request: Request, { params }: Params) {
     null
 
   const eventDate = event?.event_date ?? null
-  let dayBusy: Array<{ team_id: string; id: string }> = []
-  if (eventDate) {
-    const { data: dayRows } = await db
-      .from('agenda_events')
-      .select('id, team_id, event_date, status, quote_id')
-      .eq('company_id', companyId)
-      .eq('event_date', eventDate)
-      .in('status', ['scheduled', 'completed'])
-    dayBusy = (dayRows ?? []) as Array<{ team_id: string; id: string }>
-  }
+  const startTime = event?.start_time
+    ? String(event.start_time).length === 5
+      ? `${event.start_time}:00`
+      : String(event.start_time).slice(0, 8)
+    : null
+  const endTime = event?.end_time
+    ? String(event.end_time).length === 5
+      ? `${event.end_time}:00`
+      : String(event.end_time).slice(0, 8)
+    : null
 
-  const busyTeamIds = new Set(
-    dayBusy
-      .filter((e) => !agendaEvent || e.id !== agendaEvent.id)
-      .map((e) => e.team_id),
-  )
+  let busyTeamIds = new Set<string>()
+  if (eventDate && startTime && endTime) {
+    const { config } = await loadScheduleTurnaroundConfig(companyId)
+    const day = new Date(`${eventDate}T12:00:00`)
+    const prevDay = new Date(day)
+    prevDay.setDate(prevDay.getDate() - 1)
+    const nextDay = new Date(day)
+    nextDay.setDate(nextDay.getDate() + 1)
+
+    const { data: nearby } = await db
+      .from('agenda_events')
+      .select('id, team_id, event_date, start_time, end_time, status')
+      .eq('company_id', companyId)
+      .gte('event_date', prevDay.toISOString().slice(0, 10))
+      .lte('event_date', nextDay.toISOString().slice(0, 10))
+      .in('status', ['reserved', 'scheduled', 'completed'])
+      .not('team_id', 'is', null)
+
+    const excludeId = agendaEvent?.id ?? null
+    for (const team of teams) {
+      const busy = findTeamTimeConflict(
+        (nearby ?? []).map((e) => ({
+          id: e.id,
+          team_id: e.team_id,
+          event_date: e.event_date,
+          start_time: e.start_time,
+          end_time: e.end_time,
+          status: e.status,
+        })),
+        team.id,
+        eventDate,
+        startTime,
+        endTime,
+        excludeId,
+        config,
+      )
+      if (busy) busyTeamIds.add(team.id)
+    }
+  }
 
   const availableTeams = teams.filter((t) => !busyTeamIds.has(t.id))
 
@@ -401,7 +435,7 @@ export async function POST(request: Request, { params }: Params) {
     .eq('team_id', teamId)
     .gte('event_date', prevDay.toISOString().slice(0, 10))
     .lte('event_date', nextDay.toISOString().slice(0, 10))
-    .in('status', ['scheduled', 'completed'])
+    .in('status', ['reserved', 'scheduled', 'completed'])
 
   const busy = findTeamTimeConflict(
     (nearby ?? []).map((e) => ({
