@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import InventoryPageShell from '@/components/inventory/InventoryPageShell'
 import { tCommon } from '@/Lib/i18n/common'
 import {
   INVENTORY_MOVEMENT_TYPE_KEYS,
@@ -177,22 +178,11 @@ export default function InventoryDashboard({
   }
 
   return (
-    <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 text-cdl-fg sm:px-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          {tInventoryUi(locale, 'title')}
-        </h1>
-        <p className="max-w-2xl text-sm text-cdl-muted">
-          {tInventoryUi(locale, 'subtitle')}
-        </p>
-      </header>
-
-      {error ? (
-        <p className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-          {error}
-        </p>
-      ) : null}
-
+    <InventoryPageShell
+      title={tInventoryUi(locale, 'navOverview')}
+      subtitle={tInventoryUi(locale, 'subtitle')}
+      error={error}
+    >
       <section className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-cdl-muted">
           {tInventoryUi(locale, 'itemCategory')}
@@ -470,6 +460,6 @@ export default function InventoryDashboard({
           </table>
         </div>
       </section>
-    </main>
+    </InventoryPageShell>
   )
 }

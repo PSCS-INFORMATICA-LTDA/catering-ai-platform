@@ -3,7 +3,7 @@
 **Ambiente:** DEV only (`yasprgtlqclwsjcshtls`)  
 **Branch:** `feat/inventory-jde-foundation-dev`  
 **Base:** `feat/data-dictionary-i18n-foundation-dev` @ `5e3331d`  
-**Status:** Fase B (schema foundation) — **checkpoint**  
+**Status:** Fases B–E concluídas (schema · domain · OS · UI) — **próximo: Fase F (QA)**  
 **Inventory v1 anterior:** `docs/architecture/inventory-v1.md`
 
 ---
@@ -217,4 +217,22 @@ Evolução documentada em `inventory-jde-model.md` (header/revision/components) 
 | `20260812130000` | documents, lines, movement types, Kardex estendido |
 | `20260812140000` | fix `rebuild_inventory_balances` (DELETE com WHERE) |
 
-**Próximas fases:** C domain services · D OS integration · E UI · F QA T01–T24.
+**Próxima fase:** F QA T01–T24 (regressões, build preview DEV, fix reconciliation script v1).
+
+---
+
+## Fase E — UI (`/estoque`)
+
+Layout com auth + RBAC (`inventory.view`) em `app/estoque/layout.tsx` e subnav JDE em `components/inventory/InventorySubnav.tsx`.
+
+| Rota | View | API principal |
+|------|------|---------------|
+| `/estoque` | `InventoryDashboard` (visão geral v1 + posting manual) | balances, movements, post |
+| `/estoque/disponibilidade` | `InventoryAvailabilityView` (P41202-like + drill-down reservas) | `/api/inventory/availability` |
+| `/estoque/reservas` | `InventoryCommitmentsView` | `/api/inventory/commitments` |
+| `/estoque/kardex` | `InventoryKardexView` | `/api/inventory/movements` |
+| `/estoque/documentos` | `InventoryDocumentsView` (modal detalhe) | `/api/inventory/documents` |
+| `/estoque/locais` | `InventoryLocationsView` (`canManage` via server page) | `/api/inventory/locations` |
+| `/estoque/lotes` | `InventoryLotsView` (read-only) | `/api/inventory/lots`, `/api/inventory/branches` |
+
+Shell comum: `InventoryPageShell`. i18n: `Lib/i18n/inventoryUi.ts` (nav, colunas, filtros).
