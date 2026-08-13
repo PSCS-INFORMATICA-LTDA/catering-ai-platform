@@ -1,3 +1,4 @@
+import { cancelAgendaReservationForQuote } from '@/Lib/quotes/confirmQuoteDepositAndReserveSchedule'
 import { getActiveCompanyId } from '@/Lib/tenant/resolveTenant'
 import { getSupabaseServerClient } from './supabaseServer'
 
@@ -27,6 +28,13 @@ export async function deactivateQuote(quoteId: string) {
       error: new Error('Cotação não encontrada ou já excluída.'),
     }
   }
+
+  // Libera reserva de agenda criada no sinal (sem apagar histórico).
+  await cancelAgendaReservationForQuote({
+    companyId,
+    quoteId,
+    reason: 'Cotação desativada',
+  })
 
   return { data: { id: data.id as string }, error: null }
 }

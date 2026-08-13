@@ -128,7 +128,7 @@ export async function POST(request: Request) {
     .eq('team_id', teamId)
     .gte('event_date', from)
     .lte('event_date', to)
-    .in('status', ['scheduled', 'completed'])
+    .in('status', ['reserved', 'scheduled', 'completed'])
 
   const conflict = findTeamTimeConflict(
     (nearby ?? []).map((e) => ({

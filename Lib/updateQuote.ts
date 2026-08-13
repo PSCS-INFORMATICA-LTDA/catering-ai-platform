@@ -7,6 +7,7 @@ import {
 } from './buildQuoteSavePayload'
 import { postalCodeSaveError } from './cep'
 import { getCdlCompanyId } from './cdlCompany'
+import { syncReservedAgendaEventForQuote } from './quotes/confirmQuoteDepositAndReserveSchedule'
 import {
   buildSaveQuoteError,
   logSaveQuoteError,
@@ -34,7 +35,7 @@ export async function updateQuote(
 
   const { data: existingQuote, error: fetchError } = await supabase
     .from('quotes')
-    .select('event_id')
+    .select('event_id, reservation_confirmed_at')
     .eq('id', quoteId)
     .eq('company_id', companyId)
     .eq('active', true)
@@ -48,8 +49,21 @@ export async function updateQuote(
 
   const eventPayload = buildEventSavePayload(input, { mode: 'update' })
   let eventId = existingQuote?.event_id as string | null | undefined
+  let previousEvent: {
+    event_name: string | null
+    event_date: string | null
+    start_time: string | null
+    end_time: string | null
+  } | null = null
 
   if (eventId) {
+    const { data: beforeEvent } = await supabase
+      .from('events')
+      .select('event_name, event_date, start_time, end_time')
+      .eq('id', eventId)
+      .maybeSingle()
+    previousEvent = beforeEvent
+
     const { error: eventUpdateError } = await supabase
       .from('events')
       .update(eventPayload)
@@ -99,6 +113,27 @@ export async function updateQuote(
     })
     logSaveQuoteError(errorInfo, updateError)
     return { data: null, error: errorInfo }
+  }
+
+  // Sinal já confirmado: mover/atualizar a mesma reserva (sem duplicar).
+  if (existingQuote?.reservation_confirmed_at) {
+    const sync = await syncReservedAgendaEventForQuote({
+      companyId,
+      quoteId,
+      requireConfirmed: true,
+    })
+    if (!sync.ok) {
+      if (eventId && previousEvent) {
+        await supabase.from('events').update(previousEvent).eq('id', eventId)
+      }
+      const errorInfo = buildSaveQuoteError(
+        'event',
+        new Error(sync.error ?? 'Conflito ao atualizar reserva na agenda.'),
+        { eventPayload },
+      )
+      logSaveQuoteError(errorInfo)
+      return { data: null, error: errorInfo }
+    }
   }
 
   const { error: deleteSelectionsError } = await supabase

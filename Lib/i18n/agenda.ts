@@ -23,9 +23,9 @@ const { t, list } = makeI18nModule('agenda', 'ui', {
     es: 'No cree eventos “a mano” en la agenda. Use',
   },
   workflowHintAfter: {
-    pt: ': cliente → evento (adultos/crianças) → pacote → adicionais → resumo. Com aceite do cliente e confirmação do sinal (30%) na cotação, a data fecha aqui ao designar a equipe.',
-    en: ': customer → event (adults/children) → package → extras → summary. After customer acceptance and the 30% deposit confirmation on the quote, the date closes here when the team is assigned.',
-    es: ': cliente → evento (adultos/niños) → paquete → adicionales → resumen. Con el acepto del cliente y la confirmación de la seña (30%) en el presupuesto, la fecha se cierra aquí al designar el equipo.',
+    pt: ': cliente → evento (adultos/crianças) → pacote → adicionais → resumo. Com aceite do cliente e confirmação do sinal (30%), a Agenda reserva a data/horário imediatamente (mesmo sem equipe). A OS depois vincula a mesma reserva.',
+    en: ': customer → event (adults/children) → package → extras → summary. After customer acceptance and the 30% deposit confirmation, the Agenda reserves the date/time immediately (even without a team). The service order later links the same reservation.',
+    es: ': cliente → evento (adultos/niños) → paquete → adicionales → resumen. Con el acepto del cliente y la confirmación de la seña (30%), la Agenda reserva la fecha/hora de inmediato (aunque no haya equipo). La OS luego vincula la misma reserva.',
   },
   noTeamsBefore: {
     pt: 'Cadastre ao menos uma equipe em',
@@ -99,10 +99,15 @@ const { t, list } = makeI18nModule('agenda', 'ui', {
     en: 'No events in this period.',
     es: 'Ningún evento en este período.',
   },
+  legendReserved: {
+    pt: 'Reservado — sinal confirmado',
+    en: 'Reserved — deposit confirmed',
+    es: 'Reservado — seña confirmada',
+  },
   legendScheduled: {
-    pt: 'Agendado (dia fechado)',
-    en: 'Scheduled (day closed)',
-    es: 'Agendado (día cerrado)',
+    pt: 'Agendado / planejado (equipe ou OS)',
+    en: 'Scheduled / planned (team or service order)',
+    es: 'Agendado / planificado (equipo u OS)',
   },
   legendCompleted: {
     pt: 'Concluído (dia fechado)',
@@ -115,9 +120,14 @@ const { t, list } = makeI18nModule('agenda', 'ui', {
     es: 'Libre — se puede agendar',
   },
   oneEventRule: {
-    pt: 'Uma equipe só pode ter um evento por data. Se sábado estiver fechado, use domingo (se livre), dia útil ou feriado.',
-    en: 'A team can have only one event per date. If Saturday is closed, use Sunday (if free), a weekday, or a holiday.',
-    es: 'Un equipo solo puede tener un evento por fecha. Si el sábado está cerrado, use el domingo (si está libre), un día hábil o un feriado.',
+    pt: 'A disponibilidade considera horário do evento, equipe, pessoas e janela operacional entre eventos.',
+    en: 'Availability considers event time, team, people, and the operational window between events.',
+    es: 'La disponibilidad considera el horario del evento, el equipo, las personas y la ventana operativa entre eventos.',
+  },
+  unassignedRow: {
+    pt: 'Reservado (sem equipe)',
+    en: 'Reserved (no team)',
+    es: 'Reservado (sin equipo)',
   },
   dayFree: { pt: 'Livre o dia', en: 'Day free', es: 'Día libre' },
   openQuoteTitle: {
@@ -157,6 +167,7 @@ const { t, list } = makeI18nModule('agenda', 'ui', {
     en: 'New quote on this date',
     es: 'Nuevo presupuesto en esta fecha',
   },
+  statusReserved: { pt: 'Reservado', en: 'Reserved', es: 'Reservado' },
   statusScheduled: { pt: 'Agendado', en: 'Scheduled', es: 'Agendado' },
   statusCompleted: { pt: 'Concluído', en: 'Completed', es: 'Completado' },
   statusCancelled: { pt: 'Cancelado', en: 'Cancelled', es: 'Cancelado' },

@@ -55,6 +55,7 @@ export async function PATCH(request: Request, context: Ctx) {
       body.end_time.length === 5 ? `${body.end_time}:00` : body.end_time
   }
   if (
+    body.status === 'reserved' ||
     body.status === 'scheduled' ||
     body.status === 'completed' ||
     body.status === 'cancelled'
@@ -91,7 +92,7 @@ export async function PATCH(request: Request, context: Ctx) {
   const nextEnd =
     typeof patch.end_time === 'string' ? patch.end_time : current.end_time
 
-  if (nextStatus === 'scheduled' || nextStatus === 'completed') {
+  if (nextStatus === 'reserved' || nextStatus === 'scheduled' || nextStatus === 'completed') {
     const { config } = await loadScheduleTurnaroundConfig(companyId)
     const day = new Date(`${nextDate}T12:00:00`)
     const prevDay = new Date(day)
@@ -106,7 +107,7 @@ export async function PATCH(request: Request, context: Ctx) {
       .eq('team_id', nextTeamId)
       .gte('event_date', prevDay.toISOString().slice(0, 10))
       .lte('event_date', nextDay.toISOString().slice(0, 10))
-      .in('status', ['scheduled', 'completed'])
+      .in('status', ['reserved', 'scheduled', 'completed'])
       .neq('id', id)
 
     const conflict = findTeamTimeConflict(

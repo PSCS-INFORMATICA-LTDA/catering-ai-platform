@@ -26,12 +26,12 @@ export type OperationalTeam = {
   updated_at?: string
 }
 
-export type AgendaEventStatus = 'scheduled' | 'completed' | 'cancelled'
+export type AgendaEventStatus = 'reserved' | 'scheduled' | 'completed' | 'cancelled'
 
 export type AgendaEvent = {
   id: string
   company_id: string
-  team_id: string
+  team_id: string | null
   code: string
   title: string
   client_name: string | null
@@ -42,6 +42,7 @@ export type AgendaEvent = {
   status: AgendaEventStatus
   notes: string | null
   quote_id: string | null
+  service_order_id?: string | null
   team_assignment_token?: string | null
   team_assignment_response?: string | null
   team_assignment_sent_at?: string | null
@@ -51,7 +52,7 @@ export type AgendaEvent = {
 
 export type AgendaSegment = {
   eventId: string
-  teamId: string
+  teamId: string | null
   dayKey: string
   code: string
   title: string
