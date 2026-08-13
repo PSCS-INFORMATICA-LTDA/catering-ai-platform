@@ -22,6 +22,10 @@ export type OperationalAuditEntityType =
   | 'inventory_location'
   | 'inventory_movement'
   | 'inventory_balance'
+  | 'inventory_commitment'
+  | 'inventory_document'
+  | 'inventory_lot'
+  | 'branch'
 
 export type OperationalAuditAction =
   | 'quote_version_created'
@@ -69,6 +73,12 @@ export type OperationalAuditAction =
   | 'inventory_adjustment_posted'
   | 'inventory_posting_failed'
   | 'inventory_reconciliation_checked'
+  | 'inventory_commitment_created'
+  | 'inventory_commitment_released'
+  | 'inventory_document_created'
+  | 'inventory_document_posted'
+  | 'inventory_branch_created'
+  | 'inventory_branch_ensured_default'
 
 export async function writeOperationalAudit(input: {
   companyId: string
