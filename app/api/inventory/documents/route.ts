@@ -2,12 +2,12 @@ import {
   requireApiPermission,
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
-import { listInventoryMovements } from '@/Lib/inventory/listInventoryMovements'
+import { listInventoryDocuments } from '@/Lib/inventory/inventoryDocuments'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-/** GET /api/inventory/movements — Kardex (sem custo/valuation). */
+/** GET /api/inventory/documents — cabeçalhos (sem custo). */
 export async function GET(request: Request) {
   const auth = await requireApiPermission('inventory.view')
   if (!auth.ok) return auth.response
@@ -15,23 +15,17 @@ export async function GET(request: Request) {
   const companyId = resolveAuthorizedCompanyId(auth.session)
   const url = new URL(request.url)
 
-  const { data, error } = await listInventoryMovements(companyId, {
+  const { data, error } = await listInventoryDocuments(companyId, {
     branchId: url.searchParams.get('branch_id'),
-    locationId: url.searchParams.get('location_id'),
-    catalogItemId: url.searchParams.get('catalog_item_id'),
-    lotId: url.searchParams.get('lot_id'),
-    movementType: url.searchParams.get('movement_type'),
+    documentType: url.searchParams.get('document_type'),
     movementCode: url.searchParams.get('movement_code'),
-    documentId: url.searchParams.get('document_id'),
     serviceOrderId: url.searchParams.get('service_order_id'),
+    status: url.searchParams.get('status'),
     from: url.searchParams.get('from'),
     to: url.searchParams.get('to'),
     limit: Number(url.searchParams.get('limit') || 100),
   })
 
-  if (error) {
-    return Response.json({ error }, { status: 500 })
-  }
-
+  if (error) return Response.json({ error }, { status: 500 })
   return Response.json({ data })
 }

@@ -3,6 +3,7 @@ import {
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
 import {
+  ensureDefaultBranch,
   ensureDefaultInventoryLocation,
 } from '@/Lib/inventory/postInventory'
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
@@ -18,7 +19,9 @@ export async function GET() {
   const db = getSupabaseServerClient()
   const { data, error } = await db
     .from('inventory_locations')
-    .select('id, name, code, is_default, active, created_at, updated_at')
+    .select(
+      'id, branch_id, name, code, location_type, is_default, active, created_at, updated_at',
+    )
     .eq('company_id', companyId)
     .order('is_default', { ascending: false })
     .order('name', { ascending: true })
@@ -31,7 +34,13 @@ export async function POST(request: Request) {
   if (!auth.ok) return auth.response
   const companyId = resolveAuthorizedCompanyId(auth.session)
 
-  let body: { name?: string; code?: string | null; ensure_default?: boolean }
+  let body: {
+    name?: string
+    code?: string | null
+    branch_id?: string | null
+    location_type?: string | null
+    ensure_default?: boolean
+  }
   try {
     body = await request.json()
   } catch {
@@ -39,10 +48,14 @@ export async function POST(request: Request) {
   }
 
   if (body.ensure_default) {
+    const branchId =
+      body.branch_id?.trim() ||
+      (await ensureDefaultBranch(companyId, auth.session.userId))
     const id = await ensureDefaultInventoryLocation(
       companyId,
       auth.session.userId,
       body.name?.trim() || 'Main Stock',
+      branchId,
     )
     await writeOperationalAudit({
       companyId,
@@ -60,13 +73,19 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Nome é obrigatório.' }, { status: 400 })
   }
 
+  const branchId =
+    body.branch_id?.trim() ||
+    (await ensureDefaultBranch(companyId, auth.session.userId))
+
   const db = getSupabaseServerClient()
   const { data, error } = await db
     .from('inventory_locations')
     .insert({
       company_id: companyId,
+      branch_id: branchId,
       name,
       code: body.code?.trim() || null,
+      location_type: body.location_type?.trim() || null,
       is_default: false,
       active: true,
       created_by: auth.session.userId,

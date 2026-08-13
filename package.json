@@ -93,6 +93,7 @@
     "test:dev:inventory-core": "node scripts/dev/test-inventory-core.mjs",
     "test:dev:inventory-order-posting": "node scripts/dev/test-inventory-order-posting.mjs",
     "test:dev:inventory-reconciliation": "node scripts/dev/test-inventory-reconciliation.mjs",
+    "test:dev:inventory-jde-domain": "node scripts/dev/test-inventory-jde-domain.mjs",
     "rebuild:dev:inventory-balances": "node scripts/dev/rebuild-inventory-balances.mjs"
   },
   "dependencies": {
