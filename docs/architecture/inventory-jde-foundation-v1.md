@@ -3,7 +3,8 @@
 **Ambiente:** DEV only (`yasprgtlqclwsjcshtls`)  
 **Branch:** `feat/inventory-jde-foundation-dev`  
 **Base:** `feat/data-dictionary-i18n-foundation-dev` @ `5e3331d`  
-**Status:** Fases B–E concluídas (schema · domain · OS · UI) — **próximo: Fase F (QA)**  
+**Status:** Fases B–F concluídas — **foundation pronta para validação Philippe**  
+**QA:** ver `inventory-jde-foundation-phase-f-results.md`  
 **Inventory v1 anterior:** `docs/architecture/inventory-v1.md`
 
 ---
@@ -217,7 +218,10 @@ Evolução documentada em `inventory-jde-model.md` (header/revision/components) 
 | `20260812130000` | documents, lines, movement types, Kardex estendido |
 | `20260812140000` | fix `rebuild_inventory_balances` (DELETE com WHERE) |
 
-**Próxima fase:** F QA T01–T24 (regressões, build preview DEV, fix reconciliation script v1).
+## Fase F — QA (concluída)
+
+Scripts: `test:dev:inventory-jde-foundation` (T01–T32), `test:dev:inventory-all`, reconciliação corrigida.  
+Relatório: `inventory-jde-foundation-phase-f-results.md`
 
 ---
 

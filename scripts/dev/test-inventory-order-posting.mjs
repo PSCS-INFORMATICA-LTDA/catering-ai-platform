@@ -64,8 +64,37 @@ async function bal(itemId) {
     .select('quantity_on_hand')
     .eq('company_id', COMPANY)
     .eq('catalog_item_id', itemId)
-    .maybeSingle()
-  return Number(data?.quantity_on_hand ?? 0)
+  return (data ?? []).reduce((s, r) => s + Number(r.quantity_on_hand), 0)
+}
+
+async function resetQaPostingState() {
+  const { data: docs } = await sb
+    .from('inventory_documents')
+    .select('id')
+    .eq('company_id', COMPANY)
+    .eq('service_order_id', OS_ID)
+  const docIds = (docs ?? []).map((d) => d.id)
+  if (docIds.length) {
+    await sb.from('inventory_document_lines').delete().in('document_id', docIds)
+    await sb.from('inventory_documents').delete().in('id', docIds)
+  }
+  for (const id of QA_MAT_IDS) {
+    await sb.from('inventory_commitments').delete().eq('service_order_material_id', id)
+    await sb
+      .from('inventory_movements')
+      .delete()
+      .eq('company_id', COMPANY)
+      .eq('service_order_material_id', id)
+  }
+  await sb
+    .from('inventory_movements')
+    .delete()
+    .eq('company_id', COMPANY)
+    .eq('service_order_id', OS_ID)
+  await sb
+    .from('service_order_material_dispatch_confirmations')
+    .delete()
+    .eq('service_order_id', OS_ID)
 }
 
 console.log('=== TEST INVENTORY ORDER POSTING ===')
@@ -161,6 +190,8 @@ const QA_MAT_IDS = [
   'f2500000-0000-4000-8000-0000000000a4',
   'f2500000-0000-4000-8000-0000000000a9',
 ]
+
+await resetQaPostingState()
 
 await sb
   .from('service_order_materials')
@@ -332,12 +363,6 @@ else fail('T11', String(coolerDisp))
 
 // T12 return 2
 {
-  const { data: ret } = await sb.rpc('post_inventory_for_material_return', {
-    p_company_id: COMPANY,
-    p_material_id: mats[1].id,
-    p_actor: null,
-  })
-  // set returned first
   await sb
     .from('service_order_materials')
     .update({
@@ -353,14 +378,30 @@ else fail('T11', String(coolerDisp))
   })
   const r = await sumMov(mats[1].id, 'event_return')
   if (r === 2 && ret2?.ok) pass('T12 returnable return 2 → IN 2')
-  else fail('T12', JSON.stringify({ r, ret, ret2 }))
+  else fail('T12', JSON.stringify({ r, ret2 }))
 }
 
-// T13 correction 1→2 already at 2; set to 1 then 2 for delta
+// T13 return correction 1→2 (delta) — reset ledger JDE para evitar idempotência por target
 {
   await sb
+    .from('inventory_movements')
+    .delete()
+    .eq('company_id', COMPANY)
+    .eq('service_order_material_id', mats[1].id)
+    .in('movement_type', ['event_return'])
+  await sb
+    .from('inventory_documents')
+    .delete()
+    .eq('company_id', COMPANY)
+    .like('idempotency_key', `%${mats[1].id}%`)
+  await sb
     .from('service_order_materials')
-    .update({ returned_quantity: 1 })
+    .update({ returned_quantity: 0, status: 'returned' })
+    .eq('id', mats[1].id)
+
+  await sb
+    .from('service_order_materials')
+    .update({ returned_quantity: 1, returned_at: new Date().toISOString() })
     .eq('id', mats[1].id)
   await sb.rpc('post_inventory_for_material_return', {
     p_company_id: COMPANY,
@@ -463,22 +504,24 @@ else fail('T11', String(coolerDisp))
     stock_posting_status: 'pending',
   })
   const beforeStatus = 'pending'
-  const { data } = await sb.rpc('post_inventory_for_order_dispatch', {
+  const res = await sb.rpc('post_inventory_for_order_dispatch', {
     p_company_id: COMPANY,
     p_service_order_id: OS_ID,
     p_actor: null,
   })
+  const data = res.data
   const { data: row } = await sb
     .from('service_order_materials')
     .select('stock_posting_status')
     .eq('id', failMat)
     .single()
-  if (
-    data?.ok === false &&
-    row?.stock_posting_status === beforeStatus
-  ) {
+  const postingFailed =
+    data?.ok === false ||
+    (Array.isArray(data?.errors) && data.errors.length > 0) ||
+    Boolean(res.error)
+  if (postingFailed && row?.stock_posting_status === beforeStatus) {
     pass('T18 posting failure → status não fica posted')
-  } else fail('T18', JSON.stringify({ data, row }))
+  } else fail('T18', JSON.stringify({ data, error: res.error, row }))
 }
 
 void coolerBefore

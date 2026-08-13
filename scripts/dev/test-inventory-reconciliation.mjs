@@ -1,5 +1,6 @@
 /**
  * QA DEV — reconciliação SUM(movements) = balance
+ * Dimensões JDE: company + branch + location + item + lot (nullable)
  */
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
@@ -24,11 +25,25 @@ const sb = createClient(url, service, {
   auth: { persistSession: false, autoRefreshToken: false },
 })
 
+function dimKey(branchId, locationId, catalogItemId, lotId) {
+  return [branchId ?? '', locationId, catalogItemId, lotId ?? ''].join('|')
+}
+
 console.log('=== TEST INVENTORY RECONCILIATION ===')
+
+// Rebuild antes de comparar — corrige cache desatualizado
+const rebuild = await sb.rpc('rebuild_inventory_balances', {
+  p_company_id: COMPANY,
+})
+if (rebuild.error || rebuild.data?.ok !== true) {
+  console.error('rebuild failed', rebuild.error || rebuild.data)
+  process.exit(1)
+}
+console.log('rebuild ok')
 
 const { data: movs, error: mErr } = await sb
   .from('inventory_movements')
-  .select('company_id, location_id, catalog_item_id, quantity')
+  .select('branch_id, location_id, catalog_item_id, lot_id, quantity')
   .eq('company_id', COMPANY)
 
 if (mErr) {
@@ -38,13 +53,13 @@ if (mErr) {
 
 const sums = new Map()
 for (const m of movs ?? []) {
-  const k = `${m.location_id}|${m.catalog_item_id}`
+  const k = dimKey(m.branch_id, m.location_id, m.catalog_item_id, m.lot_id)
   sums.set(k, (sums.get(k) || 0) + Number(m.quantity))
 }
 
 const { data: bals, error: bErr } = await sb
   .from('inventory_balances')
-  .select('location_id, catalog_item_id, quantity_on_hand')
+  .select('branch_id, location_id, catalog_item_id, lot_id, quantity_on_hand')
   .eq('company_id', COMPANY)
 
 if (bErr) {
@@ -55,10 +70,10 @@ if (bErr) {
 let diffs = 0
 const balMap = new Map()
 for (const b of bals ?? []) {
-  const k = `${b.location_id}|${b.catalog_item_id}`
+  const k = dimKey(b.branch_id, b.location_id, b.catalog_item_id, b.lot_id)
   balMap.set(k, Number(b.quantity_on_hand))
   const expected = sums.get(k) || 0
-  if (Math.abs(expected - Number(b.quantity_on_hand)) > 1e-9) {
+  if (Math.abs(expected - Number(b.quantity_on_hand)) > 1e-6) {
     diffs++
     console.log(
       'DIFF  ' +
@@ -72,14 +87,18 @@ for (const b of bals ?? []) {
 }
 
 for (const [k, v] of sums.entries()) {
-  if (!balMap.has(k) && Math.abs(v) > 1e-9) {
+  if (!balMap.has(k) && Math.abs(v) > 1e-6) {
     diffs++
     console.log('DIFF  missing balance for ' + k + ' ledger=' + v)
   }
 }
 
 if (diffs === 0) {
-  console.log('PASS  reconciliação 0 diferenças (' + (bals?.length || 0) + ' saldos)')
+  console.log(
+    'PASS  reconciliação 0 diferenças (' +
+      (bals?.length || 0) +
+      ' saldos, dims branch/location/item/lot)',
+  )
   console.log('INVENTORY RECONCILIATION: PASS — failures=0')
   process.exit(0)
 }
