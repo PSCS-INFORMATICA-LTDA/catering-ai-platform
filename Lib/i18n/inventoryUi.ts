@@ -191,6 +191,112 @@ const { t, list } = makeI18nModule('inventoryUi', 'ui', {
     en: 'Tier ({count} bands)',
     es: 'Rango ({count} bandas)',
   },
+  navOverview: {
+    pt: 'Visão geral',
+    en: 'Overview',
+    es: 'Resumen',
+  },
+  navAvailability: {
+    pt: 'Disponibilidade',
+    en: 'Availability',
+    es: 'Disponibilidad',
+  },
+  navCommitments: {
+    pt: 'Reservas',
+    en: 'Commitments',
+    es: 'Reservas',
+  },
+  navKardex: { pt: 'Kardex', en: 'Kardex', es: 'Kardex' },
+  navDocuments: {
+    pt: 'Documentos',
+    en: 'Documents',
+    es: 'Documentos',
+  },
+  navLocations: { pt: 'Locais', en: 'Locations', es: 'Locales' },
+  navLots: { pt: 'Lotes', en: 'Lots', es: 'Lotes' },
+  colBranch: { pt: 'Filial', en: 'Branch', es: 'Sucursal' },
+  colLot: { pt: 'Lote', en: 'Lot', es: 'Lote' },
+  colOnHand: { pt: 'On Hand', en: 'On Hand', es: 'On Hand' },
+  colCommitted: { pt: 'Committed', en: 'Committed', es: 'Committed' },
+  colAvailable: { pt: 'Available', en: 'Available', es: 'Available' },
+  colInEvent: { pt: 'In Event', en: 'In Event', es: 'In Event' },
+  colDocument: { pt: 'Documento', en: 'Document', es: 'Documento' },
+  colDocType: { pt: 'Tipo doc.', en: 'Doc type', es: 'Tipo doc.' },
+  colMovementCode: {
+    pt: 'Cód. mov.',
+    en: 'Move code',
+    es: 'Cód. mov.',
+  },
+  colOrder: { pt: 'OS', en: 'SO', es: 'OS' },
+  colFrom: { pt: 'De', en: 'From', es: 'De' },
+  colTo: { pt: 'Para', en: 'To', es: 'Para' },
+  colLines: { pt: 'Linhas', en: 'Lines', es: 'Líneas' },
+  colPostedAt: { pt: 'Postado em', en: 'Posted at', es: 'Registrado' },
+  filterOnlyStock: {
+    pt: 'Somente com saldo',
+    en: 'Only with stock',
+    es: 'Solo con saldo',
+  },
+  filterOnlyCommitted: {
+    pt: 'Somente reservado',
+    en: 'Only committed',
+    es: 'Solo reservado',
+  },
+  commitmentDrillDown: {
+    pt: 'Reservas ativas',
+    en: 'Active commitments',
+    es: 'Reservas activas',
+  },
+  emptyAvailability: {
+    pt: 'Nenhum registro de disponibilidade.',
+    en: 'No availability records.',
+    es: 'Ningún registro de disponibilidad.',
+  },
+  emptyCommitments: {
+    pt: 'Nenhuma reserva encontrada.',
+    en: 'No commitments found.',
+    es: 'Ninguna reserva encontrada.',
+  },
+  emptyDocuments: {
+    pt: 'Nenhum documento de estoque.',
+    en: 'No inventory documents.',
+    es: 'Ningún documento de inventario.',
+  },
+  emptyLots: {
+    pt: 'Nenhum lote cadastrado.',
+    en: 'No lots registered.',
+    es: 'Ningún lote registrado.',
+  },
+  documentDetail: {
+    pt: 'Detalhe do documento',
+    en: 'Document detail',
+    es: 'Detalle del documento',
+  },
+  locationsTitle: {
+    pt: 'Locais de estoque',
+    en: 'Inventory locations',
+    es: 'Locales de inventario',
+  },
+  lotsTitle: {
+    pt: 'Lotes (foundation)',
+    en: 'Lots (foundation)',
+    es: 'Lotes (foundation)',
+  },
+  lotsHint: {
+    pt: 'Lote opcional por item/filial. Workflow avançado fora desta fase.',
+    en: 'Optional lot per item/branch. Advanced workflow is out of scope for this phase.',
+    es: 'Lote opcional por ítem/sucursal. Flujo avanzado fuera de esta fase.',
+  },
+  availabilitySubtitle: {
+    pt: 'On Hand, Committed e Available por filial/local/lote. Sem custo ou valuation.',
+    en: 'On Hand, Committed and Available by branch/location/lot. No cost or valuation.',
+    es: 'On Hand, Committed y Available por sucursal/local/lote. Sin costo ni valuación.',
+  },
+  kardexSubtitle: {
+    pt: 'Ledger imutável — rastreio por documento, OS e código de movimento.',
+    en: 'Immutable ledger — trace by document, SO and movement code.',
+    es: 'Ledger inmutable — trazabilidad por documento, OS y código de movimiento.',
+  },
 })
 
 export const tInventoryUi = t
