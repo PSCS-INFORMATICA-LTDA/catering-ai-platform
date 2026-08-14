@@ -11,6 +11,10 @@ import type { GrillPhotoStatus } from '@/Lib/grillPhotoStatus'
 import { isUsablePostalCode } from '@/Lib/cep'
 import { isUsablePhone } from '@/Lib/normalizePhone'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
+import {
+  areAllAdditionalCategoriesVisited,
+  getVisibleAdditionalCategoryKeys,
+} from '@/Lib/wizardAdditionalCategories'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 export const WIZARD_STEP_LABELS = [
@@ -91,6 +95,10 @@ export type StepStatusContext = {
   language?: QuoteLanguage | string | null
   /** Categorias de adicionais que devem ser visitadas (keys). */
   additionalCategoryKeys?: string[]
+  additionalCategoryGroups?: ReadonlyArray<{
+    categoryKey: string
+    items: ReadonlyArray<unknown>
+  }>
   visitedAdditionalCategories?: ReadonlySet<string> | string[]
   pricingPreviewReady?: boolean
 }
@@ -115,13 +123,10 @@ function hasLinkedCustomer(ctx: StepStatusContext): boolean {
 }
 
 function allAdditionalCategoriesVisited(ctx: StepStatusContext): boolean {
-  const keys = ctx.additionalCategoryKeys ?? []
-  if (keys.length === 0) return true
-  const visited =
-    ctx.visitedAdditionalCategories instanceof Set
-      ? ctx.visitedAdditionalCategories
-      : new Set(ctx.visitedAdditionalCategories ?? [])
-  return keys.every((key) => visited.has(key))
+  const keys =
+    ctx.additionalCategoryKeys ??
+    getVisibleAdditionalCategoryKeys(ctx.additionalCategoryGroups ?? [])
+  return areAllAdditionalCategoriesVisited(keys, ctx.visitedAdditionalCategories)
 }
 
 export function isGrillPhotoRequiredAndMissing(

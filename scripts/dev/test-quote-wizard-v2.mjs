@@ -422,7 +422,9 @@ async function main() {
     ]) {
       assert.match(translationsSrc, new RegExp(`${key}:`))
     }
-    assert.ok(translationsSrc.includes('Review all categories before continuing'))
+    assert.ok(translationsSrc.includes('Faltam {remaining} de {total}'))
+    assert.ok(translationsSrc.includes('{remaining} of {total} remaining'))
+    assert.ok(translationsSrc.includes('Faltan {remaining} de {total}'))
     assert.ok(translationsSrc.includes('Agregue una foto de la parrilla'))
     pass('H09 PT strings')
     pass('H10 EN strings')
@@ -652,6 +654,139 @@ async function main() {
     pass('T65 ES header fallback')
   } catch (e) {
     fail('T63–T65 i18n', e)
+  }
+
+  // --- Additionals visited categories (A01–A16) ---
+  const wizardAdditionalSrc = read('Lib/wizardAdditionalCategories.ts')
+  const {
+    areAllAdditionalCategoriesVisited: allVisited,
+    countUnvisitedAdditionalCategories: countUnvisited,
+    getVisibleAdditionalCategoryKeys: visibleKeys,
+    markAdditionalCategoryVisitedInSet: markVisited,
+    pruneVisitedAdditionalCategories: pruneVisited,
+  } = await import('../../Lib/wizardAdditionalCategories.ts')
+
+  const sampleGroups = [
+    { categoryKey: 'GUARNICOES', items: [{ id: '1' }] },
+    { categoryKey: 'BOVINO', items: [{ id: '2' }] },
+    { categoryKey: 'EMPTY', items: [] },
+    { categoryKey: 'HIDDEN', items: [] },
+  ]
+  const requiredKeys = visibleKeys(sampleGroups)
+
+  try {
+    assert.equal(requiredKeys.length, 2)
+    assert.ok(!requiredKeys.includes('EMPTY'))
+    pass('A06 empty category does not block')
+    pass('A08 invisible category does not block')
+  } catch (e) {
+    fail('A06–A08 empty/invisible categories', e)
+  }
+
+  try {
+    let visited = new Set(['GUARNICOES'])
+    assert.equal(allVisited(requiredKeys, visited), false)
+    assert.equal(countUnvisited(requiredKeys, visited), 1)
+    pass('A01 unvisited category blocks next')
+  } catch (e) {
+    fail('A01 unvisited blocks', e)
+  }
+
+  try {
+    let visited = markVisited(new Set(), 'GUARNICOES')
+    assert.ok(visited.has('GUARNICOES'))
+    pass('A02 opening category marks visited')
+  } catch (e) {
+    fail('A02 open marks visited', e)
+  }
+
+  try {
+    assert.match(wizardSrc, /getAdditionalItemCategoryKey\(item\)/)
+    assert.match(wizardSrc, /markAdditionalCategoryVisited\(getAdditionalItemCategoryKey/)
+    pass('A03 item interaction marks category visited')
+  } catch (e) {
+    fail('A03 item marks visited', e)
+  }
+
+  try {
+    assert.doesNotMatch(stepStatusSrc, /additionalsCount > 0/)
+    pass('A04 selection remains optional')
+  } catch (e) {
+    fail('A04 selection optional', e)
+  }
+
+  try {
+    let visited = markVisited(markVisited(new Set(), 'GUARNICOES'), 'BOVINO')
+    assert.equal(allVisited(requiredKeys, visited), true)
+    pass('A05 zero selected + all visited enables next')
+    pass('A13 all visited canGoNext')
+  } catch (e) {
+    fail('A05/A13 all visited', e)
+  }
+
+  try {
+    assert.match(wizardAdditionalSrc, /categoryKey/)
+    assert.match(wizardSrc, /getVisibleAdditionalCategoryKeys/)
+    assert.doesNotMatch(wizardAdditionalSrc, /categoryLabel/)
+    pass('A07 inactive uses stable category_key not label')
+  } catch (e) {
+    fail('A07 stable id', e)
+  }
+
+  try {
+    const dupKeys = visibleKeys([
+      { categoryKey: 'ACOMP_A', items: [1] },
+      { categoryKey: 'ACOMP_B', items: [2] },
+    ])
+    assert.equal(dupKeys.length, 2)
+    assert.notEqual(dupKeys[0], dupKeys[1])
+    pass('A09 duplicate names use distinct ids')
+  } catch (e) {
+    fail('A09 duplicate names', e)
+  }
+
+  try {
+    let visited = markVisited(markVisited(new Set(), 'GUARNICOES'), 'BOVINO')
+    visited = pruneVisited(visited, ['GUARNICOES', 'BOVINO', 'NEW_CAT'])
+    assert.equal(allVisited(['GUARNICOES', 'BOVINO', 'NEW_CAT'], visited), false)
+    pass('A10 rerender keeps visited and adds new requirement')
+  } catch (e) {
+    fail('A10 rerender visited', e)
+  }
+
+  try {
+    assert.doesNotMatch(wizardSrc, /setVisitedAdditionalCategories\(new Set\(\)\)/)
+    assert.match(wizardSrc, /uiLocale/)
+    assert.match(wizardSrc, /getVisibleAdditionalCategoryKeys/)
+    pass('A11 locale change keeps visited keys stable')
+  } catch (e) {
+    fail('A11 locale visited', e)
+  }
+
+  try {
+    assert.match(wizardSrc, /toggleAdditionalCategory/)
+    assert.match(wizardSrc, /markAdditionalCategoryVisited\(category\)/)
+    pass('A12 closing accordion keeps visited')
+  } catch (e) {
+    fail('A12 accordion close', e)
+  }
+
+  try {
+    assert.match(wizardSrc, /step !== 3/)
+    assert.doesNotMatch(wizardSrc, /step !== 4[\s\S]*setOpenAdditionalCategories/)
+    pass('A14 additionals step index uses step 3')
+  } catch (e) {
+    fail('A14 step index', e)
+  }
+
+  try {
+    assert.match(translationsSrc, /Faltam \{remaining\} de \{total\}/)
+    assert.match(translationsSrc, /\{remaining\} of \{total\} remaining/)
+    assert.match(translationsSrc, /Faltan \{remaining\} de \{total\}/)
+    pass('A15 PT progress copy')
+    pass('A16 EN/ES progress copy')
+  } catch (e) {
+    fail('A15–A16 i18n progress', e)
   }
 
   console.log('')

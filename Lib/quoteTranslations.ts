@@ -739,8 +739,10 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       confirmSectionFinancial: 'Financeiro',
       confirmSectionRules: 'Regras comerciais',
       confirmSectionCancellation: 'Política de cancelamento',
-      categoriesReviewRequired: 'Revise todas as categorias antes de continuar.',
-      categoriesReviewComplete: 'Todas as categorias foram revisadas.',
+      categoriesReviewRequired:
+        'Revise todas as categorias antes de continuar. Faltam {remaining} de {total}.',
+      categoriesReviewComplete:
+        'Todas as categorias foram revisadas. Você pode continuar.',
       grillPhotoRequiredError: 'Adicione uma foto da churrasqueira para continuar.',
       grillPendingPhoto: 'Adicione uma foto da churrasqueira para continuar.',
       grillPendingRentalQty:
@@ -1089,8 +1091,10 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       confirmSectionFinancial: 'Financial summary',
       confirmSectionRules: 'Commercial rules',
       confirmSectionCancellation: 'Cancellation policy',
-      categoriesReviewRequired: 'Review all categories before continuing.',
-      categoriesReviewComplete: 'All categories have been reviewed.',
+      categoriesReviewRequired:
+        'Review all categories before continuing. {remaining} of {total} remaining.',
+      categoriesReviewComplete:
+        'All categories have been reviewed. You can continue.',
       grillPhotoRequiredError: 'Add a photo of the grill to continue.',
       grillPendingPhoto: 'Add a photo of the grill to continue.',
       grillPendingRentalQty: 'Enter a valid grill rental quantity.',
@@ -1442,8 +1446,10 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       confirmSectionFinancial: 'Financiero',
       confirmSectionRules: 'Reglas comerciales',
       confirmSectionCancellation: 'Política de cancelación',
-      categoriesReviewRequired: 'Revise todas las categorías antes de continuar.',
-      categoriesReviewComplete: 'Todas las categorías fueron revisadas.',
+      categoriesReviewRequired:
+        'Revise todas las categorías antes de continuar. Faltan {remaining} de {total}.',
+      categoriesReviewComplete:
+        'Todas las categorías fueron revisadas. Puede continuar.',
       grillPhotoRequiredError: 'Agregue una foto de la parrilla para continuar.',
       grillPendingPhoto: 'Agregue una foto de la parrilla para continuar.',
       grillPendingRentalQty:

@@ -19,6 +19,13 @@ import {
   isPerPersonAdditional,
   normalizeAdditionalQuantity,
 } from '../../../Lib/quoteAdditionalDisplay'
+import { getAdditionalItemCategoryKey } from '@/Lib/additionalItemFieldAccess'
+import {
+  areAllAdditionalCategoriesVisited,
+  countUnvisitedAdditionalCategories,
+  getVisibleAdditionalCategoryKeys,
+  pruneVisitedAdditionalCategories,
+} from '@/Lib/wizardAdditionalCategories'
 import { getQuoteStrings, tw } from '../../../Lib/quoteTranslations'
 import { useAuthLocaleFromMe } from '../../../Lib/i18n/useAuthLocaleFromMe'
 import {
@@ -1304,13 +1311,8 @@ export default function QuoteWizard({
     })
   }, [blockedCatalogItemIds])
 
-  useEffect(() => {
-    if (step !== 4) {
-      setOpenAdditionalCategories(new Set())
-    }
-  }, [step])
-
   function markAdditionalCategoryVisited(categoryKey: string) {
+    if (!categoryKey) return
     setVisitedAdditionalCategories((prev) => {
       if (prev.has(categoryKey)) return prev
       const next = new Set(prev)
@@ -1425,9 +1427,48 @@ export default function QuoteWizard({
   const additionalsCount = selectedAdditionals.length
 
   const additionalCategoryKeys = useMemo(
-    () => additionalItemsByCategory.map(({ categoryKey }) => categoryKey),
+    () => getVisibleAdditionalCategoryKeys(additionalItemsByCategory),
     [additionalItemsByCategory],
   )
+
+  const unvisitedAdditionalCategoryCount = useMemo(
+    () =>
+      countUnvisitedAdditionalCategories(
+        additionalCategoryKeys,
+        visitedAdditionalCategories,
+      ),
+    [additionalCategoryKeys, visitedAdditionalCategories],
+  )
+
+  useEffect(() => {
+    if (step !== 3) {
+      setOpenAdditionalCategories(new Set())
+    }
+  }, [step])
+
+  useEffect(() => {
+    if (step !== 3) return
+    setVisitedAdditionalCategories((prev) =>
+      pruneVisitedAdditionalCategories(prev, additionalCategoryKeys),
+    )
+  }, [step, additionalCategoryKeys])
+
+  useEffect(() => {
+    if (step !== 3 || additionalCategoryKeys.length === 0) return
+
+    setOpenAdditionalCategories((prev) => {
+      if (prev.size > 0) return prev
+      return new Set([additionalCategoryKeys[0]!])
+    })
+
+    setVisitedAdditionalCategories((prev) => {
+      const firstKey = additionalCategoryKeys[0]
+      if (!firstKey || prev.has(firstKey)) return prev
+      const next = new Set(prev)
+      next.add(firstKey)
+      return next
+    })
+  }, [step, additionalCategoryKeys])
 
   const stepStatusCtx = useMemo<StepStatusContext>(
     () => ({
@@ -1622,6 +1663,10 @@ export default function QuoteWizard({
       ? normalizeAdditionalQuantity(item, quantity)
       : Math.max(0, quantity)
 
+    if (item) {
+      markAdditionalCategoryVisited(getAdditionalItemCategoryKey(item))
+    }
+
     setState((prev) => {
       const next = { ...prev.additionals }
       if (normalizedQty <= 0) {
@@ -1794,12 +1839,14 @@ export default function QuoteWizard({
     state.packageSelections,
   ])
 
-  const allAdditionalCategoriesVisited = useMemo(() => {
-    if (additionalCategoryKeys.length === 0) return true
-    return additionalCategoryKeys.every((key) =>
-      visitedAdditionalCategories.has(key),
-    )
-  }, [additionalCategoryKeys, visitedAdditionalCategories])
+  const allAdditionalCategoriesVisited = useMemo(
+    () =>
+      areAllAdditionalCategoriesVisited(
+        additionalCategoryKeys,
+        visitedAdditionalCategories,
+      ),
+    [additionalCategoryKeys, visitedAdditionalCategories],
+  )
 
   const additionalsStepNextDisabled = !allAdditionalCategoriesVisited
 
@@ -2415,7 +2462,10 @@ export default function QuoteWizard({
                   >
                     {allAdditionalCategoriesVisited
                       ? tw(uiLocale, 'categoriesReviewComplete')
-                      : tw(uiLocale, 'categoriesReviewRequired')}
+                      : tw(uiLocale, 'categoriesReviewRequired', {
+                          remaining: String(unvisitedAdditionalCategoryCount),
+                          total: String(additionalCategoryKeys.length),
+                        })}
                   </p>
                 ) : null}
                 {additionalItemsByCategory.map(
