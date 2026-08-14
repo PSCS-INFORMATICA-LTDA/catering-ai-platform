@@ -68,3 +68,75 @@ export function getUnvisitedAdditionalCategoryKeys(
   const visitedSet = toVisitedCategorySet(visited)
   return categoryKeys.filter((key) => !visitedSet.has(key))
 }
+
+export function countVisitedAdditionalCategories(
+  categoryKeys: readonly string[],
+  visited: ReadonlySet<string> | readonly string[] | undefined,
+): number {
+  const visitedSet = toVisitedCategorySet(visited)
+  return categoryKeys.filter((key) => visitedSet.has(key)).length
+}
+
+export type AdditionalCategoryReviewProgress = {
+  total: number
+  visited: number
+  remaining: number
+}
+
+export function getAdditionalCategoryReviewProgress(
+  categoryKeys: readonly string[],
+  visited: ReadonlySet<string> | readonly string[] | undefined,
+): AdditionalCategoryReviewProgress {
+  const total = categoryKeys.length
+  const visitedCount = countVisitedAdditionalCategories(categoryKeys, visited)
+  return {
+    total,
+    visited: visitedCount,
+    remaining: Math.max(0, total - visitedCount),
+  }
+}
+
+function formatCategoryKeyForDisplay(categoryKey: string): string {
+  const normalized = categoryKey.trim().replace(/_/g, ' ').replace(/\s+/g, ' ')
+  if (!normalized) return ''
+  return normalized
+    .toLowerCase()
+    .split(' ')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+/** Quando labels traduzidos colidem, usa category_key legível como sufixo real. */
+export function buildAdditionalCategoryDisplayLabels(
+  groups: ReadonlyArray<{ categoryKey: string; categoryLabel: string }>,
+): Map<string, string> {
+  const labelCounts = new Map<string, number>()
+  for (const group of groups) {
+    labelCounts.set(
+      group.categoryLabel,
+      (labelCounts.get(group.categoryLabel) ?? 0) + 1,
+    )
+  }
+
+  const labels = new Map<string, string>()
+  for (const group of groups) {
+    if ((labelCounts.get(group.categoryLabel) ?? 0) <= 1) {
+      labels.set(group.categoryKey, group.categoryLabel)
+      continue
+    }
+
+    const keyLabel = formatCategoryKeyForDisplay(group.categoryKey)
+    const base = group.categoryLabel.trim()
+    if (
+      keyLabel &&
+      keyLabel.localeCompare(base, undefined, { sensitivity: 'accent' }) !== 0
+    ) {
+      labels.set(group.categoryKey, `${base} — ${keyLabel}`)
+    } else {
+      labels.set(group.categoryKey, base)
+    }
+  }
+
+  return labels
+}

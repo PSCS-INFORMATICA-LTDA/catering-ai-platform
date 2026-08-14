@@ -386,6 +386,9 @@ type QuoteStrings = {
     confirmSectionCancellation: string
     categoriesReviewRequired: string
     categoriesReviewComplete: string
+    categoriesReviewPendingHeading: string
+    categoryReviewStatusReviewed: string
+    categoryReviewStatusPending: string
     grillPhotoRequiredError: string
     grillPendingPhoto: string
     grillPendingRentalQty: string
@@ -743,6 +746,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Revise todas as categorias antes de continuar. Faltam {remaining} de {total}.',
       categoriesReviewComplete:
         'Todas as categorias foram revisadas. Você pode continuar.',
+      categoriesReviewPendingHeading: 'Categorias pendentes',
+      categoryReviewStatusReviewed: 'Revisada',
+      categoryReviewStatusPending: 'Pendente',
       grillPhotoRequiredError: 'Adicione uma foto da churrasqueira para continuar.',
       grillPendingPhoto: 'Adicione uma foto da churrasqueira para continuar.',
       grillPendingRentalQty:
@@ -1095,6 +1101,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Review all categories before continuing. {remaining} of {total} remaining.',
       categoriesReviewComplete:
         'All categories have been reviewed. You can continue.',
+      categoriesReviewPendingHeading: 'Pending categories',
+      categoryReviewStatusReviewed: 'Reviewed',
+      categoryReviewStatusPending: 'Pending',
       grillPhotoRequiredError: 'Add a photo of the grill to continue.',
       grillPendingPhoto: 'Add a photo of the grill to continue.',
       grillPendingRentalQty: 'Enter a valid grill rental quantity.',
@@ -1450,6 +1459,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Revise todas las categorías antes de continuar. Faltan {remaining} de {total}.',
       categoriesReviewComplete:
         'Todas las categorías fueron revisadas. Puede continuar.',
+      categoriesReviewPendingHeading: 'Categorías pendientes',
+      categoryReviewStatusReviewed: 'Revisada',
+      categoryReviewStatusPending: 'Pendiente',
       grillPhotoRequiredError: 'Agregue una foto de la parrilla para continuar.',
       grillPendingPhoto: 'Agregue una foto de la parrilla para continuar.',
       grillPendingRentalQty:

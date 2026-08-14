@@ -727,7 +727,11 @@ async function main() {
   try {
     assert.match(wizardAdditionalSrc, /categoryKey/)
     assert.match(wizardSrc, /getVisibleAdditionalCategoryKeys/)
-    assert.doesNotMatch(wizardAdditionalSrc, /categoryLabel/)
+    assert.match(wizardAdditionalSrc, /buildAdditionalCategoryDisplayLabels/)
+    assert.doesNotMatch(
+      wizardSrc,
+      /visitedAdditionalCategories\.has\(categoryLabel/,
+    )
     pass('A07 inactive uses stable category_key not label')
   } catch (e) {
     fail('A07 stable id', e)
@@ -787,6 +791,118 @@ async function main() {
     pass('A16 EN/ES progress copy')
   } catch (e) {
     fail('A15–A16 i18n progress', e)
+  }
+
+  const {
+    buildAdditionalCategoryDisplayLabels: buildDisplayLabels,
+    countVisitedAdditionalCategories: countVisited,
+    getAdditionalCategoryReviewProgress: reviewProgress,
+    getUnvisitedAdditionalCategoryKeys: unvisitedKeys,
+  } = await import('../../Lib/wizardAdditionalCategories.ts')
+
+  try {
+    assert.match(wizardSrc, /additionalCategoryKeys\[0\]/)
+    assert.match(wizardSrc, /setVisitedAdditionalCategories/)
+    const progress = reviewProgress(['A', 'B', 'C'], new Set(['A']))
+    assert.equal(progress.total, 3)
+    assert.equal(progress.visited, 1)
+    assert.equal(progress.remaining, 2)
+    pass('A17 initial progress counts first category visited')
+  } catch (e) {
+    fail('A17 initial progress', e)
+  }
+
+  try {
+    assert.match(wizardSrc, /toggleAdditionalCategory/)
+    assert.match(wizardSrc, /markAdditionalCategoryVisited\(category\)/)
+    let visited = markVisited(new Set(['GUARNICOES']), 'BOVINO')
+    assert.equal(countUnvisited(['GUARNICOES', 'BOVINO'], visited), 0)
+    pass('A18 opening category reduces remaining')
+  } catch (e) {
+    fail('A18 open reduces remaining', e)
+  }
+
+  try {
+    assert.match(wizardSrc, /markAdditionalCategoryVisited\(getAdditionalItemCategoryKey/)
+    pass('A19 item interaction reduces remaining')
+  } catch (e) {
+    fail('A19 item interaction', e)
+  }
+
+  try {
+    assert.match(wizardSrc, /toggleAdditionalCategory/)
+    assert.doesNotMatch(wizardSrc, /delete.*visitedAdditionalCategories/)
+    pass('A20 closing accordion does not increase remaining')
+  } catch (e) {
+    fail('A20 accordion close', e)
+  }
+
+  try {
+    assert.match(wizardSrc, /additionalsStepNextDisabled/)
+    assert.match(wizardSrc, /areAllAdditionalCategoriesVisited/)
+    assert.doesNotMatch(stepStatusSrc, /additionalsCount > 0/)
+    pass('A21 zero selections + all visited enables next')
+  } catch (e) {
+    fail('A21 zero selections next enabled', e)
+  }
+
+  try {
+    assert.match(stepNavSrc, /step === 3 && additionalsStepNextDisabled/)
+    pass('A22 remaining > 0 keeps next disabled')
+  } catch (e) {
+    fail('A22 next disabled', e)
+  }
+
+  try {
+    assert.match(translationsSrc, /Revise todas as categorias antes de continuar\. Faltam/)
+    assert.match(translationsSrc, /Todas as categorias foram revisadas/)
+    pass('A23 PT review messages')
+  } catch (e) {
+    fail('A23 PT messages', e)
+  }
+
+  try {
+    assert.match(translationsSrc, /Review all categories before continuing/)
+    assert.match(translationsSrc, /All categories have been reviewed/)
+    pass('A24 EN review messages')
+  } catch (e) {
+    fail('A24 EN messages', e)
+  }
+
+  try {
+    assert.match(translationsSrc, /Revise todas las categorías antes de continuar/)
+    assert.match(translationsSrc, /Todas las categorías fueron revisadas/)
+    pass('A25 ES review messages')
+  } catch (e) {
+    fail('A25 ES messages', e)
+  }
+
+  try {
+    assert.match(
+      read('components/quotes/additionals/AdditionalCategorySection.tsx'),
+      /categoryReviewStatusReviewed/,
+    )
+    assert.match(
+      read('components/quotes/additionals/AdditionalCategorySection.tsx'),
+      /categoryReviewStatusPending/,
+    )
+    assert.match(wizardSrc, /visited=\{visitedAdditionalCategories\.has\(categoryKey\)\}/)
+    pass('A26 reviewed/pending indicator per category')
+  } catch (e) {
+    fail('A26 category indicator', e)
+  }
+
+  try {
+    const labels = buildDisplayLabels([
+      { categoryKey: 'ACOMPANHAMENTOS', categoryLabel: 'ACOMPANHAMENTOS' },
+      { categoryKey: 'ACOMPANHAMENTOS_EXTRA', categoryLabel: 'ACOMPANHAMENTOS' },
+    ])
+    assert.equal(labels.get('ACOMPANHAMENTOS'), 'ACOMPANHAMENTOS')
+    assert.match(labels.get('ACOMPANHAMENTOS_EXTRA') ?? '', /ACOMPANHAMENTOS —/)
+    assert.equal(unvisitedKeys(['ACOMP_A', 'ACOMP_B'], ['ACOMP_A']).length, 1)
+    pass('A27 duplicate labels stay independent by category_key')
+  } catch (e) {
+    fail('A27 duplicate labels', e)
   }
 
   console.log('')

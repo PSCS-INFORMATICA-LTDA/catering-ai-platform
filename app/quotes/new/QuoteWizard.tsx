@@ -11,6 +11,7 @@ import QuoteStepper from '../../../components/quotes/QuoteStepper'
 import QuotePackageStepExplorer from '../../../components/quotes/QuotePackageStepExplorer'
 import QuoteWizardStepNav from '../../../components/quotes/QuoteWizardStepNav'
 import AdditionalCategorySection from '../../../components/quotes/additionals/AdditionalCategorySection'
+import AdditionalsCategoryReviewPanel from '../../../components/quotes/additionals/AdditionalsCategoryReviewPanel'
 import {
   calcAdditionalLineTotalForItem,
   getAdditionalUnitPrice,
@@ -22,7 +23,10 @@ import {
 import { getAdditionalItemCategoryKey } from '@/Lib/additionalItemFieldAccess'
 import {
   areAllAdditionalCategoriesVisited,
+  buildAdditionalCategoryDisplayLabels,
   countUnvisitedAdditionalCategories,
+  getAdditionalCategoryReviewProgress,
+  getUnvisitedAdditionalCategoryKeys,
   getVisibleAdditionalCategoryKeys,
   pruneVisitedAdditionalCategories,
 } from '@/Lib/wizardAdditionalCategories'
@@ -1440,6 +1444,40 @@ export default function QuoteWizard({
     [additionalCategoryKeys, visitedAdditionalCategories],
   )
 
+  const additionalCategoryReviewProgress = useMemo(
+    () =>
+      getAdditionalCategoryReviewProgress(
+        additionalCategoryKeys,
+        visitedAdditionalCategories,
+      ),
+    [additionalCategoryKeys, visitedAdditionalCategories],
+  )
+
+  const additionalCategoryDisplayLabels = useMemo(
+    () =>
+      buildAdditionalCategoryDisplayLabels(
+        additionalItemsByCategory.map(({ categoryKey, categoryLabel }) => ({
+          categoryKey,
+          categoryLabel,
+        })),
+      ),
+    [additionalItemsByCategory],
+  )
+
+  const pendingAdditionalCategoryLabels = useMemo(() => {
+    const pendingKeys = getUnvisitedAdditionalCategoryKeys(
+      additionalCategoryKeys,
+      visitedAdditionalCategories,
+    )
+    return pendingKeys.map(
+      (key) => additionalCategoryDisplayLabels.get(key) ?? key,
+    )
+  }, [
+    additionalCategoryKeys,
+    visitedAdditionalCategories,
+    additionalCategoryDisplayLabels,
+  ])
+
   useEffect(() => {
     if (step !== 3) {
       setOpenAdditionalCategories(new Set())
@@ -2451,32 +2489,29 @@ export default function QuoteWizard({
                 {quoteStrings.noAdditionalsAvailable}
               </p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {additionalCategoryKeys.length > 0 ? (
-                  <p
-                    className={`text-sm ${
-                      allAdditionalCategoriesVisited
-                        ? 'text-cdl-muted'
-                        : 'text-cdl-text-secondary'
-                    }`}
-                  >
-                    {allAdditionalCategoriesVisited
-                      ? tw(uiLocale, 'categoriesReviewComplete')
-                      : tw(uiLocale, 'categoriesReviewRequired', {
-                          remaining: String(unvisitedAdditionalCategoryCount),
-                          total: String(additionalCategoryKeys.length),
-                        })}
-                  </p>
+                  <AdditionalsCategoryReviewPanel
+                    language={uiLocale}
+                    total={additionalCategoryReviewProgress.total}
+                    remaining={additionalCategoryReviewProgress.remaining}
+                    complete={allAdditionalCategoriesVisited}
+                    pendingLabels={pendingAdditionalCategoryLabels}
+                  />
                 ) : null}
                 {additionalItemsByCategory.map(
                   ({ categoryKey, categoryLabel, items }) => (
                   <AdditionalCategorySection
                     key={categoryKey}
                     categoryKey={categoryKey}
-                    categoryLabel={categoryLabel}
+                    categoryLabel={
+                      additionalCategoryDisplayLabels.get(categoryKey) ??
+                      categoryLabel
+                    }
                     items={items}
                     expanded={openAdditionalCategories.has(categoryKey)}
                     selectedCount={selectedCountByCategory[categoryKey] ?? 0}
+                    visited={visitedAdditionalCategories.has(categoryKey)}
                     quantities={state.additionals}
                     billableGuestCount={billableGuestCount}
                     language={uiLocale}

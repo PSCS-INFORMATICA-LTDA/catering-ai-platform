@@ -2,7 +2,7 @@
 
 import AdditionalItemCard from '@/components/quotes/additionals/AdditionalItemCard'
 import type { QuoteAdditionalItem } from '@/Lib/quoteAdditionalDisplay'
-import { getQuoteStrings } from '@/Lib/quoteTranslations'
+import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 export default function AdditionalCategorySection({
@@ -11,6 +11,7 @@ export default function AdditionalCategorySection({
   items,
   expanded,
   selectedCount,
+  visited,
   quantities,
   billableGuestCount,
   language,
@@ -22,6 +23,7 @@ export default function AdditionalCategorySection({
   items: QuoteAdditionalItem[]
   expanded: boolean
   selectedCount: number
+  visited: boolean
   quantities: Record<string, number>
   billableGuestCount: number
   language: QuoteLanguage
@@ -29,6 +31,9 @@ export default function AdditionalCategorySection({
   onChangeQty: (itemId: string, qty: number) => void
 }) {
   const t = getQuoteStrings(language)
+  const reviewStatus = visited
+    ? tw(language, 'categoryReviewStatusReviewed')
+    : tw(language, 'categoryReviewStatusPending')
 
   return (
     <section className="overflow-hidden rounded-2xl border border-cdl-border bg-cdl-surface shadow-cdl">
@@ -44,6 +49,13 @@ export default function AdditionalCategorySection({
           </span>
           <span className="text-sm text-cdl-muted">
             {t.itemsCount(items.length)}
+          </span>
+          <span
+            className={`text-xs font-semibold uppercase tracking-wide ${
+              visited ? 'text-cdl-muted' : 'text-cdl-text-secondary'
+            }`}
+          >
+            {reviewStatus}
           </span>
           {selectedCount > 0 ? (
             <span className="rounded-full bg-[var(--brand-primary)] px-2.5 py-0.5 text-xs font-bold text-white">
