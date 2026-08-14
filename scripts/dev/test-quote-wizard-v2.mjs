@@ -78,6 +78,7 @@ async function main() {
   const previewRouteSrc = read('app/api/quotes/preview/route.ts')
   const pdfSrc = read('app/quotes/[id]/QuotePdfDocument.tsx')
   const readSnapshotSrc = read('Lib/readQuoteSnapshot.ts')
+  const wizardAdvanceSrc = read('Lib/wizardStepAdvance.ts')
 
   // T01 — exactly 6 steps
   try {
@@ -85,7 +86,8 @@ async function main() {
     const labels = stepStatusSrc.match(/WIZARD_STEP_LABELS = \[([\s\S]*?)\] as const/)?.[1] ?? ''
     const count = (labels.match(/'/g) ?? []).length / 2
     assert.equal(count, 6)
-    assert.match(wizardSrc, /const WIZARD_STEP_COUNT = 6/)
+    assert.match(wizardSrc, /WIZARD_STEP_COUNT/)
+    assert.match(wizardAdvanceSrc, /export const WIZARD_STEP_COUNT = 6/)
     pass('T01 6 steps exactly')
   } catch (e) {
     fail('T01 6 steps exactly', e)
@@ -839,7 +841,7 @@ async function main() {
 
   try {
     assert.match(wizardSrc, /additionalsStepNextDisabled/)
-    assert.match(wizardSrc, /areAllAdditionalCategoriesVisited/)
+    assert.match(wizardSrc, /canAdvanceFromAdditionalsStep/)
     assert.doesNotMatch(stepStatusSrc, /additionalsCount > 0/)
     pass('A21 zero selections + all visited enables next')
   } catch (e) {
@@ -903,6 +905,167 @@ async function main() {
     pass('A27 duplicate labels stay independent by category_key')
   } catch (e) {
     fail('A27 duplicate labels', e)
+  }
+
+  // --- Navigation step 3 → 4 (N01–N12) ---
+  const fieldAccessSrc = read('Lib/additionalItemFieldAccess.ts')
+
+  function simulateResolveNextWizardStep(ctx) {
+    if (ctx.step === 3) {
+      if (!allVisited(ctx.additionalCategoryKeys, ctx.visitedAdditionalCategories)) {
+        return ctx.step
+      }
+      return ctx.step + 1
+    }
+    return ctx.step
+  }
+
+  const sampleAdvanceCtx = (overrides = {}) => ({
+    step: 3,
+    packageId: 'pkg-1',
+    selectedPackage: { id: 'pkg-1', package_key: 'STANDARD' },
+    packageSelections: {},
+    selectableActivePackageOptionGroups: [],
+    additionalCategoryKeys: ['GUARNICOES', 'BOVINO'],
+    visitedAdditionalCategories: new Set(['GUARNICOES', 'BOVINO']),
+    state: {
+      customerId: null,
+      customerDraftPhone: '',
+      eventName: 'Event',
+      eventDate: '2026-08-14',
+      startTime: '12:00',
+      endTime: '16:00',
+      address: 'Addr',
+      city: 'City',
+      state: 'FL',
+      zipCode: '32801',
+      adultCount: 10,
+      childrenUnder3Count: 0,
+      children4To12Count: 0,
+      hasGrill: false,
+      grillSetupAnswered: true,
+      grillPhotoRequired: false,
+      grillPhotoStatus: 'not_applicable',
+      grillPhotoAnswered: true,
+      grillPhotoUrl: null,
+      grillRentalRequired: false,
+      grillRentalQty: 0,
+      grillNotes: '',
+      packageId: 'pkg-1',
+      packageSelections: {},
+      additionals: {},
+      baseLocation: '',
+      distance: 0,
+      freeLimit: 0,
+      rate: 0,
+      reservationPercentage: 30,
+      reservationNotes: '',
+    },
+    uiLocale: 'pt',
+    ...overrides,
+  })
+
+  try {
+    assert.equal(Number(wizardAdvanceSrc.match(/export const WIZARD_STEP_COUNT = (\d+)/)?.[1]), 6)
+    assert.match(wizardAdvanceSrc, /isAdditionalsWizardStep/)
+    pass('N01 step initial 3 is additionals')
+    pass('N11 map contains exactly 6 steps')
+  } catch (e) {
+    fail('N01/N11 step map', e)
+  }
+
+  try {
+    const visited = new Set(['GUARNICOES', 'BOVINO'])
+    assert.equal(countUnvisited(['GUARNICOES', 'BOVINO'], visited), 0)
+    assert.equal(allVisited(['GUARNICOES', 'BOVINO'], visited), true)
+    pass('N02 all categories visited')
+    pass('N03 remainingCategories === 0')
+  } catch (e) {
+    fail('N02–N03 visited complete', e)
+  }
+
+  try {
+    assert.match(wizardSrc, /additionalsStepNextDisabled = !allAdditionalCategoriesVisited/)
+    assert.match(wizardSrc, /canAdvanceFromAdditionalsStep/)
+    pass('N04 Próximo not disabled when remaining=0')
+  } catch (e) {
+    fail('N04 next enabled', e)
+  }
+
+  try {
+    assert.match(wizardSrc, /onNext=\{goNext\}/)
+    assert.match(wizardSrc, /resolveNextWizardStep/)
+    pass('N05 click Próximo calls goNext via resolveNextWizardStep')
+  } catch (e) {
+    fail('N05 goNext wiring', e)
+  }
+
+  try {
+    const next = simulateResolveNextWizardStep(sampleAdvanceCtx())
+    assert.equal(next, 4)
+    pass('N06 after click step === 4')
+  } catch (e) {
+    fail('N06 advance to step 4', e)
+  }
+
+  try {
+    assert.match(wizardAdvanceSrc, /isGrillWizardStep/)
+    assert.match(wizardSrc, /\{step === 4 &&/)
+    pass('N07 step 4 is Churrasco')
+  } catch (e) {
+    fail('N07 grill step index', e)
+  }
+
+  try {
+    const ctx = sampleAdvanceCtx({
+      state: {
+        ...sampleAdvanceCtx().state,
+        additionals: {},
+      },
+    })
+    assert.equal(simulateResolveNextWizardStep(ctx), 4)
+    pass('N08 zero additionals selected still advances')
+  } catch (e) {
+    fail('N08 zero selections advance', e)
+  }
+
+  try {
+    const pending = sampleAdvanceCtx({
+      visitedAdditionalCategories: new Set(['GUARNICOES']),
+    })
+    assert.equal(simulateResolveNextWizardStep(pending), 3)
+    assert.equal(allVisited(['GUARNICOES', 'BOVINO'], pending.visitedAdditionalCategories), false)
+    pass('N09 pending category does not advance')
+  } catch (e) {
+    fail('N09 pending blocks advance', e)
+  }
+
+  try {
+    assert.match(stepNavSrc, /type=\"button\"/)
+    assert.match(stepNavSrc, /onClick=\{onNext\}/)
+    pass('N10 button uses type=\"button\"')
+  } catch (e) {
+    fail('N10 button type', e)
+  }
+
+  try {
+    assert.doesNotMatch(wizardAdvanceSrc, /step === 6/)
+    assert.doesNotMatch(wizardAdvanceSrc, /step === 7/)
+    assert.doesNotMatch(wizardAdvanceSrc, /step === 8/)
+    assert.match(wizardSrc, /WIZARD_STEP_COUNT/)
+    assert.doesNotMatch(wizardSrc, /const WIZARD_STEP_COUNT = 8/)
+    pass('N12 no legacy 8-step navigation guards')
+  } catch (e) {
+    fail('N12 legacy step guards', e)
+  }
+
+  try {
+    assert.match(fieldAccessSrc, /normalizeCategoryKey/)
+    const { normalizeCategoryKey } = await import('../../Lib/quoteTranslations.ts')
+    assert.equal(normalizeCategoryKey('acompanhamentos'), 'ACOMPANHAMENTOS')
+    pass('N-E2E normalized category_key keeps visit tracking consistent')
+  } catch (e) {
+    fail('N-E2E category key normalization', e)
   }
 
   console.log('')

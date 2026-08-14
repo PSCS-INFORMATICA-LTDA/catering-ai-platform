@@ -4,6 +4,7 @@ import { getCatalogItemImageUrl as resolveCatalogImageUrl } from '@/Lib/catalogI
 import { getCatalogItemSalePrice } from '@/Lib/itemCatalog'
 import { pickLocalizedText } from '@/Lib/i18n/locales'
 import { resolveCatalogItemDisplayLabel } from '@/Lib/cdlPackageItemI18n'
+import { normalizeCategoryKey } from '@/Lib/quoteTranslations'
 
 export type AdditionalItemFieldSource = {
   item_key?: string | null
@@ -30,7 +31,9 @@ export type AdditionalItemFieldSource = {
 export function getAdditionalItemCategoryKey(
   item: AdditionalItemFieldSource | null | undefined,
 ): string {
-  return item?.category_key?.trim() || 'OUTROS'
+  const raw = item?.category_key?.trim()
+  if (!raw) return 'OUTROS'
+  return normalizeCategoryKey(raw)
 }
 
 export function getAdditionalItemCategoryLabel(

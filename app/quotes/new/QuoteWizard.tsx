@@ -22,7 +22,6 @@ import {
 } from '../../../Lib/quoteAdditionalDisplay'
 import { getAdditionalItemCategoryKey } from '@/Lib/additionalItemFieldAccess'
 import {
-  areAllAdditionalCategoriesVisited,
   buildAdditionalCategoryDisplayLabels,
   countUnvisitedAdditionalCategories,
   getAdditionalCategoryReviewProgress,
@@ -30,6 +29,11 @@ import {
   getVisibleAdditionalCategoryKeys,
   pruneVisitedAdditionalCategories,
 } from '@/Lib/wizardAdditionalCategories'
+import {
+  canAdvanceFromAdditionalsStep,
+  resolveNextWizardStep,
+  WIZARD_STEP_COUNT,
+} from '@/Lib/wizardStepAdvance'
 import { getQuoteStrings, tw } from '../../../Lib/quoteTranslations'
 import { useAuthLocaleFromMe } from '../../../Lib/i18n/useAuthLocaleFromMe'
 import {
@@ -185,7 +189,6 @@ export type AdditionalItem = {
 /** Item do catálogo mestre (`catalog_items`). */
 export type CatalogItem = AdditionalItem
 
-const WIZARD_STEP_COUNT = 6
 
 function formatDate(value: string, locale: string | null | undefined = 'pt') {
   return formatUiDate(value, locale, {
@@ -942,6 +945,9 @@ export default function QuoteWizard({
   >(() => new Set())
   const [visitedAdditionalCategories, setVisitedAdditionalCategories] =
     useState<Set<string>>(() => new Set())
+  const visitedAdditionalCategoriesRef = useRef(visitedAdditionalCategories)
+  const additionalCategoryKeysRef = useRef<string[]>([])
+  visitedAdditionalCategoriesRef.current = visitedAdditionalCategories
   const grillPhotoInputRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [saveErrorInfo, setSaveErrorInfo] = useState<SaveQuoteErrorInfo | null>(
@@ -1434,6 +1440,7 @@ export default function QuoteWizard({
     () => getVisibleAdditionalCategoryKeys(additionalItemsByCategory),
     [additionalItemsByCategory],
   )
+  additionalCategoryKeysRef.current = additionalCategoryKeys
 
   const unvisitedAdditionalCategoryCount = useMemo(
     () =>
@@ -1747,6 +1754,9 @@ export default function QuoteWizard({
   }
 
   function goNext() {
+    const categoryKeys = additionalCategoryKeysRef.current
+    const visitedCategories = visitedAdditionalCategoriesRef.current
+
     if (step === 2 && !state.packageId) {
       setPackageStepMessage(w.selectPackageToContinue)
       return
@@ -1765,28 +1775,29 @@ export default function QuoteWizard({
         }
       }
     }
-    if (step === 3) {
-      const missing = additionalCategoryKeys.filter(
-        (key) => !visitedAdditionalCategories.has(key),
-      )
-      if (missing.length > 0) {
-        return
-      }
+    if (step === 4 && !state.grillSetupAnswered) {
+      updateState({ grillSetupAnswered: true })
     }
-    if (step === 4) {
-      if (!state.grillSetupAnswered) {
-        updateState({ grillSetupAnswered: true })
-      }
-      if (isGrillPhotoRequiredAndMissing(state)) {
-        return
-      }
-      if (state.grillRentalRequired && state.grillRentalQty <= 0) {
-        return
-      }
+
+    const nextStep = resolveNextWizardStep({
+      step,
+      packageId: state.packageId,
+      selectedPackage,
+      packageSelections: state.packageSelections,
+      selectableActivePackageOptionGroups,
+      additionalCategoryKeys: categoryKeys,
+      visitedAdditionalCategories: visitedCategories,
+      state,
+      uiLocale,
+    })
+
+    if (nextStep === step) {
+      return
     }
+
     setPackageSelectionAttempted(false)
     setPackageStepMessage(null)
-    if (step < WIZARD_STEP_COUNT - 1) setStep((s) => s + 1)
+    setStep(nextStep)
   }
 
   useEffect(() => {
@@ -1879,7 +1890,7 @@ export default function QuoteWizard({
 
   const allAdditionalCategoriesVisited = useMemo(
     () =>
-      areAllAdditionalCategoriesVisited(
+      canAdvanceFromAdditionalsStep(
         additionalCategoryKeys,
         visitedAdditionalCategories,
       ),
