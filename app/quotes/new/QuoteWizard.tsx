@@ -2392,66 +2392,70 @@ export default function QuoteWizard({
           <SectionCard>
             <div className="grid grid-cols-1 gap-4 sm:col-span-2">
               <InputField
-                className="sm:col-span-2"
                 label={w.eventName}
                 value={state.eventName}
                 onChange={(v) => updateState({ eventName: v })}
                 placeholder={w.eventNamePlaceholder}
                 completion={getFieldCompletion(state.eventName)}
               />
-              <DatePickerField
-                label={w.eventDate}
-                value={state.eventDate}
-                onChange={(v) => updateState({ eventDate: v })}
-                completion={getFieldCompletion(state.eventDate)}
-                language={uiLocale}
-              />
-              <TimePickerField
-                label={w.startTime}
-                language={uiLocale}
-                value={state.startTime}
-                onChange={(v) =>
-                  setState((prev) => ({
-                    ...prev,
-                    startTime: v,
-                    endTime: endTimeCustomized
-                      ? prev.endTime
-                      : addHoursToTime(v, 4),
-                  }))
-                }
-                completion={getFieldCompletion(state.startTime)}
-              />
-              <div>
-                <TimePickerField
-                  label={w.endTime}
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+                <DatePickerField
+                  label={w.eventDate}
+                  value={state.eventDate}
+                  onChange={(v) => updateState({ eventDate: v })}
+                  completion={getFieldCompletion(state.eventDate)}
                   language={uiLocale}
-                  value={state.endTime}
-                  onChange={(v) => {
-                    setEndTimeCustomized(true)
-                    updateState({ endTime: v })
-                  }}
-                  completion={getFieldCompletion(state.endTime)}
                 />
-                <p className="mt-2 text-xs text-cdl-subtle">{w.endTimeHint}</p>
+                <TimePickerField
+                  label={w.startTime}
+                  language={uiLocale}
+                  value={state.startTime}
+                  onChange={(v) =>
+                    setState((prev) => ({
+                      ...prev,
+                      startTime: v,
+                      endTime: endTimeCustomized
+                        ? prev.endTime
+                        : addHoursToTime(v, 4),
+                    }))
+                  }
+                  completion={getFieldCompletion(state.startTime)}
+                />
+                <div>
+                  <TimePickerField
+                    label={w.endTime}
+                    language={uiLocale}
+                    value={state.endTime}
+                    onChange={(v) => {
+                      setEndTimeCustomized(true)
+                      updateState({ endTime: v })
+                    }}
+                    completion={getFieldCompletion(state.endTime)}
+                  />
+                  <p className="mt-2 text-xs text-cdl-subtle">
+                    {w.endTimeHint}
+                  </p>
+                </div>
               </div>
-              <QuantityField
-                label={w.adults}
-                value={state.adultCount}
-                onChange={(v) => updateState({ adultCount: v })}
-                completion={getFieldCompletion(state.adultCount)}
-              />
-              <QuantityField
-                label={w.childrenUnder3}
-                value={state.childrenUnder3Count}
-                onChange={(v) => updateState({ childrenUnder3Count: v })}
-              />
-              <QuantityField
-                label={w.children4to12}
-                value={state.children4To12Count}
-                onChange={(v) => updateState({ children4To12Count: v })}
-              />
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <QuantityField
+                  label={w.adults}
+                  value={state.adultCount}
+                  onChange={(v) => updateState({ adultCount: v })}
+                  completion={getFieldCompletion(state.adultCount)}
+                />
+                <QuantityField
+                  label={w.childrenUnder3}
+                  value={state.childrenUnder3Count}
+                  onChange={(v) => updateState({ childrenUnder3Count: v })}
+                />
+                <QuantityField
+                  label={w.children4to12}
+                  value={state.children4To12Count}
+                  onChange={(v) => updateState({ children4To12Count: v })}
+                />
+              </div>
               <AddressAutocompleteFields
-                className="sm:col-span-2"
                 values={{
                   address: state.address,
                   city: state.city,

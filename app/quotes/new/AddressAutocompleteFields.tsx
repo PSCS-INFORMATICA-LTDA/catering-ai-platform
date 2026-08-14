@@ -166,9 +166,11 @@ export default function AddressAutocompleteFields({
   const zipInvalid = zipDigits.length >= 5 && !isUsablePostalCode(values.zipCode)
 
   return (
-    <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${className}`}>
+    <div
+      className={`grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,3fr)_minmax(0,1.7fr)_minmax(0,1fr)] ${className}`}
+    >
       {enabled && (
-        <div className="flex flex-col gap-2 sm:col-span-2">
+        <div className="flex flex-col gap-2 lg:col-span-4">
           <FieldLabel>{tw(loc, 'googleSearchLabel')}</FieldLabel>
           <input
             ref={searchInputRef}
@@ -185,7 +187,30 @@ export default function AddressAutocompleteFields({
         </div>
       )}
 
-      <div className="flex flex-col gap-2 sm:col-span-2">
+      <label className="flex flex-col gap-2">
+        <FieldLabel>{tCommon(loc, 'postalCode')}</FieldLabel>
+        <div className="relative">
+          <input
+            type="text"
+            inputMode="numeric"
+            autoComplete="postal-code"
+            value={values.zipCode}
+            onChange={(e) =>
+              onChange({ zipCode: formatPostalCode(e.target.value) })
+            }
+            placeholder={tCommon(loc, 'postalCodePlaceholder')}
+            className={getInputClassName(fieldCompletions?.zipCode)}
+          />
+          <FieldCheck show={fieldCompletions?.zipCode === 'filled'} />
+        </div>
+        {zipInvalid ? (
+          <p className="text-xs text-cdl-action">
+            {tCommon(loc, 'invalidPostalCode')}
+          </p>
+        ) : null}
+      </label>
+
+      <div className="flex flex-col gap-2">
         <FieldLabel>{tCommon(loc, 'address')}</FieldLabel>
         <input
           type="text"
@@ -222,29 +247,6 @@ export default function AddressAutocompleteFields({
           />
           <FieldCheck show={fieldCompletions?.state === 'filled'} />
         </div>
-      </label>
-
-      <label className="flex flex-col gap-2">
-        <FieldLabel>{tCommon(loc, 'postalCode')}</FieldLabel>
-        <div className="relative">
-          <input
-            type="text"
-            inputMode="numeric"
-            autoComplete="postal-code"
-            value={values.zipCode}
-            onChange={(e) =>
-              onChange({ zipCode: formatPostalCode(e.target.value) })
-            }
-            placeholder={tCommon(loc, 'postalCodePlaceholder')}
-            className={getInputClassName(fieldCompletions?.zipCode)}
-          />
-          <FieldCheck show={fieldCompletions?.zipCode === 'filled'} />
-        </div>
-        {zipInvalid ? (
-          <p className="text-xs text-cdl-action">
-            {tCommon(loc, 'invalidPostalCode')}
-          </p>
-        ) : null}
       </label>
     </div>
   )
