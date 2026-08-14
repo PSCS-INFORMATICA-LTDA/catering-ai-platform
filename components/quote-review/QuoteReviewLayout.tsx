@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { Montserrat, Playfair_Display } from 'next/font/google'
 import CatalogImageFrame from '@/components/CatalogImageFrame'
 import CdlBrandLogo from '@/components/CdlBrandLogo'
 import QuoteGrillPhotoFrame from '@/components/quote-review/QuoteGrillPhotoFrame'
@@ -32,6 +33,18 @@ import type {
   PricingBreakdown,
   PricingBreakdownLine,
 } from '@/Lib/pricing/pricingBreakdownTypes'
+
+const proposalSerif = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-proposal-serif',
+  display: 'swap',
+})
+
+const proposalSans = Montserrat({
+  subsets: ['latin'],
+  variable: '--font-proposal-sans',
+  display: 'swap',
+})
 
 function ProposalSection({
   title,
@@ -593,7 +606,9 @@ export default function QuoteReviewLayout({
       ]
 
   return (
-    <div className="quote-proposal overflow-x-hidden">
+    <div
+      className={`${proposalSerif.variable} ${proposalSans.variable} quote-proposal overflow-x-hidden`}
+    >
       <header className="quote-proposal-hero quote-print-header">
         <div className="quote-proposal-hero-inner">
           <div className="quote-proposal-hero-brand">
