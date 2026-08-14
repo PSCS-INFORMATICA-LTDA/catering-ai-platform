@@ -1,5 +1,5 @@
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
-import type { Branch, Company, FeatureFlagKey, TenantContext } from './types'
+import type { Branch, Company, CompanyRole, FeatureFlagKey, TenantContext } from './types'
 import {
   getActiveBranchIdFromEnv,
   getActiveCompanyId,
@@ -9,9 +9,13 @@ import {
 export async function fetchTenantContext(options?: {
   companyId?: string
   branchId?: string | null
+  role?: CompanyRole | null
 }): Promise<TenantContext> {
   const companyId = options?.companyId?.trim() || getActiveCompanyId()
-  const envBranchId = options?.branchId ?? getActiveBranchIdFromEnv()
+  const envBranchId =
+    options?.branchId !== undefined
+      ? options.branchId
+      : getActiveBranchIdFromEnv()
   const supabase = getSupabaseServerClient()
 
   const companyColumnsBase =
@@ -74,7 +78,7 @@ export async function fetchTenantContext(options?: {
     branchId: branch?.id ?? branchId,
     branch,
     branches,
-    role: getActiveRoleFromEnv(),
+    role: options?.role ?? getActiveRoleFromEnv(),
     featureFlags: featureFlags as Partial<Record<FeatureFlagKey, boolean>>,
   }
 }

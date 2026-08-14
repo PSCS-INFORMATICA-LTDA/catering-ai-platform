@@ -1,7 +1,9 @@
 'use client'
 
+import { tChrome } from '@/Lib/i18n/chrome'
 import { tCommon } from '@/Lib/i18n/common'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
+import { resolveTenantCompanyDisplayName } from '@/Lib/tenant/companyDisplayName'
 import { useTenant } from './TenantProvider'
 
 export default function TenantContextBar() {
@@ -17,9 +19,8 @@ export default function TenantContextBar() {
   }
 
   const companyLabel =
-    company?.trade_name?.trim() ||
-    company?.company_name?.trim() ||
-    tCommon(locale, 'activeCompany')
+    resolveTenantCompanyDisplayName(company) ??
+    tChrome(locale, 'headerCompanyUnidentified')
 
   return (
     <div className="liquid-glass-panel flex flex-wrap items-center gap-2 px-3 py-2 text-xs">

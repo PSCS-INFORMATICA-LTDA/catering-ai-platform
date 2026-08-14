@@ -490,6 +490,133 @@ async function main() {
     fail('T48–T50 i18n', e)
   }
 
+  // --- Header company name + confirmation final (T51–T65) ---
+  const appHeaderSrc = read('components/layout/AppHeader.tsx')
+  const tenantContextRouteSrc = read('app/api/tenant/context/route.ts')
+  const companyDisplayNameSrc = read('Lib/tenant/companyDisplayName.ts')
+  const chromeSrc = read('Lib/i18n/chrome.ts')
+
+  try {
+    assert.match(appHeaderSrc, /resolveTenantCompanyDisplayName/)
+    assert.match(appHeaderSrc, /useTenant\(\)/)
+    assert.doesNotMatch(appHeaderSrc, /CDL Services/)
+    assert.doesNotMatch(appHeaderSrc, /BBQ At Home/)
+    pass('T51 header uses real company name resolver')
+  } catch (e) {
+    fail('T51 header company name', e)
+  }
+
+  try {
+    assert.match(appHeaderSrc, /headerCompanyUnidentified/)
+    assert.doesNotMatch(
+      appHeaderSrc,
+      /headerCompanyFallback\)/,
+    )
+    assert.match(chromeSrc, /headerCompanyUnidentified: 'Empresa não identificada'/)
+    pass('T52 header avoids generic Empresa fallback')
+  } catch (e) {
+    fail('T52 header fallback', e)
+  }
+
+  try {
+    assert.doesNotMatch(appHeaderSrc, /CDL Services BBQ/)
+    assert.doesNotMatch(appHeaderSrc, /65fd576f-8d97-49ba-bf38-61bc1e94e94a/)
+    assert.doesNotMatch(tenantContextRouteSrc, /CDL Services/)
+    pass('T53 company name not hardcoded CDL')
+  } catch (e) {
+    fail('T53 no hardcoded CDL', e)
+  }
+
+  try {
+    assert.match(tenantContextRouteSrc, /resolveAuthorizedCompanyId/)
+    assert.match(tenantContextRouteSrc, /activeMembership\?\.branch_id/)
+    assert.match(tenantContextRouteSrc, /activeMembership\?\.role/)
+    assert.match(companyDisplayNameSrc, /legal_name/)
+    pass('T54 header company isolation via session tenant context')
+  } catch (e) {
+    fail('T54 company isolation', e)
+  }
+
+  try {
+    const physicalCount = (confirmationSrc.match(/tw\(uiLanguage, 'physicalGuests'\)/g) ?? [])
+      .length
+    assert.equal(physicalCount, 1)
+    pass('T55 physical guests appear once')
+  } catch (e) {
+    fail('T55 physical guests', e)
+  }
+
+  try {
+    const billableCount = (confirmationSrc.match(/tw\(uiLanguage, 'billableGuests'\)/g) ?? [])
+      .length
+    assert.equal(billableCount, 1)
+    pass('T56 billable guests appear once')
+  } catch (e) {
+    fail('T56 billable guests', e)
+  }
+
+  try {
+    assert.match(breakdownViewSrc, /tw\(language, 'totalToPay'\)/)
+    assert.doesNotMatch(confirmationSrc, /financialTotal/)
+    pass('T57 single TOTAL A PAGAR')
+  } catch (e) {
+    fail('T57 total dedup', e)
+  }
+
+  try {
+    assert.equal(
+      (breakdownViewSrc.match(/tw\(language, 'breakdownDeposit'\)/g) ?? []).length,
+      1,
+    )
+    pass('T58 deposit appears once')
+  } catch (e) {
+    fail('T58 deposit', e)
+  }
+
+  try {
+    assert.equal((breakdownViewSrc.match(/breakdownBalance/g) ?? []).length, 1)
+    pass('T59 balance appears once')
+  } catch (e) {
+    fail('T59 balance', e)
+  }
+
+  try {
+    const cancelIdx = confirmationSrc.indexOf('confirmSectionCancellation')
+    const saveErrorIdx = confirmationSrc.indexOf('saveErrorInfo ?')
+    assert.ok(cancelIdx > 0)
+    assert.ok(cancelIdx < saveErrorIdx)
+    pass('T60 cancellation is last section')
+  } catch (e) {
+    fail('T60 cancellation order', e)
+  }
+
+  try {
+    assert.match(breakdownViewSrc, /breakdown\.total/)
+    assert.match(confirmationSrc, /variant=['"]confirmation['"]/)
+    pass('T61 confirmation uses pricingBreakdown.total')
+  } catch (e) {
+    fail('T61 breakdown total', e)
+  }
+
+  try {
+    assert.doesNotMatch(confirmationSrc, /computeQuotePricing/)
+    assert.doesNotMatch(confirmationSrc, /calculateQuote/)
+    pass('T62 no new financial calc in UI')
+  } catch (e) {
+    fail('T62 no client calc', e)
+  }
+
+  try {
+    assert.match(chromeSrc, /headerCompanyUnidentified: 'Empresa não identificada'/)
+    assert.match(chromeSrc, /headerCompanyUnidentified: 'Company not identified'/)
+    assert.match(chromeSrc, /headerCompanyUnidentified: 'Empresa no identificada'/)
+    pass('T63 PT header fallback')
+    pass('T64 EN header fallback')
+    pass('T65 ES header fallback')
+  } catch (e) {
+    fail('T63–T65 i18n', e)
+  }
+
   console.log('')
   if (failed > 0) {
     console.log(`QUOTE-WIZARD-V2: FAIL (${failed} test(s))`)

@@ -1,4 +1,4 @@
-import { requireApiAuth } from '@/Lib/auth/requireApi'
+import { requireApiAuth, resolveAuthorizedCompanyId } from '@/Lib/auth/requireApi'
 import { fetchTenantContext } from '@/Lib/tenant/fetchTenantContext'
 
 export const dynamic = 'force-dynamic'
@@ -9,7 +9,10 @@ export async function GET() {
   if (!auth.ok) return auth.response
 
   try {
-    const context = await fetchTenantContext()
+    const companyId = resolveAuthorizedCompanyId(auth.session)
+    const branchId = auth.session.activeMembership?.branch_id ?? null
+    const role = auth.session.activeMembership?.role ?? null
+    const context = await fetchTenantContext({ companyId, branchId, role })
     return Response.json(
       { data: context },
       { headers: { 'Cache-Control': 'no-store' } },

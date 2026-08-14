@@ -7,6 +7,7 @@ import { glassBtn } from '@/Lib/liquidGlass'
 import { createClient } from '@/Lib/supabase/client'
 import { resolveAuthLocale, tAuth } from '@/Lib/i18n/authUsers'
 import { tChrome } from '@/Lib/i18n/chrome'
+import { resolveTenantCompanyDisplayName } from '@/Lib/tenant/companyDisplayName'
 
 type MeResponse = {
   email?: string | null
@@ -49,10 +50,10 @@ export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
   }
 
   const locale = resolveAuthLocale(me?.locale)
-  const companyLabel =
-    company?.trade_name?.trim() ||
-    company?.company_name?.trim() ||
-    (loading ? '…' : tChrome(locale, 'headerCompanyFallback'))
+  const resolvedCompanyName = resolveTenantCompanyDisplayName(company)
+  const companyLabel = loading
+    ? '…'
+    : resolvedCompanyName ?? tChrome(locale, 'headerCompanyUnidentified')
 
   return (
     <header className="catering-app-header flex shrink-0 items-center gap-3 border-b border-cdl-border px-3 py-2.5 sm:px-4">
