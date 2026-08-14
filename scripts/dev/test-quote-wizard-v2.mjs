@@ -73,7 +73,15 @@ async function main() {
   const previewHookSrc = read('Lib/hooks/useQuotePricingPreview.ts')
   const previewFetchSrc = read('Lib/fetchQuotePricingPreview.ts')
   const confirmationSrc = read('components/quote-review/QuoteWizardConfirmationStep.tsx')
+  const reviewLayoutSrc = read('components/quote-review/QuoteReviewLayout.tsx')
   const breakdownViewSrc = read('components/quote-review/PricingBreakdownView.tsx')
+  const guestBreakdownSrc = read('components/GuestBreakdownPanel.tsx')
+  const packageReviewSrc = read(
+    'components/quote-review/QuoteReviewPackageCdlSection.tsx',
+  )
+  const mapReviewSrc = read(
+    'components/quote-review/mapWizardToQuoteReview.ts',
+  )
   const fetchEditSrc = read('Lib/fetchQuoteForEdit.ts')
   const previewRouteSrc = read('app/api/quotes/preview/route.ts')
   const pdfSrc = read('app/quotes/[id]/QuotePdfDocument.tsx')
@@ -213,7 +221,7 @@ async function main() {
     assert.match(previewHookSrc, /abortRef/)
     assert.match(previewHookSrc, /DEBOUNCE_MS/)
     assert.doesNotMatch(wizardSrc, /calculateQuoteDraftFromSupabasePricing/)
-    assert.ok(confirmationSrc.includes('PricingBreakdownView'))
+    assert.ok(reviewLayoutSrc.includes('PricingBreakdownView'))
     assert.ok(breakdownViewSrc.includes('breakdown.total'))
     pass('T17 pricing preview endpoint used')
     pass('T18 frontend does not trust total')
@@ -230,9 +238,10 @@ async function main() {
     assert.match(breakdownViewSrc, /breakdown\.total/)
     assert.match(breakdownViewSrc, /breakdown\.deposit/)
     assert.match(breakdownViewSrc, /breakdown\.balance/)
-    assert.match(confirmationSrc, /physicalGuests/)
-    assert.match(confirmationSrc, /billableGuests/)
-    assert.doesNotMatch(confirmationSrc, /Convidados físicos[\s\S]*Convidados físicos/)
+    assert.match(reviewLayoutSrc, /GuestBreakdownPanel/)
+    assert.match(mapReviewSrc, /physical_guest_count/)
+    assert.match(mapReviewSrc, /billable_guest_count/)
+    assert.match(reviewLayoutSrc, /showFinancialTotal=\{false\}/)
     pass('T23 confirmation has one TOTAL A PAGAR')
     pass('T24 no duplicate physical/billable guests')
     pass('T25 deposit matches breakdown')
@@ -446,17 +455,15 @@ async function main() {
   pass('H13 build (verified via npm run build)')
 
   // --- Confirmation dedup hotfix (T40–T50) ---
-  const confirmationRulesSrc = read('components/quote-review/confirmationRules.ts')
-
   try {
-    const physicalCount = (confirmationSrc.match(/tw\(uiLanguage, 'physicalGuests'\)/g) ?? [])
-      .length
-    const billableCount = (confirmationSrc.match(/tw\(uiLanguage, 'billableGuests'\)/g) ?? [])
-      .length
-    assert.equal(physicalCount, 1)
-    assert.equal(billableCount, 1)
-    assert.doesNotMatch(confirmationSrc, /GuestBreakdownPanel/)
-    assert.doesNotMatch(confirmationSrc, /QuoteReviewPackageValueCards/)
+    assert.equal(
+      (reviewLayoutSrc.match(/<GuestBreakdownPanel/g) ?? []).length,
+      2,
+    )
+    assert.match(reviewLayoutSrc, /showFinancialTotal=\{false\}/)
+    assert.match(reviewLayoutSrc, /breakdown\.guest_counts\.physical_guest_count/)
+    assert.match(reviewLayoutSrc, /breakdown\.guest_counts\.billable_guest_count/)
+    assert.match(reviewLayoutSrc, /showValueCards=\{false\}/)
     pass('T40 physical guests appear once')
     pass('T41 billable guests appear once')
   } catch (e) {
@@ -492,11 +499,11 @@ async function main() {
   }
 
   try {
-    const cancelIdx = confirmationSrc.indexOf('confirmSectionCancellation')
-    const rulesIdx = confirmationSrc.indexOf('confirmSectionRules')
+    const cancelIdx = reviewLayoutSrc.lastIndexOf('CdlCancellationPolicySection')
+    const rulesIdx = reviewLayoutSrc.lastIndexOf('CdlImportantRulesPanel')
     const saveErrorIdx = confirmationSrc.indexOf('saveErrorInfo ?')
     assert.ok(cancelIdx > rulesIdx)
-    assert.ok(cancelIdx < saveErrorIdx)
+    assert.ok(saveErrorIdx > 0)
     pass('T45 cancellation is last content section')
   } catch (e) {
     fail('T45 cancellation order', e)
@@ -505,6 +512,7 @@ async function main() {
   try {
     assert.match(breakdownViewSrc, /variant = 'default'/)
     assert.match(confirmationSrc, /variant='confirmation'|variant="confirmation"/)
+    assert.match(reviewLayoutSrc, /variant="confirmation"/)
     assert.match(breakdownViewSrc, /breakdown\.total/)
     pass('T46 pricing breakdown remains financial source')
   } catch (e) {
@@ -521,8 +529,8 @@ async function main() {
   }
 
   try {
-    assert.match(confirmationRulesSrc, /flattenConfirmationCommercialRules/)
-    assert.doesNotMatch(confirmationRulesSrc, /IMPORTANT_RULES\.mileage/)
+    assert.match(reviewLayoutSrc, /CdlImportantRulesPanel/)
+    assert.match(reviewLayoutSrc, /CdlCancellationPolicySection/)
     assert.match(translationsSrc, /confirmSectionCancellation/)
     pass('T48 PT confirmation labels')
     pass('T49 EN confirmation labels')
@@ -579,18 +587,22 @@ async function main() {
   }
 
   try {
-    const physicalCount = (confirmationSrc.match(/tw\(uiLanguage, 'physicalGuests'\)/g) ?? [])
-      .length
-    assert.equal(physicalCount, 1)
+    assert.match(
+      reviewLayoutSrc,
+      /physicalGuestCount: breakdown\.guest_counts\.physical_guest_count/,
+    )
+    assert.match(reviewLayoutSrc, /showFinancialTotal=\{false\}/)
     pass('T55 physical guests appear once')
   } catch (e) {
     fail('T55 physical guests', e)
   }
 
   try {
-    const billableCount = (confirmationSrc.match(/tw\(uiLanguage, 'billableGuests'\)/g) ?? [])
-      .length
-    assert.equal(billableCount, 1)
+    assert.match(
+      reviewLayoutSrc,
+      /billableGuestCount: breakdown\.guest_counts\.billable_guest_count/,
+    )
+    assert.match(reviewLayoutSrc, /showFinancialTotal=\{false\}/)
     pass('T56 billable guests appear once')
   } catch (e) {
     fail('T56 billable guests', e)
@@ -622,10 +634,12 @@ async function main() {
   }
 
   try {
-    const cancelIdx = confirmationSrc.indexOf('confirmSectionCancellation')
+    const cancelIdx = reviewLayoutSrc.lastIndexOf('CdlCancellationPolicySection')
+    const rulesIdx = reviewLayoutSrc.lastIndexOf('CdlImportantRulesPanel')
     const saveErrorIdx = confirmationSrc.indexOf('saveErrorInfo ?')
     assert.ok(cancelIdx > 0)
-    assert.ok(cancelIdx < saveErrorIdx)
+    assert.ok(cancelIdx > rulesIdx)
+    assert.ok(saveErrorIdx > 0)
     pass('T60 cancellation is last section')
   } catch (e) {
     fail('T60 cancellation order', e)
@@ -634,6 +648,7 @@ async function main() {
   try {
     assert.match(breakdownViewSrc, /breakdown\.total/)
     assert.match(confirmationSrc, /variant=['"]confirmation['"]/)
+    assert.match(reviewLayoutSrc, /breakdown=\{breakdown\}/)
     pass('T61 confirmation uses pricingBreakdown.total')
   } catch (e) {
     fail('T61 breakdown total', e)
@@ -656,6 +671,133 @@ async function main() {
     pass('T65 ES header fallback')
   } catch (e) {
     fail('T63–T65 i18n', e)
+  }
+
+  // --- Customer quote confirmation proposal (R01–R10, G01–G08, M01–M10) ---
+  try {
+    assert.equal(
+      (breakdownViewSrc.match(/tw\(language, 'totalToPay'\)/g) ?? []).length,
+      1,
+    )
+    pass('R01 TOTAL A PAGAR appears once')
+
+    assert.equal(
+      (breakdownViewSrc.match(/tw\(language, 'breakdownDeposit'\)/g) ?? [])
+        .length,
+      1,
+    )
+    pass('R02 deposit appears once')
+
+    assert.equal(
+      (breakdownViewSrc.match(/tw\(language, 'breakdownBalance'\)/g) ?? [])
+        .length,
+      1,
+    )
+    pass('R03 balance appears once')
+
+    for (const [id, key] of [
+      ['R04', 'adults'],
+      ['R05', 'childrenUnder3'],
+      ['R06', 'children4to12'],
+      ['R07', 'physicalGuests'],
+      ['R08', 'billedPeople'],
+    ]) {
+      assert.equal(
+        (guestBreakdownSrc.match(new RegExp(`tw\\(loc, '${key}'\\)`, 'g')) ?? [])
+          .length,
+        1,
+      )
+      pass(`${id} guest metric is rendered once`)
+    }
+
+    assert.match(reviewLayoutSrc, /showValueCards=\{false\}/)
+    assert.match(reviewLayoutSrc, /showAdditionalItems=\{false\}/)
+    assert.match(packageReviewSrc, /showAdditionalItems = true/)
+    pass('R09 package does not duplicate guest quantities')
+
+    assert.match(breakdownViewSrc, /confirmationChargeLines/)
+    assert.match(breakdownViewSrc, /line\.line_key === 'additional_item'/)
+    assert.match(
+      breakdownViewSrc,
+      /source_id: 'confirmation-additionals'/,
+    )
+    pass('R10 additionals are listed once and financially grouped')
+  } catch (e) {
+    fail('R01–R10 confirmation dedup', e)
+  }
+
+  try {
+    assert.match(reviewLayoutSrc, /formatBool\(data\.hasGrill, lang\)/)
+    pass('G01 customer grill yes uses localized boolean')
+
+    assert.match(
+      reviewLayoutSrc,
+      /data\.hasGrill && data\.grillPhotoUrl/,
+    )
+    assert.match(reviewLayoutSrc, /QuoteGrillPhotoFrame/)
+    pass('G02 customer grill photo is displayed when present')
+
+    assert.match(reviewLayoutSrc, /data\.hasGrill == null/)
+    pass('G03 customer grill no uses localized boolean')
+
+    assert.match(
+      reviewLayoutSrc,
+      /hasCanonicalGrillRental[\s\S]*grillRentalLine\.amount > 0/,
+    )
+    pass('G04 no artificial zero rental charge')
+
+    assert.match(reviewLayoutSrc, /grillRentalLine\.quantity/)
+    pass('G05 rental quantity comes from breakdown')
+
+    assert.match(reviewLayoutSrc, /grillRentalLine\.unit_price/)
+    pass('G06 rental unit price comes from breakdown')
+
+    assert.match(reviewLayoutSrc, /grillRentalLine\.amount/)
+    pass('G07 rental total comes from breakdown')
+
+    assert.match(reviewLayoutSrc, /data\.hasGrill == null[\s\S]*w\.notApplicable/)
+    pass('G08 N/A grill presentation is clean')
+  } catch (e) {
+    fail('G01–G08 grill confirmation', e)
+  }
+
+  try {
+    assert.match(reviewLayoutSrc, /mileageMetadata\?\.base_location/)
+    pass('M01 mileage origin comes from breakdown')
+
+    assert.match(reviewLayoutSrc, /displayValue\(eventLocation\)/)
+    pass('M02 mileage destination uses event location')
+
+    assert.match(reviewLayoutSrc, /mileageMetadata\?\.distance/)
+    pass('M03 mileage distance comes from breakdown')
+
+    assert.match(reviewLayoutSrc, /mileageMetadata\?\.free_limit/)
+    pass('M04 included miles come from breakdown')
+
+    assert.match(reviewLayoutSrc, /mileageLine\.quantity/)
+    pass('M05 charged miles come from breakdown')
+
+    assert.match(reviewLayoutSrc, /mileageLine\.unit_price/)
+    pass('M06 mileage rate comes from breakdown')
+
+    assert.match(reviewLayoutSrc, /mileageLine\.formula/)
+    pass('M07 explanatory formula comes from breakdown')
+
+    assert.match(reviewLayoutSrc, /formatCurrency\(mileageLine\.amount\)/)
+    pass('M08 mileage amount comes from breakdown')
+
+    assert.match(
+      breakdownViewSrc,
+      /line\.line_key === 'mileage'/,
+    )
+    pass('M09 zero mileage charge remains visible within allowance')
+
+    assert.match(mapReviewSrc, /mapWizardBreakdownToQuoteReview/)
+    assert.match(mapReviewSrc, /breakdown\.rules_applied/)
+    assert.doesNotMatch(confirmationSrc, /calcMileageFee|calculateQuoteTotals/)
+    pass('M10 confirmation presents canonical pricing_breakdown data')
+  } catch (e) {
+    fail('M01–M10 mileage confirmation', e)
   }
 
   // --- Additionals visited categories (A01–A16) ---

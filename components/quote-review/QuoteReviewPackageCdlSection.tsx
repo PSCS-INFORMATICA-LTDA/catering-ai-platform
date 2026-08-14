@@ -180,6 +180,7 @@ export default function QuoteReviewPackageCdlSection({
   language = 'pt',
   showHeroImage = true,
   showValueCards = true,
+  showAdditionalItems = true,
 }: {
   packageName: string | null
   packageImageUrl?: string | null
@@ -195,6 +196,7 @@ export default function QuoteReviewPackageCdlSection({
   language?: QuoteLanguage | string | null
   showHeroImage?: boolean
   showValueCards?: boolean
+  showAdditionalItems?: boolean
 }) {
   const loc: QuoteLanguage =
     language === 'en' || language === 'es' ? language : 'pt'
@@ -240,10 +242,12 @@ export default function QuoteReviewPackageCdlSection({
       ) : null}
       <PackageDetailLine label={tw(loc, 'packageItems')} value={itemsText} />
       <PackageDetailLine label={tw(loc, 'garnish')} value={garnishText} />
-      <PackageDetailLine
-        label={tw(loc, 'additionalItems')}
-        value={additionalsText}
-      />
+      {showAdditionalItems ? (
+        <PackageDetailLine
+          label={tw(loc, 'additionalItems')}
+          value={additionalsText}
+        />
+      ) : null}
     </div>
   )
 

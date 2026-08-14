@@ -1,6 +1,9 @@
 'use client'
 
-import type { PricingBreakdown } from '@/Lib/pricing/pricingBreakdownTypes'
+import type {
+  PricingBreakdown,
+  PricingBreakdownLine,
+} from '@/Lib/pricing/pricingBreakdownTypes'
 import { tw } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
@@ -14,8 +17,8 @@ function lineLabel(
   lineKey: string,
   description: string,
   language: QuoteLanguage,
+  variant: 'default' | 'confirmation',
 ): string {
-  if (description?.trim()) return description
   const map: Record<string, string> = {
     package: tw(language, 'breakdownPackage'),
     additional_item: tw(language, 'breakdownAdditional'),
@@ -25,6 +28,8 @@ function lineLabel(
     minimum_order: tw(language, 'breakdownMinimum'),
     discount: tw(language, 'breakdownDiscount'),
   }
+  if (variant === 'confirmation' && map[lineKey]) return map[lineKey]
+  if (description?.trim()) return description
   return map[lineKey] ?? lineKey
 }
 
@@ -34,6 +39,48 @@ function shouldShowFormula(
 ): boolean {
   if (variant !== 'confirmation') return true
   return !['package', 'additional_item'].includes(lineKey)
+}
+
+function confirmationChargeLines(
+  breakdown: PricingBreakdown,
+): PricingBreakdownLine[] {
+  const result: PricingBreakdownLine[] = []
+
+  for (const line of [...breakdown.lines, ...breakdown.adjustments]) {
+    if (GUEST_LINE_KEYS.has(line.line_key)) continue
+
+    if (line.line_key === 'additional_item') {
+      const existingIndex = result.findIndex(
+        (item) => item.line_key === 'additional_item',
+      )
+      if (existingIndex >= 0) {
+        const existing = result[existingIndex]
+        result[existingIndex] = {
+          ...existing,
+          quantity: existing.quantity + line.quantity,
+          amount: existing.amount + line.amount,
+        }
+      } else {
+        result.push({
+          ...line,
+          source_id: 'confirmation-additionals',
+          description: '',
+          formula: null,
+        })
+      }
+      continue
+    }
+
+    if (
+      line.amount !== 0 ||
+      line.line_key === 'package' ||
+      line.line_key === 'mileage'
+    ) {
+      result.push(line)
+    }
+  }
+
+  return result
 }
 
 export default function PricingBreakdownView({
@@ -49,11 +96,14 @@ export default function PricingBreakdownView({
   emphasizeTotal?: boolean
   variant?: 'default' | 'confirmation'
 }) {
-  const allChargeLines = [...breakdown.lines, ...breakdown.adjustments].filter(
-    (line) =>
-      !GUEST_LINE_KEYS.has(line.line_key) &&
-      (line.amount !== 0 || line.line_key === 'package'),
-  )
+  const allChargeLines =
+    variant === 'confirmation'
+      ? confirmationChargeLines(breakdown)
+      : [...breakdown.lines, ...breakdown.adjustments].filter(
+          (line) =>
+            !GUEST_LINE_KEYS.has(line.line_key) &&
+            (line.amount !== 0 || line.line_key === 'package'),
+        )
 
   return (
     <div className="space-y-4">
@@ -65,7 +115,7 @@ export default function PricingBreakdownView({
           >
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-cdl-fg">
-                {lineLabel(line.line_key, line.description, language)}
+                {lineLabel(line.line_key, line.description, language, variant)}
               </p>
               {line.formula && shouldShowFormula(line.line_key, variant) ? (
                 <p className="mt-0.5 text-xs text-cdl-muted">{line.formula}</p>

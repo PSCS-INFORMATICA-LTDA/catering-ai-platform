@@ -2712,25 +2712,17 @@ export default function QuoteWizard({
                   : state.customerDraftName.trim() ||
                     w.customerNotLinkedShort
             }
-            customerPhone={
-              linkedCustomer?.phone ??
-              selectedCustomer?.phone ??
-              state.customerDraftPhone
-            }
-            customerEmail={
-              linkedCustomer?.email ??
-              selectedCustomer?.email ??
-              state.customerDraftEmail
-            }
             packageName={
               selectedPackage ? getPackageName(selectedPackage, uiLocale) : null
             }
-            packageDescription={
-              selectedPackage
-                ? catalogPackageDescription(selectedPackage, state.language)
-                : null
-            }
             packageImageUrl={packageImageUrl}
+            selectedPackage={selectedPackage}
+            allPackages={packages}
+            packageOptionGroups={flatOptionGroups}
+            packageOptionGroupItems={flatOptionGroupItems}
+            packageItems={packageItems}
+            packageSideItems={packageSideItems}
+            fromWithSidesSection={fromWithSidesSection}
             additionals={reviewAdditionals}
             stepStatusCtx={stepStatusCtx}
             mandatoryPendingSteps={mandatoryPendingSteps}

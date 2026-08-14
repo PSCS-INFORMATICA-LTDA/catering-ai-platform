@@ -19,6 +19,10 @@ import {
 } from '@/Lib/packageOptionGroups'
 import type { WizardState } from '@/Lib/quoteWizardTypes'
 import type { CommercialRulesSnapshot } from '@/Lib/supabaseCommercialRules'
+import type {
+  PricingBreakdown,
+  PricingBreakdownLine,
+} from '@/Lib/pricing/pricingBreakdownTypes'
 import { getGrillPhotoStatusLabel } from '@/Lib/grillPhotoStatus'
 import { tw } from '@/Lib/quoteTranslations'
 import {
@@ -211,5 +215,145 @@ export function mapWizardToQuoteReview(
     quoteTotal: quoteTotals.quoteTotal,
     additionals: reviewAdditionals,
     language: lang,
+  }
+}
+
+type MapWizardBreakdownToQuoteReviewInput = Omit<
+  MapWizardToQuoteReviewInput,
+  'quoteTotals' | 'commercialRules' | 'packageUnitPrice'
+> & {
+  breakdown: PricingBreakdown
+}
+
+function firstBreakdownLine(
+  breakdown: PricingBreakdown,
+  lineKey: string,
+): PricingBreakdownLine | null {
+  return (
+    [...breakdown.lines, ...breakdown.adjustments].find(
+      (line) => line.line_key === lineKey,
+    ) ?? null
+  )
+}
+
+function breakdownLineTotal(
+  breakdown: PricingBreakdown,
+  lineKey: string,
+): number {
+  return [...breakdown.lines, ...breakdown.adjustments]
+    .filter((line) => line.line_key === lineKey)
+    .reduce((total, line) => total + Number(line.amount ?? 0), 0)
+}
+
+/**
+ * Adapta o snapshot canônico do Pricing Engine para o layout de proposta.
+ * Não executa fórmulas comerciais: apenas seleciona e formata valores já
+ * calculados no servidor.
+ */
+export function mapWizardBreakdownToQuoteReview(
+  input: MapWizardBreakdownToQuoteReviewInput,
+): QuoteReviewData {
+  const { breakdown } = input
+  const packageLine = firstBreakdownLine(breakdown, 'package')
+  const mileageLine = firstBreakdownLine(breakdown, 'mileage')
+  const grillRentalLine = firstBreakdownLine(breakdown, 'grill_rental')
+  const holidayLine = firstBreakdownLine(breakdown, 'holiday_surcharge')
+  const minimumLine = firstBreakdownLine(breakdown, 'minimum_order')
+  const discountLine = firstBreakdownLine(breakdown, 'discount')
+  const additionalLinesById = new Map(
+    breakdown.lines
+      .filter(
+        (line): line is PricingBreakdownLine & { source_id: string } =>
+          line.line_key === 'additional_item' &&
+          typeof line.source_id === 'string' &&
+          line.source_id.length > 0,
+      )
+      .map((line) => [line.source_id, line]),
+  )
+
+  const canonicalAdditionals = input.additionals.map((item) => {
+    const line = additionalLinesById.get(item.id)
+    return line
+      ? {
+          ...item,
+          quantity: line.quantity,
+          unitPrice: line.unit_price,
+          totalPrice: line.amount,
+        }
+      : item
+  })
+
+  const guestCounts = breakdown.guest_counts
+  const quoteTotals: QuoteTotals = {
+    billableAdults: 0,
+    freeChildren: 0,
+    halfPriceChildren: 0,
+    billableGuestCount: guestCounts.billable_guest_count,
+    physicalGuestCount: guestCounts.physical_guest_count,
+    packageTotal: Number(packageLine?.amount ?? 0),
+    additionalTotal: breakdownLineTotal(breakdown, 'additional_item'),
+    mileageFee: Number(mileageLine?.amount ?? 0),
+    grillRentalTotal: Number(grillRentalLine?.amount ?? 0),
+    quoteSubtotal: breakdown.subtotal,
+    holidaySurchargeAmount: Number(holidayLine?.amount ?? 0),
+    holidaySurchargePercent: breakdown.rules_applied.holidaySurchargePercent,
+    minimumOrderAmount: Number(
+      minimumLine?.metadata?.minimum_order_amount ?? 0,
+    ),
+    minimumOrderApplied: Boolean(minimumLine),
+    minimumOrderAdjustment: Number(minimumLine?.amount ?? 0),
+    reservationAmount: breakdown.deposit,
+    balanceDue: breakdown.balance,
+    quoteTotal: breakdown.total,
+  }
+
+  const mapped = mapWizardToQuoteReview({
+    ...input,
+    additionals: canonicalAdditionals,
+    packageUnitPrice: Number(packageLine?.unit_price ?? 0),
+    quoteTotals,
+    commercialRules: breakdown.rules_applied,
+  })
+
+  return {
+    ...mapped,
+    packageUnitPrice: packageLine?.unit_price ?? null,
+    packageTotal: packageLine?.amount ?? null,
+    additionalTotal: quoteTotals.additionalTotal,
+    guestCounts: {
+      adultCount: guestCounts.adultCount,
+      childrenUnder3Count: guestCounts.childrenUnder3Count,
+      children4To12Count: guestCounts.children4To12Count,
+    },
+    billableGuestCount: guestCounts.billable_guest_count,
+    physicalGuestCount: guestCounts.physical_guest_count,
+    grillRentalQty: grillRentalLine?.quantity ?? null,
+    grillRentalTotal: grillRentalLine?.amount ?? null,
+    mileageBaseLocation:
+      String(
+        mileageLine?.metadata?.base_location ??
+          breakdown.rules_applied.mileageBaseLocation,
+      ) || null,
+    mileageDistance:
+      mileageLine?.metadata?.distance != null
+        ? Number(mileageLine.metadata.distance)
+        : null,
+    mileageFreeLimit:
+      mileageLine?.metadata?.free_limit != null
+        ? Number(mileageLine.metadata.free_limit)
+        : breakdown.rules_applied.mileageFreeLimit,
+    mileageRate:
+      mileageLine?.unit_price ?? breakdown.rules_applied.mileageRate,
+    mileageFee: mileageLine?.amount ?? 0,
+    holidaySurchargeAmount: quoteTotals.holidaySurchargeAmount,
+    minimumOrderAdjustment: quoteTotals.minimumOrderAdjustment,
+    minimumOrderApplied: quoteTotals.minimumOrderApplied,
+    minimumOrderAmount: quoteTotals.minimumOrderAmount,
+    reservationPercentage:
+      breakdown.rules_applied.reservationPercentage ?? null,
+    reservationAmount: breakdown.deposit,
+    balanceDue: breakdown.balance,
+    quoteTotal: breakdown.total,
+    discount: Math.abs(Number(discountLine?.amount ?? 0)),
   }
 }

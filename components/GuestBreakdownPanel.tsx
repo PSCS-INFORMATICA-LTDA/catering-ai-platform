@@ -52,11 +52,13 @@ export default function GuestBreakdownPanel({
   totals,
   variant = 'default',
   language = 'pt',
+  showFinancialTotal = true,
 }: {
   guestCounts: GuestCounts
   totals: SnapshotTotals
   variant?: 'default' | 'compact' | 'pdf'
   language?: QuoteLanguage | string | null
+  showFinancialTotal?: boolean
 }) {
   const loc: QuoteLanguage =
     language === 'en' || language === 'es' ? language : 'pt'
@@ -85,12 +87,14 @@ export default function GuestBreakdownPanel({
         value={formatCount(totals.billableGuestCount)}
         highlight
       />
-      <StatCard
-        label={tw(loc, 'financialTotal')}
-        value={formatQuoteTotal(totals.quoteTotal)}
-        highlight
-        money
-      />
+      {showFinancialTotal ? (
+        <StatCard
+          label={tw(loc, 'financialTotal')}
+          value={formatQuoteTotal(totals.quoteTotal)}
+          highlight
+          money
+        />
+      ) : null}
     </>
   )
 

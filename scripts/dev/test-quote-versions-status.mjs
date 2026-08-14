@@ -33,7 +33,7 @@ function loadEnv() {
   const env = readFileSync(join(ROOT, '.env.local'), 'utf8')
   const get = (k) => {
     const m = env.match(new RegExp(`^${k}=(.*)$`, 'm'))
-    return m ? m[1].trim() : ''
+    return m ? m[1].trim().replace(/^["']|["']$/g, '') : ''
   }
   return { url: get('NEXT_PUBLIC_SUPABASE_URL'), service: get('SUPABASE_SERVICE_ROLE_KEY') }
 }

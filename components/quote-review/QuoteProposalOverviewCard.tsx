@@ -150,6 +150,7 @@ export default function QuoteProposalOverviewCard({
   grillRentalRequired = false,
   afterClient,
   language = 'pt',
+  showFinance = true,
 }: {
   customerName: string
   eventDate: string | null
@@ -174,6 +175,7 @@ export default function QuoteProposalOverviewCard({
   /** Conteúdo após endereço e preço (ex.: aviso de mínimo comercial). */
   afterClient?: ReactNode
   language?: QuoteLanguage | string | null
+  showFinance?: boolean
 }) {
   const locale = loc(language)
   const cityState = [city, state].filter(Boolean).join(', ')
@@ -250,26 +252,28 @@ export default function QuoteProposalOverviewCard({
         </div>
       )}
 
-      <div className="quote-proposal-overview-finance">
-        <p className="quote-proposal-label">
-          {tQuotesOrders(locale, 'docFinancialSection')}
-        </p>
-        <div className="quote-proposal-finance-lines">
-          {financialLines.map((line) => (
-            <div
-              key={line.label}
-              className={`quote-proposal-finance-row${
-                line.emphasis ? ' quote-proposal-finance-row--total' : ''
-              }${line.subtle ? ' quote-proposal-finance-row--subtle' : ''}${
-                line.discount ? ' quote-proposal-finance-row--discount' : ''
-              }`}
-            >
-              <span>{line.label}</span>
-              <span>{line.value}</span>
-            </div>
-          ))}
+      {showFinance ? (
+        <div className="quote-proposal-overview-finance">
+          <p className="quote-proposal-label">
+            {tQuotesOrders(locale, 'docFinancialSection')}
+          </p>
+          <div className="quote-proposal-finance-lines">
+            {financialLines.map((line) => (
+              <div
+                key={line.label}
+                className={`quote-proposal-finance-row${
+                  line.emphasis ? ' quote-proposal-finance-row--total' : ''
+                }${line.subtle ? ' quote-proposal-finance-row--subtle' : ''}${
+                  line.discount ? ' quote-proposal-finance-row--discount' : ''
+                }`}
+              >
+                <span>{line.label}</span>
+                <span>{line.value}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {afterClient ? (
         <div className="quote-proposal-overview-after-client mt-5 space-y-4">
