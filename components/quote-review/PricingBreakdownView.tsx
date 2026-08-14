@@ -8,6 +8,8 @@ function formatCurrency(value: number) {
   return `$${Number(value).toFixed(2)}`
 }
 
+const GUEST_LINE_KEYS = new Set(['guest_billable', 'guest_physical'])
+
 function lineLabel(
   lineKey: string,
   description: string,
@@ -26,19 +28,31 @@ function lineLabel(
   return map[lineKey] ?? lineKey
 }
 
+function shouldShowFormula(
+  lineKey: string,
+  variant: 'default' | 'confirmation',
+): boolean {
+  if (variant !== 'confirmation') return true
+  return !['package', 'additional_item'].includes(lineKey)
+}
+
 export default function PricingBreakdownView({
   breakdown,
   language,
   showDeposit = true,
   emphasizeTotal = false,
+  variant = 'default',
 }: {
   breakdown: PricingBreakdown
   language: QuoteLanguage
   showDeposit?: boolean
   emphasizeTotal?: boolean
+  variant?: 'default' | 'confirmation'
 }) {
   const allChargeLines = [...breakdown.lines, ...breakdown.adjustments].filter(
-    (line) => line.amount !== 0 || line.line_key === 'package',
+    (line) =>
+      !GUEST_LINE_KEYS.has(line.line_key) &&
+      (line.amount !== 0 || line.line_key === 'package'),
   )
 
   return (
@@ -53,7 +67,7 @@ export default function PricingBreakdownView({
               <p className="font-semibold text-cdl-fg">
                 {lineLabel(line.line_key, line.description, language)}
               </p>
-              {line.formula ? (
+              {line.formula && shouldShowFormula(line.line_key, variant) ? (
                 <p className="mt-0.5 text-xs text-cdl-muted">{line.formula}</p>
               ) : null}
             </div>

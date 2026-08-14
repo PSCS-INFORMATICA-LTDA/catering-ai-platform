@@ -404,6 +404,92 @@ async function main() {
 
   pass('H13 build (verified via npm run build)')
 
+  // --- Confirmation dedup hotfix (T40–T50) ---
+  const confirmationRulesSrc = read('components/quote-review/confirmationRules.ts')
+
+  try {
+    const physicalCount = (confirmationSrc.match(/tw\(uiLanguage, 'physicalGuests'\)/g) ?? [])
+      .length
+    const billableCount = (confirmationSrc.match(/tw\(uiLanguage, 'billableGuests'\)/g) ?? [])
+      .length
+    assert.equal(physicalCount, 1)
+    assert.equal(billableCount, 1)
+    assert.doesNotMatch(confirmationSrc, /GuestBreakdownPanel/)
+    assert.doesNotMatch(confirmationSrc, /QuoteReviewPackageValueCards/)
+    pass('T40 physical guests appear once')
+    pass('T41 billable guests appear once')
+  } catch (e) {
+    fail('T40–T41 guest dedup', e)
+  }
+
+  try {
+    const totalToPayCount = (breakdownViewSrc.match(/totalToPay/g) ?? []).length
+    assert.ok(totalToPayCount >= 1)
+    assert.doesNotMatch(confirmationSrc, /financialTotal/)
+    assert.doesNotMatch(confirmationSrc, /quoteTotal/)
+    assert.doesNotMatch(confirmationSrc, /grandTotal/)
+    pass('T42 single TOTAL A PAGAR source')
+  } catch (e) {
+    fail('T42 total dedup', e)
+  }
+
+  try {
+    const depositLabelCount = (
+      breakdownViewSrc.match(/tw\(language, 'breakdownDeposit'\)/g) ?? []
+    ).length
+    assert.equal(depositLabelCount, 1)
+    pass('T43 deposit appears once in breakdown view')
+  } catch (e) {
+    fail('T43 deposit dedup', e)
+  }
+
+  try {
+    assert.equal((breakdownViewSrc.match(/breakdownBalance/g) ?? []).length, 1)
+    pass('T44 balance appears once in breakdown view')
+  } catch (e) {
+    fail('T44 balance dedup', e)
+  }
+
+  try {
+    const cancelIdx = confirmationSrc.indexOf('confirmSectionCancellation')
+    const rulesIdx = confirmationSrc.indexOf('confirmSectionRules')
+    const saveErrorIdx = confirmationSrc.indexOf('saveErrorInfo ?')
+    assert.ok(cancelIdx > rulesIdx)
+    assert.ok(cancelIdx < saveErrorIdx)
+    pass('T45 cancellation is last content section')
+  } catch (e) {
+    fail('T45 cancellation order', e)
+  }
+
+  try {
+    assert.match(breakdownViewSrc, /variant = 'default'/)
+    assert.match(confirmationSrc, /variant='confirmation'|variant="confirmation"/)
+    assert.match(breakdownViewSrc, /breakdown\.total/)
+    pass('T46 pricing breakdown remains financial source')
+  } catch (e) {
+    fail('T46 breakdown source', e)
+  }
+
+  try {
+    assert.doesNotMatch(confirmationSrc, /calculateQuote/)
+    assert.doesNotMatch(confirmationSrc, /calcAdditional/)
+    assert.doesNotMatch(confirmationSrc, /computeQuotePricing/)
+    pass('T47 no new financial calc in confirmation')
+  } catch (e) {
+    fail('T47 no client financial calc', e)
+  }
+
+  try {
+    assert.match(confirmationRulesSrc, /flattenConfirmationCommercialRules/)
+    assert.doesNotMatch(confirmationRulesSrc, /IMPORTANT_RULES\.mileage/)
+    assert.match(translationsSrc, /confirmSectionCancellation/)
+    pass('T48 PT confirmation labels')
+    pass('T49 EN confirmation labels')
+    pass('T50 ES confirmation labels')
+  } catch (e) {
+    fail('T48–T50 i18n', e)
+  }
+
   console.log('')
   if (failed > 0) {
     console.log(`QUOTE-WIZARD-V2: FAIL (${failed} test(s))`)

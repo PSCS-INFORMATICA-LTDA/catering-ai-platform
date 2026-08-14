@@ -2,15 +2,15 @@
 
 import Link from 'next/link'
 import CatalogImageFrame from '@/components/CatalogImageFrame'
+import {
+  confirmationCancellationPolicy,
+  flattenConfirmationCommercialRules,
+} from '@/components/quote-review/confirmationRules'
 import PricingBreakdownView, {
   PricingPreviewStatus,
 } from '@/components/quote-review/PricingBreakdownView'
 import SaveQuoteTechnicalError from '@/components/quote-review/SaveQuoteTechnicalError'
 import WizardQuoteValidationPanel from '@/components/quote-review/WizardQuoteValidationPanel'
-import {
-  CANCELLATION_POLICY_SUMMARY,
-  IMPORTANT_RULES,
-} from '@/Lib/cdlCommercialRules'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
 import type { PricingBreakdown } from '@/Lib/pricing/pricingBreakdownTypes'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
@@ -21,23 +21,12 @@ import { getOptionalStepWarnings } from '@/app/quotes/new/wizardStepStatus'
 import { formatUiDate, toBcp47Locale } from '@/Lib/i18n/locales'
 import type { WizardSelectedAdditional } from './mapWizardToQuoteReview'
 
-function flattenImportantRules(): string[] {
-  return [
-    ...IMPORTANT_RULES.minimumOrder,
-    ...IMPORTANT_RULES.mileage,
-    ...IMPORTANT_RULES.reservation,
-    ...IMPORTANT_RULES.foodPolicy,
-    ...IMPORTANT_RULES.latePayment,
-    ...IMPORTANT_RULES.decemberJanuary,
-  ]
+function breakdownLine(breakdown: PricingBreakdown, lineKey: string) {
+  return breakdown.lines.find((line) => line.line_key === lineKey) ?? null
 }
 
 function formatCurrency(value: number) {
-  return `$${value.toFixed(2)}`
-}
-
-function mileageLine(breakdown: PricingBreakdown) {
-  return breakdown.lines.find((line) => line.line_key === 'mileage') ?? null
+  return `$${Number(value).toFixed(2)}`
 }
 
 export default function QuoteWizardConfirmationStep({
@@ -94,14 +83,18 @@ export default function QuoteWizardConfirmationStep({
   const docLang = lang
   const optionalWarnings = getOptionalStepWarnings(stepStatusCtx)
   const saveDisabled = saving || mandatoryPendingSteps.length > 0 || pricingLoading || !breakdown
-  const mileage = breakdown ? mileageLine(breakdown) : null
+  const mileage = breakdown ? breakdownLine(breakdown, 'mileage') : null
+  const packageLine = breakdown ? breakdownLine(breakdown, 'package') : null
   const rules = breakdown?.rules_applied
-  const physicalGuests = breakdown?.guest_counts.physical_guest_count ?? 0
-  const billableGuests = breakdown?.guest_counts.billable_guest_count ?? 0
+  const physicalGuests = breakdown?.guest_counts.physical_guest_count ?? null
+  const billableGuests = breakdown?.guest_counts.billable_guest_count ?? null
   const cityState = [state.city, state.state].filter(Boolean).join(' / ')
   const eventLocation = [state.address, cityState, state.zipCode]
     .filter(Boolean)
     .join(' · ')
+  const commercialRules = flattenConfirmationCommercialRules()
+  const cancellationPolicy = confirmationCancellationPolicy()
+  const showPricingPlaceholder = pricingLoading || Boolean(pricingError)
 
   return (
     <div className="space-y-8 pb-8">
@@ -178,13 +171,15 @@ export default function QuoteWizardConfirmationStep({
             <dt className="text-xs text-cdl-muted">{chrome.wizard.children4to12}</dt>
             <dd className="font-semibold">{state.children4To12Count}</dd>
           </div>
+        </dl>
+        <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-cdl-border pt-4 sm:max-w-md">
           <div>
             <dt className="text-xs text-cdl-muted">{tw(uiLanguage, 'physicalGuests')}</dt>
-            <dd className="font-semibold">{physicalGuests}</dd>
+            <dd className="font-semibold">{physicalGuests ?? '—'}</dd>
           </div>
           <div>
             <dt className="text-xs text-cdl-muted">{tw(uiLanguage, 'billableGuests')}</dt>
-            <dd className="font-semibold">{billableGuests}</dd>
+            <dd className="font-semibold">{billableGuests ?? '—'}</dd>
           </div>
         </dl>
       </section>
@@ -206,6 +201,11 @@ export default function QuoteWizardConfirmationStep({
             {packageDescription ? (
               <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-cdl-text-secondary">
                 {packageDescription}
+              </p>
+            ) : null}
+            {packageLine ? (
+              <p className="mt-3 text-sm font-semibold tabular-nums text-cdl-muted">
+                {tw(uiLanguage, 'breakdownPackage')}: {formatCurrency(packageLine.amount)}
               </p>
             ) : null}
           </div>
@@ -303,7 +303,7 @@ export default function QuoteWizardConfirmationStep({
             </div>
             <div>
               <dt className="text-xs text-cdl-muted">{tw(uiLanguage, 'mileageChargeable')}</dt>
-              <dd>{mileage?.quantity ?? Math.max(0, state.distance - rules.mileageFreeLimit)} mi</dd>
+              <dd>{mileage != null ? `${mileage.quantity} mi` : '—'}</dd>
             </div>
             <div>
               <dt className="text-xs text-cdl-muted">{tw(uiLanguage, 'mileageRateLabel')}</dt>
@@ -315,34 +315,33 @@ export default function QuoteWizardConfirmationStep({
                 <dd className="text-sm">{mileage.formula}</dd>
               </div>
             ) : null}
-            <div>
-              <dt className="text-xs text-cdl-muted">{tw(uiLanguage, 'mileageFeeFinal')}</dt>
-              <dd className="font-semibold">{formatCurrency(mileage?.amount ?? 0)}</dd>
-            </div>
           </dl>
-        ) : (
+        ) : showPricingPlaceholder ? (
           <PricingPreviewStatus
             loading={pricingLoading}
             error={pricingError}
             language={uiLanguage}
           />
-        )}
+        ) : null}
       </section>
 
       <section className="rounded-2xl border border-cdl-border bg-cdl-surface p-6 shadow-cdl">
         <h3 className="mb-4 text-sm font-black uppercase tracking-wider text-cdl-brand">
           {tw(uiLanguage, 'confirmSectionFinancial')}
         </h3>
-        <PricingPreviewStatus
-          loading={pricingLoading}
-          error={pricingError}
-          language={uiLanguage}
-        />
+        {showPricingPlaceholder ? (
+          <PricingPreviewStatus
+            loading={pricingLoading}
+            error={pricingError}
+            language={uiLanguage}
+          />
+        ) : null}
         {breakdown ? (
           <PricingBreakdownView
             breakdown={breakdown}
             language={uiLanguage}
             emphasizeTotal
+            variant="confirmation"
           />
         ) : null}
       </section>
@@ -352,7 +351,7 @@ export default function QuoteWizardConfirmationStep({
           {tw(uiLanguage, 'confirmSectionRules')}
         </h3>
         <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-cdl-text-secondary">
-          {flattenImportantRules().map((rule) => (
+          {commercialRules.map((rule) => (
             <li key={rule}>{rule}</li>
           ))}
         </ul>
@@ -363,7 +362,7 @@ export default function QuoteWizardConfirmationStep({
           {tw(uiLanguage, 'confirmSectionCancellation')}
         </h3>
         <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-cdl-text-secondary">
-          {CANCELLATION_POLICY_SUMMARY.map((paragraph) => (
+          {cancellationPolicy.map((paragraph) => (
             <li key={paragraph}>{paragraph}</li>
           ))}
         </ul>
