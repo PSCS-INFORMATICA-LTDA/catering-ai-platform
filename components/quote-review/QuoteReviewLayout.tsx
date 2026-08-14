@@ -193,34 +193,36 @@ function ConfirmationProposalBody({
         </div>
       </ProposalSection>
 
-      <ProposalSection title={t.review.packageSection}>
-        <QuoteReviewPackageCdlSection
-          packageName={data.packageName}
-          packageImageUrl={data.packageImageUrl}
-          packageSummary={data.packageSummary}
-          packageSelections={data.packageSelections}
-          physicalGuestCount={data.physicalGuestCount}
-          billableGuestCount={data.billableGuestCount}
-          packageTotal={data.packageTotal}
-          packageUnitPrice={data.packageUnitPrice}
-          language={lang}
-          showValueCards={false}
-          showAdditionalItems={false}
-        />
-      </ProposalSection>
+      <div className="quote-proposal-grid-2">
+        <ProposalSection title={t.review.packageSection}>
+          <QuoteReviewPackageCdlSection
+            packageName={data.packageName}
+            packageImageUrl={data.packageImageUrl}
+            packageSummary={data.packageSummary}
+            packageSelections={data.packageSelections}
+            physicalGuestCount={data.physicalGuestCount}
+            billableGuestCount={data.billableGuestCount}
+            packageTotal={data.packageTotal}
+            packageUnitPrice={data.packageUnitPrice}
+            language={lang}
+            showValueCards={false}
+            showAdditionalItems={false}
+          />
+        </ProposalSection>
 
-      <ProposalSection title={t.review.guestsSection}>
-        <GuestBreakdownPanel
-          guestCounts={data.guestCounts}
-          totals={{
-            billableGuestCount: breakdown.guest_counts.billable_guest_count,
-            physicalGuestCount: breakdown.guest_counts.physical_guest_count,
-            quoteTotal: breakdown.total,
-          }}
-          language={lang}
-          showFinancialTotal={false}
-        />
-      </ProposalSection>
+        <ProposalSection title={t.review.guestsSection}>
+          <GuestBreakdownPanel
+            guestCounts={data.guestCounts}
+            totals={{
+              billableGuestCount: breakdown.guest_counts.billable_guest_count,
+              physicalGuestCount: breakdown.guest_counts.physical_guest_count,
+              quoteTotal: breakdown.total,
+            }}
+            language={lang}
+            showFinancialTotal={false}
+          />
+        </ProposalSection>
+      </div>
 
       <ProposalSection title={t.review.additionalsSection}>
         {groupedAdditionals.length === 0 ? (
