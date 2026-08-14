@@ -9,6 +9,7 @@ import CatalogImageFrame from '../../../components/CatalogImageFrame'
 import QuoteStepHeader from '../../../components/quotes/QuoteStepHeader'
 import QuoteStepper from '../../../components/quotes/QuoteStepper'
 import QuotePackageStepExplorer from '../../../components/quotes/QuotePackageStepExplorer'
+import QuoteWizardStepNav from '../../../components/quotes/QuoteWizardStepNav'
 import AdditionalCategorySection from '../../../components/quotes/additionals/AdditionalCategorySection'
 import {
   calcAdditionalLineTotalForItem,
@@ -2612,56 +2613,27 @@ export default function QuoteWizard({
           />
         )}
 
-        {step !== 5 && (
-        <div className="mt-8 space-y-3">
-          {step === 2 && !state.packageId && packageStepMessage ? (
-            <p className="text-center text-sm font-medium text-[var(--brand-primary)] sm:text-right">
-              {packageStepMessage}
-            </p>
-          ) : null}
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <button
-              type="button"
-              onClick={goBack}
-              disabled={step === 0}
-              className="rounded-xl border border-cdl-border bg-cdl-surface px-6 py-3 text-sm font-bold uppercase tracking-wider text-cdl-fg transition-colors hover:border-cdl-accent-border disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {quoteStrings.back}
-            </button>
-            {step === 2 && state.packageId ? null : (
-            <span className="relative inline-flex w-full sm:w-auto">
-              {step === 2 && packageStepNextDisabled ? (
-                <button
-                  type="button"
-                  aria-label={w.nextCompleteOptions}
-                  className="absolute inset-0 z-10 cursor-not-allowed rounded-xl"
-                  onClick={() => {
-                    if (!state.packageId) {
-                      setPackageStepMessage(w.selectPackageToContinue)
-                      return
-                    }
-                    setPackageSelectionAttempted(true)
-                  }}
-                />
-              ) : null}
-              <button
-                type="button"
-                onClick={goNext}
-                disabled={
-                  step === WIZARD_STEP_COUNT - 1 ||
-                  (step === 2 && packageStepNextDisabled) ||
-                  (step === 3 && additionalsStepNextDisabled) ||
-                  (step === 4 && grillStepPendingIssues.length > 0)
-                }
-                className="cdl-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
-              >
-                {quoteStrings.next}
-              </button>
-            </span>
-            )}
-          </div>
-        </div>
-        )}
+        {step !== 5 ? (
+          <QuoteWizardStepNav
+            step={step}
+            wizardStepCount={WIZARD_STEP_COUNT}
+            language={uiLocale}
+            packageId={state.packageId}
+            packageStepMessage={packageStepMessage}
+            packageStepNextDisabled={packageStepNextDisabled}
+            additionalsStepNextDisabled={additionalsStepNextDisabled}
+            grillStepPendingIssuesCount={grillStepPendingIssues.length}
+            onBack={goBack}
+            onNext={goNext}
+            onPackageNextBlockedClick={() => {
+              if (!state.packageId) {
+                setPackageStepMessage(w.selectPackageToContinue)
+                return
+              }
+              setPackageSelectionAttempted(true)
+            }}
+          />
+        ) : null}
       </div>
     </main>
   )

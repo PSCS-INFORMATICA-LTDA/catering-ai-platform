@@ -330,20 +330,58 @@ async function main() {
   pass('T38 tsc (verified via npm run build)')
   pass('T39 build (verified via npm run build)')
 
-  // --- Visual hotfix: Adicionais + Churrasco (H01–H13) ---
+  // --- Visual hotfix: Adicionais + Churrasco (H01–H14) ---
+  const stepNavSrc = read('components/quotes/QuoteWizardStepNav.tsx')
+  const translationsFullSrc = read('Lib/quoteTranslations.ts')
+
   try {
+    assert.match(wizardSrc, /QuoteWizardStepNav/)
     assert.doesNotMatch(wizardSrc, /WizardStepButton/)
     assert.doesNotMatch(wizardSrc, /continueToBbq/)
-    pass('H01 Adicionais has only one advance CTA')
-    pass('H02 internal continueToBbq removed')
+    pass('H01 Adicionais has only one advance CTA via QuoteWizardStepNav')
+    pass('H02 internal continueToBbq removed from wizard')
   } catch (e) {
     fail('H01–H02 single CTA', e)
   }
 
   try {
+    const step3Match = wizardSrc.match(/\{step === 3 && \([\s\S]*?\n        \)\}/)
+    const step3Block = step3Match?.[0] ?? ''
+    assert.ok(step3Block.length > 0)
+    assert.doesNotMatch(step3Block, /cdl-btn-primary/)
+    assert.doesNotMatch(step3Block, /goNext/)
+    assert.doesNotMatch(step3Block, /Continuar para Churrasqueira/)
+    assert.doesNotMatch(step3Block, /continueToBbq/)
+    pass('H14 step 3 content has no internal advance CTA')
+  } catch (e) {
+    fail('H14 additionals step DOM', e)
+  }
+
+  try {
+    const wizardComponentFiles = [
+      'app/quotes/new/QuoteWizard.tsx',
+      'components/quotes/QuoteWizardStepNav.tsx',
+      'components/quotes/additionals/AdditionalCategorySection.tsx',
+      'components/quotes/additionals/AdditionalItemCard.tsx',
+      'components/quotes/QuotePackageStepExplorer.tsx',
+      'components/quotes/SelectedPackageDetails.tsx',
+    ]
+    for (const rel of wizardComponentFiles) {
+      const src = read(rel)
+      assert.doesNotMatch(src, /Continuar para Churrasqueira/)
+      assert.doesNotMatch(src, /Continue to BBQ Setup/)
+      assert.doesNotMatch(src, /continueToBbq/)
+    }
+    assert.doesNotMatch(translationsFullSrc, /continueToBbq/)
+    pass('H15 wizard tree has no continue-to-grill CTA strings')
+  } catch (e) {
+    fail('H15 wizard tree string scan', e)
+  }
+
+  try {
     assert.match(wizardSrc, /additionalsStepNextDisabled/)
     assert.match(wizardSrc, /allAdditionalCategoriesVisited/)
-    assert.match(wizardSrc, /step === 3 && additionalsStepNextDisabled/)
+    assert.match(stepNavSrc, /step === 3 && additionalsStepNextDisabled/)
     pass('H03 Next blocked when category not visited')
     pass('H04 Next enabled after all visited')
   } catch (e) {
@@ -394,8 +432,7 @@ async function main() {
   }
 
   try {
-    const nextButtonCount = (wizardSrc.match(/quoteStrings\.next/g) ?? []).length
-    assert.ok(nextButtonCount >= 1)
+    assert.match(stepNavSrc, /quoteStrings\.next/)
     assert.doesNotMatch(wizardSrc, /step === 3[\s\S]*?cdl-btn-primary[\s\S]*?cdl-btn-primary/)
     pass('H12 mobile without duplicated advance CTA')
   } catch (e) {

@@ -110,7 +110,6 @@ type QuoteStrings = {
   itemsCount: (count: number) => string
   selectedCount: (count: number) => string
   noAdditionalsAvailable: string
-  continueToBbq: string
   additionalsStepHint: string
   addUnit: string
   removeUnit: string
@@ -451,7 +450,6 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     selectedCount: (count) =>
       `${count} selecionado${count !== 1 ? 's' : ''}`,
     noAdditionalsAvailable: 'Nenhum adicional disponível.',
-    continueToBbq: 'Continuar para Churrasqueira →',
     additionalsStepHint: 'Escolha os itens extras para complementar a cotação.',
     addUnit: 'Adicionar unidade',
     removeUnit: 'Remover unidade',
@@ -804,7 +802,6 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     itemsCount: (count) => `${count} ${count === 1 ? 'item' : 'items'}`,
     selectedCount: (count) => `${count} selected`,
     noAdditionalsAvailable: 'No additional items available.',
-    continueToBbq: 'Continue to BBQ Setup →',
     additionalsStepHint: 'Choose extra items to complement the quote.',
     addUnit: 'Add unit',
     removeUnit: 'Remove unit',
@@ -1155,7 +1152,6 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       `${count} ${count === 1 ? 'artículo' : 'artículos'}`,
     selectedCount: (count) => `${count} seleccionado${count !== 1 ? 's' : ''}`,
     noAdditionalsAvailable: 'No hay artículos adicionales disponibles.',
-    continueToBbq: 'Continuar a Parrilla →',
     additionalsStepHint:
       'Elija artículos extra para complementar la cotización.',
     addUnit: 'Agregar unidad',
