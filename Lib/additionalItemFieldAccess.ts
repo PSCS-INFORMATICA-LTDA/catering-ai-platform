@@ -32,8 +32,15 @@ export function getAdditionalItemCategoryKey(
   item: AdditionalItemFieldSource | null | undefined,
 ): string {
   const raw = item?.category_key?.trim()
-  if (!raw) return 'OUTROS'
-  return normalizeCategoryKey(raw)
+  if (raw) return normalizeCategoryKey(raw)
+
+  const categoryLabel =
+    item?.category_pt?.trim() ||
+    item?.category_en?.trim() ||
+    item?.category_es?.trim()
+  if (categoryLabel) return normalizeCategoryKey(categoryLabel)
+
+  return 'OUTROS'
 }
 
 export function getAdditionalItemCategoryLabel(

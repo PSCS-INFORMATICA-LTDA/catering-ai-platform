@@ -697,6 +697,11 @@ async function main() {
   try {
     let visited = markVisited(new Set(), 'GUARNICOES')
     assert.ok(visited.has('GUARNICOES'))
+    assert.match(wizardSrc, /onReviewed=\{\(\) => markAdditionalCategoryVisited\(categoryKey\)\}/)
+    assert.match(
+      read('components/quotes/additionals/AdditionalCategorySection.tsx'),
+      /IntersectionObserver/,
+    )
     pass('A02 opening category marks visited')
   } catch (e) {
     fail('A02 open marks visited', e)
@@ -850,6 +855,8 @@ async function main() {
 
   try {
     assert.match(stepNavSrc, /step === 3 && additionalsStepNextDisabled/)
+    assert.match(stepNavSrc, /onAdditionalsNextBlockedClick/)
+    assert.match(wizardSrc, /handleAdditionalsNextBlockedClick/)
     pass('A22 remaining > 0 keeps next disabled')
   } catch (e) {
     fail('A22 next disabled', e)

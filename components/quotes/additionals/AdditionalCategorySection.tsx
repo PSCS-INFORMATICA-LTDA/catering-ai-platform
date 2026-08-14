@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import AdditionalItemCard from '@/components/quotes/additionals/AdditionalItemCard'
 import type { QuoteAdditionalItem } from '@/Lib/quoteAdditionalDisplay'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
@@ -17,6 +18,7 @@ export default function AdditionalCategorySection({
   language,
   onToggle,
   onChangeQty,
+  onReviewed,
 }: {
   categoryKey: string
   categoryLabel: string
@@ -29,14 +31,49 @@ export default function AdditionalCategorySection({
   language: QuoteLanguage
   onToggle: () => void
   onChangeQty: (itemId: string, qty: number) => void
+  onReviewed?: () => void
 }) {
   const t = getQuoteStrings(language)
+  const sectionRef = useRef<HTMLElement>(null)
   const reviewStatus = visited
     ? tw(language, 'categoryReviewStatusReviewed')
     : tw(language, 'categoryReviewStatusPending')
 
+  useEffect(() => {
+    if (visited || !onReviewed) return
+    const node = sectionRef.current
+    if (!node) return
+
+    let visibleTimer: number | undefined
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) {
+          if (visibleTimer) window.clearTimeout(visibleTimer)
+          visibleTimer = undefined
+          return
+        }
+        if (visibleTimer) return
+        visibleTimer = window.setTimeout(() => {
+          onReviewed()
+        }, 400)
+      },
+      { threshold: 0.35 },
+    )
+
+    observer.observe(node)
+    return () => {
+      observer.disconnect()
+      if (visibleTimer) window.clearTimeout(visibleTimer)
+    }
+  }, [visited, onReviewed])
+
   return (
-    <section className="overflow-hidden rounded-2xl border border-cdl-border bg-cdl-surface shadow-cdl">
+    <section
+      ref={sectionRef}
+      id={`additional-category-${categoryKey}`}
+      data-category-key={categoryKey}
+      className="overflow-hidden rounded-2xl border border-cdl-border bg-cdl-surface shadow-cdl"
+    >
       <button
         type="button"
         onClick={onToggle}

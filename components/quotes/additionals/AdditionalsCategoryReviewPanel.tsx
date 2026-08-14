@@ -8,13 +8,13 @@ export default function AdditionalsCategoryReviewPanel({
   total,
   remaining,
   complete,
-  pendingLabels,
+  pendingCategories,
 }: {
   language: QuoteLanguage
   total: number
   remaining: number
   complete: boolean
-  pendingLabels: string[]
+  pendingCategories: ReadonlyArray<{ categoryKey: string; label: string }>
 }) {
   if (total <= 0) return null
 
@@ -39,14 +39,14 @@ export default function AdditionalsCategoryReviewPanel({
               total: String(total),
             })}
       </p>
-      {!complete && pendingLabels.length > 0 ? (
+      {!complete && pendingCategories.length > 0 ? (
         <div className="mt-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-cdl-muted">
             {tw(language, 'categoriesReviewPendingHeading')}
           </p>
           <ul className="mt-1.5 space-y-1 text-sm text-cdl-text-secondary">
-            {pendingLabels.map((label) => (
-              <li key={label} className="flex gap-2">
+            {pendingCategories.map(({ categoryKey, label }) => (
+              <li key={categoryKey} className="flex gap-2">
                 <span className="text-cdl-warning" aria-hidden>
                   •
                 </span>

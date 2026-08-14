@@ -16,6 +16,7 @@ export default function QuoteWizardStepNav({
   onBack,
   onNext,
   onPackageNextBlockedClick,
+  onAdditionalsNextBlockedClick,
 }: {
   step: number
   wizardStepCount: number
@@ -28,6 +29,7 @@ export default function QuoteWizardStepNav({
   onBack: () => void
   onNext: () => void
   onPackageNextBlockedClick: () => void
+  onAdditionalsNextBlockedClick: () => void
 }) {
   const quoteStrings = getQuoteStrings(language)
   const w = quoteStrings.wizard
@@ -65,6 +67,14 @@ export default function QuoteWizardStepNav({
                 aria-label={tw(language, 'nextCompleteOptions')}
                 className="absolute inset-0 z-10 cursor-not-allowed rounded-xl"
                 onClick={onPackageNextBlockedClick}
+              />
+            ) : null}
+            {step === 3 && additionalsStepNextDisabled ? (
+              <button
+                type="button"
+                aria-label={quoteStrings.wizard.categoriesReviewPendingHeading}
+                className="absolute inset-0 z-10 cursor-not-allowed rounded-xl"
+                onClick={onAdditionalsNextBlockedClick}
               />
             ) : null}
             <button

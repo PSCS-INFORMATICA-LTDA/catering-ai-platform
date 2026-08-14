@@ -1471,25 +1471,58 @@ export default function QuoteWizard({
     [additionalItemsByCategory],
   )
 
-  const pendingAdditionalCategoryLabels = useMemo(() => {
+  const pendingAdditionalCategories = useMemo(() => {
     const pendingKeys = getUnvisitedAdditionalCategoryKeys(
       additionalCategoryKeys,
       visitedAdditionalCategories,
     )
-    return pendingKeys.map(
-      (key) => additionalCategoryDisplayLabels.get(key) ?? key,
-    )
+    return pendingKeys.map((key) => ({
+      categoryKey: key,
+      label: additionalCategoryDisplayLabels.get(key) ?? key,
+    }))
   }, [
     additionalCategoryKeys,
     visitedAdditionalCategories,
     additionalCategoryDisplayLabels,
   ])
 
+  function scrollToAdditionalCategory(categoryKey: string) {
+    const target = document.getElementById(`additional-category-${categoryKey}`)
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  function handleAdditionalsNextBlockedClick() {
+    const firstPending = pendingAdditionalCategories[0]
+    if (!firstPending) return
+    scrollToAdditionalCategory(firstPending.categoryKey)
+    setOpenAdditionalCategories((prev) => {
+      const next = new Set(prev)
+      next.add(firstPending.categoryKey)
+      return next
+    })
+    markAdditionalCategoryVisited(firstPending.categoryKey)
+  }
+
   useEffect(() => {
     if (step !== 3) {
       setOpenAdditionalCategories(new Set())
     }
   }, [step])
+
+  useEffect(() => {
+    if (step !== 3 || openAdditionalCategories.size === 0) return
+    setVisitedAdditionalCategories((prev) => {
+      let changed = false
+      const next = new Set(prev)
+      for (const key of openAdditionalCategories) {
+        if (!next.has(key)) {
+          next.add(key)
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [step, openAdditionalCategories])
 
   useEffect(() => {
     if (step !== 3) return
@@ -2507,7 +2540,7 @@ export default function QuoteWizard({
                     total={additionalCategoryReviewProgress.total}
                     remaining={additionalCategoryReviewProgress.remaining}
                     complete={allAdditionalCategoriesVisited}
-                    pendingLabels={pendingAdditionalCategoryLabels}
+                    pendingCategories={pendingAdditionalCategories}
                   />
                 ) : null}
                 {additionalItemsByCategory.map(
@@ -2528,6 +2561,7 @@ export default function QuoteWizard({
                     language={uiLocale}
                     onToggle={() => toggleAdditionalCategory(categoryKey)}
                     onChangeQty={setAdditionalQty}
+                    onReviewed={() => markAdditionalCategoryVisited(categoryKey)}
                   />
                 ),
                 )}
@@ -2728,6 +2762,7 @@ export default function QuoteWizard({
               }
               setPackageSelectionAttempted(true)
             }}
+            onAdditionalsNextBlockedClick={handleAdditionalsNextBlockedClick}
           />
         ) : null}
       </div>
