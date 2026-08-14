@@ -16,6 +16,10 @@ import {
   type SaveQuoteErrorInfo,
 } from './supabaseSaveError'
 import { getSupabaseServerClient } from './supabaseServer'
+import {
+  computeServerPricingForSave,
+  mergeServerPricingIntoSaveInput,
+} from './pricing/applyServerPricingToQuoteSave'
 
 export type CreateQuoteResult = {
   data: { id: string; quote_number: string | null } | null
@@ -146,11 +150,23 @@ export async function createQuote(input: QuoteSaveInput): Promise<CreateQuoteRes
     return { data: null, error: customerError }
   }
 
-  const saveInput: QuoteSaveInput = {
+  const saveInputBase: QuoteSaveInput = {
     ...input,
     customerId,
     customerDraft: null,
   }
+
+  const pricingResult = await computeServerPricingForSave(saveInputBase)
+  if (!pricingResult.ok) {
+    const errorInfo = buildSaveQuoteError(
+      'validation',
+      new Error(pricingResult.error.message),
+    )
+    logSaveQuoteError(errorInfo)
+    return { data: null, error: errorInfo }
+  }
+
+  const saveInput = mergeServerPricingIntoSaveInput(saveInputBase, pricingResult)
 
   const companyId = getCdlCompanyId()
   const { number: quoteNumber, error: numberError } =
@@ -208,6 +224,7 @@ export async function createQuote(input: QuoteSaveInput): Promise<CreateQuoteRes
     ...buildQuoteSavePayload(saveInput, {
       mode: 'create',
       eventId,
+      pricingBreakdown: pricingResult.breakdown,
     }),
     quote_number: quoteNumber,
   }

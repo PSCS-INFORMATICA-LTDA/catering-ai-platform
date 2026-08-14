@@ -27,6 +27,7 @@ import {
   getChargedMilesFromSnapshot,
   readQuoteSnapshot,
 } from '@/Lib/readQuoteSnapshot'
+import { calcGrillRentalFee } from '@/Lib/calculateQuoteTotals'
 import {
   getGrillPhotoDetailLabel,
 } from '@/Lib/grillPhotoStatus'
@@ -603,9 +604,10 @@ export function QuotePdfDocument({
   const grillRentalTotal =
     grillRentalStored > 0
       ? grillRentalStored
-      : quote.grill_rental_required
-        ? Math.round(Math.max(0, grillRentalQty) * 100 * 100) / 100
-        : 0
+      : calcGrillRentalFee(
+          Boolean(quote.grill_rental_required),
+          grillRentalQty,
+        )
   const minimumAdjustment = quote.minimum_order_applied
     ? Math.max(
         0,

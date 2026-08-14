@@ -9,6 +9,7 @@ import {
   calcPhysicalGuestCount,
 } from './quoteGuestFields'
 import type { QuoteSnapshotRecord } from './readQuoteSnapshot'
+import type { PricingBreakdown } from './pricing/pricingBreakdownTypes'
 import {
   assertNoForbiddenEventColumns,
   pickEventsInsertPayload,
@@ -68,6 +69,7 @@ export type QuoteSaveInput = {
   additionals: QuoteAdditionalSaveLine[]
   recalculateSnapshot?: boolean
   existingSnapshot?: QuoteSnapshotRecord
+  pricingBreakdown?: PricingBreakdown | null
 }
 
 function addDaysIso(date: Date, days: number) {
@@ -183,7 +185,11 @@ function buildQuoteGrillAndMileagePayload(
 
 export function buildQuoteSavePayload(
   input: QuoteSaveInput,
-  options?: { mode?: 'create' | 'update'; eventId?: string | null },
+  options?: {
+    mode?: 'create' | 'update'
+    eventId?: string | null
+    pricingBreakdown?: PricingBreakdown | null
+  },
 ) {
   const guestCounts = {
     adultCount: input.adultCount,
@@ -217,6 +223,11 @@ export function buildQuoteSavePayload(
 
   if (!shouldRecalculate && input.existingSnapshot) {
     const existing = input.existingSnapshot
+    const existingBreakdown =
+      options?.pricingBreakdown ??
+      (existing as { pricing_breakdown?: PricingBreakdown | null })
+        .pricing_breakdown ??
+      null
     return {
       ...basePayload,
       ...(options?.mode === 'update' && input.language
@@ -250,6 +261,7 @@ export function buildQuoteSavePayload(
       holiday_surcharge_amount:
         (existing as { holiday_surcharge_amount?: number | null })
           .holiday_surcharge_amount ?? 0,
+      ...(existingBreakdown ? { pricing_breakdown: existingBreakdown } : {}),
     }
   }
 
@@ -295,6 +307,9 @@ export function buildQuoteSavePayload(
       ? { language: quoteLanguage }
       : {}
 
+  const pricingBreakdown =
+    options?.pricingBreakdown ?? input.pricingBreakdown ?? null
+
   return {
     ...basePayload,
     ...createMeta,
@@ -313,6 +328,7 @@ export function buildQuoteSavePayload(
     minimum_order_amount: draftSnapshot.minimumOrderAmount,
     minimum_order_applied: draftSnapshot.minimumOrderApplied,
     holiday_surcharge_amount: draftSnapshot.holidaySurchargeAmount,
+    ...(pricingBreakdown ? { pricing_breakdown: pricingBreakdown } : {}),
   }
 }
 

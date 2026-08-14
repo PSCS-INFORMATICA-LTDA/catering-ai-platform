@@ -10,7 +10,8 @@ import { fetchQuotePackageSelections } from './fetchPackageOptionGroups'
 import { fetchQuoteDetail } from './fetchQuoteDetail'
 import type { CommercialRulesSnapshot } from './supabaseCommercialRules'
 import { fetchSupabaseCommercialRules } from './supabaseCommercialRules'
-import { supabase } from './supabase'
+import { getActiveCompanyId } from '@/Lib/tenant/resolveTenant'
+import { getSupabaseServerClient } from './supabaseServer'
 import { tw } from './quoteTranslations'
 
 type QuoteRow = {
@@ -144,10 +145,14 @@ export async function fetchQuoteForEdit(
     }
   }
 
+  const companyId = getActiveCompanyId()
+  const supabase = getSupabaseServerClient()
+
   const { data: quoteRow, error: quoteRowError } = await supabase
     .from('quotes')
     .select('event_id, customer_id, package_id')
     .eq('id', quoteId)
+    .eq('company_id', companyId)
     .eq('active', true)
     .maybeSingle()
 
@@ -171,13 +176,19 @@ export async function fetchQuoteForEdit(
     catalogRes,
   ] = await Promise.all([
     eventId
-      ? supabase.from('events').select('*').eq('id', eventId).maybeSingle()
+      ? supabase
+          .from('events')
+          .select('*')
+          .eq('id', eventId)
+          .eq('company_id', companyId)
+          .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     customerId
       ? supabase
           .from('customers')
           .select(buildCustomersListSelect())
           .eq('id', customerId)
+          .eq('company_id', companyId)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     packageId
@@ -185,18 +196,21 @@ export async function fetchQuoteForEdit(
           .from('packages')
           .select(buildPackagesListSelect())
           .eq('id', packageId)
+          .or(`company_id.eq.${companyId},company_id.is.null`)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     supabase
       .from('quote_additional_items')
       .select('additional_item_id, quantity, unit_price, total_price')
-      .eq('quote_id', quoteId),
+      .eq('quote_id', quoteId)
+      .eq('company_id', companyId),
     fetchQuotePackageSelections(quoteId),
     loadPackageConfiguration(),
     supabase
       .from('packages')
       .select(buildPackagesListSelect())
       .eq('active', true)
+      .or(`company_id.eq.${companyId},company_id.is.null`)
       .order('display_order', { ascending: true }),
     fetchCatalogItems({
       activeOnly: true,

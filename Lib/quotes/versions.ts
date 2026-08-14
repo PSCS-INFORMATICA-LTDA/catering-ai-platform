@@ -57,6 +57,7 @@ type QuoteRowForSnapshot = {
   proposal_response: string | null
   proposal_accepted_at: string | null
   active: boolean | null
+  pricing_breakdown?: Record<string, unknown> | null
 }
 
 const QUOTE_SNAPSHOT_SELECT = `
@@ -66,7 +67,7 @@ const QUOTE_SNAPSHOT_SELECT = `
   package_total, additional_total,
   mileage_base_location, mileage_distance, mileage_free_limit, mileage_rate, mileage_fee,
   discount, discount_amount, reservation_percentage, reservation_amount, balance_due, quote_total,
-  proposal_response, proposal_accepted_at, active
+  proposal_response, proposal_accepted_at, active, pricing_breakdown
 `.trim()
 
 async function fetchQuoteRowForSnapshot(
@@ -129,6 +130,7 @@ export async function buildCommercialSnapshotFromQuote(
     quote_number: quote.quote_number,
     language: quote.language ?? 'pt',
     currency_code: quote.currency_code ?? 'USD',
+    pricing_breakdown: quote.pricing_breakdown ?? null,
     package: {
       id: quote.package_id,
       price_per_person: quote.package_price_per_person ?? 0,

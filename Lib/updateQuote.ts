@@ -14,6 +14,11 @@ import {
   type SaveQuoteErrorInfo,
 } from './supabaseSaveError'
 import { getSupabaseServerClient } from './supabaseServer'
+import {
+  computeServerPricingForSave,
+  mergeServerPricingIntoSaveInput,
+} from './pricing/applyServerPricingToQuoteSave'
+import type { PricingBreakdown } from './pricing/pricingBreakdownTypes'
 
 export type UpdateQuoteResult = {
   data: { id: string } | null
@@ -35,7 +40,7 @@ export async function updateQuote(
 
   const { data: existingQuote, error: fetchError } = await supabase
     .from('quotes')
-    .select('event_id, reservation_confirmed_at')
+    .select('event_id, reservation_confirmed_at, pricing_breakdown, quote_total, proposal_accepted_at, accepted_version_id')
     .eq('id', quoteId)
     .eq('company_id', companyId)
     .eq('active', true)
@@ -94,9 +99,31 @@ export async function updateQuote(
     eventId = eventData.id as string
   }
 
-  const quotePayload = buildQuoteSavePayload(input, {
+  const shouldRecalculate =
+    input.recalculateSnapshot !== false
+
+  let saveInput = input
+  let pricingBreakdown: PricingBreakdown | null =
+    (existingQuote?.pricing_breakdown as PricingBreakdown | null) ?? null
+
+  if (shouldRecalculate) {
+    const pricingResult = await computeServerPricingForSave(input)
+    if (!pricingResult.ok) {
+      const errorInfo = buildSaveQuoteError(
+        'validation',
+        new Error(pricingResult.error.message),
+      )
+      logSaveQuoteError(errorInfo)
+      return { data: null, error: errorInfo }
+    }
+    saveInput = mergeServerPricingIntoSaveInput(input, pricingResult)
+    pricingBreakdown = pricingResult.breakdown
+  }
+
+  const quotePayload = buildQuoteSavePayload(saveInput, {
     mode: 'update',
     eventId: eventId ?? null,
+    pricingBreakdown,
   })
 
   const { error: updateError } = await supabase
@@ -207,7 +234,7 @@ export async function updateQuote(
     additionalItemsPayload = buildAdditionalItemRows(
       quoteId,
       companyId,
-      input.additionals,
+      saveInput.additionals,
     )
   } catch (error) {
     const errorInfo = buildSaveQuoteError('additionals', error, {
