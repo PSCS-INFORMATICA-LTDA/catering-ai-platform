@@ -653,26 +653,6 @@ function mapSelectedAdditionalRow(
   }
 }
 
-function WizardStepButton({
-  label,
-  onClick,
-  className = '',
-}: {
-  label: string
-  onClick: () => void
-  className?: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`cdl-btn-primary ${className}`}
-    >
-      {label}
-    </button>
-  )
-}
-
 // mileage + quote totals: see Lib/calculateQuoteTotals.ts
 
 function SectionCard({
@@ -1813,6 +1793,33 @@ export default function QuoteWizard({
     state.packageSelections,
   ])
 
+  const allAdditionalCategoriesVisited = useMemo(() => {
+    if (additionalCategoryKeys.length === 0) return true
+    return additionalCategoryKeys.every((key) =>
+      visitedAdditionalCategories.has(key),
+    )
+  }, [additionalCategoryKeys, visitedAdditionalCategories])
+
+  const additionalsStepNextDisabled = !allAdditionalCategoriesVisited
+
+  const grillStepPendingIssues = useMemo(() => {
+    const issues: string[] = []
+    if (isGrillPhotoRequiredAndMissing(state)) {
+      issues.push(tw(uiLocale, 'grillPendingPhoto'))
+    }
+    if (state.grillRentalRequired && state.grillRentalQty <= 0) {
+      issues.push(tw(uiLocale, 'grillPendingRentalQty'))
+    }
+    return issues
+  }, [
+    state.hasGrill,
+    state.grillPhotoStatus,
+    state.grillPhotoUrl,
+    state.grillRentalRequired,
+    state.grillRentalQty,
+    uiLocale,
+  ])
+
   useEffect(() => {
     const previousStep = previousStepRef.current
     previousStepRef.current = step
@@ -2387,7 +2394,7 @@ export default function QuoteWizard({
         )}
 
         {step === 3 && (
-          <div className="space-y-6 pb-28">
+          <div className="space-y-6">
             <p className="text-sm text-cdl-muted">
               {quoteStrings.additionalsStepHint}
             </p>
@@ -2397,12 +2404,17 @@ export default function QuoteWizard({
               </p>
             ) : (
               <div className="space-y-3">
-                {additionalCategoryKeys.length > 0 &&
-                additionalCategoryKeys.some(
-                  (key) => !visitedAdditionalCategories.has(key),
-                ) ? (
-                  <p className="text-sm text-cdl-warning">
-                    {tw(uiLocale, 'categoriesReviewRequired')}
+                {additionalCategoryKeys.length > 0 ? (
+                  <p
+                    className={`text-sm ${
+                      allAdditionalCategoriesVisited
+                        ? 'text-cdl-muted'
+                        : 'text-cdl-text-secondary'
+                    }`}
+                  >
+                    {allAdditionalCategoriesVisited
+                      ? tw(uiLocale, 'categoriesReviewComplete')
+                      : tw(uiLocale, 'categoriesReviewRequired')}
                   </p>
                 ) : null}
                 {additionalItemsByCategory.map(
@@ -2424,18 +2436,29 @@ export default function QuoteWizard({
                 )}
               </div>
             )}
-
-            <div className="flex justify-end rounded-2xl border border-cdl-border bg-cdl-surface p-7 shadow-cdl sm:p-9">
-              <WizardStepButton
-                label={quoteStrings.continueToBbq}
-                onClick={goNext}
-              />
-            </div>
           </div>
         )}
 
         {step === 4 && (
-          <SectionCard>
+          <div className="space-y-6">
+            {grillStepPendingIssues.length > 0 ? (
+              <section className="rounded-2xl border border-cdl-action/40 bg-cdl-red-soft p-5 shadow-cdl sm:p-6">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-cdl-action">
+                  {tw(uiLocale, 'stepPendingTitle')}
+                </h2>
+                <ul className="mt-3 space-y-1 text-sm text-cdl-text-secondary">
+                  {grillStepPendingIssues.map((issue) => (
+                    <li key={issue} className="flex gap-2">
+                      <span className="text-cdl-action" aria-hidden>
+                        •
+                      </span>
+                      <span>{issue}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+            <SectionCard>
             <div className="grid grid-cols-1 gap-5 sm:col-span-2 sm:grid-cols-2">
               <CheckboxField
                 label={w.hasGrill}
@@ -2496,11 +2519,6 @@ export default function QuoteWizard({
                 <p className="mt-3 rounded-xl border border-cdl-border-subtle bg-cdl-inset px-4 py-3 text-sm leading-relaxed text-cdl-text-secondary">
                   {w.grillPhotoHint}
                 </p>
-                {isGrillPhotoRequiredAndMissing(state) ? (
-                  <p className="mt-2 text-sm text-cdl-warning">
-                    {tw(uiLocale, 'grillPhotoRequiredError')}
-                  </p>
-                ) : null}
               </div>
               <CheckboxField
                 label={w.grillRentalRequired}
@@ -2542,6 +2560,7 @@ export default function QuoteWizard({
               </div>
             </div>
           </SectionCard>
+          </div>
         )}
 
         {step === 5 && (
@@ -2630,7 +2649,9 @@ export default function QuoteWizard({
                 onClick={goNext}
                 disabled={
                   step === WIZARD_STEP_COUNT - 1 ||
-                  (step === 2 && packageStepNextDisabled)
+                  (step === 2 && packageStepNextDisabled) ||
+                  (step === 3 && additionalsStepNextDisabled) ||
+                  (step === 4 && grillStepPendingIssues.length > 0)
                 }
                 className="cdl-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
               >

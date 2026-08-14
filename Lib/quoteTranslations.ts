@@ -386,7 +386,11 @@ type QuoteStrings = {
     confirmSectionRules: string
     confirmSectionCancellation: string
     categoriesReviewRequired: string
+    categoriesReviewComplete: string
     grillPhotoRequiredError: string
+    grillPendingPhoto: string
+    grillPendingRentalQty: string
+    stepPendingTitle: string
     packagesLoadError: string
     mileageOrigin: string
     mileageDestination: string
@@ -737,8 +741,13 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       confirmSectionFinancial: 'Financeiro',
       confirmSectionRules: 'Regras comerciais',
       confirmSectionCancellation: 'Política de cancelamento',
-      categoriesReviewRequired: 'Revise todas as categorias de adicionais antes de continuar.',
-      grillPhotoRequiredError: 'Foto da churrasqueira obrigatória quando o cliente possui churrasqueira.',
+      categoriesReviewRequired: 'Revise todas as categorias antes de continuar.',
+      categoriesReviewComplete: 'Todas as categorias foram revisadas.',
+      grillPhotoRequiredError: 'Adicione uma foto da churrasqueira para continuar.',
+      grillPendingPhoto: 'Adicione uma foto da churrasqueira para continuar.',
+      grillPendingRentalQty:
+        'Informe uma quantidade válida para a locação da churrasqueira.',
+      stepPendingTitle: 'Pendências desta etapa',
       packagesLoadError: 'Erro ao carregar pacotes. Tente atualizar a página.',
       mileageOrigin: 'Origem',
       mileageDestination: 'Destino',
@@ -1083,8 +1092,12 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       confirmSectionFinancial: 'Financial summary',
       confirmSectionRules: 'Commercial rules',
       confirmSectionCancellation: 'Cancellation policy',
-      categoriesReviewRequired: 'Review all additional categories before continuing.',
-      grillPhotoRequiredError: 'Grill photo is required when the customer has a grill.',
+      categoriesReviewRequired: 'Review all categories before continuing.',
+      categoriesReviewComplete: 'All categories have been reviewed.',
+      grillPhotoRequiredError: 'Add a photo of the grill to continue.',
+      grillPendingPhoto: 'Add a photo of the grill to continue.',
+      grillPendingRentalQty: 'Enter a valid grill rental quantity.',
+      stepPendingTitle: 'Pending items for this step',
       packagesLoadError: 'Failed to load packages. Try refreshing the page.',
       mileageOrigin: 'Origin',
       mileageDestination: 'Destination',
@@ -1433,8 +1446,13 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       confirmSectionFinancial: 'Financiero',
       confirmSectionRules: 'Reglas comerciales',
       confirmSectionCancellation: 'Política de cancelación',
-      categoriesReviewRequired: 'Revise todas las categorías de adicionales antes de continuar.',
-      grillPhotoRequiredError: 'Foto de la parrilla obligatoria cuando el cliente tiene parrilla.',
+      categoriesReviewRequired: 'Revise todas las categorías antes de continuar.',
+      categoriesReviewComplete: 'Todas las categorías fueron revisadas.',
+      grillPhotoRequiredError: 'Agregue una foto de la parrilla para continuar.',
+      grillPendingPhoto: 'Agregue una foto de la parrilla para continuar.',
+      grillPendingRentalQty:
+        'Ingrese una cantidad válida para el alquiler de la parrilla.',
+      stepPendingTitle: 'Pendientes de esta etapa',
       packagesLoadError: 'Error al cargar paquetes. Intente actualizar la página.',
       mileageOrigin: 'Origen',
       mileageDestination: 'Destino',

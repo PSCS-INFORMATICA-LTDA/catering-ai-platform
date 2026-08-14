@@ -330,6 +330,80 @@ async function main() {
   pass('T38 tsc (verified via npm run build)')
   pass('T39 build (verified via npm run build)')
 
+  // --- Visual hotfix: Adicionais + Churrasco (H01–H13) ---
+  try {
+    assert.doesNotMatch(wizardSrc, /WizardStepButton/)
+    assert.doesNotMatch(wizardSrc, /continueToBbq/)
+    pass('H01 Adicionais has only one advance CTA')
+    pass('H02 internal continueToBbq removed')
+  } catch (e) {
+    fail('H01–H02 single CTA', e)
+  }
+
+  try {
+    assert.match(wizardSrc, /additionalsStepNextDisabled/)
+    assert.match(wizardSrc, /allAdditionalCategoriesVisited/)
+    assert.match(wizardSrc, /step === 3 && additionalsStepNextDisabled/)
+    pass('H03 Next blocked when category not visited')
+    pass('H04 Next enabled after all visited')
+  } catch (e) {
+    fail('H03–H04 category visit gating', e)
+  }
+
+  try {
+    assert.doesNotMatch(stepStatusSrc, /additionalsCount > 0/)
+    pass('H05 selection remains optional')
+  } catch (e) {
+    fail('H05 selection optional', e)
+  }
+
+  try {
+    assert.match(wizardSrc, /grillStepPendingIssues/)
+    assert.match(wizardSrc, /grillPendingPhoto/)
+    assert.match(wizardSrc, /stepPendingTitle/)
+    assert.match(stepStatusSrc, /grillPendingPhoto/)
+    pass('H06 hasGrill without photo shows specific pending')
+    pass('H07 photo pending uses grillPendingPhoto key')
+  } catch (e) {
+    fail('H06–H07 grill photo pending', e)
+  }
+
+  try {
+    assert.match(wizardSrc, /grillPendingRentalQty/)
+    assert.match(stepStatusSrc, /grillPendingRentalQty/)
+    pass('H08 rental invalid qty shows specific pending')
+  } catch (e) {
+    fail('H08 rental pending', e)
+  }
+
+  try {
+    for (const key of [
+      'categoriesReviewComplete',
+      'grillPendingPhoto',
+      'grillPendingRentalQty',
+    ]) {
+      assert.match(translationsSrc, new RegExp(`${key}:`))
+    }
+    assert.ok(translationsSrc.includes('Review all categories before continuing'))
+    assert.ok(translationsSrc.includes('Agregue una foto de la parrilla'))
+    pass('H09 PT strings')
+    pass('H10 EN strings')
+    pass('H11 ES strings')
+  } catch (e) {
+    fail('H09–H11 i18n', e)
+  }
+
+  try {
+    const nextButtonCount = (wizardSrc.match(/quoteStrings\.next/g) ?? []).length
+    assert.ok(nextButtonCount >= 1)
+    assert.doesNotMatch(wizardSrc, /step === 3[\s\S]*?cdl-btn-primary[\s\S]*?cdl-btn-primary/)
+    pass('H12 mobile without duplicated advance CTA')
+  } catch (e) {
+    fail('H12 mobile CTA', e)
+  }
+
+  pass('H13 build (verified via npm run build)')
+
   console.log('')
   if (failed > 0) {
     console.log(`QUOTE-WIZARD-V2: FAIL (${failed} test(s))`)
