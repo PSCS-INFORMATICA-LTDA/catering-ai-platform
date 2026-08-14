@@ -1,6 +1,7 @@
 import { getCatalogItemImageUrl } from '@/Lib/catalogItemVisual'
 import { resolveCatalogItemDisplayLabel } from '@/Lib/cdlPackageItemI18n'
 import type { PackageCatalogRecord } from '@/Lib/packageCatalogVisual'
+import type { PricingBreakdown } from '@/Lib/pricing/pricingBreakdownTypes'
 
 export type QuoteAdditionalItem = {
   item_id: string
@@ -92,6 +93,7 @@ export type QuoteDetail = {
   minimum_order_amount?: number | null
   minimum_order_applied?: boolean | null
   holiday_surcharge_amount?: number | null
+  pricing_breakdown?: PricingBreakdown | Record<string, unknown> | null
   reservation_confirmed_at?: string | null
   reservation_confirmed_by?: string | null
   currency_code?: string | null

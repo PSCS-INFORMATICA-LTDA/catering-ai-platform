@@ -800,6 +800,30 @@ async function main() {
     fail('M01–M10 mileage confirmation', e)
   }
 
+  const detailViewSrc = read('app/quotes/[id]/QuoteDetailView.tsx')
+  const mapDetailSrc = read(
+    'components/quote-review/mapQuoteDetailToQuoteReview.ts',
+  )
+  const fetchDetailSrc = read('Lib/fetchQuoteDetail.ts')
+
+  try {
+    assert.match(detailViewSrc, /QuoteReviewLayout/)
+    assert.match(detailViewSrc, /variant="confirmation"/)
+    assert.match(detailViewSrc, /mapQuoteDetailToQuoteReview/)
+    assert.match(detailViewSrc, /buildSavedQuotePresentationBreakdown/)
+    assert.match(mapDetailSrc, /export function mapQuoteDetailToQuoteReview/)
+    assert.match(mapDetailSrc, /export function buildSavedQuotePresentationBreakdown/)
+    assert.match(fetchDetailSrc, /pricing_breakdown/)
+    assert.doesNotMatch(detailViewSrc, /quote-proposal-grid-2/)
+    assert.doesNotMatch(detailViewSrc, /QuoteReviewPackageValueCards/)
+    assert.doesNotMatch(detailViewSrc, /applyCommercialMinimums/)
+    assert.doesNotMatch(detailViewSrc, /calcGrillRentalFee/)
+    assert.doesNotMatch(detailViewSrc, /QuoteReservationPaymentCard/)
+    pass('S01 saved quote reuses official confirmation layout')
+  } catch (e) {
+    fail('S01 saved quote reuses official confirmation layout', e)
+  }
+
   // --- Additionals visited categories (A01–A16) ---
   const wizardAdditionalSrc = read('Lib/wizardAdditionalCategories.ts')
   const {

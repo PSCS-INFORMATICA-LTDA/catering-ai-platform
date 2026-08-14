@@ -68,7 +68,7 @@ export async function fetchQuoteDetail(
   const companyId = getActiveCompanyId()
   const supabase = getSupabaseServerClient()
 
-  const [viewRes, guestRes, proposalRes, orderRes, commercialRes] =
+  const [viewRes, guestRes, proposalRes, orderRes, commercialRes, breakdownRes] =
     await Promise.all([
     supabase
       .from('quote_detail_view')
@@ -97,6 +97,12 @@ export async function fetchQuoteDetail(
     supabase
       .from('quotes')
       .select(COMMERCIAL_COLUMNS)
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .maybeSingle(),
+    supabase
+      .from('quotes')
+      .select('pricing_breakdown')
       .eq('id', id)
       .eq('company_id', companyId)
       .maybeSingle(),
@@ -139,12 +145,23 @@ export async function fetchQuoteDetail(
     )
   }
 
+  if (
+    breakdownRes.error &&
+    !/column|pricing_breakdown/i.test(breakdownRes.error.message)
+  ) {
+    console.error(
+      `[CDL Quote] Failed to load pricing_breakdown for quote ${id}:`,
+      breakdownRes.error.message,
+    )
+  }
+
   const quote = normalizeQuoteDetailRow({
     ...(viewRes.data as Record<string, unknown>),
     ...(guestRes.data ?? {}),
     ...(proposalRes.data && !proposalRes.error ? proposalRes.data : {}),
     ...(orderRes.data && !orderRes.error ? orderRes.data : {}),
     ...(commercialRes.data && !commercialRes.error ? commercialRes.data : {}),
+    ...(breakdownRes.data && !breakdownRes.error ? breakdownRes.data : {}),
   })
 
   const packageCatalog = await fetchQuoteLinkedPackageCatalog({
