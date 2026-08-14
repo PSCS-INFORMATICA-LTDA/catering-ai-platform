@@ -7,8 +7,6 @@ export const WIZARD_STEP_KEYS = [
   'package',
   'additionals',
   'bbq',
-  'details',
-  'summary',
   'confirmation',
 ] as const
 
@@ -362,6 +360,43 @@ type QuoteStrings = {
     refresh: string
     refreshing: string
     physicalGuests: string
+    billableGuests: string
+    totalToPay: string
+    pricingCalculating: string
+    pricingCalcError: string
+    breakdownPackage: string
+    breakdownAdditional: string
+    breakdownMileage: string
+    breakdownGrillRental: string
+    breakdownHoliday: string
+    breakdownMinimum: string
+    breakdownDiscount: string
+    breakdownSubtotal: string
+    breakdownDeposit: string
+    breakdownBalance: string
+    breakdownDepositPct: string
+    confirmSectionClient: string
+    confirmSectionEvent: string
+    confirmSectionGuests: string
+    confirmSectionPackage: string
+    confirmSectionAdditionals: string
+    confirmSectionGrill: string
+    confirmSectionMileage: string
+    confirmSectionFinancial: string
+    confirmSectionRules: string
+    confirmSectionCancellation: string
+    categoriesReviewRequired: string
+    grillPhotoRequiredError: string
+    packagesLoadError: string
+    mileageOrigin: string
+    mileageDestination: string
+    mileageTotalDistance: string
+    mileageIncluded: string
+    mileageChargeable: string
+    mileageRateLabel: string
+    mileageFormula: string
+    mileageFeeFinal: string
+    editStep: string
     financialTotal: string
     additionalValue: string
     mileageValue: string
@@ -388,11 +423,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       0: 'Identifique o cliente para começar a cotação.',
       1: 'Informe data, local e detalhes do evento.',
       2: 'Escolha o pacote e confira as opções disponíveis.',
-      3: 'Selecione itens extras, se desejar.',
-      4: 'Configure churrasqueira e equipamentos.',
-      5: 'Informe distância e dados de deslocamento.',
-      6: 'Defina reserva e pagamento inicial.',
-      7: 'Revise tudo antes de confirmar.',
+      3: 'Revise todas as categorias de adicionais (seleção opcional).',
+      4: 'Configure churrasqueira, foto e rental quando aplicável.',
+      5: 'Revise e confirme a cotação comercial completa.',
     },
     wizardSteps: [
       'Cliente',
@@ -400,8 +433,6 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       'Pacote',
       'Adicionais',
       'Churrasco',
-      'Dados',
-      'Resumo',
       'Confirmação',
     ],
     next: 'Próximo',
@@ -681,6 +712,43 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       refresh: 'Atualizar',
       refreshing: 'Atualizando…',
       physicalGuests: 'Convidados físicos',
+      billableGuests: 'Pessoas cobradas',
+      totalToPay: 'TOTAL A PAGAR',
+      pricingCalculating: 'Calculando valores...',
+      pricingCalcError: 'Não foi possível calcular a cotação.',
+      breakdownPackage: 'Pacote',
+      breakdownAdditional: 'Adicional',
+      breakdownMileage: 'Milhagem',
+      breakdownGrillRental: 'Aluguel de churrasqueira',
+      breakdownHoliday: 'Acréscimo feriado',
+      breakdownMinimum: 'Pedido mínimo',
+      breakdownDiscount: 'Desconto',
+      breakdownSubtotal: 'Subtotal',
+      breakdownDeposit: 'Sinal',
+      breakdownBalance: 'Saldo',
+      breakdownDepositPct: '{pct}% configurado nas regras comerciais',
+      confirmSectionClient: 'Cliente',
+      confirmSectionEvent: 'Evento',
+      confirmSectionGuests: 'Convidados',
+      confirmSectionPackage: 'Pacote',
+      confirmSectionAdditionals: 'Adicionais',
+      confirmSectionGrill: 'Churrasqueira',
+      confirmSectionMileage: 'Milhagem',
+      confirmSectionFinancial: 'Financeiro',
+      confirmSectionRules: 'Regras comerciais',
+      confirmSectionCancellation: 'Política de cancelamento',
+      categoriesReviewRequired: 'Revise todas as categorias de adicionais antes de continuar.',
+      grillPhotoRequiredError: 'Foto da churrasqueira obrigatória quando o cliente possui churrasqueira.',
+      packagesLoadError: 'Erro ao carregar pacotes. Tente atualizar a página.',
+      mileageOrigin: 'Origem',
+      mileageDestination: 'Destino',
+      mileageTotalDistance: 'Distância total',
+      mileageIncluded: 'Milhas incluídas',
+      mileageChargeable: 'Milhas cobradas',
+      mileageRateLabel: 'Tarifa',
+      mileageFormula: 'Fórmula',
+      mileageFeeFinal: 'Taxa final de milhagem',
+      editStep: 'Editar',
       financialTotal: 'Total a pagar',
       additionalValue: 'Valor adicional',
       mileageValue: 'Valor milhagem',
@@ -705,20 +773,16 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       0: 'Identify the customer to start the quote.',
       1: 'Enter date, location, and event details.',
       2: 'Choose the package and review available options.',
-      3: 'Select extra items, if needed.',
-      4: 'Configure grill and equipment.',
-      5: 'Enter distance and travel details.',
-      6: 'Set deposit and initial payment.',
-      7: 'Review everything before confirming.',
+      3: 'Review all additional categories (selection optional).',
+      4: 'Configure grill, photo and rental when applicable.',
+      5: 'Review and confirm the full commercial quote.',
     },
     wizardSteps: [
       'Customer',
       'Event',
       'Package',
       'Extras',
-      'BBQ Setup',
-      'Details',
-      'Summary',
+      'BBQ',
       'Confirmation',
     ],
     next: 'Next',
@@ -994,6 +1058,43 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       refresh: 'Refresh',
       refreshing: 'Refreshing…',
       physicalGuests: 'Physical guests',
+      billableGuests: 'Billable guests',
+      totalToPay: 'TOTAL DUE',
+      pricingCalculating: 'Calculating pricing...',
+      pricingCalcError: 'Could not calculate the quote.',
+      breakdownPackage: 'Package',
+      breakdownAdditional: 'Additional item',
+      breakdownMileage: 'Mileage',
+      breakdownGrillRental: 'Grill rental',
+      breakdownHoliday: 'Holiday surcharge',
+      breakdownMinimum: 'Minimum order',
+      breakdownDiscount: 'Discount',
+      breakdownSubtotal: 'Subtotal',
+      breakdownDeposit: 'Deposit',
+      breakdownBalance: 'Balance',
+      breakdownDepositPct: '{pct}% per commercial rules',
+      confirmSectionClient: 'Customer',
+      confirmSectionEvent: 'Event',
+      confirmSectionGuests: 'Guests',
+      confirmSectionPackage: 'Package',
+      confirmSectionAdditionals: 'Additional items',
+      confirmSectionGrill: 'Grill setup',
+      confirmSectionMileage: 'Mileage',
+      confirmSectionFinancial: 'Financial summary',
+      confirmSectionRules: 'Commercial rules',
+      confirmSectionCancellation: 'Cancellation policy',
+      categoriesReviewRequired: 'Review all additional categories before continuing.',
+      grillPhotoRequiredError: 'Grill photo is required when the customer has a grill.',
+      packagesLoadError: 'Failed to load packages. Try refreshing the page.',
+      mileageOrigin: 'Origin',
+      mileageDestination: 'Destination',
+      mileageTotalDistance: 'Total distance',
+      mileageIncluded: 'Included miles',
+      mileageChargeable: 'Chargeable miles',
+      mileageRateLabel: 'Rate',
+      mileageFormula: 'Formula',
+      mileageFeeFinal: 'Final mileage fee',
+      editStep: 'Edit',
       financialTotal: 'Total due',
       additionalValue: 'Additional value',
       mileageValue: 'Mileage value',
@@ -1018,11 +1119,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       0: 'Identifique al cliente para comenzar la cotización.',
       1: 'Indique fecha, lugar y detalles del evento.',
       2: 'Elija el paquete y revise las opciones disponibles.',
-      3: 'Seleccione artículos extra, si desea.',
-      4: 'Configure parrilla y equipos.',
-      5: 'Indique distancia y datos de desplazamiento.',
-      6: 'Defina reserva y pago inicial.',
-      7: 'Revise todo antes de confirmar.',
+      3: 'Revise todas las categorías de adicionales (selección opcional).',
+      4: 'Configure parrilla, foto y rental cuando aplique.',
+      5: 'Revise y confirme la cotización comercial completa.',
     },
     wizardSteps: [
       'Cliente',
@@ -1030,8 +1129,6 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       'Paquete',
       'Adicionales',
       'Parrilla',
-      'Datos',
-      'Resumen',
       'Confirmación',
     ],
     next: 'Siguiente',
@@ -1311,6 +1408,43 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       refresh: 'Actualizar',
       refreshing: 'Actualizando…',
       physicalGuests: 'Invitados físicos',
+      billableGuests: 'Personas cobradas',
+      totalToPay: 'TOTAL A PAGAR',
+      pricingCalculating: 'Calculando valores...',
+      pricingCalcError: 'No fue posible calcular la cotización.',
+      breakdownPackage: 'Paquete',
+      breakdownAdditional: 'Adicional',
+      breakdownMileage: 'Kilometraje',
+      breakdownGrillRental: 'Alquiler de parrilla',
+      breakdownHoliday: 'Recargo feriado',
+      breakdownMinimum: 'Pedido mínimo',
+      breakdownDiscount: 'Descuento',
+      breakdownSubtotal: 'Subtotal',
+      breakdownDeposit: 'Señal',
+      breakdownBalance: 'Saldo',
+      breakdownDepositPct: '{pct}% según reglas comerciales',
+      confirmSectionClient: 'Cliente',
+      confirmSectionEvent: 'Evento',
+      confirmSectionGuests: 'Invitados',
+      confirmSectionPackage: 'Paquete',
+      confirmSectionAdditionals: 'Adicionales',
+      confirmSectionGrill: 'Parrilla',
+      confirmSectionMileage: 'Kilometraje',
+      confirmSectionFinancial: 'Financiero',
+      confirmSectionRules: 'Reglas comerciales',
+      confirmSectionCancellation: 'Política de cancelación',
+      categoriesReviewRequired: 'Revise todas las categorías de adicionales antes de continuar.',
+      grillPhotoRequiredError: 'Foto de la parrilla obligatoria cuando el cliente tiene parrilla.',
+      packagesLoadError: 'Error al cargar paquetes. Intente actualizar la página.',
+      mileageOrigin: 'Origen',
+      mileageDestination: 'Destino',
+      mileageTotalDistance: 'Distancia total',
+      mileageIncluded: 'Millas incluidas',
+      mileageChargeable: 'Millas cobradas',
+      mileageRateLabel: 'Tarifa',
+      mileageFormula: 'Fórmula',
+      mileageFeeFinal: 'Tarifa final de kilometraje',
+      editStep: 'Editar',
       financialTotal: 'Total a pagar',
       additionalValue: 'Valor adicional',
       mileageValue: 'Valor de millaje',

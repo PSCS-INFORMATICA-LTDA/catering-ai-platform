@@ -24,7 +24,6 @@ import {
   formatUiDate,
   toBcp47Locale,
 } from '../../../Lib/i18n/locales'
-import { tQuotesOrders } from '../../../Lib/i18n/quotesOrders'
 import { tCommon } from '../../../Lib/i18n/common'
 import PackageOptionsDebugPanel from '../../../components/quotes/PackageOptionsDebugPanel'
 import { CDL_DEFAULT_COMPANY_ID } from '../../../Lib/cdlCompany'
@@ -36,11 +35,12 @@ import {
   getPackageDescription as catalogPackageDescription,
   getPackageLabel,
 } from '../../../Lib/packageFieldAccess'
-import QuoteWizardSummaryStep from '../../../components/quote-review/QuoteWizardSummaryStep'
+import QuoteWizardConfirmationStep from '../../../components/quote-review/QuoteWizardConfirmationStep'
 import { resolvePackageCatalogImageUrl } from '../../../Lib/packageCatalogVisual'
 import { calcAdditionalLineTotal } from '../../../Lib/calculateQuoteTotals'
 import type { CommercialRulesSnapshot } from '../../../Lib/supabaseCommercialRules'
-import { calculateQuoteDraftFromSupabasePricing } from '../../../Lib/calculateQuoteDraftFromSupabasePricing'
+import type { PricingBreakdown } from '@/Lib/pricing/pricingBreakdownTypes'
+import { useQuotePricingPreview } from '@/Lib/hooks/useQuotePricingPreview'
 import type { QuoteSaveInput } from '../../../Lib/buildQuoteSavePayload'
 import { saveQuoteViaApi } from '../../../Lib/saveQuoteViaApi'
 import {
@@ -95,6 +95,7 @@ import AddressAutocompleteFields from './AddressAutocompleteFields'
 import {
   getMandatoryPendingSteps,
   getStepVisualStatus,
+  isGrillPhotoRequiredAndMissing,
   isQuoteReadyToSave,
   type StepStatusContext,
 } from './wizardStepStatus'
@@ -172,35 +173,7 @@ export type AdditionalItem = {
 /** Item do catálogo mestre (`catalog_items`). */
 export type CatalogItem = AdditionalItem
 
-const WIZARD_STEP_COUNT = 8
-
-function formatCurrency(value: number) {
-  return `$${value.toFixed(2)}`
-}
-
-function roundMoney(value: number) {
-  return Math.round(value * 100) / 100
-}
-
-function roundPercentage(value: number) {
-  return Math.round(value * 1000) / 1000
-}
-
-function formatPercentage(value: number) {
-  const rounded = roundPercentage(Math.min(100, Math.max(0, value)))
-  const formatted = rounded.toFixed(3).replace(/\.?0+$/, '')
-  return `${formatted}%`
-}
-
-function formatReservationSummary(
-  percentage: number,
-  amount: number,
-  amountCustomized: boolean,
-) {
-  const pct = formatPercentage(percentage)
-  const abs = formatCurrency(amount)
-  return amountCustomized ? `${abs} (${pct})` : `${pct} (${abs})`
-}
+const WIZARD_STEP_COUNT = 6
 
 function formatDate(value: string, locale: string | null | undefined = 'pt') {
   return formatUiDate(value, locale, {
@@ -721,62 +694,6 @@ function SectionCard({
   )
 }
 
-function Field({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs font-bold uppercase tracking-wider text-cdl-muted">
-        {label}
-      </span>
-      <span className="text-sm text-cdl-fg">{value ?? '—'}</span>
-    </div>
-  )
-}
-
-function MileageSummaryPanel({
-  distance,
-  freeLimit,
-  rate,
-  mileageFee,
-  language = 'pt',
-}: {
-  distance: number
-  freeLimit: number
-  rate: number
-  mileageFee: number
-  language?: QuoteLanguage | string | null
-}) {
-  const chargedMiles = Math.max(0, distance - freeLimit)
-
-  return (
-    <div className="sm:col-span-2 rounded-xl border border-cdl-border bg-cdl-inset px-6 py-5 shadow-cdl">
-      <p className="cdl-eyebrow">{tw(language, 'mileageSummary')}</p>
-      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div>
-          <p className="cdl-eyebrow">{tw(language, 'totalMiles')}</p>
-          <p className="mt-2 text-xl font-bold text-cdl-fg">{distance} mi</p>
-        </div>
-        <div>
-          <p className="cdl-eyebrow">{tw(language, 'includedMiles')}</p>
-          <p className="mt-2 text-xl font-bold text-cdl-fg">{freeLimit} mi</p>
-        </div>
-        <div>
-          <p className="cdl-eyebrow">{tw(language, 'chargedMiles')}</p>
-          <p className="mt-2 text-xl font-bold text-cdl-price">{chargedMiles} mi</p>
-        </div>
-        <div>
-          <p className="cdl-eyebrow">{tw(language, 'calculatedFee')}</p>
-          <p className="mt-2 text-xl font-bold text-cdl-price">
-            {formatCurrency(mileageFee)}
-          </p>
-        </div>
-      </div>
-      <p className="mt-4 text-xs text-cdl-text-secondary">
-        {chargedMiles} mi × {formatCurrency(rate)}/mi
-      </p>
-    </div>
-  )
-}
-
 function InputField({
   label,
   type = 'text',
@@ -1031,8 +948,9 @@ export default function QuoteWizard({
   const [openAdditionalCategories, setOpenAdditionalCategories] = useState<
     Set<string>
   >(() => new Set())
-  const [reservationAmountCustomized, setReservationAmountCustomized] =
-    useState(false)
+  const [visitedAdditionalCategories, setVisitedAdditionalCategories] =
+    useState<Set<string>>(() => new Set())
+  const grillPhotoInputRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [saveErrorInfo, setSaveErrorInfo] = useState<SaveQuoteErrorInfo | null>(
     null,
@@ -1411,6 +1329,15 @@ export default function QuoteWizard({
     }
   }, [step])
 
+  function markAdditionalCategoryVisited(categoryKey: string) {
+    setVisitedAdditionalCategories((prev) => {
+      if (prev.has(categoryKey)) return prev
+      const next = new Set(prev)
+      next.add(categoryKey)
+      return next
+    })
+  }
+
   function toggleAdditionalCategory(category: string) {
     setOpenAdditionalCategories((prev) => {
       const next = new Set(prev)
@@ -1421,60 +1348,50 @@ export default function QuoteWizard({
       }
       return next
     })
+    markAdditionalCategoryVisited(category)
   }
 
-  const quoteTotals = useMemo(() => {
-    const additionals = Object.entries(state.additionals)
-      .filter(([, quantity]) => quantity > 0)
-      .map(([itemId, quantity]) => {
-        const item = itemCatalog.find((row) => row.id === itemId)
-        if (!item) return null
-        const normalizedQty = normalizeAdditionalQuantity(item, quantity)
-        return {
-          quantity: normalizedQty,
-          unitPrice: getAdditionalUnitPrice(item),
-          perPerson: isPerPersonAdditional(item),
-        }
-      })
-      .filter((line): line is NonNullable<typeof line> => line !== null)
+  const previewAdditionals = useMemo(
+    () =>
+      Object.entries(state.additionals)
+        .filter(([, quantity]) => quantity > 0)
+        .map(([itemId, quantity]) => ({ itemId, quantity })),
+    [state.additionals],
+  )
 
-    return calculateQuoteDraftFromSupabasePricing({
-      guestCounts: {
-        adultCount: state.adultCount,
-        childrenUnder3Count: state.childrenUnder3Count,
-        children4To12Count: state.children4To12Count,
-      },
-      packagePricePerPerson: selectedPackage ? getPackagePrice(selectedPackage) : 0,
-      additionals,
-      mileageDistance: state.distance,
-      grillRentalRequired: state.grillRentalRequired,
-      grillRentalQty: state.grillRentalQty,
-      pricing: commercialRules,
-      reservationPercentage: state.reservationPercentage,
-      reservationAmountOverride: state.reservationAmount,
-      useCustomReservation: reservationAmountCustomized,
-      eventDate: state.eventDate,
-    })
-  }, [
-    state.adultCount,
-    state.childrenUnder3Count,
-    state.children4To12Count,
-    state.additionals,
-    state.distance,
-    state.grillRentalRequired,
-    state.grillRentalQty,
-    state.eventDate,
-    state.reservationPercentage,
-    state.reservationAmount,
-    selectedPackage,
-    itemCatalog,
-    reservationAmountCustomized,
-    commercialRules,
-  ])
+  const pricingPreview = useQuotePricingPreview({
+    packageId: state.packageId,
+    additionals: previewAdditionals,
+    adultCount: state.adultCount,
+    childrenUnder3Count: state.childrenUnder3Count,
+    children4To12Count: state.children4To12Count,
+    eventDate: state.eventDate,
+    mileageDistance: state.distance,
+    grillRentalRequired: state.grillRentalRequired,
+    grillRentalQty: state.grillRentalQty,
+    reservationPercentage: state.reservationPercentage,
+    language: state.language,
+    enabled: Boolean(state.packageId?.trim()),
+  })
 
-  const billableGuestCount = quoteTotals.billableGuestCount
-  const packageUnitPrice = selectedPackage ? getPackagePrice(selectedPackage) : 0
-  const packageTotal = quoteTotals.packageTotal
+  const pricingBreakdown: PricingBreakdown | null =
+    pricingPreview.data?.breakdown ?? null
+
+  useEffect(() => {
+    if (!pricingBreakdown) return
+    setState((prev) => ({
+      ...prev,
+      reservationPercentage:
+        pricingBreakdown.rules_applied.reservationPercentage,
+      reservationAmount: pricingBreakdown.deposit,
+    }))
+  }, [pricingBreakdown?.computed_at, pricingBreakdown?.deposit, pricingBreakdown?.rules_applied.reservationPercentage])
+
+  const billableGuestCount =
+    pricingBreakdown?.guest_counts.billable_guest_count ??
+    pricingPreview.data?.totals.billableGuestCount ??
+    0
+  const reservationAmount = pricingBreakdown?.deposit ?? 0
 
   const selectedAdditionalsByCategory = useMemo(() => {
     return additionalItemsByCategory
@@ -1524,17 +1441,12 @@ export default function QuoteWizard({
     [selectedAdditionalsByCategory, uiLocale],
   )
 
-  const additionalTotal = quoteTotals.additionalTotal
-
-  const mileageFee = quoteTotals.mileageFee
-
-  const quoteTotal = quoteTotals.quoteTotal
-
-  const reservationAmount = quoteTotals.reservationAmount
-
-  const balanceDue = quoteTotals.balanceDue
-
   const additionalsCount = selectedAdditionals.length
+
+  const additionalCategoryKeys = useMemo(
+    () => additionalItemsByCategory.map(({ categoryKey }) => categoryKey),
+    [additionalItemsByCategory],
+  )
 
   const stepStatusCtx = useMemo<StepStatusContext>(
     () => ({
@@ -1549,6 +1461,9 @@ export default function QuoteWizard({
       commercialRules,
       isEditMode,
       language: uiLocale,
+      additionalCategoryKeys,
+      visitedAdditionalCategories,
+      pricingPreviewReady: Boolean(pricingBreakdown) && !pricingPreview.loading,
     }),
     [
       state,
@@ -1562,51 +1477,21 @@ export default function QuoteWizard({
       commercialRules,
       isEditMode,
       uiLocale,
+      additionalCategoryKeys,
+      visitedAdditionalCategories,
+      pricingPreview.loading,
+      pricingBreakdown,
     ],
   )
 
-  useEffect(() => {
-    if (!reservationAmountCustomized) return
-    setState((prev) => ({
-      ...prev,
-      reservationPercentage:
-        quoteTotal > 0
-          ? roundPercentage(
-              Math.min(
-                100,
-                Math.max(0, (prev.reservationAmount / quoteTotal) * 100),
-              ),
-            )
-          : prev.reservationPercentage,
-    }))
-  }, [quoteTotal, reservationAmountCustomized])
-
-  function updateReservationPercentage(raw: string) {
-    const percentage = roundPercentage(
-      Math.min(100, Math.max(0, Number(raw) || 0)),
-    )
-    const amount = roundMoney(quoteTotal * (percentage / 100))
-    setReservationAmountCustomized(false)
+  function handleGrillPhotoSelected(file: File | null) {
+    if (!file) return
+    const url = URL.createObjectURL(file)
     updateState({
-      reservationPercentage: percentage,
-      reservationAmount: amount,
-    })
-  }
-
-  function updateReservationAmount(raw: string) {
-    const amount = roundMoney(
-      Math.min(quoteTotal, Math.max(0, Number.parseFloat(raw) || 0)),
-    )
-    const percentage =
-      quoteTotal > 0
-        ? roundPercentage(
-            Math.min(100, Math.max(0, (amount / quoteTotal) * 100)),
-          )
-        : 0
-    setReservationAmountCustomized(true)
-    updateState({
-      reservationAmount: amount,
-      reservationPercentage: percentage,
+      grillPhotoUrl: url,
+      grillPhotoStatus: 'received',
+      grillPhotoRequired: true,
+      grillPhotoAnswered: true,
     })
   }
 
@@ -1816,11 +1701,27 @@ export default function QuoteWizard({
         }
       }
     }
+    if (step === 3) {
+      const missing = additionalCategoryKeys.filter(
+        (key) => !visitedAdditionalCategories.has(key),
+      )
+      if (missing.length > 0) {
+        return
+      }
+    }
+    if (step === 4) {
+      if (!state.grillSetupAnswered) {
+        updateState({ grillSetupAnswered: true })
+      }
+      if (isGrillPhotoRequiredAndMissing(state)) {
+        return
+      }
+      if (state.grillRentalRequired && state.grillRentalQty <= 0) {
+        return
+      }
+    }
     setPackageSelectionAttempted(false)
     setPackageStepMessage(null)
-    if (step === 4 && !state.grillSetupAnswered) {
-      updateState({ grillSetupAnswered: true })
-    }
     if (step < WIZARD_STEP_COUNT - 1) setStep((s) => s + 1)
   }
 
@@ -2352,8 +2253,9 @@ export default function QuoteWizard({
 
         {step === 1 && (
           <SectionCard>
-            <div className="grid grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:col-span-2">
               <InputField
+                className="sm:col-span-2"
                 label={w.eventName}
                 value={state.eventName}
                 onChange={(v) => updateState({ eventName: v })}
@@ -2393,9 +2295,7 @@ export default function QuoteWizard({
                   }}
                   completion={getFieldCompletion(state.endTime)}
                 />
-                <p className="mt-2 text-xs text-cdl-subtle">
-                  {w.endTimeHint}
-                </p>
+                <p className="mt-2 text-xs text-cdl-subtle">{w.endTimeHint}</p>
               </div>
               <QuantityField
                 label={w.adults}
@@ -2437,6 +2337,13 @@ export default function QuoteWizard({
 
         {step === 2 && (
           <div className="space-y-4">
+            {packages.length === 0 ? (
+              <div className="rounded-2xl border border-red-500/40 bg-cdl-surface p-6 text-sm text-red-300">
+                {fetchErrors.some((e) => /pacote|package/i.test(e))
+                  ? tw(uiLocale, 'packagesLoadError')
+                  : w.noPackages}
+              </div>
+            ) : null}
             <QuotePackageStepExplorer
               packagesWithoutSides={packagesWithoutSides}
               packagesWithSides={packagesWithSides}
@@ -2490,6 +2397,14 @@ export default function QuoteWizard({
               </p>
             ) : (
               <div className="space-y-3">
+                {additionalCategoryKeys.length > 0 &&
+                additionalCategoryKeys.some(
+                  (key) => !visitedAdditionalCategories.has(key),
+                ) ? (
+                  <p className="text-sm text-cdl-warning">
+                    {tw(uiLocale, 'categoriesReviewRequired')}
+                  </p>
+                ) : null}
                 {additionalItemsByCategory.map(
                   ({ categoryKey, categoryLabel, items }) => (
                   <AdditionalCategorySection
@@ -2513,7 +2428,7 @@ export default function QuoteWizard({
             <div className="flex justify-end rounded-2xl border border-cdl-border bg-cdl-surface p-7 shadow-cdl sm:p-9">
               <WizardStepButton
                 label={quoteStrings.continueToBbq}
-                onClick={() => setStep(4)}
+                onClick={goNext}
               />
             </div>
           </div>
@@ -2552,18 +2467,40 @@ export default function QuoteWizard({
                 language={uiLocale}
               />
               <div className="sm:col-span-2">
+                <input
+                  ref={grillPhotoInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) =>
+                    handleGrillPhotoSelected(e.target.files?.[0] ?? null)
+                  }
+                />
                 <button
                   type="button"
-                  disabled
-                  title={w.comingSoon}
-                  className="inline-flex cursor-not-allowed items-center justify-center rounded-xl border border-dashed border-cdl-border bg-cdl-inset px-4 py-3 text-xs font-bold uppercase tracking-wider text-cdl-muted opacity-70"
+                  disabled={!state.hasGrill}
+                  onClick={() => grillPhotoInputRef.current?.click()}
+                  className="inline-flex items-center justify-center rounded-xl border border-cdl-border bg-cdl-inset px-4 py-3 text-xs font-bold uppercase tracking-wider text-cdl-fg disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {w.attachGrillPhoto}
                 </button>
-                {/* Future: upload grill photo to Supabase Storage and save media id/url on events.grill_photo_media_id / grill_photo_url. */}
+                {state.grillPhotoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={state.grillPhotoUrl}
+                    alt=""
+                    className="mt-3 max-h-48 rounded-xl border border-cdl-border object-cover"
+                  />
+                ) : null}
                 <p className="mt-3 rounded-xl border border-cdl-border-subtle bg-cdl-inset px-4 py-3 text-sm leading-relaxed text-cdl-text-secondary">
                   {w.grillPhotoHint}
                 </p>
+                {isGrillPhotoRequiredAndMissing(state) ? (
+                  <p className="mt-2 text-sm text-cdl-warning">
+                    {tw(uiLocale, 'grillPhotoRequiredError')}
+                  </p>
+                ) : null}
               </div>
               <CheckboxField
                 label={w.grillRentalRequired}
@@ -2608,133 +2545,11 @@ export default function QuoteWizard({
         )}
 
         {step === 5 && (
-          <SectionCard>
-            <div className="sm:col-span-2 rounded-xl border border-cdl-warning-border bg-cdl-warning-soft px-4 py-3">
-              <p className="text-sm leading-relaxed text-cdl-text-secondary">
-                {tw(uiLocale, 'mileageBaseHint', {
-                  base: commercialRules.mileageBaseLocation,
-                  limit: commercialRules.mileageFreeLimit,
-                })}
-              </p>
-              {/* TODO: Future: calculate mileage automatically using event destination address and base location. */}
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-2">
-              <InputField
-                label={w.baseLocation}
-                value={state.baseLocation}
-                onChange={(v) => updateState({ baseLocation: v })}
-                placeholder={w.baseLocationPlaceholder}
-                completion={getFieldCompletion(state.baseLocation)}
-              />
-              <InputField
-                label={w.distanceMi}
-                type="number"
-                value={state.distance}
-                inputRef={distanceInputRef}
-                onChange={(v) =>
-                  updateState({ distance: Math.max(0, Number(v) || 0) })
-                }
-                completion={getFieldCompletion(state.distance)}
-              />
-              <InputField
-                label={w.freeLimitMi}
-                type="number"
-                value={state.freeLimit}
-                onChange={(v) =>
-                  updateState({ freeLimit: Math.max(0, Number(v) || 0) })
-                }
-              />
-              <InputField
-                label={w.ratePerMi}
-                type="number"
-                value={state.rate}
-                onChange={(v) =>
-                  updateState({ rate: Math.max(0, Number(v) || 0) })
-                }
-              />
-              <MileageSummaryPanel
-                distance={state.distance}
-                freeLimit={state.freeLimit}
-                rate={state.rate}
-                mileageFee={mileageFee}
-                language={uiLocale}
-              />
-            </div>
-          </SectionCard>
-        )}
-
-        {step === 6 && (
-          <SectionCard>
-            <div className="grid grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <div className="rounded-2xl border border-cdl-accent-border bg-cdl-inset px-4 py-4">
-                  <p className="text-sm leading-relaxed text-cdl-text-secondary">
-                    {tQuotesOrders(uiLocale, 'docReservationPaymentText')}
-                  </p>
-                </div>
-              </div>
-              <div className="sm:col-span-2">
-                <div className="rounded-2xl border border-cdl-border bg-cdl-inset px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-cdl-muted">
-                    {w.quoteTotal}
-                  </p>
-                  <p className="mt-1 text-2xl font-black text-cdl-price">
-                    {formatCurrency(quoteTotal)}
-                  </p>
-                </div>
-              </div>
-              <InputField
-                label={w.reservationPct}
-                type="number"
-                step="0.001"
-                min={0}
-                max={100}
-                value={state.reservationPercentage}
-                onChange={updateReservationPercentage}
-              />
-              <InputField
-                label={w.reservationAmount}
-                type="number"
-                step="0.01"
-                min={0}
-                max={quoteTotal}
-                value={reservationAmount}
-                onChange={updateReservationAmount}
-              />
-              <p className="sm:col-span-2 text-xs text-cdl-subtle">
-                {tw(uiLocale, 'reservationRecalcHint', {
-                  summary: formatReservationSummary(
-                    state.reservationPercentage,
-                    reservationAmount,
-                    reservationAmountCustomized,
-                  ),
-                  balance: formatCurrency(balanceDue),
-                })}
-              </p>
-              <div className="sm:col-span-2">
-                <label className="flex flex-col gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-cdl-muted">
-                    {w.notes}
-                  </span>
-                  <textarea
-                    value={state.reservationNotes}
-                    onChange={(e) =>
-                      updateState({ reservationNotes: e.target.value })
-                    }
-                    rows={4}
-                    placeholder={w.reservationNotesPlaceholder}
-                    className="rounded-xl border border-cdl-border bg-cdl-inset px-4 py-3 text-sm text-cdl-fg outline-none transition-colors placeholder:text-cdl-faint focus:border-cdl-accent-border"
-                  />
-                </label>
-              </div>
-            </div>
-          </SectionCard>
-        )}
-
-        {step === 7 && (
-          <QuoteWizardSummaryStep
+          <QuoteWizardConfirmationStep
             state={state}
-            quoteTotals={quoteTotals}
+            breakdown={pricingBreakdown}
+            pricingLoading={pricingPreview.loading}
+            pricingError={pricingPreview.error}
             customerName={
               isEditMode
                 ? editCustomerDisplayName
@@ -2743,21 +2558,26 @@ export default function QuoteWizard({
                   : state.customerDraftName.trim() ||
                     w.customerNotLinkedShort
             }
+            customerPhone={
+              linkedCustomer?.phone ??
+              selectedCustomer?.phone ??
+              state.customerDraftPhone
+            }
+            customerEmail={
+              linkedCustomer?.email ??
+              selectedCustomer?.email ??
+              state.customerDraftEmail
+            }
             packageName={
               selectedPackage ? getPackageName(selectedPackage, uiLocale) : null
             }
+            packageDescription={
+              selectedPackage
+                ? catalogPackageDescription(selectedPackage, state.language)
+                : null
+            }
             packageImageUrl={packageImageUrl}
-            packageUnitPrice={packageUnitPrice}
-            selectedPackage={selectedPackage}
-            allPackages={packages}
-            packageOptionGroups={flatOptionGroups}
-            packageOptionGroupItems={flatOptionGroupItems}
-            packageItems={packageItems}
-            packageSideItems={packageSideItems}
-            fromWithSidesSection={fromWithSidesSection}
-            billableGuestCount={billableGuestCount}
             additionals={reviewAdditionals}
-            commercialRules={commercialRules}
             stepStatusCtx={stepStatusCtx}
             mandatoryPendingSteps={mandatoryPendingSteps}
             quoteReady={quoteReady}
@@ -2768,11 +2588,12 @@ export default function QuoteWizard({
             uiLanguage={uiLocale}
             onGoToStep={setStep}
             onBack={goBack}
-            onSave={handleSaveQuote}
+            onSave={() => void handleSaveQuote(false)}
+            onDistanceChange={(distance) => updateState({ distance })}
           />
         )}
 
-        {step !== 7 && (
+        {step !== 5 && (
         <div className="mt-8 space-y-3">
           {step === 2 && !state.packageId && packageStepMessage ? (
             <p className="text-center text-sm font-medium text-[var(--brand-primary)] sm:text-right">
