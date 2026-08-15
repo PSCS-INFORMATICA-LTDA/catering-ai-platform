@@ -215,7 +215,6 @@ export default function AddressAutocompleteFields({
           inputMode="numeric"
           value={values.addressNumber}
           onChange={(e) => onChange({ addressNumber: e.target.value })}
-          placeholder="123"
           className={getInputClassName()}
         />
       </label>
