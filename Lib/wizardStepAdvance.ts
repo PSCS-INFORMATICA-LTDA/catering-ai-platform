@@ -1,5 +1,4 @@
 import {
-  areAllAdditionalCategoriesVisited,
   getUnvisitedAdditionalCategoryKeys,
 } from './wizardAdditionalCategories'
 import {
@@ -39,13 +38,10 @@ export function getAdditionalsRemainingCategoryKeys(
 }
 
 export function canAdvanceFromAdditionalsStep(
-  additionalCategoryKeys: readonly string[],
-  visitedAdditionalCategories: ReadonlySet<string>,
+  _additionalCategoryKeys: readonly string[],
+  _visitedAdditionalCategories: ReadonlySet<string>,
 ): boolean {
-  return areAllAdditionalCategoriesVisited(
-    additionalCategoryKeys,
-    visitedAdditionalCategories,
-  )
+  return true
 }
 
 export function canAdvanceFromWizardStep(ctx: WizardAdvanceContext): boolean {

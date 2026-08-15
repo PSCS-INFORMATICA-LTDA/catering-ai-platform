@@ -390,11 +390,10 @@ async function main() {
   }
 
   try {
-    assert.match(wizardSrc, /additionalsStepNextDisabled/)
+    assert.match(wizardSrc, /additionalsStepNextDisabled = false/)
     assert.match(wizardSrc, /allAdditionalCategoriesVisited/)
-    assert.match(stepNavSrc, /step === 3 && additionalsStepNextDisabled/)
-    pass('H03 Next blocked when category not visited')
-    pass('H04 Next enabled after all visited')
+    pass('H03 Next stays available on additionals')
+    pass('H04 Next enabled without category lock')
   } catch (e) {
     fail('H03–H04 category visit gating', e)
   }
@@ -749,8 +748,8 @@ async function main() {
     assert.match(reviewLayoutSrc, /grillRentalLine\.quantity/)
     pass('G05 rental quantity comes from breakdown')
 
-    assert.match(reviewLayoutSrc, /grillRentalLine\.unit_price/)
-    pass('G06 rental unit price comes from breakdown')
+    assert.doesNotMatch(reviewLayoutSrc, /grillRentalLine\.unit_price/)
+    pass('G06 rental unit price is not shown to the customer')
 
     assert.match(reviewLayoutSrc, /grillRentalLine\.amount/)
     pass('G07 rental total comes from breakdown')
@@ -777,11 +776,14 @@ async function main() {
     assert.match(reviewLayoutSrc, /mileageLine\.quantity/)
     pass('M05 charged miles come from breakdown')
 
-    assert.match(reviewLayoutSrc, /mileageLine\.unit_price/)
-    pass('M06 mileage rate comes from breakdown')
+    assert.doesNotMatch(
+      reviewLayoutSrc,
+      /tw\(lang, 'mileageRateLabel'\)/,
+    )
+    pass('M06 mileage rate is folded into the compact value line')
 
-    assert.match(reviewLayoutSrc, /mileageLine\.formula/)
-    pass('M07 explanatory formula comes from breakdown')
+    assert.doesNotMatch(reviewLayoutSrc, /mileageLine\.formula/)
+    pass('M07 customer mileage hides technical formulas')
 
     assert.match(reviewLayoutSrc, /formatCurrency\(mileageLine\.amount\)/)
     pass('M08 mileage amount comes from breakdown')
@@ -855,7 +857,7 @@ async function main() {
     let visited = new Set(['GUARNICOES'])
     assert.equal(allVisited(requiredKeys, visited), false)
     assert.equal(countUnvisited(requiredKeys, visited), 1)
-    pass('A01 unvisited category blocks next')
+    pass('A01 unvisited category is still tracked')
   } catch (e) {
     fail('A01 unvisited blocks', e)
   }
@@ -1020,10 +1022,8 @@ async function main() {
   }
 
   try {
-    assert.match(stepNavSrc, /step === 3 && additionalsStepNextDisabled/)
-    assert.match(stepNavSrc, /onAdditionalsNextBlockedClick/)
-    assert.match(wizardSrc, /handleAdditionalsNextBlockedClick/)
-    pass('A22 remaining > 0 keeps next disabled')
+    assert.match(wizardSrc, /additionalsStepNextDisabled = false/)
+    pass('A22 remaining categories do not lock next')
   } catch (e) {
     fail('A22 next disabled', e)
   }
@@ -1085,9 +1085,6 @@ async function main() {
 
   function simulateResolveNextWizardStep(ctx) {
     if (ctx.step === 3) {
-      if (!allVisited(ctx.additionalCategoryKeys, ctx.visitedAdditionalCategories)) {
-        return ctx.step
-      }
       return ctx.step + 1
     }
     return ctx.step
@@ -1158,9 +1155,9 @@ async function main() {
   }
 
   try {
-    assert.match(wizardSrc, /additionalsStepNextDisabled = !allAdditionalCategoriesVisited/)
+    assert.match(wizardSrc, /additionalsStepNextDisabled = false/)
     assert.match(wizardSrc, /canAdvanceFromAdditionalsStep/)
-    pass('N04 Próximo not disabled when remaining=0')
+    pass('N04 Próximo stays enabled on additionals')
   } catch (e) {
     fail('N04 next enabled', e)
   }
@@ -1206,9 +1203,9 @@ async function main() {
     const pending = sampleAdvanceCtx({
       visitedAdditionalCategories: new Set(['GUARNICOES']),
     })
-    assert.equal(simulateResolveNextWizardStep(pending), 3)
+    assert.equal(simulateResolveNextWizardStep(pending), 4)
     assert.equal(allVisited(['GUARNICOES', 'BOVINO'], pending.visitedAdditionalCategories), false)
-    pass('N09 pending category does not advance')
+    pass('N09 pending category still advances')
   } catch (e) {
     fail('N09 pending blocks advance', e)
   }

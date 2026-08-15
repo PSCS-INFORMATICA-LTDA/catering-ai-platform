@@ -1,3 +1,4 @@
+import { composeAddressLine } from './addressLine'
 import { formatPostalCode, inferCountryFromPostalCode } from './cep'
 import { getCdlCompanyId } from './cdlCompany'
 import { buildQuoteDraftSnapshotPayload } from './calculateQuoteDraftFromSupabasePricing'
@@ -52,6 +53,7 @@ export type QuoteSaveInput = {
   childrenUnder3Count: number
   children4To12Count: number
   address: string
+  addressNumber?: string
   city: string
   state: string
   zipCode: string
@@ -135,7 +137,7 @@ export function buildEventSavePayload(
     event_date: input.eventDate || null,
     start_time: input.startTime || null,
     end_time: input.endTime || null,
-    address_line: input.address.trim(),
+    address_line: composeAddressLine(input.address, input.addressNumber),
     city: input.city.trim(),
     state: input.state.trim(),
     postal_code: formatPostalCode(input.zipCode) || null,

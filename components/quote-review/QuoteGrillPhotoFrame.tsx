@@ -15,9 +15,11 @@ export default function QuoteGrillPhotoFrame({
 
   if (!url) {
     return (
-      <div className="quote-proposal-grill-photo quote-proposal-grill-photo--empty">
-        <p className="quote-proposal-value">{emptyLabel}</p>
-      </div>
+      <div
+        className="quote-proposal-grill-photo quote-proposal-grill-photo--empty"
+        aria-hidden={emptyLabel ? undefined : true}
+        aria-label={emptyLabel || undefined}
+      />
     )
   }
 

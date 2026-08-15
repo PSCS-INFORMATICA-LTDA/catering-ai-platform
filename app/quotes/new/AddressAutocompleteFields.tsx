@@ -167,10 +167,10 @@ export default function AddressAutocompleteFields({
 
   return (
     <div
-      className={`grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,3fr)_minmax(0,1.7fr)_minmax(0,1fr)] ${className}`}
+      className={`grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,2.4fr)_minmax(0,0.8fr)_minmax(0,1.5fr)_minmax(0,0.9fr)] ${className}`}
     >
       {enabled && (
-        <div className="flex flex-col gap-2 lg:col-span-4">
+        <div className="flex flex-col gap-2 lg:col-span-5">
           <FieldLabel>{tw(loc, 'googleSearchLabel')}</FieldLabel>
           <input
             ref={searchInputRef}
@@ -220,6 +220,18 @@ export default function AddressAutocompleteFields({
           className={getInputClassName()}
         />
       </div>
+
+      <label className="flex flex-col gap-2">
+        <FieldLabel>{tCommon(loc, 'streetNumber')}</FieldLabel>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={values.addressNumber}
+          onChange={(e) => onChange({ addressNumber: e.target.value })}
+          placeholder="123"
+          className={getInputClassName()}
+        />
+      </label>
 
       <label className="flex flex-col gap-2">
         <FieldLabel>{tCommon(loc, 'city')}</FieldLabel>

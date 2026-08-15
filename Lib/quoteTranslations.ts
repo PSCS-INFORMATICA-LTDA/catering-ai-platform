@@ -361,6 +361,7 @@ type QuoteStrings = {
     physicalGuests: string
     billableGuests: string
     totalToPay: string
+    reservationRuleHint: string
     pricingCalculating: string
     pricingCalcError: string
     breakdownPackage: string
@@ -431,7 +432,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       0: 'Identifique o cliente para começar a cotação.',
       1: 'Informe data, local e detalhes do evento.',
       2: 'Escolha o pacote e confira as opções disponíveis.',
-      3: 'Revise todas as categorias de adicionais (seleção opcional).',
+      3: 'Adicione itens extras se quiser. A seleção é opcional.',
       4: 'Configure churrasqueira, foto e rental quando aplicável.',
       5: 'Revise e confirme a cotação comercial completa.',
     },
@@ -720,7 +721,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       refreshing: 'Atualizando…',
       physicalGuests: 'Convidados físicos',
       billableGuests: 'Pessoas cobradas',
-      totalToPay: 'TOTAL A PAGAR',
+      totalToPay: 'TOTAL DA COTAÇÃO',
+      reservationRuleHint:
+        'O sinal reserva a data. O saldo restante é pago no evento.',
       pricingCalculating: 'Calculando valores...',
       pricingCalcError: 'Não foi possível calcular a cotação.',
       breakdownPackage: 'Pacote',
@@ -792,7 +795,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       0: 'Identify the customer to start the quote.',
       1: 'Enter date, location, and event details.',
       2: 'Choose the package and review available options.',
-      3: 'Review all additional categories (selection optional).',
+      3: 'Add extra items if you want. Selection is optional.',
       4: 'Configure grill, photo and rental when applicable.',
       5: 'Review and confirm the full commercial quote.',
     },
@@ -1077,7 +1080,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       refreshing: 'Refreshing…',
       physicalGuests: 'Physical guests',
       billableGuests: 'Billable guests',
-      totalToPay: 'TOTAL DUE',
+      totalToPay: 'QUOTE TOTAL',
+      reservationRuleHint:
+        'The deposit reserves the date. The remaining balance is due at the event.',
       pricingCalculating: 'Calculating pricing...',
       pricingCalcError: 'Could not calculate the quote.',
       breakdownPackage: 'Package',
@@ -1148,7 +1153,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       0: 'Identifique al cliente para comenzar la cotización.',
       1: 'Indique fecha, lugar y detalles del evento.',
       2: 'Elija el paquete y revise las opciones disponibles.',
-      3: 'Revise todas las categorías de adicionales (selección opcional).',
+      3: 'Agregue ítems extra si quiere. La selección es opcional.',
       4: 'Configure parrilla, foto y rental cuando aplique.',
       5: 'Revise y confirme la cotización comercial completa.',
     },
@@ -1437,7 +1442,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       refreshing: 'Actualizando…',
       physicalGuests: 'Invitados físicos',
       billableGuests: 'Personas cobradas',
-      totalToPay: 'TOTAL A PAGAR',
+      totalToPay: 'TOTAL DE LA COTIZACIÓN',
+      reservationRuleHint:
+        'La señal reserva la fecha. El saldo restante se paga en el evento.',
       pricingCalculating: 'Calculando valores...',
       pricingCalcError: 'No fue posible calcular la cotización.',
       breakdownPackage: 'Paquete',

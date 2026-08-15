@@ -355,13 +355,62 @@
 }
 
 .quote-proposal-grill-photo--empty {
-  display: flex;
-  min-height: 12rem;
-  align-items: center;
-  justify-content: center;
-  padding: 1.25rem;
+  display: block;
+  min-height: 10rem;
   border: 1px dashed var(--proposal-border);
+  background: color-mix(in srgb, var(--proposal-light) 88%, #fff);
+}
+
+.quote-proposal-grill-photo-row {
+  margin-top: 1rem;
+}
+
+.quote-proposal-grill-facts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 1024px) {
+  .quote-proposal-grill-facts {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.quote-proposal-mileage-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.quote-proposal-reservation-amounts {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+@media (min-width: 640px) {
+  .quote-proposal-reservation-amounts {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.quote-proposal-signature {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--proposal-border);
   text-align: center;
+}
+
+.quote-proposal-pscs-mark {
+  margin-top: 0.5rem;
+  height: 1.75rem;
+  width: auto;
+  object-fit: contain;
+  opacity: 0.85;
 }
 
 .quote-proposal-package-split {

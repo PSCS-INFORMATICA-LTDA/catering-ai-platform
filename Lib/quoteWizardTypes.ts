@@ -20,6 +20,7 @@ export type WizardState = {
   childrenUnder3Count: number
   children4To12Count: number
   address: string
+  addressNumber: string
   city: string
   state: string
   zipCode: string
@@ -66,6 +67,7 @@ export function createInitialWizardState(
     childrenUnder3Count: 0,
     children4To12Count: 0,
     address: '',
+    addressNumber: '',
     city: '',
     state: '',
     zipCode: '',

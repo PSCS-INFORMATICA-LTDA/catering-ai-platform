@@ -51,6 +51,7 @@ export type WizardStateSnapshot = {
   startTime: string
   endTime: string
   address: string
+  addressNumber: string
   city: string
   state: string
   zipCode: string
@@ -215,9 +216,6 @@ export function getStepIssues(
       break
     }
     case 3:
-      if (!allAdditionalCategoriesVisited(ctx)) {
-        issues.push(tw(language, 'categoriesReviewRequired'))
-      }
       break
     case 4:
       if (!state.grillSetupAnswered) {
@@ -286,7 +284,9 @@ export function getStepVisualStatus(
   }
 
   if (stepIndex === 3) {
-    return allAdditionalCategoriesVisited(ctx) ? 'complete' : 'pending'
+    return ctx.currentStep > 3 || allAdditionalCategoriesVisited(ctx)
+      ? 'complete'
+      : 'pending'
   }
 
   return isMandatoryStepComplete(stepIndex, ctx) ? 'complete' : 'pending'
@@ -298,7 +298,6 @@ export type StepStatus = 'current' | 'complete' | 'incomplete' | 'empty'
 export function isQuoteReadyToSave(ctx: StepStatusContext) {
   return (
     areMandatoryStepsComplete(ctx) &&
-    allAdditionalCategoriesVisited(ctx) &&
     isMandatoryStepComplete(4, ctx) &&
     isMandatoryStepComplete(5, ctx)
   )

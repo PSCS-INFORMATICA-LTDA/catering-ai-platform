@@ -11,7 +11,7 @@ import QuoteStepper from '../../../components/quotes/QuoteStepper'
 import QuotePackageStepExplorer from '../../../components/quotes/QuotePackageStepExplorer'
 import QuoteWizardStepNav from '../../../components/quotes/QuoteWizardStepNav'
 import AdditionalCategorySection from '../../../components/quotes/additionals/AdditionalCategorySection'
-import AdditionalsCategoryReviewPanel from '../../../components/quotes/additionals/AdditionalsCategoryReviewPanel'
+import { useAutoEventDistance } from '@/Lib/hooks/useAutoEventDistance'
 import {
   calcAdditionalLineTotalForItem,
   getAdditionalUnitPrice,
@@ -24,7 +24,6 @@ import { getAdditionalItemCategoryKey } from '@/Lib/additionalItemFieldAccess'
 import {
   buildAdditionalCategoryDisplayLabels,
   countUnvisitedAdditionalCategories,
-  getAdditionalCategoryReviewProgress,
   getUnvisitedAdditionalCategoryKeys,
   getVisibleAdditionalCategoryKeys,
   pruneVisitedAdditionalCategories,
@@ -996,7 +995,27 @@ export default function QuoteWizard({
   )
   const router = useRouter()
   const distanceInputRef = useRef<HTMLInputElement>(null)
+  const distanceManualRef = useRef(false)
   const previousStepRef = useRef(step)
+
+  useEffect(() => {
+    distanceManualRef.current = false
+  }, [state.address, state.addressNumber, state.city, state.state, state.zipCode])
+
+  useAutoEventDistance({
+    origin: state.baseLocation,
+    address: state.address,
+    addressNumber: state.addressNumber,
+    city: state.city,
+    state: state.state,
+    zipCode: state.zipCode,
+    enabled: !distanceManualRef.current,
+    onDistance: (miles) => {
+      setState((prev) =>
+        prev.distance === miles ? prev : { ...prev, distance: miles },
+      )
+    },
+  })
 
   useEffect(() => {
     setFlatOptionGroups(packageOptionGroups)
@@ -1451,15 +1470,6 @@ export default function QuoteWizard({
     [additionalCategoryKeys, visitedAdditionalCategories],
   )
 
-  const additionalCategoryReviewProgress = useMemo(
-    () =>
-      getAdditionalCategoryReviewProgress(
-        additionalCategoryKeys,
-        visitedAdditionalCategories,
-      ),
-    [additionalCategoryKeys, visitedAdditionalCategories],
-  )
-
   const additionalCategoryDisplayLabels = useMemo(
     () =>
       buildAdditionalCategoryDisplayLabels(
@@ -1502,6 +1512,20 @@ export default function QuoteWizard({
     })
     markAdditionalCategoryVisited(firstPending.categoryKey)
   }
+
+  useEffect(() => {
+    if (step !== 3) return
+    function markSeenIfScrolled() {
+      const reached =
+        window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - 96
+      if (!reached) return
+      setVisitedAdditionalCategories(new Set(additionalCategoryKeys))
+    }
+    markSeenIfScrolled()
+    window.addEventListener('scroll', markSeenIfScrolled, { passive: true })
+    return () => window.removeEventListener('scroll', markSeenIfScrolled)
+  }, [step, additionalCategoryKeys])
 
   useEffect(() => {
     if (step !== 3) {
@@ -1930,7 +1954,7 @@ export default function QuoteWizard({
     [additionalCategoryKeys, visitedAdditionalCategories],
   )
 
-  const additionalsStepNextDisabled = !allAdditionalCategoriesVisited
+  const additionalsStepNextDisabled = false
 
   const grillStepPendingIssues = useMemo(() => {
     const issues: string[] = []
@@ -2036,6 +2060,7 @@ export default function QuoteWizard({
       childrenUnder3Count: state.childrenUnder3Count,
       children4To12Count: state.children4To12Count,
       address: state.address,
+      addressNumber: state.addressNumber,
       city: state.city,
       state: state.state,
       zipCode: state.zipCode,
@@ -2458,6 +2483,7 @@ export default function QuoteWizard({
               <AddressAutocompleteFields
                 values={{
                   address: state.address,
+                  addressNumber: state.addressNumber,
                   city: state.city,
                   state: state.state,
                   zipCode: state.zipCode,
@@ -2528,7 +2554,18 @@ export default function QuoteWizard({
         )}
 
         {step === 3 && (
-          <div className="space-y-6">
+          <div
+            className="space-y-6"
+            onScroll={(event) => {
+              const target = event.currentTarget
+              if (
+                target.scrollTop + target.clientHeight >=
+                target.scrollHeight - 48
+              ) {
+                setVisitedAdditionalCategories(new Set(additionalCategoryKeys))
+              }
+            }}
+          >
             <p className="text-sm text-cdl-muted">
               {quoteStrings.additionalsStepHint}
             </p>
@@ -2538,15 +2575,6 @@ export default function QuoteWizard({
               </p>
             ) : (
               <div className="space-y-4">
-                {additionalCategoryKeys.length > 0 ? (
-                  <AdditionalsCategoryReviewPanel
-                    language={uiLocale}
-                    total={additionalCategoryReviewProgress.total}
-                    remaining={additionalCategoryReviewProgress.remaining}
-                    complete={allAdditionalCategoriesVisited}
-                    pendingCategories={pendingAdditionalCategories}
-                  />
-                ) : null}
                 {additionalItemsByCategory.map(
                   ({ categoryKey, categoryLabel, items }) => (
                   <AdditionalCategorySection
@@ -2661,6 +2689,7 @@ export default function QuoteWizard({
                 onChange={(v) =>
                   updateState({
                     grillRentalRequired: v,
+                    grillSetupAnswered: true,
                     grillRentalQty: v ? Math.max(1, state.grillRentalQty) : 0,
                   })
                 }
@@ -2735,7 +2764,10 @@ export default function QuoteWizard({
             onGoToStep={setStep}
             onBack={goBack}
             onSave={() => void handleSaveQuote(false)}
-            onDistanceChange={(distance) => updateState({ distance })}
+            onDistanceChange={(distance) => {
+              distanceManualRef.current = true
+              updateState({ distance })
+            }}
           />
         )}
 

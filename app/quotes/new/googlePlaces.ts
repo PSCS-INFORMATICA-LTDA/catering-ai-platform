@@ -2,6 +2,7 @@ import { formatPostalCode } from '@/Lib/cep'
 
 export type AddressValues = {
   address: string
+  addressNumber: string
   city: string
   state: string
   zipCode: string
@@ -36,13 +37,12 @@ export function parseGooglePlace(
   const zipCode = formatPostalCode(
     getAddressComponent(components, 'postal_code'),
   )
-  const streetLine = [streetNumber, route].filter(Boolean).join(' ')
-
   return {
     address:
-      streetLine ||
+      route ||
       place.formatted_address?.split(',')[0]?.trim() ||
       '',
+    addressNumber: streetNumber,
     city,
     state,
     zipCode,

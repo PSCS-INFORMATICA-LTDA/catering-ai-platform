@@ -285,7 +285,7 @@ export default function QuotesDashboard({
         </div>
         <Link
           href="/quotes/new"
-          className="pscs-btn-primary inline-flex min-h-[44px] items-center justify-center rounded-xl px-5 py-3 text-sm font-bold"
+          className={glassBtn('primary', 'inline-flex min-h-[44px] items-center justify-center rounded-xl px-5 py-3 text-sm font-bold')}
         >
           {tQuotesOrders(locale, 'newQuote')}
         </Link>

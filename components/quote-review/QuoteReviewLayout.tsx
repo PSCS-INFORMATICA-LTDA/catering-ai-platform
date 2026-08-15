@@ -286,74 +286,68 @@ function ConfirmationProposalBody({
       </ProposalSection>
 
       <ProposalSection title={tw(lang, 'confirmSectionGrill')}>
-        {data.hasGrill == null ? (
+        <div className="quote-proposal-info-grid quote-proposal-grill-facts">
           <div className="quote-proposal-info-cell">
             <span className="quote-proposal-label">
-              {tw(lang, 'confirmSectionGrill')}
+              {tw(lang, 'grillAtLocation')}
             </span>
-            <p className="quote-proposal-value">{w.notApplicable}</p>
+            <p className="quote-proposal-value">
+              {data.hasGrill == null
+                ? w.notApplicable
+                : formatBool(data.hasGrill, lang)}
+            </p>
           </div>
-        ) : (
-          <div className="quote-proposal-info-grid">
-            <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">
-                {tw(lang, 'grillAtLocation')}
-              </span>
-              <p className="quote-proposal-value">
-                {formatBool(data.hasGrill, lang)}
-              </p>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">
+              {w.grillRentalRequired}
+            </span>
+            <p className="quote-proposal-value">
+              {hasCanonicalGrillRental
+                ? w.yes
+                : data.hasGrill == null
+                  ? w.notApplicable
+                  : w.no}
+            </p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">
+              {tQuotesOrders(lang, 'docGrillRentalQty')}
+            </span>
+            <p className="quote-proposal-value">
+              {hasCanonicalGrillRental
+                ? displayValue(grillRentalLine.quantity)
+                : '—'}
+            </p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">
+              {tw(lang, 'grillRentalValue')}
+            </span>
+            <p className="quote-proposal-value">
+              {hasCanonicalGrillRental
+                ? formatCurrency(grillRentalLine.amount)
+                : '—'}
+            </p>
+          </div>
+          {data.grillNotes ? (
+            <div className="quote-proposal-info-cell quote-proposal-info-cell--wide">
+              <span className="quote-proposal-label">{w.notes}</span>
+              <p className="quote-proposal-value">{data.grillNotes}</p>
             </div>
-            {hasCanonicalGrillRental ? (
-              <>
-                <div className="quote-proposal-info-cell">
-                  <span className="quote-proposal-label">
-                    {w.grillRentalRequired}
-                  </span>
-                  <p className="quote-proposal-value">{w.yes}</p>
-                </div>
-                <div className="quote-proposal-info-cell">
-                  <span className="quote-proposal-label">
-                    {tQuotesOrders(lang, 'docGrillRentalQty')}
-                  </span>
-                  <p className="quote-proposal-value">
-                    {displayValue(grillRentalLine.quantity)}
-                  </p>
-                </div>
-                <div className="quote-proposal-info-cell">
-                  <span className="quote-proposal-label">
-                    {tQuotesOrders(lang, 'docUnitPriceLabel')}
-                  </span>
-                  <p className="quote-proposal-value">
-                    {formatCurrency(grillRentalLine.unit_price)}
-                  </p>
-                </div>
-                <div className="quote-proposal-info-cell">
-                  <span className="quote-proposal-label">
-                    {tw(lang, 'grillRentalValue')}
-                  </span>
-                  <p className="quote-proposal-value">
-                    {formatCurrency(grillRentalLine.amount)}
-                  </p>
-                </div>
-              </>
-            ) : null}
-            {data.grillNotes ? (
-              <div className="quote-proposal-info-cell quote-proposal-info-cell--wide">
-                <span className="quote-proposal-label">{w.notes}</span>
-                <p className="quote-proposal-value">{data.grillNotes}</p>
-              </div>
-            ) : null}
-            {data.hasGrill && data.grillPhotoUrl ? (
-              <div className="quote-proposal-info-cell quote-proposal-info-cell--wide">
-                <QuoteGrillPhotoFrame
-                  src={data.grillPhotoUrl}
-                  alt={tQuotesOrders(lang, 'docGrillPhoto')}
-                  emptyLabel={w.notApplicable}
-                />
-              </div>
-            ) : null}
-          </div>
-        )}
+          ) : null}
+        </div>
+        <div className="quote-proposal-grill-photo-row">
+          <span className="quote-proposal-label">
+            {tQuotesOrders(lang, 'docGrillPhoto')}
+          </span>
+          <QuoteGrillPhotoFrame
+            src={
+              data.hasGrill && data.grillPhotoUrl ? data.grillPhotoUrl : null
+            }
+            alt={tQuotesOrders(lang, 'docGrillPhoto')}
+            emptyLabel=""
+          />
+        </div>
       </ProposalSection>
 
       <ProposalSection
@@ -362,68 +356,56 @@ function ConfirmationProposalBody({
       >
         {mileageEditor}
         {mileageLine ? (
-          <div className="quote-proposal-mileage-grid">
-            <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">
-                {tw(lang, 'mileageOrigin')}
-              </span>
-              <p className="quote-proposal-value">
-                {displayValue(
-                  mileageMetadata?.base_location ??
-                    breakdown.rules_applied.mileageBaseLocation,
-                )}
-              </p>
-            </div>
-            <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">
-                {tw(lang, 'mileageDestination')}
-              </span>
-              <p className="quote-proposal-value">
-                {displayValue(eventLocation)}
-              </p>
-            </div>
-            <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">
-                {tw(lang, 'mileageTotalDistance')}
-              </span>
-              <p className="quote-proposal-value">
-                {mileageMetadata?.distance != null
-                  ? `${String(mileageMetadata.distance)} mi`
-                  : '—'}
-              </p>
-            </div>
-            <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">
-                {tw(lang, 'mileageIncluded')}
-              </span>
-              <p className="quote-proposal-value">
-                {mileageMetadata?.free_limit != null
-                  ? `${String(mileageMetadata.free_limit)} mi`
-                  : `${breakdown.rules_applied.mileageFreeLimit} mi`}
-              </p>
-            </div>
-            <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">
-                {tw(lang, 'mileageChargeable')}
-              </span>
-              <p className="quote-proposal-value">{`${mileageLine.quantity} mi`}</p>
-            </div>
-            <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">
-                {tw(lang, 'mileageRateLabel')}
-              </span>
-              <p className="quote-proposal-value">
-                {`${formatCurrency(mileageLine.unit_price)}/mi`}
-              </p>
-            </div>
-            {mileageLine.formula ? (
-              <div className="quote-proposal-info-cell quote-proposal-info-cell--wide">
+          <div className="quote-proposal-mileage-compact">
+            <div className="quote-proposal-mileage-grid">
+              <div className="quote-proposal-info-cell">
                 <span className="quote-proposal-label">
-                  {tw(lang, 'mileageFormula')}
+                  {tw(lang, 'mileageOrigin')}
                 </span>
-                <p className="quote-proposal-value">{mileageLine.formula}</p>
+                <p className="quote-proposal-value">
+                  {displayValue(
+                    mileageMetadata?.base_location ??
+                      breakdown.rules_applied.mileageBaseLocation,
+                  )}
+                </p>
               </div>
-            ) : null}
+              <div className="quote-proposal-info-cell">
+                <span className="quote-proposal-label">
+                  {tw(lang, 'mileageDestination')}
+                </span>
+                <p className="quote-proposal-value">
+                  {displayValue(eventLocation)}
+                </p>
+              </div>
+            </div>
+            <div className="quote-proposal-mileage-grid">
+              <div className="quote-proposal-info-cell">
+                <span className="quote-proposal-label">
+                  {tw(lang, 'mileageTotalDistance')}
+                </span>
+                <p className="quote-proposal-value">
+                  {mileageMetadata?.distance != null
+                    ? `${String(mileageMetadata.distance)} mi`
+                    : '—'}
+                </p>
+              </div>
+              <div className="quote-proposal-info-cell">
+                <span className="quote-proposal-label">
+                  {tw(lang, 'mileageIncluded')}
+                </span>
+                <p className="quote-proposal-value">
+                  {mileageMetadata?.free_limit != null
+                    ? `${String(mileageMetadata.free_limit)} mi`
+                    : `${breakdown.rules_applied.mileageFreeLimit} mi`}
+                </p>
+              </div>
+              <div className="quote-proposal-info-cell">
+                <span className="quote-proposal-label">
+                  {tw(lang, 'mileageChargeable')}
+                </span>
+                <p className="quote-proposal-value">{`${mileageLine.quantity} mi`}</p>
+              </div>
+            </div>
             <div className="quote-proposal-info-cell quote-proposal-info-cell--wide">
               <span className="quote-proposal-label">
                 {tw(lang, 'mileageFeeFinal')}
@@ -444,9 +426,18 @@ function ConfirmationProposalBody({
           breakdown={breakdown}
           language={lang}
           emphasizeTotal
+          showDeposit={false}
           variant="confirmation"
         />
       </section>
+
+      <QuoteReservationPaymentCard
+        language={lang}
+        depositAmount={breakdown.deposit}
+        balanceAmount={breakdown.balance}
+        reservationPercentage={breakdown.rules_applied.reservationPercentage}
+        ruleHint={tw(lang, 'reservationRuleHint')}
+      />
 
       <CdlImportantRulesPanel
         variant="summary"
@@ -455,6 +446,16 @@ function ConfirmationProposalBody({
       />
 
       <CdlCancellationPolicySection variant="summary" language={lang} />
+
+      <footer className="quote-proposal-signature">
+        <p className="quote-proposal-footer-brand">BBQ AT HOME</p>
+        <p className="quote-proposal-footer-tagline">Orlando, Florida</p>
+        <img
+          src="/brand/pscs-one.png"
+          alt="PSCS One"
+          className="quote-proposal-pscs-mark"
+        />
+      </footer>
     </>
   )
 }

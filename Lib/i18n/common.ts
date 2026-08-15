@@ -62,6 +62,7 @@ const { t, list } = makeI18nModule('common', 'ui', {
   role: { pt: 'Papel', en: 'Role', es: 'Rol' },
   contact: { pt: 'Contato', en: 'Contact', es: 'Contacto' },
   address: { pt: 'Endereço', en: 'Address', es: 'Dirección' },
+  streetNumber: { pt: 'Número', en: 'Number', es: 'Número' },
   city: { pt: 'Cidade', en: 'City', es: 'Ciudad' },
   state: { pt: 'Estado', en: 'State', es: 'Estado' },
   postalCode: { pt: 'CEP / ZIP', en: 'ZIP / postal code', es: 'Código postal' },

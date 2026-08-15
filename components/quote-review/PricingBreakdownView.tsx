@@ -34,11 +34,10 @@ function lineLabel(
 }
 
 function shouldShowFormula(
-  lineKey: string,
+  _lineKey: string,
   variant: 'default' | 'confirmation',
 ): boolean {
-  if (variant !== 'confirmation') return true
-  return !['package', 'additional_item'].includes(lineKey)
+  return variant !== 'confirmation'
 }
 
 function confirmationChargeLines(
