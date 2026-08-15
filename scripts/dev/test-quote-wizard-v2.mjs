@@ -10,39 +10,17 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
+import { assertDevUrl, loadDevEnv } from './loadDevEnv.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..', '..')
-const DEV_REF = 'yasprgtlqclwsjcshtls'
-const PROD_REF = 'eapwtirhevxrqinytans'
 
 function loadEnv() {
-  const env = readFileSync(join(ROOT, '.env.local'), 'utf8')
-  const get = (k) => {
-    const m = env.match(new RegExp(`^${k}=(.*)$`, 'm'))
-    return m ? m[1].trim().replace(/^["']|["']$/g, '') : ''
-  }
-  return {
-    url: get('NEXT_PUBLIC_SUPABASE_URL'),
-    service: get('SUPABASE_SERVICE_ROLE_KEY'),
-    companyId:
-      get('NEXT_PUBLIC_CDL_COMPANY_ID') ||
-      get('CDL_COMPANY_ID') ||
-      '65fd576f-8d97-49ba-bf38-61bc1e94e94a',
-  }
+  return loadDevEnv(ROOT)
 }
 
 function assertDev(url) {
-  const ref = (url.match(/https:\/\/([a-z0-9]+)\.supabase\.co/) || [])[1] || 'none'
-  if (ref === PROD_REF) {
-    console.error('BLOQUEADO — PROD')
-    process.exit(2)
-  }
-  if (ref !== DEV_REF) {
-    console.error(`BLOQUEADO — ref ${ref}`)
-    process.exit(2)
-  }
-  return ref
+  return assertDevUrl(url)
 }
 
 function read(rel) {

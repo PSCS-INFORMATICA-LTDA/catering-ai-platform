@@ -1,0 +1,4 @@
+{
+  "name": "Catering AI Platform DEV",
+  "install": "npm ci"
+}

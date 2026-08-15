@@ -17,9 +17,12 @@ Do not document or commit keys/secrets in this file.
 
 | Context | Database | Deploy | Write policy |
 |---------|----------|--------|--------------|
-| **LOCAL / Cursor** | DEV | none | DEV only |
+| **LOCAL / Cursor Desktop** | DEV | none | DEV only |
+| **Cursor Cloud** | DEV | Vercel Preview (sem `--prod`) | DEV only; secrets no painel Cloud |
 | **Vercel Preview** | DEV | Vercel Preview | DEV only |
 | **Vercel Production** | PROD | Vercel Production | Philippe approval only |
+
+Cloud compartilhado: `.cursor/environment.json` + `docs/CURSOR_CLOUD.md`.
 
 ### Never
 

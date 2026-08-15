@@ -89,10 +89,34 @@ function checkFile(label, filename) {
   }
 }
 
+function checkProcessEnv() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+  const ref = extractRefFromUrl(url)
+  const target = classifyRef(ref)
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const serviceInPublic = Object.keys(process.env).some(
+    (k) => k.startsWith('NEXT_PUBLIC_') && k.includes('SERVICE_ROLE'),
+  )
+  const serviceServer = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)
+  const googleMaps = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
+  return {
+    label: 'process-env',
+    file: 'process.env (Cloud / shell)',
+    present: Boolean(url || anon || serviceServer),
+    ref: maskRef(ref),
+    target,
+    anonKey: anon ? 'PRESENT' : 'ABSENT',
+    serviceRoleServer: serviceServer ? 'PRESENT' : 'ABSENT',
+    serviceRoleInNextPublic: serviceInPublic ? 'YES (RISK)' : 'NO',
+    googleMaps: googleMaps ? 'PRESENT' : 'ABSENT',
+  }
+}
+
 const checks = [
   checkFile('local', '.env.local'),
   checkFile('vercel-development-pull', '.env.vercel.development'),
   checkFile('vercel-preview-pull', '.env.vercel.preview'),
+  checkProcessEnv(),
 ]
 
 let vercelProject = 'not linked locally'
@@ -129,11 +153,19 @@ for (const row of checks) {
   console.log(`  anon key: ${row.anonKey}`)
   console.log(`  service role (server): ${row.serviceRoleServer}`)
   console.log(`  service role in NEXT_PUBLIC: ${row.serviceRoleInNextPublic}`)
+  if (row.googleMaps) {
+    console.log(`  google maps key: ${row.googleMaps}`)
+  }
   console.log('')
 }
 
 const local = checks.find((c) => c.label === 'local')
-const localTarget = local?.present ? local.target : 'UNKNOWN'
+const processEnv = checks.find((c) => c.label === 'process-env')
+const localTarget = local?.present
+  ? local.target
+  : processEnv?.present
+    ? processEnv.target
+    : 'UNKNOWN'
 
 if (expectedArg === 'dev' && localTarget !== 'DEV') {
   console.error('FAIL: local environment is not DEV.')
