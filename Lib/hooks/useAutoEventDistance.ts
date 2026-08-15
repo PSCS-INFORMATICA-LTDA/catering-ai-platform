@@ -62,24 +62,42 @@ export function useAutoEventDistance({
     const key = `${originLabel}|${destination}`
     if (lastKeyRef.current === key) return
 
-    const api = window.google?.maps
-    if (!api?.DistanceMatrixService) return
+    const maps = window.google?.maps
+    if (!maps?.importLibrary) return
 
+    let cancelled = false
     lastKeyRef.current = key
-    const service = new api.DistanceMatrixService()
-    service.getDistanceMatrix(
-      {
-        origins: [originLabel],
-        destinations: [destination],
-        travelMode: api.TravelMode.DRIVING,
-        unitSystem: api.UnitSystem.IMPERIAL,
-      },
-      (response, status) => {
-        if (status !== 'OK' || !response) return
-        const meters = response.rows[0]?.elements[0]?.distance?.value
-        if (meters == null || Number.isNaN(meters)) return
-        onDistanceRef.current(milesFromMeters(meters))
-      },
-    )
+
+    void (async () => {
+      try {
+        const { DistanceMatrixService } = (await maps.importLibrary(
+          'routes',
+        )) as google.maps.RoutesLibrary
+        if (cancelled) return
+
+        const service = new DistanceMatrixService()
+        service.getDistanceMatrix(
+          {
+            origins: [originLabel],
+            destinations: [destination],
+            travelMode: google.maps.TravelMode.DRIVING,
+            unitSystem: google.maps.UnitSystem.IMPERIAL,
+          },
+          (response, status) => {
+            if (cancelled) return
+            if (status !== 'OK' || !response) return
+            const meters = response.rows[0]?.elements[0]?.distance?.value
+            if (meters == null || Number.isNaN(meters)) return
+            onDistanceRef.current(milesFromMeters(meters))
+          },
+        )
+      } catch {
+        if (lastKeyRef.current === key) lastKeyRef.current = ''
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
   }, [enabled, origin, address, addressNumber, city, state, zipCode])
 }
