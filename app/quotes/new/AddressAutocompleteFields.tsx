@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react'
 import {
-  fetchAddressByCep,
   formatPostalCode,
+  inferCountryFromPostalCode,
   isUsablePostalCode,
+  lookupPostalAddress,
   normalizePostalDigits,
 } from '@/Lib/cep'
-import { parseGooglePlace, type AddressValues } from './googlePlaces'
+import type { AddressValues } from './googlePlaces'
 import { tCommon } from '@/Lib/i18n/common'
 import { tw } from '../../../Lib/quoteTranslations'
 import type { QuoteLanguage } from '../../../Lib/quoteWizardTypes'
@@ -49,7 +50,7 @@ function useGooglePlacesReady(language: QuoteLanguage = 'pt') {
       return
     }
 
-    if (window.google?.maps?.places) {
+    if (window.google?.maps) {
       setReady(true)
       return
     }
@@ -71,7 +72,7 @@ function useGooglePlacesReady(language: QuoteLanguage = 'pt') {
 
     const script = document.createElement('script')
     script.id = scriptId
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly`
     script.async = true
     script.defer = true
     script.onload = handleReady
@@ -101,66 +102,61 @@ export default function AddressAutocompleteFields({
 }) {
   const loc: QuoteLanguage =
     language === 'en' || language === 'es' ? language : 'pt'
-  const searchInputRef = useRef<HTMLInputElement>(null)
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
   const onChangeRef = useRef(onChange)
   const { ready, error, enabled } = useGooglePlacesReady(loc)
+  const [lookupError, setLookupError] = useState<string | null>(null)
+  const [looking, setLooking] = useState(false)
 
   useEffect(() => {
     onChangeRef.current = onChange
   }, [onChange])
 
-  useEffect(() => {
-    if (!ready || !searchInputRef.current || autocompleteRef.current) return
-
-    const autocomplete = new google.maps.places.Autocomplete(
-      searchInputRef.current,
-      {
-        types: ['address'],
-        componentRestrictions: { country: ['br', 'us'] },
-        fields: ['address_components', 'formatted_address'],
-      },
-    )
-
-    autocomplete.addListener('place_changed', () => {
-      const place = autocomplete.getPlace()
-      const parsed = parseGooglePlace(place)
-      onChangeRef.current(parsed)
-      if (searchInputRef.current) {
-        searchInputRef.current.value = ''
-      }
-    })
-
-    autocompleteRef.current = autocomplete
-  }, [ready])
-
-  const lastCepLookupRef = useRef('')
-  const valuesRef = useRef(values)
-  valuesRef.current = values
+  const lastLookupRef = useRef('')
 
   useEffect(() => {
     const digits = normalizePostalDigits(values.zipCode)
-    if (digits.length !== 8 || lastCepLookupRef.current === digits) return
-    lastCepLookupRef.current = digits
+    if (!isUsablePostalCode(values.zipCode)) {
+      setLookupError(null)
+      setLooking(false)
+      return
+    }
+    if (lastLookupRef.current === digits) return
+
+    const country = inferCountryFromPostalCode(values.zipCode)
+    if (country === 'US' && enabled && !ready) return
+
     let cancelled = false
-    void fetchAddressByCep(digits)
-      .then((addr) => {
-        if (cancelled) return
-        const current = valuesRef.current
-        onChangeRef.current({
-          zipCode: addr.cep,
-          city: addr.city || current.city,
-          state: addr.state || current.state,
-          address: current.address.trim()
-            ? current.address
-            : addr.street || addr.formatted || current.address,
+    const timer = window.setTimeout(() => {
+      setLooking(true)
+      setLookupError(null)
+      void lookupPostalAddress(values.zipCode)
+        .then((addr) => {
+          if (cancelled) return
+          lastLookupRef.current = digits
+          onChangeRef.current({
+            zipCode: addr.zipCode,
+            address: addr.address,
+            city: addr.city,
+            state: addr.state,
+          })
         })
-      })
-      .catch(() => {})
+        .catch((err: unknown) => {
+          if (cancelled) return
+          const code = err instanceof Error ? err.message : ''
+          if (code === 'GOOGLE_UNAVAILABLE' && enabled && !ready) return
+          lastLookupRef.current = digits
+          setLookupError(tCommon(loc, 'postalNotFound'))
+        })
+        .finally(() => {
+          if (!cancelled) setLooking(false)
+        })
+    }, 400)
+
     return () => {
       cancelled = true
+      window.clearTimeout(timer)
     }
-  }, [values.zipCode])
+  }, [values.zipCode, loc, ready, enabled])
 
   const zipDigits = normalizePostalDigits(values.zipCode)
   const zipInvalid = zipDigits.length >= 5 && !isUsablePostalCode(values.zipCode)
@@ -169,24 +165,6 @@ export default function AddressAutocompleteFields({
     <div
       className={`grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,2.4fr)_minmax(0,0.8fr)_minmax(0,1.5fr)_minmax(0,0.9fr)] ${className}`}
     >
-      {enabled && (
-        <div className="flex flex-col gap-2 lg:col-span-5">
-          <FieldLabel>{tw(loc, 'googleSearchLabel')}</FieldLabel>
-          <input
-            ref={searchInputRef}
-            type="text"
-            disabled={!ready}
-            placeholder={
-              ready
-                ? tw(loc, 'googleSearchPlaceholder')
-                : tw(loc, 'googleLoading')
-            }
-            className={getInputClassName()}
-          />
-          {error && <p className="text-xs text-cdl-muted">{error}</p>}
-        </div>
-      )}
-
       <label className="flex flex-col gap-2">
         <FieldLabel>{tCommon(loc, 'postalCode')}</FieldLabel>
         <div className="relative">
@@ -200,6 +178,7 @@ export default function AddressAutocompleteFields({
             }
             placeholder={tCommon(loc, 'postalCodePlaceholder')}
             className={getInputClassName(fieldCompletions?.zipCode)}
+            aria-invalid={zipInvalid || Boolean(lookupError)}
           />
           <FieldCheck show={fieldCompletions?.zipCode === 'filled'} />
         </div>
@@ -207,6 +186,14 @@ export default function AddressAutocompleteFields({
           <p className="text-xs text-cdl-action">
             {tCommon(loc, 'invalidPostalCode')}
           </p>
+        ) : looking ? (
+          <p className="text-xs text-cdl-muted">
+            {tCommon(loc, 'postalLookingUp')}
+          </p>
+        ) : lookupError ? (
+          <p className="text-xs text-cdl-action">{lookupError}</p>
+        ) : error ? (
+          <p className="text-xs text-cdl-muted">{error}</p>
         ) : null}
       </label>
 

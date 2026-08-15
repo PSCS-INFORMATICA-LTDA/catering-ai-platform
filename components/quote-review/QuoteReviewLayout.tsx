@@ -453,7 +453,7 @@ function ConfirmationProposalBody({
         <img
           src="/brand/pscs-one.png"
           alt="PSCS One"
-          className="quote-proposal-pscs-mark"
+          className="quote-proposal-pscs-mark bg-transparent"
         />
       </footer>
     </>
@@ -1040,6 +1040,11 @@ export default function QuoteReviewLayout({
             <p className="quote-proposal-footer-tagline">
               Premium Brazilian BBQ Experience · Orlando, Florida
             </p>
+            <img
+              src="/brand/pscs-one.png"
+              alt="PSCS One"
+              className="quote-proposal-pscs-mark bg-transparent"
+            />
           </footer>
         ) : null}
       </div>

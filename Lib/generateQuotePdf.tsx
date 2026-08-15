@@ -1,12 +1,18 @@
 import { renderToBuffer } from '@react-pdf/renderer'
 import { QuotePdfDocument } from '@/app/quotes/[id]/QuotePdfDocument'
 import type { QuoteDetail } from '@/app/quotes/[id]/quoteDetailTypes'
-import { resolveCdlLogoForPdf } from '@/Lib/cdlLogoForPdf'
+import {
+  resolveCdlLogoForPdf,
+  resolvePublicImageForPdf,
+} from '@/Lib/cdlLogoForPdf'
 import { getQuotePdfContentDisposition } from '@/Lib/quotePdfFilename'
 
 export async function generateQuotePdfBuffer(quote: QuoteDetail) {
   const logo = resolveCdlLogoForPdf()
-  return renderToBuffer(<QuotePdfDocument quote={quote} logo={logo} />)
+  const pscs = resolvePublicImageForPdf('brand/pscs-one.png')
+  return renderToBuffer(
+    <QuotePdfDocument quote={quote} logo={logo} pscs={pscs} />,
+  )
 }
 
 export function getQuotePdfResponseHeaders(quote: QuoteDetail) {

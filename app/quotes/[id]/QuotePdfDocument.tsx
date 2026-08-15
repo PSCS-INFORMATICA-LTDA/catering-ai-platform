@@ -242,6 +242,13 @@ const styles = StyleSheet.create({
     fontSize: 7.5,
     color: colors.muted,
   },
+  pageFooterPscs: {
+    marginTop: 6,
+    alignSelf: 'center',
+    height: 14,
+    width: 72,
+    objectFit: 'contain',
+  },
   overview: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -519,12 +526,13 @@ function PdfLogoMark({
   )
 }
 
-function PdfPageFooter() {
+function PdfPageFooter({ pscsSrc }: { pscsSrc: string | null }) {
   return (
     <View style={styles.pageFooter} fixed>
       <Text style={styles.pageFooterBrand}>BBQ AT HOME</Text>
       <Text style={styles.pageFooterLine}>Orlando, Florida</Text>
       <Text style={styles.pageFooterLine}>www.cdlbbq.com</Text>
+      {pscsSrc ? <Image src={pscsSrc} style={styles.pageFooterPscs} /> : null}
     </View>
   )
 }
@@ -551,16 +559,18 @@ function PdfCompactHeader({
 function PdfDocumentPage({
   quoteNumber,
   logoSrc,
+  pscsSrc,
   children,
 }: {
   quoteNumber: string
   logoSrc: string | null
+  pscsSrc: string | null
   children: React.ReactNode
 }) {
   return (
     <Page size="A4" style={styles.contentPage} wrap>
       <PdfCompactHeader quoteNumber={quoteNumber} logoSrc={logoSrc} />
-      <PdfPageFooter />
+      <PdfPageFooter pscsSrc={pscsSrc} />
       {children}
     </Page>
   )
@@ -569,11 +579,14 @@ function PdfDocumentPage({
 export function QuotePdfDocument({
   quote,
   logo,
+  pscs,
 }: {
   quote: QuoteDetail
   logo?: PdfLogoSource
+  pscs?: PdfLogoSource
 }) {
   const logoSrc = logo?.filePath ?? logo?.src ?? null
+  const pscsSrc = pscs?.filePath ?? pscs?.src ?? null
   const lang = quote.language ?? 'pt'
   const packageName = getPackageName(quote) ?? '—'
   const packageDescription = getPackageDescription(quote)
@@ -717,7 +730,7 @@ export function QuotePdfDocument({
         </View>
       </Page>
 
-      <PdfDocumentPage quoteNumber={quoteNumber} logoSrc={logoSrc}>
+      <PdfDocumentPage quoteNumber={quoteNumber} logoSrc={logoSrc} pscsSrc={pscsSrc}>
         <View wrap={false} style={styles.overview}>
           <View style={styles.overviewItem}>
             <Text style={styles.overviewLabel}>{t('docCustomer')}</Text>
@@ -942,7 +955,7 @@ export function QuotePdfDocument({
         </View>
       </PdfDocumentPage>
 
-      <PdfDocumentPage quoteNumber={quoteNumber} logoSrc={logoSrc}>
+      <PdfDocumentPage quoteNumber={quoteNumber} logoSrc={logoSrc} pscsSrc={pscsSrc}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('docRulesSectionTitle')}</Text>
           <RulesBlock title={t('docMinOrderRuleTitle')} items={IMPORTANT_RULES.minimumOrder} />

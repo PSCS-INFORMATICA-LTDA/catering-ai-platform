@@ -129,6 +129,16 @@ const { t, list } = makeI18nModule('common', 'ui', {
     en: 'Enter a valid Brazilian ZIP (8 digits, e.g. 01310-100) or US ZIP (e.g. 32801).',
     es: 'Indique un CEP de Brasil con 8 dígitos (ej.: 01310-100) o ZIP de EE. UU. (ej.: 32801).',
   },
+  postalLookingUp: {
+    pt: 'Buscando endereço…',
+    en: 'Looking up address…',
+    es: 'Buscando dirección…',
+  },
+  postalNotFound: {
+    pt: 'CEP/ZIP não encontrado. Verifique o número informado.',
+    en: 'ZIP/postal code not found. Check the number entered.',
+    es: 'Código postal no encontrado. Verifique el número informado.',
+  },
   postalCodePlaceholder: {
     pt: '01310-100',
     en: '32801',

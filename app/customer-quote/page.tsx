@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { headers } from 'next/headers'
 import CdlBrandLogo from '../../components/CdlBrandLogo'
+import { PscsOneMark } from '@/components/brand/PscsOneMark'
 import {
   CHILD_FREE_AGE_MAX,
   CHILD_HALF_AGE_MAX,
@@ -159,6 +160,9 @@ export default async function CustomerQuotePage() {
             {tPublicOps(lang, 'backHome')}
           </Link>
         </div>
+        <footer className="mt-12 flex flex-col items-center gap-2 border-t border-cdl-border pt-6">
+          <PscsOneMark className="h-6 dark:brightness-0 dark:invert dark:opacity-70" />
+        </footer>
       </div>
     </main>
   )

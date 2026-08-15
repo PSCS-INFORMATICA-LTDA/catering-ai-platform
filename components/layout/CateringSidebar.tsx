@@ -75,7 +75,7 @@ export function CateringSidebar({
                 alt="Catering AI Platform"
                 width={36}
                 height={36}
-                className="h-8 w-8 object-contain"
+                className="h-11 w-11 bg-transparent object-contain"
               />
             </Link>
             <button
@@ -191,9 +191,17 @@ export function CateringSidebar({
 
           <footer className="mt-auto space-y-2 border-t border-white/10 px-3 py-2.5">
             <ThemeToggle className="catering-sidebar-theme-toggle w-full justify-center" />
-            <p className="text-center text-[0.65rem] text-white/40">
-              PSCS Informática
-            </p>
+            <div className="flex flex-col items-center gap-1.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/brand/pscs-one.png"
+                alt="PSCS One"
+                className="h-5 w-auto bg-transparent object-contain opacity-75 brightness-0 invert"
+              />
+              <p className="text-center text-[0.65rem] text-white/40">
+                PSCS Informática
+              </p>
+            </div>
           </footer>
         </div>
       </aside>

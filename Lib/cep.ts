@@ -155,3 +155,103 @@ async function fetchViaCep(cep: string): Promise<CepAddress | null> {
     formatted: [street, neighborhood, city, state].filter(Boolean).join(', '),
   }
 }
+
+export type PostalLookupResult = {
+  address: string
+  city: string
+  state: string
+  zipCode: string
+}
+
+function readComponent(
+  components: google.maps.GeocoderAddressComponent[],
+  type: string,
+  useShort = false,
+) {
+  const match = components.find((item) => item.types.includes(type))
+  if (!match) return ''
+  return useShort ? match.short_name : match.long_name
+}
+
+export async function geocodePostalCode(
+  zipCode: string,
+  country: 'BR' | 'US',
+): Promise<PostalLookupResult> {
+  const maps = globalThis.window?.google?.maps
+  if (!maps?.importLibrary) {
+    throw new Error('GOOGLE_UNAVAILABLE')
+  }
+
+  const { Geocoder } = (await maps.importLibrary(
+    'geocoding',
+  )) as google.maps.GeocodingLibrary
+  const service = new Geocoder()
+  const formatted = formatPostalCode(zipCode)
+
+  return new Promise((resolve, reject) => {
+    service.geocode(
+      {
+        componentRestrictions: { country, postalCode: formatted },
+      },
+      (results, status) => {
+        if (status === 'ZERO_RESULTS' || !results?.[0]) {
+          reject(new Error('POSTAL_NOT_FOUND'))
+          return
+        }
+        if (status !== 'OK') {
+          reject(new Error('GEOCODE_FAILED'))
+          return
+        }
+        const components = results[0].address_components
+        const city =
+          readComponent(components, 'locality') ||
+          readComponent(components, 'postal_town') ||
+          readComponent(components, 'sublocality_level_1') ||
+          readComponent(components, 'administrative_area_level_2')
+        const state = readComponent(
+          components,
+          'administrative_area_level_1',
+          true,
+        )
+        if (!city || !state) {
+          reject(new Error('POSTAL_NOT_FOUND'))
+          return
+        }
+        resolve({
+          address: readComponent(components, 'route'),
+          city,
+          state,
+          zipCode:
+            formatPostalCode(readComponent(components, 'postal_code')) ||
+            formatted,
+        })
+      },
+    )
+  })
+}
+
+export async function lookupPostalAddress(
+  zipCode: string,
+): Promise<PostalLookupResult> {
+  const country = inferCountryFromPostalCode(zipCode)
+  if (!country) {
+    throw new Error('INVALID_POSTAL_CODE')
+  }
+
+  if (country === 'BR') {
+    const [brasil, google] = await Promise.all([
+      fetchAddressByCep(zipCode).catch(() => null),
+      geocodePostalCode(zipCode, 'BR').catch(() => null),
+    ])
+    const city = brasil?.city || google?.city || ''
+    const state = brasil?.state || google?.state || ''
+    const address = brasil?.street || google?.address || ''
+    const formatted = brasil?.cep || google?.zipCode || formatPostalCode(zipCode)
+    if (!city || !state) {
+      throw new Error('POSTAL_NOT_FOUND')
+    }
+    return { address, city, state, zipCode: formatted }
+  }
+
+  return geocodePostalCode(zipCode, 'US')
+}

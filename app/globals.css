@@ -1378,7 +1378,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem 2.75rem;
+  padding: 0.55rem 2.55rem 0.55rem 0.55rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
   overflow: visible;
 }
@@ -1399,9 +1399,9 @@ body {
 .catering-sidebar-brand-logo {
   display: block;
   width: 100%;
-  max-width: 17.5rem;
+  max-width: 18.75rem;
   height: auto;
-  aspect-ratio: 196 / 74;
+  max-height: 8.25rem;
   object-fit: contain;
   object-position: center;
   margin-inline: auto;

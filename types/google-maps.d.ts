@@ -80,6 +80,49 @@ declare namespace google.maps {
     DistanceMatrixService: typeof DistanceMatrixService
   }
 
+  type GeocoderStatus =
+    | 'OK'
+    | 'ZERO_RESULTS'
+    | 'OVER_QUERY_LIMIT'
+    | 'REQUEST_DENIED'
+    | 'INVALID_REQUEST'
+    | 'UNKNOWN_ERROR'
+    | 'ERROR'
+
+  interface GeocoderComponentRestrictions {
+    country?: string | string[]
+    postalCode?: string
+    locality?: string
+    administrativeArea?: string
+    route?: string
+  }
+
+  interface GeocoderRequest {
+    address?: string
+    componentRestrictions?: GeocoderComponentRestrictions
+    region?: string
+  }
+
+  interface GeocoderResult {
+    address_components: GeocoderAddressComponent[]
+    formatted_address: string
+  }
+
+  class Geocoder {
+    geocode(
+      request: GeocoderRequest,
+      callback: (
+        results: GeocoderResult[] | null,
+        status: GeocoderStatus,
+      ) => void,
+    ): void
+  }
+
+  interface GeocodingLibrary {
+    Geocoder: typeof Geocoder
+  }
+
+  function importLibrary(name: 'geocoding'): Promise<GeocodingLibrary>
   function importLibrary(name: 'routes'): Promise<RoutesLibrary>
   function importLibrary(name: string): Promise<object>
 }

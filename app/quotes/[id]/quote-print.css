@@ -410,7 +410,8 @@
   height: 1.75rem;
   width: auto;
   object-fit: contain;
-  opacity: 0.85;
+  background: transparent;
+  opacity: 0.9;
 }
 
 .quote-proposal-package-split {
