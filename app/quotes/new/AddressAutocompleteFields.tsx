@@ -9,6 +9,7 @@ import {
   normalizePostalDigits,
 } from '@/Lib/cep'
 import type { AddressValues } from './googlePlaces'
+import { parseGooglePlace } from './googlePlaces'
 import { tCommon } from '@/Lib/i18n/common'
 import { tw } from '../../../Lib/quoteTranslations'
 import type { QuoteLanguage } from '../../../Lib/quoteWizardTypes'
@@ -106,6 +107,9 @@ export default function AddressAutocompleteFields({
   const { ready, error, enabled } = useGooglePlacesReady(loc)
   const [lookupError, setLookupError] = useState<string | null>(null)
   const [looking, setLooking] = useState(false)
+  const [addressQuery, setAddressQuery] = useState(values.address)
+  const [addressError, setAddressError] = useState<string | null>(null)
+  const addressInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     onChangeRef.current = onChange
@@ -133,6 +137,7 @@ export default function AddressAutocompleteFields({
         .then((addr) => {
           if (cancelled) return
           lastLookupRef.current = digits
+          setAddressQuery(addr.address)
           onChangeRef.current({
             zipCode: addr.zipCode,
             address: addr.address,
@@ -157,6 +162,57 @@ export default function AddressAutocompleteFields({
       window.clearTimeout(timer)
     }
   }, [values.zipCode, loc, ready, enabled])
+
+  useEffect(() => {
+    const input = addressInputRef.current
+    const country = inferCountryFromPostalCode(values.zipCode)
+    if (!input || !ready || !country) return
+
+    let active = true
+    let autocomplete: google.maps.places.Autocomplete | null = null
+    let placeListener: google.maps.MapsEventListener | null = null
+
+    void window.google?.maps
+      .importLibrary('places')
+      .then(({ Autocomplete }) => {
+        if (!active) return
+        autocomplete = new Autocomplete(input, {
+          types: ['geocode'],
+          componentRestrictions: { country: country.toLowerCase() },
+          fields: ['address_components', 'formatted_address'],
+        })
+        placeListener = autocomplete.addListener('place_changed', () => {
+          if (!autocomplete) return
+          const selected = parseGooglePlace(autocomplete.getPlace())
+          const expectedZip = normalizePostalDigits(values.zipCode)
+          const selectedZip = normalizePostalDigits(selected.zipCode)
+
+          if (!selected.address || selectedZip !== expectedZip) {
+            setAddressError(tw(loc, 'addressZipMismatch'))
+            setAddressQuery('')
+            onChangeRef.current({ address: '', addressNumber: '' })
+            return
+          }
+
+          setAddressError(null)
+          setAddressQuery(selected.address)
+          onChangeRef.current({
+            address: selected.address,
+            addressNumber: selected.addressNumber,
+            city: selected.city,
+            state: selected.state,
+            zipCode: selected.zipCode,
+          })
+        })
+      })
+      .catch(() => setAddressError(tw(loc, 'googleLoadError')))
+
+    return () => {
+      active = false
+      placeListener?.remove()
+      autocomplete = null
+    }
+  }, [loc, ready, values.zipCode])
 
   const zipDigits = normalizePostalDigits(values.zipCode)
   const zipInvalid = zipDigits.length >= 5 && !isUsablePostalCode(values.zipCode)
@@ -197,16 +253,30 @@ export default function AddressAutocompleteFields({
         ) : null}
       </label>
 
-      <div className="flex flex-col gap-2">
+      <label className="flex flex-col gap-2">
         <FieldLabel>{tCommon(loc, 'address')}</FieldLabel>
         <input
+          ref={addressInputRef}
           type="text"
-          value={values.address}
-          onChange={(e) => onChange({ address: e.target.value })}
+          autoComplete="off"
+          value={addressQuery}
+          onChange={(e) => {
+            setAddressQuery(e.target.value)
+            setAddressError(null)
+            onChange({ address: '', addressNumber: '' })
+          }}
           placeholder={tw(loc, 'addressPlaceholder')}
           className={getInputClassName()}
+          aria-invalid={
+            Boolean(addressError) || Boolean(addressQuery && !values.address)
+          }
         />
-      </div>
+        <p
+          className={`text-xs ${addressError ? 'text-cdl-action' : 'text-cdl-muted'}`}
+        >
+          {addressError ?? tw(loc, 'addressSelectionRequired')}
+        </p>
+      </label>
 
       <label className="flex flex-col gap-2">
         <FieldLabel>{tCommon(loc, 'streetNumber')}</FieldLabel>

@@ -229,6 +229,8 @@ type QuoteStrings = {
     googleLoadError: string
     googleApiKeyMissing: string
     addressPlaceholder: string
+    addressSelectionRequired: string
+    addressZipMismatch: string
     cityPlaceholder: string
     statePlaceholder: string
     zipPlaceholder: string
@@ -584,6 +586,10 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       googleApiKeyMissing:
         'Configure NEXT_PUBLIC_GOOGLE_MAPS_API_KEY para buscar no Google.',
       addressPlaceholder: 'Endereço',
+      addressSelectionRequired:
+        'Digite a rua e selecione uma sugestão do Google para validar o trajeto.',
+      addressZipMismatch:
+        'Selecione um endereço que pertença ao CEP/ZIP informado.',
       cityPlaceholder: 'Cidade',
       statePlaceholder: 'Estado',
       zipPlaceholder: '01310-100',
@@ -943,6 +949,10 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       googleApiKeyMissing:
         'Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to search on Google.',
       addressPlaceholder: 'Address',
+      addressSelectionRequired:
+        'Type the street and select a Google suggestion to validate the route.',
+      addressZipMismatch:
+        'Select an address that belongs to the entered ZIP/postal code.',
       cityPlaceholder: 'City',
       statePlaceholder: 'State',
       zipPlaceholder: '32801',
@@ -1305,6 +1315,10 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       googleApiKeyMissing:
         'Configure NEXT_PUBLIC_GOOGLE_MAPS_API_KEY para buscar en Google.',
       addressPlaceholder: 'Dirección',
+      addressSelectionRequired:
+        'Escriba la calle y seleccione una sugerencia de Google para validar la ruta.',
+      addressZipMismatch:
+        'Seleccione una dirección que pertenezca al código postal indicado.',
       cityPlaceholder: 'Ciudad',
       statePlaceholder: 'Estado',
       zipPlaceholder: '01310-100',

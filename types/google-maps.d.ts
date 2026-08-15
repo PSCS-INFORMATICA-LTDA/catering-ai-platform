@@ -1,4 +1,8 @@
 declare namespace google.maps {
+  interface MapsEventListener {
+    remove(): void
+  }
+
   interface GeocoderAddressComponent {
     long_name: string
     short_name: string
@@ -22,8 +26,12 @@ declare namespace google.maps {
         inputField: HTMLInputElement,
         opts?: AutocompleteOptions,
       )
-      addListener(eventName: string, handler: () => void): void
+      addListener(eventName: string, handler: () => void): MapsEventListener
       getPlace(): PlaceResult
+    }
+
+    interface PlacesLibrary {
+      Autocomplete: typeof Autocomplete
     }
   }
 
@@ -123,6 +131,7 @@ declare namespace google.maps {
   }
 
   function importLibrary(name: 'geocoding'): Promise<GeocodingLibrary>
+  function importLibrary(name: 'places'): Promise<places.PlacesLibrary>
   function importLibrary(name: 'routes'): Promise<RoutesLibrary>
   function importLibrary(name: string): Promise<object>
 }
