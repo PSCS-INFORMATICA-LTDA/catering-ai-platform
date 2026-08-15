@@ -127,6 +127,7 @@ export default function AddressAutocompleteFields({
     if (lastLookupRef.current === digits) return
 
     const country = inferCountryFromPostalCode(values.zipCode)
+    if (country === 'US' && !enabled) return
     if (country === 'US' && enabled && !ready) return
 
     let cancelled = false
