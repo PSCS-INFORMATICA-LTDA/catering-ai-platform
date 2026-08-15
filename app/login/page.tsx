@@ -7,7 +7,7 @@ import { AuthGlassShell } from '@/components/auth/AuthGlassShell'
 import { safeInternalNext } from '@/Lib/auth/safeNext'
 import { glassField } from '@/Lib/liquidGlass'
 import { createClient } from '@/Lib/supabase/client'
-import { resolveAuthLocale, tAuth, type AuthLocale } from '@/Lib/i18n/authUsers'
+import { tAuth, type AuthLocale } from '@/Lib/i18n/authUsers'
 
 function LoginForm() {
   const router = useRouter()
@@ -18,7 +18,7 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [locale, setLocale] = useState<AuthLocale>('pt')
+  const [locale] = useState<AuthLocale>('pt')
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -42,23 +42,7 @@ function LoginForm() {
   }
 
   return (
-    <AuthGlassShell
-      toolbar={
-        <label className="text-xs text-cdl-muted">
-          <span className="sr-only">{tAuth(locale, 'language')}</span>
-          <select
-            value={locale}
-            onChange={(e) => setLocale(resolveAuthLocale(e.target.value))}
-            className="auth-glass-lang"
-            aria-label={tAuth(locale, 'language')}
-          >
-            <option value="pt">PT</option>
-            <option value="en">EN</option>
-            <option value="es">ES</option>
-          </select>
-        </label>
-      }
-    >
+    <AuthGlassShell>
       <h1 className="text-xl font-bold text-cdl-fg sm:text-2xl">
         {tAuth(locale, 'loginTitle')}
       </h1>
