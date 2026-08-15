@@ -50,3 +50,11 @@ Não colocar servidor de longa duração no `install` do Cloud.
 
 Secrets entram só no painel Cloud Agent. Nomes e status: `docs/CURSOR_CLOUD.md`.
 Nunca gravar valores no Git, em `environment.json` ou em chat.
+
+### Comportamento sem credenciais Supabase (não óbvio)
+
+Os secrets do Supabase DEV (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) precisam estar disponíveis como env vars (painel Cloud) ou em `.env.local`. Sem eles:
+
+- `npm run dev` sobe normalmente; `/` e `/login` renderizam (o middleware ignora auth quando faltam as env vars), mas qualquer rota com dados do Supabase (ex.: `/quotes`) retorna **500** (`Lib/supabase.ts` cria o client no load do módulo e lança `supabaseUrl is required`).
+- `npm run build` **falha** em "Collecting page data" (ex.: `/api/auth/logout`) pelo mesmo motivo. Ou seja, build e qualquer fluxo autenticado (login, criar cotação) exigem as credenciais DEV presentes.
+- Fluxo autenticado E2E usa o projeto **hosted DEV** (`yasprgtlqclwsjcshtls`), que já tem usuários/tenant/catálogo. Não há `supabase/seed.sql`, então um stack Supabase local sobe vazio (sem tenant/login utilizável).
