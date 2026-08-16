@@ -2516,7 +2516,7 @@ export default function QuoteWizard({
               packagesWithSides={packagesWithSides}
               allPackages={packages}
               selectedPackageId={state.packageId}
-              language={uiLocale}
+              language={state.language}
               sidesPricePerPerson={commercialRules.sidesPricePerPerson}
               optionGroupsForPackage={optionGroupsForPackage}
               packageItems={packageItems}

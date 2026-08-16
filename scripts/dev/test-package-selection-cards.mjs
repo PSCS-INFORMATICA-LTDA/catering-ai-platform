@@ -14,6 +14,10 @@ const translationsSource = readFileSync(
   join(ROOT, 'Lib/quoteTranslations.ts'),
   'utf8',
 )
+const wizardSource = readFileSync(
+  join(ROOT, 'app/quotes/new/QuoteWizard.tsx'),
+  'utf8',
+)
 
 function check(name, assertion) {
   assertion()
@@ -110,6 +114,7 @@ check('T09 desktop keeps the balanced two-area card', () => {
 check('T10 Portuguese labels are present', () => {
   assert.match(translationsSource, /highlights: 'Destaques'/)
   assert.match(translationsSource, /garnish: 'Guarnições'/)
+  assert.match(wizardSource, /QuotePackageStepExplorer[\s\S]*?language=\{state\.language\}/)
 })
 
 check('T11 English labels and side item payload are present', () => {
