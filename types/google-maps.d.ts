@@ -9,6 +9,16 @@ declare namespace google.maps {
     types: string[]
   }
 
+  interface LatLng {
+    lat(): number
+    lng(): number
+  }
+
+  interface LatLngLiteral {
+    lat: number
+    lng: number
+  }
+
   namespace places {
     interface AutocompleteOptions {
       types?: string[]
@@ -19,6 +29,7 @@ declare namespace google.maps {
     interface PlaceResult {
       address_components?: GeocoderAddressComponent[]
       formatted_address?: string
+      geometry?: { location?: LatLng }
     }
 
     class Autocomplete {
@@ -107,6 +118,7 @@ declare namespace google.maps {
 
   interface GeocoderRequest {
     address?: string
+    location?: LatLng | LatLngLiteral
     componentRestrictions?: GeocoderComponentRestrictions
     region?: string
   }

@@ -190,7 +190,7 @@ export default function AddressAutocompleteFields({
         autocomplete = new Autocomplete(input, {
           types: ['geocode'],
           componentRestrictions: { country: country.toLowerCase() },
-          fields: ['address_components', 'formatted_address'],
+          fields: ['address_components', 'formatted_address', 'geometry'],
         })
         placeListener = autocomplete.addListener('place_changed', () => {
           if (!autocomplete) return

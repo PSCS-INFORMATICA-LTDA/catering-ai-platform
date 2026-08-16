@@ -11,6 +11,7 @@ export type AddressValues = {
 type GoogleAddressLike = {
   address_components?: google.maps.GeocoderAddressComponent[]
   formatted_address?: string
+  geometry?: { location?: google.maps.LatLng }
 }
 
 function getAddressComponent(
@@ -60,7 +61,7 @@ export async function enrichGooglePlaceFromGeocoder(
   place: GoogleAddressLike,
   parsed: AddressValues,
 ): Promise<AddressValues> {
-  if (!place.formatted_address) return parsed
+  if (!place.geometry?.location && !place.formatted_address) return parsed
 
   const maps = globalThis.window?.google?.maps
   if (!maps?.importLibrary) return parsed
@@ -72,7 +73,9 @@ export async function enrichGooglePlaceFromGeocoder(
     const service = new Geocoder()
     const geocoded = await new Promise<AddressValues | null>((resolve) => {
       service.geocode(
-        { address: place.formatted_address },
+        place.geometry?.location
+          ? { location: place.geometry.location }
+          : { address: place.formatted_address },
         (results, status) => {
           if (status !== 'OK' || !results?.[0]) {
             resolve(null)
