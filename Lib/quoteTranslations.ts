@@ -262,6 +262,7 @@ type QuoteStrings = {
     totalPerPerson: string
     garnish: string
     highlight: string
+    highlights: string
     includedItems: string
     packageHighlights: string
     meatsCategory: string
@@ -622,6 +623,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       totalPerPerson: 'Total por pessoa',
       garnish: 'Guarnições',
       highlight: 'Destaque',
+      highlights: 'Destaques',
       includedItems: 'Itens inclusos',
       packageHighlights: 'Destaques do pacote',
       meatsCategory: 'Carnes',
@@ -985,6 +987,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       totalPerPerson: 'Total per person',
       garnish: 'Sides',
       highlight: 'Highlight',
+      highlights: 'Highlights',
       includedItems: 'Included items',
       packageHighlights: 'Package highlights',
       meatsCategory: 'Meats',
@@ -1351,6 +1354,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       totalPerPerson: 'Total por persona',
       garnish: 'Guarniciones',
       highlight: 'Destacado',
+      highlights: 'Destacados',
       includedItems: 'Ítems incluidos',
       packageHighlights: 'Destacados del paquete',
       meatsCategory: 'Carnes',

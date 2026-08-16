@@ -60,6 +60,7 @@
     "test:dev:quote-deposit-agenda-reservation": "node scripts/dev/test-quote-deposit-agenda-reservation.mjs",
     "test:dev:quote-pricing-ssot": "node scripts/dev/test-quote-pricing-ssot.mjs",
     "test:dev:quote-wizard-v2": "node scripts/dev/test-quote-wizard-v2.mjs",
+    "test:dev:package-selection-cards": "node scripts/dev/test-package-selection-cards.mjs",
     "test:dev:google-place-address": "node --experimental-strip-types scripts/dev/test-google-place-address.mjs",
     "validate:dev:preview-deposit-agenda": "node scripts/dev/validate-preview-deposit-agenda-flow.mjs",
     "seed:dev:preview-deposit-ui-demo": "node scripts/dev/seed-preview-deposit-ui-demo.mjs",
