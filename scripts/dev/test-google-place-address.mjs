@@ -80,6 +80,20 @@ check('T08 BR CEP mismatch', () => {
   assert.equal(compatible({ expectedPostalCode: '04650-160', selectedPostalCode: '04650-170' }), false)
 })
 
+check('T08b BR Google generic CEP requires authoritative street match', () => {
+  const base = {
+    expectedPostalCode: '04650-160',
+    selectedPostalCode: '04650-000',
+    expectedCity: 'São Paulo',
+    expectedState: 'SP',
+    selectedCity: 'São Paulo',
+    selectedState: 'SP',
+    expectedAddress: 'Rua Antônio Fogal',
+  }
+  assert.equal(compatible({ ...base, selectedAddress: 'Rua Antônio Fogal' }), true)
+  assert.equal(compatible({ ...base, selectedAddress: 'Outra Rua' }), false)
+})
+
 check('T09 Google street number is parsed', () => {
   assert.equal(parseGooglePlace(orlandoPlace).addressNumber, '400')
 })

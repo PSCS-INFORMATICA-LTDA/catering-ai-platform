@@ -125,6 +125,7 @@ export default function AddressAutocompleteFields({
   }, [values])
 
   const lastLookupRef = useRef('')
+  const postalLookupStreetRef = useRef('')
 
   useEffect(() => {
     const digits = normalizePostalDigits(values.zipCode)
@@ -147,6 +148,7 @@ export default function AddressAutocompleteFields({
         .then((addr) => {
           if (cancelled) return
           lastLookupRef.current = digits
+          postalLookupStreetRef.current = addr.address
           setAddressQuery(addr.address)
           onChangeRef.current({
             zipCode: addr.zipCode,
@@ -210,6 +212,8 @@ export default function AddressAutocompleteFields({
               expectedState: currentValues.state,
               selectedCity: selected.city,
               selectedState: selected.state,
+              expectedAddress: postalLookupStreetRef.current,
+              selectedAddress: selected.address,
             })
 
             if (!selected.address || !isCompatible) {
@@ -261,6 +265,7 @@ export default function AddressAutocompleteFields({
                 normalizePostalDigits(zipCode) !==
                 normalizePostalDigits(valuesRef.current.zipCode)
               setAddressError(null)
+              if (postalChanged) postalLookupStreetRef.current = ''
               onChange({
                 zipCode,
                 ...(postalChanged ? { address: '', addressNumber: '' } : {}),

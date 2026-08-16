@@ -72,6 +72,8 @@ export type SelectedPlacePostalCompatibility = {
   expectedState?: string | null
   selectedCity?: string | null
   selectedState?: string | null
+  expectedAddress?: string | null
+  selectedAddress?: string | null
 }
 
 /**
@@ -87,6 +89,8 @@ export function isSelectedPlaceCompatibleWithPostalCode({
   expectedState,
   selectedCity,
   selectedState,
+  expectedAddress,
+  selectedAddress,
 }: SelectedPlacePostalCompatibility): boolean {
   const country = inferCountryFromPostalCode(expectedPostalCode)
   const expectedDigits = normalizePostalDigits(expectedPostalCode)
@@ -98,7 +102,20 @@ export function isSelectedPlaceCompatibleWithPostalCode({
     if (country === 'US') {
       return expectedDigits.slice(0, 5) === selectedDigits.slice(0, 5)
     }
-    return expectedDigits.length === 8 && selectedDigits === expectedDigits
+    if (expectedDigits.length === 8 && selectedDigits === expectedDigits) {
+      return true
+    }
+
+    const expectedStreetKey = normalizePostalTerritoryText(expectedAddress)
+    const selectedStreetKey = normalizePostalTerritoryText(selectedAddress)
+    return Boolean(
+      expectedStreetKey &&
+        selectedStreetKey === expectedStreetKey &&
+        normalizePostalTerritoryText(expectedCity) ===
+          normalizePostalTerritoryText(selectedCity) &&
+        normalizePostalTerritoryText(expectedState) ===
+          normalizePostalTerritoryText(selectedState),
+    )
   }
 
   const expectedCityKey = normalizePostalTerritoryText(expectedCity)
