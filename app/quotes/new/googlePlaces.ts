@@ -60,7 +60,7 @@ export async function enrichGooglePlaceFromGeocoder(
   place: GoogleAddressLike,
   parsed: AddressValues,
 ): Promise<AddressValues> {
-  if (parsed.zipCode || !place.formatted_address) return parsed
+  if (!place.formatted_address) return parsed
 
   const maps = globalThis.window?.google?.maps
   if (!maps?.importLibrary) return parsed
@@ -89,7 +89,7 @@ export async function enrichGooglePlaceFromGeocoder(
       addressNumber: parsed.addressNumber || geocoded.addressNumber,
       city: parsed.city || geocoded.city,
       state: parsed.state || geocoded.state,
-      zipCode: geocoded.zipCode,
+      zipCode: geocoded.zipCode || parsed.zipCode,
     }
   } catch {
     return parsed
