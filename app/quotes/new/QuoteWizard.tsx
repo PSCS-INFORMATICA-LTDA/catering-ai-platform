@@ -9,7 +9,9 @@ import CatalogImageFrame from '../../../components/CatalogImageFrame'
 import QuoteStepHeader from '../../../components/quotes/QuoteStepHeader'
 import QuoteStepper from '../../../components/quotes/QuoteStepper'
 import QuotePackageStepExplorer from '../../../components/quotes/QuotePackageStepExplorer'
+import QuoteWizardStepNav from '../../../components/quotes/QuoteWizardStepNav'
 import AdditionalCategorySection from '../../../components/quotes/additionals/AdditionalCategorySection'
+import { useAutoEventDistance } from '@/Lib/hooks/useAutoEventDistance'
 import {
   calcAdditionalLineTotalForItem,
   getAdditionalUnitPrice,
@@ -18,23 +20,44 @@ import {
   isPerPersonAdditional,
   normalizeAdditionalQuantity,
 } from '../../../Lib/quoteAdditionalDisplay'
-import { getQuoteStrings } from '../../../Lib/quoteTranslations'
+import { getAdditionalItemCategoryKey } from '@/Lib/additionalItemFieldAccess'
+import {
+  buildAdditionalCategoryDisplayLabels,
+  countUnvisitedAdditionalCategories,
+  getUnvisitedAdditionalCategoryKeys,
+  getVisibleAdditionalCategoryKeys,
+  pruneVisitedAdditionalCategories,
+} from '@/Lib/wizardAdditionalCategories'
+import {
+  canAdvanceFromAdditionalsStep,
+  resolveNextWizardStep,
+  WIZARD_STEP_COUNT,
+} from '@/Lib/wizardStepAdvance'
+import { getQuoteStrings, tw } from '../../../Lib/quoteTranslations'
+import { useAuthLocaleFromMe } from '../../../Lib/i18n/useAuthLocaleFromMe'
+import {
+  formatUiDate,
+  toBcp47Locale,
+} from '../../../Lib/i18n/locales'
+import { tCommon } from '../../../Lib/i18n/common'
 import PackageOptionsDebugPanel from '../../../components/quotes/PackageOptionsDebugPanel'
 import { CDL_DEFAULT_COMPANY_ID } from '../../../Lib/cdlCompany'
 import type { PackageOptionQueryDebug } from '../../../Lib/fetchPackageOptionGroups'
 import {
-  getPackageDetailTitle,
   sortPackagesByCommercialTier,
 } from '../../../Lib/packageDisplay'
-import QuoteWizardSummaryStep from '../../../components/quote-review/QuoteWizardSummaryStep'
-import { RESERVATION_PAYMENT_TEXT } from '../../../Lib/cdlCommercialRules'
+import {
+  getPackageDescription as catalogPackageDescription,
+  getPackageLabel,
+} from '../../../Lib/packageFieldAccess'
+import QuoteWizardConfirmationStep from '../../../components/quote-review/QuoteWizardConfirmationStep'
 import { resolvePackageCatalogImageUrl } from '../../../Lib/packageCatalogVisual'
 import { calcAdditionalLineTotal } from '../../../Lib/calculateQuoteTotals'
 import type { CommercialRulesSnapshot } from '../../../Lib/supabaseCommercialRules'
-import { calculateQuoteDraftFromSupabasePricing } from '../../../Lib/calculateQuoteDraftFromSupabasePricing'
+import type { PricingBreakdown } from '@/Lib/pricing/pricingBreakdownTypes'
+import { useQuotePricingPreview } from '@/Lib/hooks/useQuotePricingPreview'
 import type { QuoteSaveInput } from '../../../Lib/buildQuoteSavePayload'
-import { createQuote } from '../../../Lib/createQuote'
-import { updateQuote } from '../../../Lib/updateQuote'
+import { saveQuoteViaApi } from '../../../Lib/saveQuoteViaApi'
 import {
   buildSaveQuoteError,
   logSaveQuoteError,
@@ -47,6 +70,7 @@ import {
 } from '../../../Lib/getCustomerDisplayName'
 import { getCatalogItemImageUrl } from '../../../Lib/catalogItemVisual'
 import { filterCatalogItems } from '../../../Lib/itemCatalog'
+import { isUsablePostalCode } from '../../../Lib/cep'
 import { isUsablePhone, normalizePhone } from '../../../Lib/normalizePhone'
 import {
   dedupeCustomersList,
@@ -86,6 +110,7 @@ import AddressAutocompleteFields from './AddressAutocompleteFields'
 import {
   getMandatoryPendingSteps,
   getStepVisualStatus,
+  isGrillPhotoRequiredAndMissing,
   isQuoteReadyToSave,
   type StepStatusContext,
 } from './wizardStepStatus'
@@ -108,6 +133,7 @@ export type Customer = {
   zip_code?: string | null
   postal_code?: string | null
   venue_name?: string | null
+  is_supplier?: boolean | null
   updated_at?: string | null
   created_at?: string | null
 }
@@ -162,42 +188,20 @@ export type AdditionalItem = {
 /** Item do catálogo mestre (`catalog_items`). */
 export type CatalogItem = AdditionalItem
 
-const WIZARD_STEP_COUNT = 8
 
-function formatCurrency(value: number) {
-  return `$${value.toFixed(2)}`
-}
-
-function roundMoney(value: number) {
-  return Math.round(value * 100) / 100
-}
-
-function roundPercentage(value: number) {
-  return Math.round(value * 1000) / 1000
-}
-
-function formatPercentage(value: number) {
-  const rounded = roundPercentage(Math.min(100, Math.max(0, value)))
-  const formatted = rounded.toFixed(3).replace(/\.?0+$/, '')
-  return `${formatted}%`
-}
-
-function formatReservationSummary(
-  percentage: number,
-  amount: number,
-  amountCustomized: boolean,
-) {
-  const pct = formatPercentage(percentage)
-  const abs = formatCurrency(amount)
-  return amountCustomized ? `${abs} (${pct})` : `${pct} (${abs})`
-}
-
-function formatDate(value: string) {
-  if (!value) return '—'
-  return new Date(value + 'T00:00:00').toLocaleDateString('pt-BR', {
+function formatDate(value: string, locale: string | null | undefined = 'pt') {
+  return formatUiDate(value, locale, {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
+  })
+}
+
+function getCalendarWeekdays(locale: string | null | undefined) {
+  const bcp = toBcp47Locale(locale)
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(Date.UTC(2024, 0, 1 + i))
+    return new Intl.DateTimeFormat(bcp, { weekday: 'short' }).format(date)
   })
 }
 
@@ -227,7 +231,6 @@ function toDateValue(date: Date) {
   return `${year}-${month}-${day}`
 }
 
-const CALENDAR_WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 
 type FieldCompletion = 'filled' | 'empty'
 
@@ -305,12 +308,14 @@ function DatePickerField({
   onChange,
   className = '',
   completion,
+  language = 'pt',
 }: {
   label: string
   value: string
   onChange: (value: string) => void
   className?: string
   completion?: FieldCompletion
+  language?: QuoteLanguage | string | null
 }) {
   const [open, setOpen] = useState(false)
   const [viewDate, setViewDate] = useState(() => parseDateValue(value) ?? new Date())
@@ -361,10 +366,11 @@ function DatePickerField({
     )
   }
 
-  const monthLabel = viewDate.toLocaleDateString('pt-BR', {
+  const monthLabel = viewDate.toLocaleDateString(toBcp47Locale(language), {
     month: 'long',
     year: 'numeric',
   })
+  const weekdays = getCalendarWeekdays(language)
 
   return (
     <div ref={containerRef} className={`relative flex flex-col gap-2 ${className}`}>
@@ -378,7 +384,7 @@ function DatePickerField({
           aria-haspopup="dialog"
         >
           <span className={selectedDate ? 'text-cdl-fg' : 'text-cdl-faint'}>
-            {selectedDate ? formatDate(value) : 'Selecione a data'}
+            {selectedDate ? formatDate(value, language) : tw(language, 'selectDate')}
           </span>
           <CalendarIcon />
         </button>
@@ -388,7 +394,7 @@ function DatePickerField({
       {open && (
         <div
           role="dialog"
-          aria-label={`Calendário de ${label}`}
+          aria-label={tw(language, 'calendarOf', { label })}
           className="absolute left-0 top-full z-30 mt-2 w-full min-w-[300px] rounded-2xl border border-cdl-border bg-cdl-surface p-4 shadow-cdl-popup sm:w-[320px]"
         >
           <div className="mb-4 flex items-center justify-between gap-2">
@@ -396,7 +402,7 @@ function DatePickerField({
               type="button"
               onClick={() => shiftMonth(-1)}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-cdl-border bg-cdl-inset text-cdl-fg transition-colors hover:border-cdl-accent-border"
-              aria-label="Mês anterior"
+              aria-label={tw(language, 'prevMonth')}
             >
               ‹
             </button>
@@ -407,14 +413,14 @@ function DatePickerField({
               type="button"
               onClick={() => shiftMonth(1)}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-cdl-border bg-cdl-inset text-cdl-fg transition-colors hover:border-cdl-accent-border"
-              aria-label="Próximo mês"
+              aria-label={tw(language, 'nextMonth')}
             >
               ›
             </button>
           </div>
 
           <div className="mb-2 grid grid-cols-7 gap-1">
-            {CALENDAR_WEEKDAYS.map((weekday) => (
+            {weekdays.map((weekday) => (
               <span
                 key={weekday}
                 className="py-1 text-center text-[10px] font-semibold uppercase tracking-wider text-cdl-muted"
@@ -486,12 +492,14 @@ function TimePickerField({
   onChange,
   className = '',
   completion,
+  language = 'pt',
 }: {
   label: string
   value: string
   onChange: (value: string) => void
   className?: string
   completion?: FieldCompletion
+  language?: QuoteLanguage | string | null
 }) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -543,7 +551,7 @@ function TimePickerField({
           aria-haspopup="dialog"
         >
           <span className={selected ? 'text-cdl-fg' : 'text-cdl-faint'}>
-            {selected ? formatTime(value) : 'Selecione o horário'}
+            {selected ? formatTime(value) : tw(language, 'selectTime')}
           </span>
           <ClockIcon />
         </button>
@@ -553,7 +561,7 @@ function TimePickerField({
       {open && (
         <div
           role="dialog"
-          aria-label={`Seletor de ${label}`}
+          aria-label={tw(language, 'timePickerOf', { label })}
           className="absolute left-0 top-full z-30 mt-2 w-full min-w-[300px] rounded-2xl border border-cdl-border bg-cdl-surface p-4 shadow-cdl-popup sm:w-[320px]"
         >
           <p className="mb-3 text-center text-sm font-bold text-cdl-accent">
@@ -561,7 +569,7 @@ function TimePickerField({
           </p>
 
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-cdl-muted">
-            Hora
+            {tw(language, 'hour')}
           </p>
           <div className="mb-4 grid max-h-40 grid-cols-6 gap-1 overflow-y-auto pr-1">
             {HOUR_OPTIONS.map((hour) => {
@@ -584,7 +592,7 @@ function TimePickerField({
           </div>
 
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-cdl-muted">
-            Minutos
+            {tw(language, 'minutes')}
           </p>
           <div className="grid grid-cols-4 gap-1">
             {MINUTE_OPTIONS.map((minute) => {
@@ -628,24 +636,12 @@ function getEventDefaultsFromCustomer(customer: Customer) {
   }
 }
 
-function getPackageName(pkg: Package) {
-  return (
-    pkg.label_pt ??
-    pkg.package_name ??
-    pkg.label_en ??
-    pkg.label_es ??
-    '—'
-  )
+function getPackageName(pkg: Package, language?: string | null) {
+  return getPackageLabel(pkg, language)
 }
 
-function getPackageDescription(pkg: Package) {
-  return (
-    pkg.description_pt ??
-    pkg.description_en ??
-    pkg.description_es ??
-    pkg.description ??
-    ''
-  )
+function getPackageDescription(pkg: Package, language?: string | null) {
+  return catalogPackageDescription(pkg, language)
 }
 
 function getPackagePrice(pkg: Package) {
@@ -671,26 +667,6 @@ function mapSelectedAdditionalRow(
   }
 }
 
-function WizardStepButton({
-  label,
-  onClick,
-  className = '',
-}: {
-  label: string
-  onClick: () => void
-  className?: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`cdl-btn-primary ${className}`}
-    >
-      {label}
-    </button>
-  )
-}
-
 // mileage + quote totals: see Lib/calculateQuoteTotals.ts
 
 function SectionCard({
@@ -709,60 +685,6 @@ function SectionCard({
       {title ? <h2 className="cdl-section-title">{title}</h2> : null}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">{children}</div>
     </section>
-  )
-}
-
-function Field({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs font-bold uppercase tracking-wider text-cdl-muted">
-        {label}
-      </span>
-      <span className="text-sm text-cdl-fg">{value ?? '—'}</span>
-    </div>
-  )
-}
-
-function MileageSummaryPanel({
-  distance,
-  freeLimit,
-  rate,
-  mileageFee,
-}: {
-  distance: number
-  freeLimit: number
-  rate: number
-  mileageFee: number
-}) {
-  const chargedMiles = Math.max(0, distance - freeLimit)
-
-  return (
-    <div className="sm:col-span-2 rounded-xl border border-cdl-border bg-cdl-inset px-6 py-5 shadow-cdl">
-      <p className="cdl-eyebrow">Resumo de milhagem</p>
-      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div>
-          <p className="cdl-eyebrow">Milhas totais</p>
-          <p className="mt-2 text-xl font-bold text-cdl-fg">{distance} mi</p>
-        </div>
-        <div>
-          <p className="cdl-eyebrow">Milhas inclusas</p>
-          <p className="mt-2 text-xl font-bold text-cdl-fg">{freeLimit} mi</p>
-        </div>
-        <div>
-          <p className="cdl-eyebrow">Milhas cobradas</p>
-          <p className="mt-2 text-xl font-bold text-cdl-price">{chargedMiles} mi</p>
-        </div>
-        <div>
-          <p className="cdl-eyebrow">Taxa calculada</p>
-          <p className="mt-2 text-xl font-bold text-cdl-price">
-            {formatCurrency(mileageFee)}
-          </p>
-        </div>
-      </div>
-      <p className="mt-4 text-xs text-cdl-text-secondary">
-        {chargedMiles} mi × {formatCurrency(rate)}/mi
-      </p>
-    </div>
   )
 }
 
@@ -904,20 +826,22 @@ function GrillPhotoStatusField({
   value,
   disabled,
   onChange,
+  language = 'pt',
 }: {
   value: GrillPhotoStatus
   disabled?: boolean
   onChange: (value: GrillPhotoStatus) => void
+  language?: QuoteLanguage | string | null
 }) {
   const options: { value: GrillPhotoStatus; label: string }[] = [
-    { value: 'received', label: 'Sim' },
-    { value: 'pending', label: 'Não' },
-    { value: 'not_applicable', label: 'Não se aplica' },
+    { value: 'received', label: tw(language, 'yes') },
+    { value: 'pending', label: tw(language, 'no') },
+    { value: 'not_applicable', label: tw(language, 'notApplicable') },
   ]
 
   return (
     <fieldset className="sm:col-span-2">
-      <legend className="cdl-eyebrow">Foto da churrasqueira recebida?</legend>
+      <legend className="cdl-eyebrow">{tw(language, 'grillPhotoReceived')}</legend>
       <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         {options.map((option) => {
           const selected = value === option.value
@@ -946,12 +870,12 @@ function GrillPhotoStatusField({
       </div>
       {value === 'received' ? (
         <p className="mt-2 text-xs text-cdl-success">
-          Foto confirmada como recebida.
+          {tw(language, 'photoConfirmed')}
         </p>
       ) : null}
       {value === 'pending' ? (
         <p className="mt-2 text-xs text-cdl-warning">
-          Foto ainda pendente para validação.
+          {tw(language, 'photoPendingHint')}
         </p>
       ) : null}
     </fieldset>
@@ -979,6 +903,7 @@ export default function QuoteWizard({
   existingSnapshot,
   linkedCustomer = null,
   initialStep = 0,
+  initialUiLocale,
 }: {
   customers: Customer[]
   packages: Package[]
@@ -999,6 +924,7 @@ export default function QuoteWizard({
   existingSnapshot?: QuoteSnapshotRecord
   linkedCustomer?: Customer | null
   initialStep?: number
+  initialUiLocale?: string | null
 }) {
   const itemCatalog = catalogItems ?? additionalItems ?? []
   const isEditMode = mode === 'edit' && Boolean(quoteId)
@@ -1010,12 +936,18 @@ export default function QuoteWizard({
     () => initialState ?? createInitialWizardState(commercialRules),
   )
   const [customerSearch, setCustomerSearch] = useState('')
+  const [customerSearchOpen, setCustomerSearchOpen] = useState(false)
+  const customerSearchRef = useRef<HTMLDivElement>(null)
   const [endTimeCustomized, setEndTimeCustomized] = useState(false)
   const [openAdditionalCategories, setOpenAdditionalCategories] = useState<
     Set<string>
   >(() => new Set())
-  const [reservationAmountCustomized, setReservationAmountCustomized] =
-    useState(false)
+  const [visitedAdditionalCategories, setVisitedAdditionalCategories] =
+    useState<Set<string>>(() => new Set())
+  const visitedAdditionalCategoriesRef = useRef(visitedAdditionalCategories)
+  const additionalCategoryKeysRef = useRef<string[]>([])
+  visitedAdditionalCategoriesRef.current = visitedAdditionalCategories
+  const grillPhotoInputRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [saveErrorInfo, setSaveErrorInfo] = useState<SaveQuoteErrorInfo | null>(
     null,
@@ -1045,11 +977,13 @@ export default function QuoteWizard({
   >(() => packageOptionGroupItems)
   const [packageOptionQueryDebugState, setPackageOptionQueryDebugState] =
     useState<PackageOptionQueryDebug | null>(() => packageOptionQueryDebug)
+  const uiLocale = useAuthLocaleFromMe(initialUiLocale)
   const quoteStrings = useMemo(
-    () => getQuoteStrings(state.language),
-    [state.language],
+    () => getQuoteStrings(uiLocale),
+    [uiLocale],
   )
   const wizardSteps = quoteStrings.wizardSteps
+  const w = quoteStrings.wizard
 
   const debugCompanyId =
     tenantCompanyId?.trim() || CDL_DEFAULT_COMPANY_ID
@@ -1061,7 +995,27 @@ export default function QuoteWizard({
   )
   const router = useRouter()
   const distanceInputRef = useRef<HTMLInputElement>(null)
+  const distanceManualRef = useRef(false)
   const previousStepRef = useRef(step)
+
+  useEffect(() => {
+    distanceManualRef.current = false
+  }, [state.address, state.addressNumber, state.city, state.state, state.zipCode])
+
+  useAutoEventDistance({
+    origin: state.baseLocation,
+    address: state.address,
+    addressNumber: state.addressNumber,
+    city: state.city,
+    state: state.state,
+    zipCode: state.zipCode,
+    enabled: !distanceManualRef.current,
+    onDistance: (miles) => {
+      setState((prev) =>
+        prev.distance === miles ? prev : { ...prev, distance: miles },
+      )
+    },
+  })
 
   useEffect(() => {
     setFlatOptionGroups(packageOptionGroups)
@@ -1199,7 +1153,7 @@ export default function QuoteWizard({
         error?: string
       }
       if (!response.ok || !result.data) {
-        throw new Error(result.error ?? 'Não foi possível atualizar clientes.')
+        throw new Error(result.error ?? w.refreshCustomersError)
       }
       setLocalCustomers((current) => {
         const merged = sortCustomersByRecency(result.data ?? [])
@@ -1215,7 +1169,7 @@ export default function QuoteWizard({
         customerPhoneLinkError:
           refreshError instanceof Error
             ? refreshError.message
-            : 'Erro ao atualizar lista de clientes.',
+            : w.refreshCustomersListError,
       })
     } finally {
       setCustomersRefreshing(false)
@@ -1230,7 +1184,7 @@ export default function QuoteWizard({
   const editCustomerDisplayName = linkedCustomer
     ? getCustomerDisplayName(linkedCustomer)
     : state.customerId
-      ? 'Cliente vinculado não encontrado'
+      ? w.linkedCustomerNotFound
       : CUSTOMER_DISPLAY_NAME_EMPTY
   const selectedPackage = packages.find((p) => p.id === state.packageId) ?? null
 
@@ -1244,10 +1198,30 @@ export default function QuoteWizard({
     [selectedPackage, packages, state.packageId],
   )
 
-  const filteredCustomers = useMemo(
-    () => filterCustomersBySearch(localCustomers, customerSearch),
-    [localCustomers, customerSearch],
-  )
+  const filteredCustomers = useMemo(() => {
+    const quoteClients = localCustomers.filter(
+      (row) => row.is_supplier !== true,
+    )
+    return filterCustomersBySearch(quoteClients, customerSearch)
+  }, [localCustomers, customerSearch])
+
+  const customerSuggestions = useMemo(() => {
+    if (customerSearch.trim().length < 1) return []
+    return filteredCustomers.slice(0, 12)
+  }, [filteredCustomers, customerSearch])
+
+  useEffect(() => {
+    if (!customerSearchOpen) return
+    const onPointerDown = (event: MouseEvent) => {
+      const root = customerSearchRef.current
+      if (!root) return
+      if (event.target instanceof Node && !root.contains(event.target)) {
+        setCustomerSearchOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [customerSearchOpen])
 
   const packagesWithoutSides = useMemo(
     () =>
@@ -1335,8 +1309,8 @@ export default function QuoteWizard({
   )
 
   const additionalItemsByCategory = useMemo(
-    () => groupAdditionalItemsByCategory(visibleAdditionalItems, state.language),
-    [visibleAdditionalItems, state.language],
+    () => groupAdditionalItemsByCategory(visibleAdditionalItems, uiLocale),
+    [visibleAdditionalItems, uiLocale],
   )
 
   const selectedCountByCategory = useMemo(() => {
@@ -1366,11 +1340,15 @@ export default function QuoteWizard({
     })
   }, [blockedCatalogItemIds])
 
-  useEffect(() => {
-    if (step !== 4) {
-      setOpenAdditionalCategories(new Set())
-    }
-  }, [step])
+  function markAdditionalCategoryVisited(categoryKey: string) {
+    if (!categoryKey) return
+    setVisitedAdditionalCategories((prev) => {
+      if (prev.has(categoryKey)) return prev
+      const next = new Set(prev)
+      next.add(categoryKey)
+      return next
+    })
+  }
 
   function toggleAdditionalCategory(category: string) {
     setOpenAdditionalCategories((prev) => {
@@ -1382,54 +1360,50 @@ export default function QuoteWizard({
       }
       return next
     })
+    markAdditionalCategoryVisited(category)
   }
 
-  const quoteTotals = useMemo(() => {
-    const additionals = Object.entries(state.additionals)
-      .filter(([, quantity]) => quantity > 0)
-      .map(([itemId, quantity]) => {
-        const item = itemCatalog.find((row) => row.id === itemId)
-        if (!item) return null
-        const normalizedQty = normalizeAdditionalQuantity(item, quantity)
-        return {
-          quantity: normalizedQty,
-          unitPrice: getAdditionalUnitPrice(item),
-          perPerson: isPerPersonAdditional(item),
-        }
-      })
-      .filter((line): line is NonNullable<typeof line> => line !== null)
+  const previewAdditionals = useMemo(
+    () =>
+      Object.entries(state.additionals)
+        .filter(([, quantity]) => quantity > 0)
+        .map(([itemId, quantity]) => ({ itemId, quantity })),
+    [state.additionals],
+  )
 
-    return calculateQuoteDraftFromSupabasePricing({
-      guestCounts: {
-        adultCount: state.adultCount,
-        childrenUnder3Count: state.childrenUnder3Count,
-        children4To12Count: state.children4To12Count,
-      },
-      packagePricePerPerson: selectedPackage ? getPackagePrice(selectedPackage) : 0,
-      additionals,
-      mileageDistance: state.distance,
-      pricing: commercialRules,
-      reservationPercentage: state.reservationPercentage,
-      reservationAmountOverride: state.reservationAmount,
-      useCustomReservation: reservationAmountCustomized,
-    })
-  }, [
-    state.adultCount,
-    state.childrenUnder3Count,
-    state.children4To12Count,
-    state.additionals,
-    state.distance,
-    state.reservationPercentage,
-    state.reservationAmount,
-    selectedPackage,
-    itemCatalog,
-    reservationAmountCustomized,
-    commercialRules,
-  ])
+  const pricingPreview = useQuotePricingPreview({
+    packageId: state.packageId,
+    additionals: previewAdditionals,
+    adultCount: state.adultCount,
+    childrenUnder3Count: state.childrenUnder3Count,
+    children4To12Count: state.children4To12Count,
+    eventDate: state.eventDate,
+    mileageDistance: state.distance,
+    grillRentalRequired: state.grillRentalRequired,
+    grillRentalQty: state.grillRentalQty,
+    reservationPercentage: state.reservationPercentage,
+    language: state.language,
+    enabled: Boolean(state.packageId?.trim()),
+  })
 
-  const billableGuestCount = quoteTotals.billableGuestCount
-  const packageUnitPrice = selectedPackage ? getPackagePrice(selectedPackage) : 0
-  const packageTotal = quoteTotals.packageTotal
+  const pricingBreakdown: PricingBreakdown | null =
+    pricingPreview.data?.breakdown ?? null
+
+  useEffect(() => {
+    if (!pricingBreakdown) return
+    setState((prev) => ({
+      ...prev,
+      reservationPercentage:
+        pricingBreakdown.rules_applied.reservationPercentage,
+      reservationAmount: pricingBreakdown.deposit,
+    }))
+  }, [pricingBreakdown?.computed_at, pricingBreakdown?.deposit, pricingBreakdown?.rules_applied.reservationPercentage])
+
+  const billableGuestCount =
+    pricingBreakdown?.guest_counts.billable_guest_count ??
+    pricingPreview.data?.totals.billableGuestCount ??
+    0
+  const reservationAmount = pricingBreakdown?.deposit ?? 0
 
   const selectedAdditionalsByCategory = useMemo(() => {
     return additionalItemsByCategory
@@ -1443,7 +1417,7 @@ export default function QuoteWizard({
               item,
               state.additionals[item.id] ?? 0,
               billableGuestCount,
-              state.language,
+              uiLocale,
             ),
           ),
       }))
@@ -1452,7 +1426,7 @@ export default function QuoteWizard({
     additionalItemsByCategory,
     state.additionals,
     billableGuestCount,
-    state.language,
+    uiLocale,
   ])
 
   const selectedAdditionals = useMemo(
@@ -1465,7 +1439,7 @@ export default function QuoteWizard({
       selectedAdditionalsByCategory.flatMap(({ categoryLabel, items }) =>
         items.map(({ item, quantity, unitPrice, perPerson, totalPrice }) => ({
           id: item.id,
-          label: getLocalizedAdditionalLabel(item, state.language),
+          label: getLocalizedAdditionalLabel(item, uiLocale),
           category: categoryLabel,
           quantity,
           unitPrice,
@@ -1476,20 +1450,110 @@ export default function QuoteWizard({
           perPerson,
         })),
       ),
-    [selectedAdditionalsByCategory, state.language],
+    [selectedAdditionalsByCategory, uiLocale],
   )
 
-  const additionalTotal = quoteTotals.additionalTotal
-
-  const mileageFee = quoteTotals.mileageFee
-
-  const quoteTotal = quoteTotals.quoteTotal
-
-  const reservationAmount = quoteTotals.reservationAmount
-
-  const balanceDue = quoteTotals.balanceDue
-
   const additionalsCount = selectedAdditionals.length
+
+  const additionalCategoryKeys = useMemo(
+    () => getVisibleAdditionalCategoryKeys(additionalItemsByCategory),
+    [additionalItemsByCategory],
+  )
+  additionalCategoryKeysRef.current = additionalCategoryKeys
+
+  const unvisitedAdditionalCategoryCount = useMemo(
+    () =>
+      countUnvisitedAdditionalCategories(
+        additionalCategoryKeys,
+        visitedAdditionalCategories,
+      ),
+    [additionalCategoryKeys, visitedAdditionalCategories],
+  )
+
+  const additionalCategoryDisplayLabels = useMemo(
+    () =>
+      buildAdditionalCategoryDisplayLabels(
+        additionalItemsByCategory.map(({ categoryKey, categoryLabel }) => ({
+          categoryKey,
+          categoryLabel,
+        })),
+      ),
+    [additionalItemsByCategory],
+  )
+
+  const pendingAdditionalCategories = useMemo(() => {
+    const pendingKeys = getUnvisitedAdditionalCategoryKeys(
+      additionalCategoryKeys,
+      visitedAdditionalCategories,
+    )
+    return pendingKeys.map((key) => ({
+      categoryKey: key,
+      label: additionalCategoryDisplayLabels.get(key) ?? key,
+    }))
+  }, [
+    additionalCategoryKeys,
+    visitedAdditionalCategories,
+    additionalCategoryDisplayLabels,
+  ])
+
+  function scrollToAdditionalCategory(categoryKey: string) {
+    const target = document.getElementById(`additional-category-${categoryKey}`)
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  function handleAdditionalsNextBlockedClick() {
+    const firstPending = pendingAdditionalCategories[0]
+    if (!firstPending) return
+    scrollToAdditionalCategory(firstPending.categoryKey)
+    setOpenAdditionalCategories((prev) => {
+      const next = new Set(prev)
+      next.add(firstPending.categoryKey)
+      return next
+    })
+    markAdditionalCategoryVisited(firstPending.categoryKey)
+  }
+
+  useEffect(() => {
+    if (step !== 3) return
+    function markSeenIfScrolled() {
+      const reached =
+        window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - 96
+      if (!reached) return
+      setVisitedAdditionalCategories(new Set(additionalCategoryKeys))
+    }
+    markSeenIfScrolled()
+    window.addEventListener('scroll', markSeenIfScrolled, { passive: true })
+    return () => window.removeEventListener('scroll', markSeenIfScrolled)
+  }, [step, additionalCategoryKeys])
+
+  useEffect(() => {
+    if (step !== 3) {
+      setOpenAdditionalCategories(new Set())
+    }
+  }, [step])
+
+  useEffect(() => {
+    if (step !== 3 || openAdditionalCategories.size === 0) return
+    setVisitedAdditionalCategories((prev) => {
+      let changed = false
+      const next = new Set(prev)
+      for (const key of openAdditionalCategories) {
+        if (!next.has(key)) {
+          next.add(key)
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [step, openAdditionalCategories])
+
+  useEffect(() => {
+    if (step !== 3) return
+    setVisitedAdditionalCategories((prev) =>
+      pruneVisitedAdditionalCategories(prev, additionalCategoryKeys),
+    )
+  }, [step, additionalCategoryKeys])
 
   const stepStatusCtx = useMemo<StepStatusContext>(
     () => ({
@@ -1503,6 +1567,10 @@ export default function QuoteWizard({
       packageOptionGroupItems: flatOptionGroupItems,
       commercialRules,
       isEditMode,
+      language: uiLocale,
+      additionalCategoryKeys,
+      visitedAdditionalCategories,
+      pricingPreviewReady: Boolean(pricingBreakdown) && !pricingPreview.loading,
     }),
     [
       state,
@@ -1515,51 +1583,22 @@ export default function QuoteWizard({
       flatOptionGroupItems,
       commercialRules,
       isEditMode,
+      uiLocale,
+      additionalCategoryKeys,
+      visitedAdditionalCategories,
+      pricingPreview.loading,
+      pricingBreakdown,
     ],
   )
 
-  useEffect(() => {
-    if (!reservationAmountCustomized) return
-    setState((prev) => ({
-      ...prev,
-      reservationPercentage:
-        quoteTotal > 0
-          ? roundPercentage(
-              Math.min(
-                100,
-                Math.max(0, (prev.reservationAmount / quoteTotal) * 100),
-              ),
-            )
-          : prev.reservationPercentage,
-    }))
-  }, [quoteTotal, reservationAmountCustomized])
-
-  function updateReservationPercentage(raw: string) {
-    const percentage = roundPercentage(
-      Math.min(100, Math.max(0, Number(raw) || 0)),
-    )
-    const amount = roundMoney(quoteTotal * (percentage / 100))
-    setReservationAmountCustomized(false)
+  function handleGrillPhotoSelected(file: File | null) {
+    if (!file) return
+    const url = URL.createObjectURL(file)
     updateState({
-      reservationPercentage: percentage,
-      reservationAmount: amount,
-    })
-  }
-
-  function updateReservationAmount(raw: string) {
-    const amount = roundMoney(
-      Math.min(quoteTotal, Math.max(0, Number.parseFloat(raw) || 0)),
-    )
-    const percentage =
-      quoteTotal > 0
-        ? roundPercentage(
-            Math.min(100, Math.max(0, (amount / quoteTotal) * 100)),
-          )
-        : 0
-    setReservationAmountCustomized(true)
-    updateState({
-      reservationAmount: amount,
-      reservationPercentage: percentage,
+      grillPhotoUrl: url,
+      grillPhotoStatus: 'received',
+      grillPhotoRequired: true,
+      grillPhotoAnswered: true,
     })
   }
 
@@ -1612,7 +1651,7 @@ export default function QuoteWizard({
         updateState({
           customerPhoneLinking: false,
           customerPhoneLinkError:
-            result.error ?? 'Não foi possível buscar cliente pelo telefone.',
+            result.error ?? w.lookupByPhoneError,
         })
         return null
       }
@@ -1620,7 +1659,7 @@ export default function QuoteWizard({
       if (result.customer) {
         const customer = result.customer
         setLocalCustomers((current) => mergeCustomerIntoList(current, customer))
-        setCustomerLinkSuccess('Cliente existente vinculado.')
+        setCustomerLinkSuccess(w.existingCustomerLinked)
 
         const eventDefaults = getEventDefaultsFromCustomer(customer)
         setState((prev) => ({
@@ -1643,13 +1682,13 @@ export default function QuoteWizard({
         customerPhoneLinkError: null,
       }))
       setCustomerLinkSuccess(
-        'Novo cliente — será cadastrado ao finalizar a cotação.',
+        w.newCustomerDraft,
       )
       return null
     } catch {
       updateState({
         customerPhoneLinking: false,
-        customerPhoneLinkError: 'Erro de rede ao buscar cliente.',
+        customerPhoneLinkError: w.networkLookupError,
       })
       return null
     }
@@ -1709,6 +1748,10 @@ export default function QuoteWizard({
       ? normalizeAdditionalQuantity(item, quantity)
       : Math.max(0, quantity)
 
+    if (item) {
+      markAdditionalCategoryVisited(getAdditionalItemCategoryKey(item))
+    }
+
     setState((prev) => {
       const next = { ...prev.additionals }
       if (normalizedQty <= 0) {
@@ -1751,8 +1794,11 @@ export default function QuoteWizard({
   }
 
   function goNext() {
+    const categoryKeys = additionalCategoryKeysRef.current
+    const visitedCategories = visitedAdditionalCategoriesRef.current
+
     if (step === 2 && !state.packageId) {
-      setPackageStepMessage('Selecione um pacote para continuar.')
+      setPackageStepMessage(w.selectPackageToContinue)
       return
     }
     if (step === 2 && state.packageId && selectedPackage) {
@@ -1760,6 +1806,7 @@ export default function QuoteWizard({
         const issues = validatePackageSelections(
           selectableActivePackageOptionGroups,
           state.packageSelections,
+          uiLocale,
         )
         if (issues.length > 0) {
           setPackageSelectionAttempted(true)
@@ -1768,12 +1815,29 @@ export default function QuoteWizard({
         }
       }
     }
-    setPackageSelectionAttempted(false)
-    setPackageStepMessage(null)
     if (step === 4 && !state.grillSetupAnswered) {
       updateState({ grillSetupAnswered: true })
     }
-    if (step < WIZARD_STEP_COUNT - 1) setStep((s) => s + 1)
+
+    const nextStep = resolveNextWizardStep({
+      step,
+      packageId: state.packageId,
+      selectedPackage,
+      packageSelections: state.packageSelections,
+      selectableActivePackageOptionGroups,
+      additionalCategoryKeys: categoryKeys,
+      visitedAdditionalCategories: visitedCategories,
+      state,
+      uiLocale,
+    })
+
+    if (nextStep === step) {
+      return
+    }
+
+    setPackageSelectionAttempted(false)
+    setPackageStepMessage(null)
+    setStep(nextStep)
   }
 
   useEffect(() => {
@@ -1864,6 +1928,35 @@ export default function QuoteWizard({
     state.packageSelections,
   ])
 
+  const allAdditionalCategoriesVisited = useMemo(
+    () =>
+      canAdvanceFromAdditionalsStep(
+        additionalCategoryKeys,
+        visitedAdditionalCategories,
+      ),
+    [additionalCategoryKeys, visitedAdditionalCategories],
+  )
+
+  const additionalsStepNextDisabled = false
+
+  const grillStepPendingIssues = useMemo(() => {
+    const issues: string[] = []
+    if (isGrillPhotoRequiredAndMissing(state)) {
+      issues.push(tw(uiLocale, 'grillPendingPhoto'))
+    }
+    if (state.grillRentalRequired && state.grillRentalQty <= 0) {
+      issues.push(tw(uiLocale, 'grillPendingRentalQty'))
+    }
+    return issues
+  }, [
+    state.hasGrill,
+    state.grillPhotoStatus,
+    state.grillPhotoUrl,
+    state.grillRentalRequired,
+    state.grillRentalQty,
+    uiLocale,
+  ])
+
   useEffect(() => {
     const previousStep = previousStepRef.current
     previousStepRef.current = step
@@ -1885,7 +1978,7 @@ export default function QuoteWizard({
     if (mandatoryPendingSteps.length > 0) {
       const errorInfo = buildSaveQuoteError(
         'validation',
-        new Error('Existem pendências obrigatórias nas etapas anteriores.'),
+        new Error(w.pendingPreviousSteps),
       )
       setSaveErrorInfo(errorInfo)
       return
@@ -1901,7 +1994,7 @@ export default function QuoteWizard({
     if (!state.packageId) {
       const errorInfo = buildSaveQuoteError(
         'validation',
-        new Error('Pacote não selecionado.'),
+        new Error(w.packageNotSelected),
       )
       setSaveErrorInfo(errorInfo)
       return
@@ -1915,7 +2008,7 @@ export default function QuoteWizard({
     if (!packageForSave) {
       const errorInfo = buildSaveQuoteError(
         'validation',
-        new Error('Pacote selecionado não encontrado no catálogo.'),
+        new Error(w.packageNotInCatalog),
       )
       setSaveErrorInfo(errorInfo)
       return
@@ -1950,6 +2043,7 @@ export default function QuoteWizard({
       childrenUnder3Count: state.childrenUnder3Count,
       children4To12Count: state.children4To12Count,
       address: state.address,
+      addressNumber: state.addressNumber,
       city: state.city,
       state: state.state,
       zipCode: state.zipCode,
@@ -1999,14 +2093,15 @@ export default function QuoteWizard({
     }
 
     try {
-      const result = isEditMode
-        ? await updateQuote(quoteId!, payload)
-        : await createQuote(payload)
+      const result = await saveQuoteViaApi(
+        payload,
+        isEditMode ? { quoteId: quoteId! } : undefined,
+      )
 
       if (result.error || !result.data?.id) {
         const errorInfo = normalizeSaveQuoteError(
           result.error ??
-            new Error('Cotação não foi criada — resposta sem id do Supabase.'),
+            new Error(w.quoteNotCreated),
           isEditMode ? 'quote' : 'quote',
         )
         logSaveQuoteError(errorInfo, result.error)
@@ -2034,7 +2129,7 @@ export default function QuoteWizard({
     <main className="quotes-pscs min-h-screen bg-cdl-bg px-4 py-4 pb-28 text-cdl-fg sm:px-8 sm:py-6 sm:pb-28">
       <div className="mx-auto max-w-6xl">
         <div className="mb-3 flex flex-col gap-2">
-          <AdminCompactMenu language={state.language} />
+          <AdminCompactMenu language={uiLocale} />
           <Link
             href={isEditMode && quoteId ? `/quotes/${quoteId}` : '/quotes'}
             className="inline-flex items-center text-sm text-cdl-muted transition-colors hover:text-cdl-brand"
@@ -2045,7 +2140,7 @@ export default function QuoteWizard({
 
         <QuoteStepHeader
           step={step}
-          language={state.language}
+          language={uiLocale}
           isEditMode={isEditMode}
         />
 
@@ -2053,7 +2148,7 @@ export default function QuoteWizard({
           steps={wizardSteps}
           currentStep={step}
           additionalsCount={additionalsCount}
-          language={state.language}
+          language={uiLocale}
           getStepStatus={(index) => getStepVisualStatus(index, stepStatusCtx)}
           onStepClick={setStep}
         />
@@ -2070,7 +2165,7 @@ export default function QuoteWizard({
           <SectionCard>
             <div className="sm:col-span-2">
               <label className="flex flex-col gap-2">
-                <span className="cdl-eyebrow">Idioma da cotação</span>
+                <span className="cdl-eyebrow">{quoteStrings.documentLanguage}</span>
                 <select
                   value={state.language}
                   onChange={(e) =>
@@ -2080,15 +2175,15 @@ export default function QuoteWizard({
                   }
                   className="rounded-xl border border-cdl-border bg-cdl-inset px-4 py-3 text-sm text-cdl-fg outline-none focus:border-cdl-accent-border"
                 >
-                  <option value="pt">Português (PT)</option>
-                  <option value="en">English (EN)</option>
-                  <option value="es">Español (ES)</option>
+                  <option value="pt">{w.langPt}</option>
+                  <option value="en">{w.langEn}</option>
+                  <option value="es">{w.langEs}</option>
                 </select>
               </label>
             </div>
             <div className="sm:col-span-2 rounded-xl border border-cdl-border bg-cdl-inset p-5">
               <p className="text-xs font-bold uppercase tracking-wider text-cdl-muted">
-                Cliente atual
+                {quoteStrings.currentCustomer}
               </p>
               <p className="mt-2 text-xl font-black text-cdl-title">
                 {editCustomerDisplayName}
@@ -2105,7 +2200,7 @@ export default function QuoteWizard({
                 </p>
               ) : null}
               <p className="mt-4 text-sm text-cdl-text-secondary">
-                O cliente não pode ser alterado nesta tela.
+                {quoteStrings.customerLocked}
               </p>
             </div>
           </SectionCard>
@@ -2115,7 +2210,7 @@ export default function QuoteWizard({
           <SectionCard>
             <div className="sm:col-span-2">
               <label className="flex flex-col gap-2">
-                <span className="cdl-eyebrow">Idioma da cotação</span>
+                <span className="cdl-eyebrow">{quoteStrings.documentLanguage}</span>
                 <select
                   value={state.language}
                   onChange={(e) =>
@@ -2125,27 +2220,26 @@ export default function QuoteWizard({
                   }
                   className="rounded-xl border border-cdl-border bg-cdl-inset px-4 py-3 text-sm text-cdl-fg outline-none focus:border-cdl-accent-border"
                 >
-                  <option value="pt">Português (PT)</option>
-                  <option value="en">English (EN)</option>
-                  <option value="es">Español (ES)</option>
+                  <option value="pt">{w.langPt}</option>
+                  <option value="en">{w.langEn}</option>
+                  <option value="es">{w.langEs}</option>
                 </select>
                 <p className="text-xs text-cdl-muted">
-                  Usado no PDF, visualização pública e comunicações futuras.
+                  {quoteStrings.documentLanguageHint}
                 </p>
               </label>
             </div>
             {!selectedCustomer ? (
               <div className="sm:col-span-2 rounded-xl border border-cdl-warning-border bg-cdl-warning-soft px-4 py-3">
                 <p className="text-sm leading-relaxed text-cdl-text-secondary">
-                  Cliente ainda não vinculado. A cotação pode ser criada, mas
-                  deverá ser revisada antes do envio final.
+                  {quoteStrings.customerNotLinked}
                 </p>
               </div>
             ) : null}
 
             <div className="grid grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-2">
               <InputField
-                label="Telefone do cliente"
+                label={w.customerPhone}
                 value={state.customerDraftPhone}
                 onChange={(v) =>
                   updateState({
@@ -2153,7 +2247,7 @@ export default function QuoteWizard({
                     customerPhoneLinkError: null,
                   })
                 }
-                placeholder="(555) 123-4567"
+                placeholder={tCommon(uiLocale, 'phonePlaceholder')}
                 completion={
                   selectedCustomer || isUsablePhone(state.customerDraftPhone)
                     ? 'filled'
@@ -2161,14 +2255,14 @@ export default function QuoteWizard({
                 }
               />
               <InputField
-                label="Nome do cliente"
+                label={w.customerName}
                 value={state.customerDraftName}
                 onChange={(v) => updateState({ customerDraftName: v })}
-                placeholder="Nome para contato"
+                placeholder={w.contactNamePlaceholder}
                 completion={getFieldCompletion(state.customerDraftName)}
               />
               <InputField
-                label="E-mail"
+                label={w.customerEmail}
                 value={state.customerDraftEmail}
                 onChange={(v) => updateState({ customerDraftEmail: v })}
                 placeholder="email@exemplo.com"
@@ -2177,9 +2271,15 @@ export default function QuoteWizard({
               />
             </div>
 
+            {normalizePhone(state.customerDraftPhone).length >= 10 &&
+            !isUsablePhone(state.customerDraftPhone) ? (
+              <p className="sm:col-span-2 text-sm text-cdl-action">
+                {tCommon(uiLocale, 'invalidPhone')}
+              </p>
+            ) : null}
             {state.customerPhoneLinking ? (
               <p className="sm:col-span-2 text-sm text-cdl-muted">
-                Buscando ou criando cliente pelo telefone…
+                {w.linkingCustomer}
               </p>
             ) : null}
             {state.customerPhoneLinkError ? (
@@ -2195,7 +2295,7 @@ export default function QuoteWizard({
             {selectedCustomer ? (
               <div className="sm:col-span-2 rounded-xl border border-cdl-success-border bg-cdl-success-soft px-4 py-3">
                 <p className="text-xs font-bold uppercase tracking-wider text-cdl-success">
-                  Cliente vinculado
+                  {w.customerLinked}
                 </p>
                 <p className="mt-1 font-bold text-cdl-fg">
                   {getCustomerName(selectedCustomer)}
@@ -2208,149 +2308,165 @@ export default function QuoteWizard({
               </div>
             ) : null}
 
-            <div className="sm:col-span-2">
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end">
-                <div className="min-w-0 flex-1">
+            <div className="sm:col-span-2" ref={customerSearchRef}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="relative min-w-0 flex-1">
                   <InputField
-                    label="Pesquisar cliente existente"
+                    label={w.searchExistingCustomer}
                     value={customerSearch}
                     onChange={(value) => {
                       setCustomerSearch(value)
                       setCustomerLinkSuccess(null)
+                      setCustomerSearchOpen(true)
                     }}
-                    onFocus={() => void refreshCustomersFromApi(customerSearch)}
-                    placeholder="Nome, telefone, e-mail ou AB number"
+                    onFocus={() => {
+                      setCustomerSearchOpen(true)
+                      void refreshCustomersFromApi(customerSearch)
+                    }}
+                    placeholder={w.searchCustomerPlaceholder}
                   />
+                  {customerSearchOpen && customerSearch.trim().length >= 1 ? (
+                    <div
+                      className="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 max-h-72 overflow-y-auto rounded-xl border border-cdl-border bg-cdl-surface shadow-lg"
+                      role="listbox"
+                      aria-label={w.customersFound}
+                    >
+                      {customersRefreshing ? (
+                        <p className="px-4 py-3 text-sm text-cdl-muted">
+                          {w.searching}
+                        </p>
+                      ) : customerSuggestions.length === 0 ? (
+                        <p className="px-4 py-3 text-sm text-cdl-muted">
+                          {w.noCustomersFound}
+                        </p>
+                      ) : (
+                        customerSuggestions.map((customer) => {
+                          const selected = state.customerId === customer.id
+                          return (
+                            <button
+                              key={customer.id}
+                              type="button"
+                              role="option"
+                              aria-selected={selected}
+                              onClick={() => {
+                                selectCustomer(customer.id)
+                                setCustomerSearch(getCustomerName(customer))
+                                setCustomerSearchOpen(false)
+                              }}
+                              className={`flex w-full flex-col gap-0.5 border-b border-cdl-border-subtle px-4 py-3 text-left last:border-b-0 ${
+                                selected
+                                  ? 'bg-cdl-success-soft'
+                                  : 'hover:bg-cdl-inset'
+                              }`}
+                            >
+                              <span className="text-sm font-bold text-cdl-fg">
+                                {getCustomerName(customer)}
+                                {selected ? (
+                                  <span className="ml-2 text-cdl-success">✓</span>
+                                ) : null}
+                              </span>
+                              <span className="text-xs text-cdl-muted">
+                                {[customer.phone, customer.email, customer.ab_number]
+                                  .filter(Boolean)
+                                  .join(' · ')}
+                              </span>
+                            </button>
+                          )
+                        })
+                      )}
+                    </div>
+                  ) : null}
                 </div>
                 <button
                   type="button"
-                  onClick={() => void refreshCustomersFromApi(customerSearch)}
+                  onClick={() => {
+                    setCustomerSearchOpen(true)
+                    void refreshCustomersFromApi(customerSearch)
+                  }}
                   disabled={customersRefreshing}
                   className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-xl border border-cdl-border bg-cdl-surface px-4 py-3 text-xs font-bold uppercase tracking-wider text-cdl-fg disabled:opacity-50"
                 >
-                  {customersRefreshing ? 'Atualizando…' : 'Atualizar'}
+                  {customersRefreshing ? w.refreshing : w.refresh}
                 </button>
               </div>
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:col-span-2 sm:grid-cols-2">
-              {filteredCustomers.length === 0 ? (
-                <p className="text-sm text-cdl-muted sm:col-span-2">
-                  Nenhum cliente encontrado.
-                </p>
-              ) : (
-                filteredCustomers.map((customer) => {
-                  const selected = state.customerId === customer.id
-                  return (
-                    <button
-                      key={customer.id}
-                      type="button"
-                      onClick={() => selectCustomer(customer.id)}
-                      className={`rounded-xl border p-5 text-left shadow-cdl transition-colors ${
-                        selected
-                          ? 'border-cdl-success-border bg-cdl-success-soft'
-                          : 'border-cdl-border bg-cdl-inset hover:border-cdl-accent-border'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <h3
-                          className="cursor-pointer font-bold text-cdl-fg"
-                          title="Duplo clique para ir ao evento"
-                          onDoubleClick={() =>
-                            selectCustomerAndAdvance(customer.id)
-                          }
-                        >
-                          {getCustomerName(customer)}
-                        </h3>
-                        {selected && (
-                          <span className="text-sm font-bold text-cdl-success">
-                            ✓
-                          </span>
-                        )}
-                      </div>
-                      {customer.email && (
-                        <p className="mt-1 text-sm text-cdl-muted">{customer.email}</p>
-                      )}
-                      {customer.phone && (
-                        <p className="text-sm text-cdl-muted">{customer.phone}</p>
-                      )}
-                      {customer.ab_number && (
-                        <p className="text-xs font-semibold uppercase tracking-wider text-cdl-muted">
-                          {customer.ab_number}
-                        </p>
-                      )}
-                    </button>
-                  )
-                })
-              )}
+              <p className="mt-2 text-xs text-cdl-muted">
+                {w.searchHint}
+              </p>
             </div>
           </SectionCard>
         )}
 
         {step === 1 && (
           <SectionCard>
-            <div className="grid grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:col-span-2">
               <InputField
-                label="Event Name"
+                label={w.eventName}
                 value={state.eventName}
                 onChange={(v) => updateState({ eventName: v })}
-                placeholder="Nome do evento"
+                placeholder={w.eventNamePlaceholder}
                 completion={getFieldCompletion(state.eventName)}
               />
-              <DatePickerField
-                label="Event Date"
-                value={state.eventDate}
-                onChange={(v) => updateState({ eventDate: v })}
-                completion={getFieldCompletion(state.eventDate)}
-              />
-              <TimePickerField
-                label="Horário início"
-                value={state.startTime}
-                onChange={(v) =>
-                  setState((prev) => ({
-                    ...prev,
-                    startTime: v,
-                    endTime: endTimeCustomized
-                      ? prev.endTime
-                      : addHoursToTime(v, 4),
-                  }))
-                }
-                completion={getFieldCompletion(state.startTime)}
-              />
-              <div>
-                <TimePickerField
-                  label="Horário fim"
-                  value={state.endTime}
-                  onChange={(v) => {
-                    setEndTimeCustomized(true)
-                    updateState({ endTime: v })
-                  }}
-                  completion={getFieldCompletion(state.endTime)}
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+                <DatePickerField
+                  label={w.eventDate}
+                  value={state.eventDate}
+                  onChange={(v) => updateState({ eventDate: v })}
+                  completion={getFieldCompletion(state.eventDate)}
+                  language={uiLocale}
                 />
-                <p className="mt-2 text-xs text-cdl-subtle">
-                  Preenchido automaticamente com +4h. Você pode alterar se
-                  quiser.
-                </p>
+                <TimePickerField
+                  label={w.startTime}
+                  language={uiLocale}
+                  value={state.startTime}
+                  onChange={(v) =>
+                    setState((prev) => ({
+                      ...prev,
+                      startTime: v,
+                      endTime: endTimeCustomized
+                        ? prev.endTime
+                        : addHoursToTime(v, 4),
+                    }))
+                  }
+                  completion={getFieldCompletion(state.startTime)}
+                />
+                <div>
+                  <TimePickerField
+                    label={w.endTime}
+                    language={uiLocale}
+                    value={state.endTime}
+                    onChange={(v) => {
+                      setEndTimeCustomized(true)
+                      updateState({ endTime: v })
+                    }}
+                    completion={getFieldCompletion(state.endTime)}
+                  />
+                  <p className="mt-2 text-xs text-cdl-subtle">
+                    {w.endTimeHint}
+                  </p>
+                </div>
               </div>
-              <QuantityField
-                label="Adultos"
-                value={state.adultCount}
-                onChange={(v) => updateState({ adultCount: v })}
-                completion={getFieldCompletion(state.adultCount)}
-              />
-              <QuantityField
-                label="Crianças até 3 anos"
-                value={state.childrenUnder3Count}
-                onChange={(v) => updateState({ childrenUnder3Count: v })}
-              />
-              <QuantityField
-                label="Crianças 4 a 12 anos"
-                value={state.children4To12Count}
-                onChange={(v) => updateState({ children4To12Count: v })}
-              />
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <QuantityField
+                  label={w.adults}
+                  value={state.adultCount}
+                  onChange={(v) => updateState({ adultCount: v })}
+                  completion={getFieldCompletion(state.adultCount)}
+                />
+                <QuantityField
+                  label={w.childrenUnder3}
+                  value={state.childrenUnder3Count}
+                  onChange={(v) => updateState({ childrenUnder3Count: v })}
+                />
+                <QuantityField
+                  label={w.children4to12}
+                  value={state.children4To12Count}
+                  onChange={(v) => updateState({ children4To12Count: v })}
+                />
+              </div>
               <AddressAutocompleteFields
-                className="sm:col-span-2"
                 values={{
                   address: state.address,
+                  addressNumber: state.addressNumber,
                   city: state.city,
                   state: state.state,
                   zipCode: state.zipCode,
@@ -2358,9 +2474,12 @@ export default function QuoteWizard({
                 fieldCompletions={{
                   city: getFieldCompletion(state.city),
                   state: getFieldCompletion(state.state),
-                  zipCode: getFieldCompletion(state.zipCode),
+                  zipCode: isUsablePostalCode(state.zipCode)
+                    ? 'filled'
+                    : 'empty',
                 }}
                 onChange={(patch) => updateState(patch)}
+                language={uiLocale}
               />
             </div>
           </SectionCard>
@@ -2368,12 +2487,19 @@ export default function QuoteWizard({
 
         {step === 2 && (
           <div className="space-y-4">
+            {packages.length === 0 ? (
+              <div className="rounded-2xl border border-red-500/40 bg-cdl-surface p-6 text-sm text-red-300">
+                {fetchErrors.some((e) => /pacote|package/i.test(e))
+                  ? tw(uiLocale, 'packagesLoadError')
+                  : w.noPackages}
+              </div>
+            ) : null}
             <QuotePackageStepExplorer
               packagesWithoutSides={packagesWithoutSides}
               packagesWithSides={packagesWithSides}
               allPackages={packages}
               selectedPackageId={state.packageId}
-              language="pt"
+              language={state.language}
               sidesPricePerPerson={commercialRules.sidesPricePerPerson}
               optionGroupsForPackage={optionGroupsForPackage}
               packageItems={packageItems}
@@ -2387,7 +2513,7 @@ export default function QuoteWizard({
               nextDisabled={packageStepNextDisabled}
               onNextBlockedClick={() => {
                 if (!state.packageId) {
-                  setPackageStepMessage('Selecione um pacote para continuar.')
+                  setPackageStepMessage(w.selectPackageToContinue)
                   return
                 }
                 setPackageSelectionAttempted(true)
@@ -2411,7 +2537,18 @@ export default function QuoteWizard({
         )}
 
         {step === 3 && (
-          <div className="space-y-6 pb-28">
+          <div
+            className="space-y-6"
+            onScroll={(event) => {
+              const target = event.currentTarget
+              if (
+                target.scrollTop + target.clientHeight >=
+                target.scrollHeight - 48
+              ) {
+                setVisitedAdditionalCategories(new Set(additionalCategoryKeys))
+              }
+            }}
+          >
             <p className="text-sm text-cdl-muted">
               {quoteStrings.additionalsStepHint}
             </p>
@@ -2420,41 +2557,57 @@ export default function QuoteWizard({
                 {quoteStrings.noAdditionalsAvailable}
               </p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {additionalItemsByCategory.map(
                   ({ categoryKey, categoryLabel, items }) => (
                   <AdditionalCategorySection
                     key={categoryKey}
                     categoryKey={categoryKey}
-                    categoryLabel={categoryLabel}
+                    categoryLabel={
+                      additionalCategoryDisplayLabels.get(categoryKey) ??
+                      categoryLabel
+                    }
                     items={items}
                     expanded={openAdditionalCategories.has(categoryKey)}
                     selectedCount={selectedCountByCategory[categoryKey] ?? 0}
+                    visited={visitedAdditionalCategories.has(categoryKey)}
                     quantities={state.additionals}
                     billableGuestCount={billableGuestCount}
-                    language={state.language}
+                    language={uiLocale}
                     onToggle={() => toggleAdditionalCategory(categoryKey)}
                     onChangeQty={setAdditionalQty}
+                    onReviewed={() => markAdditionalCategoryVisited(categoryKey)}
                   />
                 ),
                 )}
               </div>
             )}
-
-            <div className="flex justify-end rounded-2xl border border-cdl-border bg-cdl-surface p-7 shadow-cdl sm:p-9">
-              <WizardStepButton
-                label={quoteStrings.continueToBbq}
-                onClick={() => setStep(4)}
-              />
-            </div>
           </div>
         )}
 
         {step === 4 && (
-          <SectionCard>
+          <div className="space-y-6">
+            {grillStepPendingIssues.length > 0 ? (
+              <section className="rounded-2xl border border-cdl-action/40 bg-cdl-red-soft p-5 shadow-cdl sm:p-6">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-cdl-action">
+                  {tw(uiLocale, 'stepPendingTitle')}
+                </h2>
+                <ul className="mt-3 space-y-1 text-sm text-cdl-text-secondary">
+                  {grillStepPendingIssues.map((issue) => (
+                    <li key={issue} className="flex gap-2">
+                      <span className="text-cdl-action" aria-hidden>
+                        •
+                      </span>
+                      <span>{issue}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+            <SectionCard>
             <div className="grid grid-cols-1 gap-5 sm:col-span-2 sm:grid-cols-2">
               <CheckboxField
-                label="Cliente tem churrasqueira?"
+                label={w.hasGrill}
                 checked={state.hasGrill}
                 onChange={(v) =>
                   updateState(
@@ -2480,35 +2633,52 @@ export default function QuoteWizard({
                 value={state.grillPhotoStatus}
                 disabled={!state.hasGrill}
                 onChange={setGrillPhotoStatus}
+                language={uiLocale}
               />
               <div className="sm:col-span-2">
+                <input
+                  ref={grillPhotoInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) =>
+                    handleGrillPhotoSelected(e.target.files?.[0] ?? null)
+                  }
+                />
                 <button
                   type="button"
-                  disabled
-                  title="Em breve"
-                  className="inline-flex cursor-not-allowed items-center justify-center rounded-xl border border-dashed border-cdl-border bg-cdl-inset px-4 py-3 text-xs font-bold uppercase tracking-wider text-cdl-muted opacity-70"
+                  disabled={!state.hasGrill}
+                  onClick={() => grillPhotoInputRef.current?.click()}
+                  className="inline-flex items-center justify-center rounded-xl border border-cdl-border bg-cdl-inset px-4 py-3 text-xs font-bold uppercase tracking-wider text-cdl-fg disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Anexar foto da churrasqueira
+                  {w.attachGrillPhoto}
                 </button>
-                {/* Future: upload grill photo to Supabase Storage and save media id/url on events.grill_photo_media_id / grill_photo_url. */}
+                {state.grillPhotoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={state.grillPhotoUrl}
+                    alt=""
+                    className="mt-3 max-h-48 rounded-xl border border-cdl-border object-cover"
+                  />
+                ) : null}
                 <p className="mt-3 rounded-xl border border-cdl-border-subtle bg-cdl-inset px-4 py-3 text-sm leading-relaxed text-cdl-text-secondary">
-                  Se o cliente possui churrasqueira própria, confirme se a foto
-                  foi recebida para validar tamanho, condição e estrutura antes
-                  do evento.
+                  {w.grillPhotoHint}
                 </p>
               </div>
               <CheckboxField
-                label="Necessário alugar churrasqueira?"
+                label={w.grillRentalRequired}
                 checked={state.grillRentalRequired}
                 onChange={(v) =>
                   updateState({
                     grillRentalRequired: v,
+                    grillSetupAnswered: true,
                     grillRentalQty: v ? Math.max(1, state.grillRentalQty) : 0,
                   })
                 }
               />
               <QuantityField
-                label="Quantidade de churrasqueiras para aluguel"
+                label={w.grillRentalQty}
                 value={state.grillRentalQty}
                 min={state.grillRentalRequired ? 1 : 0}
                 disabled={!state.grillRentalRequired}
@@ -2524,161 +2694,40 @@ export default function QuoteWizard({
               <div className="sm:col-span-2">
                 <label className="flex flex-col gap-2">
                   <span className="cdl-eyebrow">
-                    Observações sobre a churrasqueira
+                    {w.grillNotes}
                   </span>
                   <textarea
                     value={state.grillNotes}
                     onChange={(e) => updateState({ grillNotes: e.target.value })}
                     rows={4}
-                    placeholder="Ex.: cliente possui churrasqueira, mas foto ainda pendente"
+                    placeholder={w.grillNotesPlaceholder}
                     className="rounded-xl border border-cdl-border bg-cdl-inset px-4 py-3 text-sm text-cdl-fg outline-none transition-colors placeholder:text-cdl-faint focus:border-cdl-accent-border"
                   />
                 </label>
               </div>
             </div>
           </SectionCard>
+          </div>
         )}
 
         {step === 5 && (
-          <SectionCard>
-            <div className="sm:col-span-2 rounded-xl border border-cdl-warning-border bg-cdl-warning-soft px-4 py-3">
-              <p className="text-sm leading-relaxed text-cdl-text-secondary">
-                Base atual: {commercialRules.mileageBaseLocation}. Até{' '}
-                {commercialRules.mileageFreeLimit} mi grátis. Acima de{' '}
-                {commercialRules.mileageFreeLimit} mi, aplicar regra comercial
-                configurada.
-              </p>
-              {/* TODO: Future: calculate mileage automatically using event destination address and base location. */}
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-2">
-              <InputField
-                label="Base Location"
-                value={state.baseLocation}
-                onChange={(v) => updateState({ baseLocation: v })}
-                placeholder="Local base"
-                completion={getFieldCompletion(state.baseLocation)}
-              />
-              <InputField
-                label="Distance (mi)"
-                type="number"
-                value={state.distance}
-                inputRef={distanceInputRef}
-                onChange={(v) =>
-                  updateState({ distance: Math.max(0, Number(v) || 0) })
-                }
-                completion={getFieldCompletion(state.distance)}
-              />
-              <InputField
-                label="Free Limit (mi)"
-                type="number"
-                value={state.freeLimit}
-                onChange={(v) =>
-                  updateState({ freeLimit: Math.max(0, Number(v) || 0) })
-                }
-              />
-              <InputField
-                label="Rate ($/mi)"
-                type="number"
-                value={state.rate}
-                onChange={(v) =>
-                  updateState({ rate: Math.max(0, Number(v) || 0) })
-                }
-              />
-              <MileageSummaryPanel
-                distance={state.distance}
-                freeLimit={state.freeLimit}
-                rate={state.rate}
-                mileageFee={mileageFee}
-              />
-            </div>
-          </SectionCard>
-        )}
-
-        {step === 6 && (
-          <SectionCard>
-            <div className="grid grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <div className="rounded-2xl border border-cdl-accent-border bg-cdl-inset px-4 py-4">
-                  <p className="text-sm leading-relaxed text-cdl-text-secondary">
-                    {RESERVATION_PAYMENT_TEXT}
-                  </p>
-                </div>
-              </div>
-              <div className="sm:col-span-2">
-                <div className="rounded-2xl border border-cdl-border bg-cdl-inset px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-cdl-muted">
-                    Total da cotação
-                  </p>
-                  <p className="mt-1 text-2xl font-black text-cdl-price">
-                    {formatCurrency(quoteTotal)}
-                  </p>
-                </div>
-              </div>
-              <InputField
-                label="Reservation Percentage (%)"
-                type="number"
-                step="0.001"
-                min={0}
-                max={100}
-                value={state.reservationPercentage}
-                onChange={updateReservationPercentage}
-              />
-              <InputField
-                label="Reservation Amount ($)"
-                type="number"
-                step="0.01"
-                min={0}
-                max={quoteTotal}
-                value={reservationAmount}
-                onChange={updateReservationAmount}
-              />
-              <p className="sm:col-span-2 text-xs text-cdl-subtle">
-                Percentual com até 3 casas decimais ou valor absoluto em $ — o
-                outro campo é recalculado automaticamente. Reserva:{' '}
-                {formatReservationSummary(
-                  state.reservationPercentage,
-                  reservationAmount,
-                  reservationAmountCustomized,
-                )}{' '}
-                · Saldo: {formatCurrency(balanceDue)}
-              </p>
-              <div className="sm:col-span-2">
-                <label className="flex flex-col gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-cdl-muted">
-                    Notes
-                  </span>
-                  <textarea
-                    value={state.reservationNotes}
-                    onChange={(e) =>
-                      updateState({ reservationNotes: e.target.value })
-                    }
-                    rows={4}
-                    placeholder="Observações da reserva..."
-                    className="rounded-xl border border-cdl-border bg-cdl-inset px-4 py-3 text-sm text-cdl-fg outline-none transition-colors placeholder:text-cdl-faint focus:border-cdl-accent-border"
-                  />
-                </label>
-              </div>
-            </div>
-          </SectionCard>
-        )}
-
-        {step === 7 && (
-          <QuoteWizardSummaryStep
+          <QuoteWizardConfirmationStep
             state={state}
-            quoteTotals={quoteTotals}
+            breakdown={pricingBreakdown}
+            pricingLoading={pricingPreview.loading}
+            pricingError={pricingPreview.error}
             customerName={
               isEditMode
                 ? editCustomerDisplayName
                 : selectedCustomer
                   ? getCustomerName(selectedCustomer)
                   : state.customerDraftName.trim() ||
-                    'Cliente ainda não vinculado'
+                    w.customerNotLinkedShort
             }
             packageName={
-              selectedPackage ? getPackageName(selectedPackage) : null
+              selectedPackage ? getPackageName(selectedPackage, uiLocale) : null
             }
             packageImageUrl={packageImageUrl}
-            packageUnitPrice={packageUnitPrice}
             selectedPackage={selectedPackage}
             allPackages={packages}
             packageOptionGroups={flatOptionGroups}
@@ -2686,9 +2735,7 @@ export default function QuoteWizard({
             packageItems={packageItems}
             packageSideItems={packageSideItems}
             fromWithSidesSection={fromWithSidesSection}
-            billableGuestCount={billableGuestCount}
             additionals={reviewAdditionals}
-            commercialRules={commercialRules}
             stepStatusCtx={stepStatusCtx}
             mandatoryPendingSteps={mandatoryPendingSteps}
             quoteReady={quoteReady}
@@ -2696,66 +2743,39 @@ export default function QuoteWizard({
             saveErrorInfo={saveErrorInfo}
             isEditMode={isEditMode}
             quoteId={quoteId}
+            uiLanguage={uiLocale}
             onGoToStep={setStep}
             onBack={goBack}
-            onSave={handleSaveQuote}
+            onSave={() => void handleSaveQuote(false)}
+            onDistanceChange={(distance) => {
+              distanceManualRef.current = true
+              updateState({ distance })
+            }}
           />
         )}
 
-        {step !== 7 && (
-        <div className="mt-8 space-y-3">
-          {step === 2 && !state.packageId && packageStepMessage ? (
-            <p className="text-center text-sm font-medium text-[var(--brand-primary)] sm:text-right">
-              {packageStepMessage}
-            </p>
-          ) : null}
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <button
-              type="button"
-              onClick={goBack}
-              disabled={step === 0}
-              className="rounded-xl border border-cdl-border bg-cdl-surface px-6 py-3 text-sm font-bold uppercase tracking-wider text-cdl-fg transition-colors hover:border-cdl-accent-border disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {quoteStrings.back}
-            </button>
-            {step === 2 && state.packageId ? null : (
-            <span className="relative inline-flex w-full sm:w-auto">
-              {step === 2 && packageStepNextDisabled ? (
-                <button
-                  type="button"
-                  aria-label={`${quoteStrings.next} — complete required options`}
-                  className="absolute inset-0 z-10 cursor-not-allowed rounded-xl"
-                  onClick={() => {
-                    if (!state.packageId) {
-                      setPackageStepMessage(
-                        state.language === 'en'
-                          ? 'Select a package to continue.'
-                          : state.language === 'es'
-                            ? 'Seleccione un paquete para continuar.'
-                            : 'Selecione um pacote para continuar.',
-                      )
-                      return
-                    }
-                    setPackageSelectionAttempted(true)
-                  }}
-                />
-              ) : null}
-              <button
-                type="button"
-                onClick={goNext}
-                disabled={
-                  step === WIZARD_STEP_COUNT - 1 ||
-                  (step === 2 && packageStepNextDisabled)
-                }
-                className="cdl-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
-              >
-                {quoteStrings.next}
-              </button>
-            </span>
-            )}
-          </div>
-        </div>
-        )}
+        {step !== 5 ? (
+          <QuoteWizardStepNav
+            step={step}
+            wizardStepCount={WIZARD_STEP_COUNT}
+            language={uiLocale}
+            packageId={state.packageId}
+            packageStepMessage={packageStepMessage}
+            packageStepNextDisabled={packageStepNextDisabled}
+            additionalsStepNextDisabled={additionalsStepNextDisabled}
+            grillStepPendingIssuesCount={grillStepPendingIssues.length}
+            onBack={goBack}
+            onNext={goNext}
+            onPackageNextBlockedClick={() => {
+              if (!state.packageId) {
+                setPackageStepMessage(w.selectPackageToContinue)
+                return
+              }
+              setPackageSelectionAttempted(true)
+            }}
+            onAdditionalsNextBlockedClick={handleAdditionalsNextBlockedClick}
+          />
+        ) : null}
       </div>
     </main>
   )

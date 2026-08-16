@@ -44,12 +44,13 @@ export type AdditionalItemCategoryGroup<T> = {
 
 export function groupAdditionalItemsByCategory<T extends AdditionalItemFieldSource>(
   items: T[],
+  locale?: string | null,
 ): AdditionalItemCategoryGroup<T>[] {
   const groups = new Map<string, AdditionalItemCategoryGroup<T>>()
 
   for (const item of items) {
     const categoryKey = getAdditionalItemCategoryKey(item)
-    const categoryLabel = getAdditionalItemCategoryLabel(item)
+    const categoryLabel = getAdditionalItemCategoryLabel(item, locale)
     const existing = groups.get(categoryKey)
     if (existing) {
       existing.items.push(item)
@@ -62,12 +63,18 @@ export function groupAdditionalItemsByCategory<T extends AdditionalItemFieldSour
     .sort((a, b) => {
       const rankDiff = categoryRank(a.categoryLabel) - categoryRank(b.categoryLabel)
       if (rankDiff !== 0) return rankDiff
-      return a.categoryLabel.localeCompare(b.categoryLabel, 'pt-BR')
+      return a.categoryLabel.localeCompare(
+        b.categoryLabel,
+        locale === 'en' ? 'en' : locale === 'es' ? 'es' : 'pt-BR',
+      )
     })
     .map((group) => ({
       ...group,
       items: [...group.items].sort((a, b) =>
-        getAdditionalItemLabel(a).localeCompare(getAdditionalItemLabel(b), 'pt-BR'),
+        getAdditionalItemLabel(a, locale).localeCompare(
+          getAdditionalItemLabel(b, locale),
+          locale === 'en' ? 'en' : locale === 'es' ? 'es' : 'pt-BR',
+        ),
       ),
     }))
 }

@@ -39,3 +39,34 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local secret rotation status (no secrets, but operational)
+scripts/dev/.rotate-secret-status.json
+scripts/dev/.philippe-dev-temp-password.txt
+scripts/dev/*-temp-password.txt
+scripts/dev/.tmp-*
+scripts/dev/_audit-rls-out.json
+
+scripts/dev/.session-validate-status.json
+scripts/dev/_audit-rls-out.json
+
+.tmp-video-frames/
+
+.tmp-video-frames-2/
+
+.tmp-video-frames-3/
+
+.tmp-video-frames-4/
+
+.tmp-video-frames-5/
+.tmp-philippe-ii/
+.tmp-quote-ii/
+.tmp-estoque-video/
+
+# Local video review extractions (not product assets)
+assets/_video_review/
+
+# Seed/preview run outputs (DEV local only)
+scripts/dev/reports/
+
+!.env.example

@@ -2,29 +2,45 @@ import {
   getPackageOptionGroupsForPackage,
   isCustomPackage,
   validatePackageSelections,
-  type PackageOptionGroup,
 } from '@/Lib/packageOptionGroups'
 import {
   getFallbackCommercialRules,
   type CommercialRulesSnapshot,
 } from '@/Lib/supabaseCommercialRules'
 import type { GrillPhotoStatus } from '@/Lib/grillPhotoStatus'
+import { isUsablePostalCode } from '@/Lib/cep'
 import { isUsablePhone } from '@/Lib/normalizePhone'
+import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
+import {
+  areAllAdditionalCategoriesVisited,
+  getVisibleAdditionalCategoryKeys,
+} from '@/Lib/wizardAdditionalCategories'
+import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 export const WIZARD_STEP_LABELS = [
   'Cliente',
   'Evento',
   'Pacote',
   'Adicionais',
-  'Churrasqueira',
-  'Milhagem',
-  'Reserva',
-  'Resumo',
+  'Churrasco',
+  'Confirmação',
 ] as const
+
+function loc(ctx: { language?: QuoteLanguage | string | null }): QuoteLanguage {
+  const l = ctx.language
+  return l === 'en' || l === 'es' || l === 'pt' ? l : 'pt'
+}
+
+function stepLabel(
+  ctx: { language?: QuoteLanguage | string | null },
+  stepIndex: number,
+): string {
+  return getQuoteStrings(loc(ctx)).wizardSteps[stepIndex] ?? WIZARD_STEP_LABELS[stepIndex]
+}
 
 export const STEPS_COUNT = WIZARD_STEP_LABELS.length
 
-/** Verde = concluído · Amarelo = pendente · Vermelho = erro (resumo) */
+/** Verde = concluído · Amarelo = pendente · Vermelho = erro (confirmação) */
 export type StepVisualStatus = 'complete' | 'pending' | 'error'
 
 export type WizardStateSnapshot = {
@@ -35,6 +51,7 @@ export type WizardStateSnapshot = {
   startTime: string
   endTime: string
   address: string
+  addressNumber: string
   city: string
   state: string
   zipCode: string
@@ -46,6 +63,7 @@ export type WizardStateSnapshot = {
   grillPhotoRequired: boolean
   grillPhotoStatus: GrillPhotoStatus
   grillPhotoAnswered: boolean
+  grillPhotoUrl: string | null
   grillRentalRequired: boolean
   grillRentalQty: number
   grillNotes: string
@@ -75,6 +93,15 @@ export type StepStatusContext = {
   >
   commercialRules?: CommercialRulesSnapshot
   isEditMode?: boolean
+  language?: QuoteLanguage | string | null
+  /** Categorias de adicionais que devem ser visitadas (keys). */
+  additionalCategoryKeys?: string[]
+  additionalCategoryGroups?: ReadonlyArray<{
+    categoryKey: string
+    items: ReadonlyArray<unknown>
+  }>
+  visitedAdditionalCategories?: ReadonlySet<string> | string[]
+  pricingPreviewReady?: boolean
 }
 
 export type PendingStepIssue = {
@@ -83,18 +110,11 @@ export type PendingStepIssue = {
   issues: string[]
 }
 
-/** Etapas obrigatórias (Cliente e Adicionais = opcionais). */
-const MANDATORY_STEP_INDICES = [1, 2, 4, 5, 6] as const
+/** Etapas com validação obrigatória antes do save. */
+const MANDATORY_STEP_INDICES = [1, 2, 4] as const
 
 function isFilled(value: string) {
   return value.trim().length > 0
-}
-
-function isReservationPercentageValid(
-  value: number,
-  expected: number,
-) {
-  return Math.abs(value - expected) < 0.001
 }
 
 function hasLinkedCustomer(ctx: StepStatusContext): boolean {
@@ -103,45 +123,36 @@ function hasLinkedCustomer(ctx: StepStatusContext): boolean {
   return isUsablePhone(ctx.state.customerDraftPhone)
 }
 
-export const GRILL_PHOTO_PENDING_WARNING =
-  'Foto da churrasqueira pendente. Pode ser confirmada posteriormente.'
+function allAdditionalCategoriesVisited(ctx: StepStatusContext): boolean {
+  const keys =
+    ctx.additionalCategoryKeys ??
+    getVisibleAdditionalCategoryKeys(ctx.additionalCategoryGroups ?? [])
+  return areAllAdditionalCategoriesVisited(keys, ctx.visitedAdditionalCategories)
+}
 
-export function isGrillPhotoOperationallyPending(
+export function isGrillPhotoRequiredAndMissing(
   state: WizardStateSnapshot,
 ): boolean {
   if (!state.hasGrill) return false
-  if (state.grillPhotoStatus === 'received') return false
-  return state.grillPhotoStatus === 'pending' || state.grillPhotoRequired
+  return state.grillPhotoStatus !== 'received' || !state.grillPhotoUrl?.trim()
 }
 
 export function getOperationalStepWarnings(
   ctx: StepStatusContext,
 ): PendingStepIssue[] {
-  const warnings: PendingStepIssue[] = []
-
-  if (isGrillPhotoOperationallyPending(ctx.state)) {
-    warnings.push({
-      stepIndex: 4,
-      label: 'Churrasqueira',
-      issues: [GRILL_PHOTO_PENDING_WARNING],
-    })
-  }
-
-  return warnings
+  return []
 }
 
 export function getOptionalStepWarnings(
   ctx: StepStatusContext,
 ): PendingStepIssue[] {
-  const warnings = getOperationalStepWarnings(ctx)
+  const warnings: PendingStepIssue[] = []
 
   if (!ctx.isEditMode && !hasLinkedCustomer(ctx)) {
     warnings.push({
       stepIndex: 0,
-      label: 'Cliente',
-      issues: [
-        'Cliente ainda não vinculado. A cotação pode ser criada, mas deverá ser revisada antes do envio final.',
-      ],
+      label: stepLabel(ctx, 0),
+      issues: [getQuoteStrings(loc(ctx)).customerNotLinked],
     })
   }
 
@@ -157,29 +168,29 @@ export function getStepIssues(
   stepIndex: number,
   ctx: StepStatusContext,
 ): string[] {
-  const { state, selectedCustomer, selectedPackage, reservationAmount } = ctx
-  const rules = ctx.commercialRules ?? getFallbackCommercialRules()
+  const { state, selectedPackage } = ctx
   const issues: string[] = []
+  const language = loc(ctx)
 
   switch (stepIndex) {
     case 0:
       break
     case 1:
-      if (!isFilled(state.eventName)) issues.push('Informe o nome do evento.')
-      if (!isFilled(state.eventDate)) issues.push('Informe a data do evento.')
-      if (!isFilled(state.startTime)) issues.push('Informe o horário de início.')
-      if (!isFilled(state.endTime)) issues.push('Informe o horário de término.')
-      if (!isFilled(state.address)) issues.push('Informe o endereço.')
-      if (!isFilled(state.city)) issues.push('Informe a cidade.')
-      if (!isFilled(state.state)) issues.push('Informe o estado.')
-      if (!isFilled(state.zipCode)) issues.push('Informe o CEP / zip code.')
+      if (!isFilled(state.eventName)) issues.push(tw(language, 'issueEventName'))
+      if (!isFilled(state.eventDate)) issues.push(tw(language, 'issueEventDate'))
+      if (!isFilled(state.startTime)) issues.push(tw(language, 'issueStartTime'))
+      if (!isFilled(state.endTime)) issues.push(tw(language, 'issueEndTime'))
+      if (!isFilled(state.address)) issues.push(tw(language, 'issueAddress'))
+      if (!isFilled(state.city)) issues.push(tw(language, 'issueCity'))
+      if (!isFilled(state.state)) issues.push(tw(language, 'issueState'))
+      if (!isUsablePostalCode(state.zipCode)) issues.push(tw(language, 'issueZip'))
       if (!(state.adultCount > 0)) {
-        issues.push('Informe o número de adultos (mínimo 1).')
+        issues.push(tw(language, 'issueAdults'))
       }
       break
     case 2: {
       if (!hasValidPackage(ctx)) {
-        issues.push('Selecione um pacote.')
+        issues.push(tw(language, 'issueSelectPackage'))
         break
       }
       const packageId = ctx.state.packageId?.trim()
@@ -195,52 +206,34 @@ export function getStepIssues(
           ctx.packageOptionGroupItems,
         )
         issues.push(
-          ...validatePackageSelections(groups, ctx.state.packageSelections),
+          ...validatePackageSelections(
+            groups,
+            ctx.state.packageSelections,
+            language,
+          ),
         )
       }
       break
     }
     case 3:
-      if (ctx.additionalsCount === 0) {
-        issues.push('Nenhum adicional selecionado (opcional).')
-      }
       break
     case 4:
       if (!state.grillSetupAnswered) {
-        issues.push('Informe se o cliente possui churrasqueira.')
+        issues.push(tw(language, 'issueHasGrill'))
+      }
+      if (isGrillPhotoRequiredAndMissing(state)) {
+        issues.push(tw(language, 'grillPendingPhoto'))
       }
       if (state.grillRentalRequired && state.grillRentalQty <= 0) {
-        issues.push('Informe a quantidade de churrasqueiras para aluguel.')
+        issues.push(tw(language, 'grillPendingRentalQty'))
       }
       break
     case 5:
-      if (state.baseLocation.trim() !== rules.mileageBaseLocation) {
-        issues.push(`Base deve ser ${rules.mileageBaseLocation}.`)
-      }
-      if (!(state.distance > 0)) issues.push('Informe a distância (mi).')
-      if (state.freeLimit !== rules.mileageFreeLimit) {
-        issues.push(`Limite gratuito deve ser ${rules.mileageFreeLimit} mi.`)
-      }
-      if (state.rate !== rules.mileageRate) {
-        issues.push(`Taxa deve ser $${rules.mileageRate}/mi.`)
-      }
-      break
-    case 6:
-      if (
-        !isReservationPercentageValid(
-          state.reservationPercentage,
-          rules.reservationPercentage,
-        )
-      ) {
-        issues.push(`Reserva deve ser ${rules.reservationPercentage}%.`)
-      }
-      if (!(reservationAmount > 0)) {
-        issues.push('Calcule o valor da reserva.')
-      }
-      break
-    case 7:
       if (!areMandatoryStepsComplete(ctx)) {
-        issues.push('Existem etapas obrigatórias incompletas.')
+        issues.push(tw(language, 'issueIncompleteSteps'))
+      }
+      if (!ctx.pricingPreviewReady) {
+        issues.push(tw(language, 'pricingCalcError'))
       }
       break
     default:
@@ -266,21 +259,24 @@ export function areMandatoryStepsComplete(ctx: StepStatusContext): boolean {
 export function getMandatoryPendingSteps(
   ctx: StepStatusContext,
 ): PendingStepIssue[] {
-  return MANDATORY_STEP_INDICES.filter(
-    (stepIndex) => !isMandatoryStepComplete(stepIndex, ctx),
-  ).map((stepIndex) => ({
-    stepIndex,
-    label: WIZARD_STEP_LABELS[stepIndex],
-    issues: getStepIssues(stepIndex, ctx),
-  }))
+  const indices = [...MANDATORY_STEP_INDICES, 3, 5]
+  return indices
+    .filter((stepIndex) => !isMandatoryStepComplete(stepIndex, ctx))
+    .map((stepIndex) => ({
+      stepIndex,
+      label: stepLabel(ctx, stepIndex),
+      issues: getStepIssues(stepIndex, ctx),
+    }))
 }
 
 export function getStepVisualStatus(
   stepIndex: number,
   ctx: StepStatusContext,
 ): StepVisualStatus {
-  if (stepIndex === 7) {
-    return areMandatoryStepsComplete(ctx) ? 'complete' : 'error'
+  if (stepIndex === 5) {
+    return isMandatoryStepComplete(5, ctx) && ctx.pricingPreviewReady
+      ? 'complete'
+      : 'error'
   }
 
   if (stepIndex === 0) {
@@ -288,13 +284,9 @@ export function getStepVisualStatus(
   }
 
   if (stepIndex === 3) {
-    return ctx.additionalsCount > 0 ? 'complete' : 'pending'
-  }
-
-  if (stepIndex === 4) {
-    if (!isMandatoryStepComplete(stepIndex, ctx)) return 'pending'
-    if (isGrillPhotoOperationallyPending(ctx.state)) return 'pending'
-    return 'complete'
+    return ctx.currentStep > 3 || allAdditionalCategoriesVisited(ctx)
+      ? 'complete'
+      : 'pending'
   }
 
   return isMandatoryStepComplete(stepIndex, ctx) ? 'complete' : 'pending'
@@ -303,25 +295,12 @@ export function getStepVisualStatus(
 /** @deprecated Use getStepVisualStatus */
 export type StepStatus = 'current' | 'complete' | 'incomplete' | 'empty'
 
-/** @deprecated Use getStepVisualStatus */
-export function getStepStatus(
-  stepNumber: number,
-  ctx: StepStatusContext,
-): StepStatus {
-  const stepIndex = stepNumber - 1
-  const visual = getStepVisualStatus(stepIndex, ctx)
-
-  if (stepIndex === ctx.currentStep) return 'current'
-  if (visual === 'complete') return 'complete'
-  if (visual === 'error' || visual === 'pending') return 'incomplete'
-  return 'empty'
-}
-
-/** @deprecated Use isMandatoryStepComplete */
-export function isStepComplete(stepIndex: number, ctx: StepStatusContext): boolean {
-  if (stepIndex === 3) return ctx.additionalsCount > 0
-  if (stepIndex === 7) return areMandatoryStepsComplete(ctx)
-  return isMandatoryStepComplete(stepIndex, ctx)
+export function isQuoteReadyToSave(ctx: StepStatusContext) {
+  return (
+    areMandatoryStepsComplete(ctx) &&
+    isMandatoryStepComplete(4, ctx) &&
+    isMandatoryStepComplete(5, ctx)
+  )
 }
 
 export function countVisuallyCompleteSteps(ctx: StepStatusContext) {
@@ -346,8 +325,4 @@ export function countRemainingSteps(ctx: StepStatusContext) {
 
 export function getCompletionPercentage(ctx: StepStatusContext) {
   return Math.round((countVisuallyCompleteSteps(ctx) / STEPS_COUNT) * 100)
-}
-
-export function isQuoteReadyToSave(ctx: StepStatusContext) {
-  return areMandatoryStepsComplete(ctx)
 }

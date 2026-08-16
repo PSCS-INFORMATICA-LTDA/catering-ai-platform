@@ -6,9 +6,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
+import { tCommon } from '@/Lib/i18n/common'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import type { Branch, Company, CompanyRole, TenantContext } from '@/Lib/tenant/types'
 
 const BRANCH_STORAGE_KEY = 'catering-ai.active-branch-id'
@@ -22,6 +25,9 @@ type TenantContextValue = TenantContext & {
 const TenantCtx = createContext<TenantContextValue | null>(null)
 
 export function TenantProvider({ children }: { children: ReactNode }) {
+  const locale = useAuthLocaleFromMe()
+  const localeRef = useRef(locale)
+  localeRef.current = locale
   const [loading, setLoading] = useState(true)
   const [companyId, setCompanyId] = useState('')
   const [company, setCompany] = useState<Company | null>(null)
@@ -39,7 +45,9 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         error?: string
       }
       if (!response.ok || !result.data) {
-        throw new Error(result.error ?? 'Falha ao carregar tenant.')
+        throw new Error(
+          result.error ?? tCommon(localeRef.current, 'tenantLoadError'),
+        )
       }
 
       const data = result.data

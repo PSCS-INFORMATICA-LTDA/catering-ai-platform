@@ -1,18 +1,122 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { PackageCodeOption } from '@/components/premium/PremiumPrimitives'
 import SelectedPackageDetails from '@/components/quotes/SelectedPackageDetails'
-import { sortPackagesByCommercialTier } from '@/Lib/packageDisplay'
+import {
+  getPackageCascadeFriendlyLabel,
+  getPackageHighlights,
+  parsePackageHighlightsText,
+  sortPackagesByCommercialTier,
+} from '@/Lib/packageDisplay'
 import { getPackageHasGarnish } from '@/Lib/packageFieldAccess'
 import type { PackageCatalogFields } from '@/Lib/packageCatalogVisual'
-import type { PackageItem, PackageSideItem } from '@/Lib/packageConfiguration'
+import {
+  getPackageSideItemLabel,
+  getPackageSideItemsForPackage,
+  type PackageItem,
+  type PackageSideItem,
+} from '@/Lib/packageConfiguration'
 import type { PackageOptionGroup } from '@/Lib/packageOptionGroups'
 import type { CatalogItemListItem } from '@/Lib/itemCatalog'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import { tw } from '@/Lib/quoteTranslations'
 
-type PackageRow = PackageCatalogFields & { id: string }
+type PackageRow = PackageCatalogFields & {
+  id: string
+  package_highlights_pt?: string | null
+  package_highlights_en?: string | null
+  package_highlights_es?: string | null
+}
 type GarnishGroup = 'with' | 'without'
+
+function PackageSelectionCard({
+  pkg,
+  active,
+  language,
+  packageSideItems,
+  onClick,
+}: {
+  pkg: PackageRow
+  active: boolean
+  language: QuoteLanguage
+  packageSideItems: ReadonlyArray<PackageSideItem>
+  onClick: () => void
+}) {
+  const withSides = getPackageHasGarnish(pkg)
+  const highlights = parsePackageHighlightsText(
+    getPackageHighlights(pkg, language),
+  )
+  const sides = withSides
+    ? getPackageSideItemsForPackage(pkg.id, packageSideItems).map((item) =>
+        getPackageSideItemLabel(item, language),
+      )
+    : []
+
+  const activeClass =
+    'border-[var(--brand-primary-2)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,white)] shadow-sm ring-2 ring-[color-mix(in_srgb,var(--brand-primary-2)_28%,transparent)]'
+
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={`grid w-full grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-3 rounded-2xl border p-3 text-left transition sm:gap-4 sm:p-4 ${
+        active
+          ? activeClass
+          : 'border-cdl-border bg-cdl-surface hover:border-neutral-300 hover:bg-cdl-hover'
+      }`}
+    >
+      <span className="flex min-w-0 flex-col items-start justify-center">
+        <span
+          className={`inline-flex max-w-full rounded-full px-2 py-0.5 text-[9px] font-bold uppercase leading-4 tracking-wide sm:text-[10px] ${
+            withSides
+              ? 'bg-amber-100 text-amber-900'
+              : 'bg-neutral-100 text-neutral-600'
+          }`}
+        >
+          {tw(language, withSides ? 'withSides' : 'withoutSides')}
+        </span>
+        <span className="mt-2 break-words text-base font-extrabold leading-tight tracking-tight text-cdl-title sm:text-lg">
+          {getPackageCascadeFriendlyLabel(pkg, language)}
+        </span>
+      </span>
+
+      <span className="min-w-0 border-l border-cdl-border pl-3 sm:pl-4">
+        {highlights.length > 0 ? (
+          <span className="block">
+            <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-cdl-muted sm:text-xs">
+              {tw(language, 'highlights')}
+            </span>
+            <span className="mt-1 block space-y-0.5 text-[11px] leading-4 text-cdl-title sm:text-xs sm:leading-5">
+              {highlights.map((highlight, index) => (
+                <span
+                  key={`${pkg.id}-highlight-${index}`}
+                  className="flex min-w-0 gap-1.5"
+                >
+                  <span aria-hidden="true" className="shrink-0 text-cdl-accent">
+                    •
+                  </span>
+                  <span className="min-w-0 break-words">{highlight}</span>
+                </span>
+              ))}
+            </span>
+          </span>
+        ) : null}
+
+        {sides.length > 0 ? (
+          <span className="mt-2.5 block border-t border-cdl-border pt-2 sm:mt-3">
+            <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-cdl-muted sm:text-xs">
+              {tw(language, 'garnish')}
+            </span>
+            <span className="mt-1 block break-words text-[11px] leading-4 text-cdl-title sm:text-xs sm:leading-5">
+              {sides.join(' • ')}
+            </span>
+          </span>
+        ) : null}
+      </span>
+    </button>
+  )
+}
 
 function PackageGroupToggle({
   title,
@@ -36,7 +140,7 @@ function PackageGroupToggle({
       <div className="min-w-0">
         <p className="text-base font-bold text-cdl-title">{title}</p>
         <p className="text-xs text-cdl-muted">
-          {count} {count === 1 ? 'pacote' : 'pacotes'} · {badge}
+          {count} · {badge}
         </p>
       </div>
       <span
@@ -57,9 +161,7 @@ function PackageListWithInlineDetails({
   language,
   sidesPricePerPerson,
   optionGroupsForPackage,
-  packageItems,
   packageSideItems,
-  catalogItems,
   selections,
   onSelectionChange,
   pendingSelectionGroupIds,
@@ -75,9 +177,7 @@ function PackageListWithInlineDetails({
   language: QuoteLanguage
   sidesPricePerPerson: number
   optionGroupsForPackage: (packageId: string) => PackageOptionGroup[]
-  packageItems: ReadonlyArray<PackageItem>
   packageSideItems: ReadonlyArray<PackageSideItem>
-  catalogItems: ReadonlyArray<CatalogItemListItem>
   selections: Record<string, string>
   onSelectionChange: (groupId: string, itemId: string) => void
   pendingSelectionGroupIds: string[]
@@ -95,11 +195,11 @@ function PackageListWithInlineDetails({
 
         return (
           <div key={pkg.id}>
-            <PackageCodeOption
+            <PackageSelectionCard
               pkg={pkg}
               active={isSelected}
-              hideTechnical
-              selectionTone="brand"
+              language={language}
+              packageSideItems={packageSideItems}
               onClick={() => onSelect(pkg.id)}
             />
             {isSelected ? (
@@ -134,9 +234,7 @@ export default function QuotePackageStepExplorer({
   language = 'pt',
   sidesPricePerPerson = 13,
   optionGroupsForPackage,
-  packageItems = [],
   packageSideItems = [],
-  catalogItems = [],
   selections = {},
   onSelectionChange,
   pendingSelectionGroupIds = [],
@@ -207,6 +305,9 @@ export default function QuotePackageStepExplorer({
 
   useEffect(() => {
     if (!selectedPackage) return
+    // Keep the open group synchronized when the selected package changes
+    // outside this component (for example while loading an editable quote).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setExpandedGroup(getPackageHasGarnish(selectedPackage) ? 'with' : 'without')
   }, [selectedPackage])
 
@@ -216,9 +317,7 @@ export default function QuotePackageStepExplorer({
     language,
     sidesPricePerPerson,
     optionGroupsForPackage,
-    packageItems,
     packageSideItems,
-    catalogItems,
     selections,
     onSelectionChange,
     pendingSelectionGroupIds: pendingSelectionGroupIds ?? [],
@@ -231,7 +330,9 @@ export default function QuotePackageStepExplorer({
 
   const totalCount = packagesWithoutSides.length + packagesWithSides.length
   if (totalCount === 0) {
-    return <p className="text-sm text-cdl-muted">Nenhum pacote disponível.</p>
+    return (
+      <p className="text-sm text-cdl-muted">{tw(language, 'noPackages')}</p>
+    )
   }
 
   const showBothGroups =
@@ -250,9 +351,9 @@ export default function QuotePackageStepExplorer({
       {sortedWithSides.length > 0 ? (
         <section>
           <PackageGroupToggle
-            title="Com guarnições"
+            title={tw(language, 'withSides')}
             count={sortedWithSides.length}
-            badge="Com guarnições"
+            badge={tw(language, 'withSides')}
             expanded={expandedGroup === 'with'}
             onClick={() => {
               if (selectedInWithSides && expandedGroup === 'with') return
@@ -273,9 +374,9 @@ export default function QuotePackageStepExplorer({
       {sortedWithoutSides.length > 0 ? (
         <section>
           <PackageGroupToggle
-            title="Sem guarnições"
+            title={tw(language, 'withoutSides')}
             count={sortedWithoutSides.length}
-            badge="Sem guarnições"
+            badge={tw(language, 'withoutSides')}
             expanded={expandedGroup === 'without'}
             onClick={() => {
               if (selectedInWithoutSides && expandedGroup === 'without') return

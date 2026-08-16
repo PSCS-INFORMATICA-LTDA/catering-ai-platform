@@ -9,6 +9,7 @@ import {
   BackofficeInput,
 } from '@/components/backoffice/BackofficeCardPrimitives'
 import { BackofficeFormSectionTitle } from '@/components/backoffice/BackofficeSectionPrimitives'
+import OperationalMaterialsBomPanel from '@/components/materials/OperationalMaterialsBomPanel'
 import AdditionalItemPicker, {
   type AdditionalItemOption,
 } from '@/components/packages/AdditionalItemPicker'
@@ -18,11 +19,19 @@ import { slugFromItemName } from '@/Lib/packageConfigKeys'
 import { filterCatalogItems } from '@/Lib/itemCatalog'
 import type { PackageItem, PackageSideItem } from '@/Lib/packageConfiguration'
 import type { PackageOptionGroup, PackageOptionGroupItem } from '@/Lib/packageOptionGroups'
+import type { AuthLocale } from '@/Lib/i18n/authUsers'
+import { tCommon } from '@/Lib/i18n/common'
+import { tPackages } from '@/Lib/i18n/packages'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
-async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
+async function apiJson<T>(
+  url: string,
+  init?: RequestInit,
+  locale?: AuthLocale,
+): Promise<T> {
   const res = await fetch(url, { cache: 'no-store', ...init })
   const json = (await res.json()) as T & { error?: string }
-  if (!res.ok) throw new Error(json.error ?? 'Erro na requisição.')
+  if (!res.ok) throw new Error(json.error ?? tPackages(locale, 'requestError'))
   return json
 }
 
@@ -57,6 +66,7 @@ export default function PackageConfigEditor({
   itemCatalog: AdditionalItemOption[]
   onChanged?: () => void
 }) {
+  const locale = useAuthLocaleFromMe()
   const packageItemCatalog = useMemo(
     () => filterCatalogItems(itemCatalog, 'package_item', 'customer'),
     [itemCatalog],
@@ -98,12 +108,12 @@ export default function PackageConfigEditor({
       setError(
         loadError instanceof Error
           ? loadError.message
-          : 'Não foi possível carregar configuração.',
+          : tPackages(locale, 'loadConfigError'),
       )
     } finally {
       setLoading(false)
     }
-  }, [packageId])
+  }, [packageId, locale])
 
   useEffect(() => {
     void reload()
@@ -161,7 +171,7 @@ export default function PackageConfigEditor({
           })
         }
       } else if (kind === 'option') {
-        if (!groupId) throw new Error('Grupo inválido.')
+        if (!groupId) throw new Error(tPackages(locale, 'invalidGroup'))
         if (id === 'new') {
           await apiJson('/api/package-option-group-items', {
             method: 'POST',
@@ -180,7 +190,7 @@ export default function PackageConfigEditor({
       onChanged?.()
     } catch (saveError) {
       setError(
-        saveError instanceof Error ? saveError.message : 'Erro ao salvar.',
+        saveError instanceof Error ? saveError.message : tCommon(locale, 'errorSave'),
       )
     } finally {
       setSavingId(null)
@@ -191,7 +201,7 @@ export default function PackageConfigEditor({
     kind: 'item' | 'side' | 'group' | 'option',
     id: string,
   ) {
-    if (!window.confirm('Excluir este registro?')) return
+    if (!window.confirm(tPackages(locale, 'deleteConfirm'))) return
     setSavingId(id)
     setError(null)
     try {
@@ -206,7 +216,9 @@ export default function PackageConfigEditor({
       onChanged?.()
     } catch (deleteError) {
       setError(
-        deleteError instanceof Error ? deleteError.message : 'Erro ao excluir.',
+        deleteError instanceof Error
+          ? deleteError.message
+          : tPackages(locale, 'deleteError'),
       )
     } finally {
       setSavingId(null)
@@ -214,7 +226,9 @@ export default function PackageConfigEditor({
   }
 
   if (loading) {
-    return <p className="text-sm text-neutral-500">Carregando configuração…</p>
+    return (
+      <p className="text-sm text-neutral-500">{tPackages(locale, 'loadingConfig')}</p>
+    )
   }
 
   return (
@@ -226,11 +240,12 @@ export default function PackageConfigEditor({
       ) : null}
 
       <InventorySection
-        title="Itens fixos do pacote"
+        title={tPackages(locale, 'fixedItems')}
         rows={items}
         catalogItems={packageItemCatalog}
         linkedItemType="PRODUCT"
-        pickerPlaceholder="Selecionar item do cadastro…"
+        pickerPlaceholder={tPackages(locale, 'pickCatalogItem')}
+        locale={locale}
         savingId={savingId}
         onSave={(id, payload) => void saveRow('item', id, payload)}
         onDelete={(id) => void deleteRow('item', id)}
@@ -248,11 +263,12 @@ export default function PackageConfigEditor({
       />
 
       <InventorySection
-        title="Guarnições"
+        title={tCommon(locale, 'sides')}
         rows={sides}
         catalogItems={sideItemCatalog}
         linkedItemType="SIDE"
-        pickerPlaceholder="Selecionar guarnição do cadastro…"
+        pickerPlaceholder={tPackages(locale, 'pickSideItem')}
+        locale={locale}
         savingId={savingId}
         onSave={(id, payload) => void saveRow('side', id, payload)}
         onDelete={(id) => void deleteRow('side', id)}
@@ -273,6 +289,7 @@ export default function PackageConfigEditor({
         groups={groups}
         catalogItems={optionChoiceCatalog}
         savingId={savingId}
+        locale={locale}
         onSaveGroup={(id, payload) => void saveRow('group', id, payload)}
         onDeleteGroup={(id) => void deleteRow('group', id)}
         onSaveOption={(groupId, id, payload) =>
@@ -308,6 +325,12 @@ export default function PackageConfigEditor({
           )
         }
       />
+
+      <OperationalMaterialsBomPanel
+        sourceType="package"
+        sourceId={packageId}
+        canManage
+      />
     </div>
   )
 }
@@ -322,6 +345,7 @@ function InventorySection({
   onSave,
   onDelete,
   onAdd,
+  locale,
 }: {
   title: string
   rows: Array<PackageItem | PackageSideItem>
@@ -332,12 +356,13 @@ function InventorySection({
   onSave: (id: string, payload: Record<string, unknown>) => void
   onDelete: (id: string) => void
   onAdd: () => void
+  locale: AuthLocale
 }) {
   return (
     <section className="space-y-3">
       <BackofficeFormSectionTitle>{title}</BackofficeFormSectionTitle>
       {rows.length === 0 ? (
-        <p className="text-sm text-neutral-500">Nenhum registro cadastrado.</p>
+        <p className="text-sm text-neutral-500">{tPackages(locale, 'emptyRecords')}</p>
       ) : (
         rows.map((row) => (
           <InventoryRowEditor
@@ -349,10 +374,13 @@ function InventorySection({
             saving={savingId === row.id}
             onSave={(payload) => onSave(row.id, payload)}
             onDelete={() => onDelete(row.id)}
+            locale={locale}
           />
         ))
       )}
-      <BackofficeBtnOutline onClick={onAdd}>Adicionar linha</BackofficeBtnOutline>
+      <BackofficeBtnOutline onClick={onAdd}>
+        {tPackages(locale, 'addRow')}
+      </BackofficeBtnOutline>
     </section>
   )
 }
@@ -365,6 +393,7 @@ function InventoryRowEditor({
   saving,
   onSave,
   onDelete,
+  locale,
 }: {
   row: PackageItem | PackageSideItem
   catalogItems: AdditionalItemOption[]
@@ -373,6 +402,7 @@ function InventoryRowEditor({
   saving: boolean
   onSave: (payload: Record<string, unknown>) => void
   onDelete: () => void
+  locale: AuthLocale
 }) {
   const [draft, setDraft] = useState(row)
 
@@ -392,7 +422,11 @@ function InventoryRowEditor({
       <div className="sm:col-span-2 lg:col-span-3">
         <CatalogImageFrame
           src={visual.imageUrl}
-          alt={draft.label_pt?.trim() || draft.item_name?.trim() || 'Item'}
+          alt={
+            draft.label_pt?.trim() ||
+            draft.item_name?.trim() ||
+            tCommon(locale, 'itemSingular')
+          }
           variant="catalogItem"
           itemType={visual.itemType ?? linkedItemType}
           categoryPt={visual.categoryPt}
@@ -402,7 +436,10 @@ function InventoryRowEditor({
           className="!inline-flex !w-20"
         />
       </div>
-      <BackofficeField label="Item do cadastro" className="sm:col-span-2 lg:col-span-3">
+      <BackofficeField
+        label={tPackages(locale, 'catalogItem')}
+        className="sm:col-span-2 lg:col-span-3"
+      >
         <AdditionalItemPicker
           catalogItems={catalogItems}
           placeholder={pickerPlaceholder}
@@ -422,25 +459,25 @@ function InventoryRowEditor({
           }}
         />
       </BackofficeField>
-      <BackofficeField label="Chave">
+      <BackofficeField label={tCommon(locale, 'keyLabel')}>
         <BackofficeInput
           value={draft.item_key ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, item_key: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Nome">
+      <BackofficeField label={tCommon(locale, 'name')}>
         <BackofficeInput
           value={draft.item_name ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, item_name: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Rótulo PT">
+      <BackofficeField label={tCommon(locale, 'labelPt')}>
         <BackofficeInput
           value={draft.label_pt ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, label_pt: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Ordem">
+      <BackofficeField label={tCommon(locale, 'displayOrder')}>
         <BackofficeInput
           type="number"
           value={draft.display_order ?? 0}
@@ -449,7 +486,7 @@ function InventoryRowEditor({
           }
         />
       </BackofficeField>
-      <BackofficeField label="Bloqueia adicional duplicado">
+      <BackofficeField label={tPackages(locale, 'blocksDuplicateAdditional')}>
         <select
           className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm"
           value={draft.blocks_additional_item === false ? 'false' : 'true'}
@@ -460,11 +497,11 @@ function InventoryRowEditor({
             }))
           }
         >
-          <option value="true">Sim</option>
-          <option value="false">Não</option>
+          <option value="true">{tCommon(locale, 'yes')}</option>
+          <option value="false">{tCommon(locale, 'no')}</option>
         </select>
       </BackofficeField>
-      <BackofficeField label="Ativo">
+      <BackofficeField label={tCommon(locale, 'active')}>
         <select
           className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm"
           value={draft.active === false ? 'false' : 'true'}
@@ -472,15 +509,17 @@ function InventoryRowEditor({
             setDraft((c) => ({ ...c, active: e.target.value === 'true' }))
           }
         >
-          <option value="true">Sim</option>
-          <option value="false">Não</option>
+          <option value="true">{tCommon(locale, 'yes')}</option>
+          <option value="false">{tCommon(locale, 'no')}</option>
         </select>
       </BackofficeField>
       <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-3">
         <BackofficeBtnPrimary disabled={saving} onClick={() => onSave(draft)}>
-          {saving ? 'Salvando…' : 'Salvar linha'}
+          {saving ? tCommon(locale, 'saving') : tPackages(locale, 'saveRow')}
         </BackofficeBtnPrimary>
-        <BackofficeBtnDanger onClick={onDelete}>Excluir</BackofficeBtnDanger>
+        <BackofficeBtnDanger onClick={onDelete}>
+          {tCommon(locale, 'delete')}
+        </BackofficeBtnDanger>
       </div>
     </div>
   )
@@ -496,6 +535,7 @@ function OptionGroupsSection({
   onDeleteOption,
   onAddGroup,
   onAddOption,
+  locale,
 }: {
   groups: PackageOptionGroup[]
   catalogItems: AdditionalItemOption[]
@@ -510,12 +550,15 @@ function OptionGroupsSection({
   onDeleteOption: (id: string) => void
   onAddGroup: () => void
   onAddOption: (groupId: string) => void
+  locale: AuthLocale
 }) {
   return (
     <section className="space-y-4">
-      <BackofficeFormSectionTitle>Escolhas inclusas</BackofficeFormSectionTitle>
+      <BackofficeFormSectionTitle>
+        {tPackages(locale, 'includedChoices')}
+      </BackofficeFormSectionTitle>
       {groups.length === 0 ? (
-        <p className="text-sm text-neutral-500">Nenhum grupo cadastrado.</p>
+        <p className="text-sm text-neutral-500">{tPackages(locale, 'emptyGroups')}</p>
       ) : (
         groups.map((group) => (
           <OptionGroupEditor
@@ -530,10 +573,13 @@ function OptionGroupsSection({
             }
             onDeleteOption={onDeleteOption}
             onAddOption={() => onAddOption(group.id)}
+            locale={locale}
           />
         ))
       )}
-      <BackofficeBtnOutline onClick={onAddGroup}>Adicionar grupo</BackofficeBtnOutline>
+      <BackofficeBtnOutline onClick={onAddGroup}>
+        {tPackages(locale, 'addGroup')}
+      </BackofficeBtnOutline>
     </section>
   )
 }
@@ -547,6 +593,7 @@ function OptionGroupEditor({
   onSaveOption,
   onDeleteOption,
   onAddOption,
+  locale,
 }: {
   group: PackageOptionGroup
   catalogItems: AdditionalItemOption[]
@@ -556,6 +603,7 @@ function OptionGroupEditor({
   onSaveOption: (id: string, payload: Record<string, unknown>) => void
   onDeleteOption: (id: string) => void
   onAddOption: () => void
+  locale: AuthLocale
 }) {
   const [draft, setDraft] = useState(group)
 
@@ -566,7 +614,7 @@ function OptionGroupEditor({
   return (
     <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/40 p-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <BackofficeField label="Chave do grupo">
+        <BackofficeField label={tPackages(locale, 'groupKey')}>
           <BackofficeInput
             value={draft.option_group_key ?? ''}
             onChange={(v) =>
@@ -578,13 +626,13 @@ function OptionGroupEditor({
             }
           />
         </BackofficeField>
-        <BackofficeField label="Rótulo PT">
+        <BackofficeField label={tCommon(locale, 'labelPt')}>
           <BackofficeInput
             value={draft.label_pt ?? ''}
             onChange={(v) => setDraft((c) => ({ ...c, label_pt: v }))}
           />
         </BackofficeField>
-        <BackofficeField label="Obrigatório">
+        <BackofficeField label={tCommon(locale, 'required')}>
           <select
             className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm"
             value={draft.required === false ? 'false' : 'true'}
@@ -592,11 +640,11 @@ function OptionGroupEditor({
               setDraft((c) => ({ ...c, required: e.target.value === 'true' }))
             }
           >
-            <option value="true">Sim</option>
-            <option value="false">Não</option>
+            <option value="true">{tCommon(locale, 'yes')}</option>
+            <option value="false">{tCommon(locale, 'no')}</option>
           </select>
         </BackofficeField>
-        <BackofficeField label="Bloqueia adicionais do grupo">
+        <BackofficeField label={tPackages(locale, 'blocksGroupAdditionals')}>
           <select
             className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm"
             value={draft.blocks_additional_items === false ? 'false' : 'true'}
@@ -607,11 +655,11 @@ function OptionGroupEditor({
               }))
             }
           >
-            <option value="true">Sim</option>
-            <option value="false">Não</option>
+            <option value="true">{tCommon(locale, 'yes')}</option>
+            <option value="false">{tCommon(locale, 'no')}</option>
           </select>
         </BackofficeField>
-        <BackofficeField label="Ordem">
+        <BackofficeField label={tCommon(locale, 'displayOrder')}>
           <BackofficeInput
             type="number"
             value={draft.display_order ?? 0}
@@ -626,14 +674,16 @@ function OptionGroupEditor({
           disabled={savingId === group.id}
           onClick={() => onSaveGroup(draft)}
         >
-          Salvar grupo
+          {tPackages(locale, 'saveGroup')}
         </BackofficeBtnPrimary>
-        <BackofficeBtnDanger onClick={onDeleteGroup}>Excluir grupo</BackofficeBtnDanger>
+        <BackofficeBtnDanger onClick={onDeleteGroup}>
+          {tPackages(locale, 'deleteGroup')}
+        </BackofficeBtnDanger>
       </div>
 
       <div className="space-y-2 border-t border-amber-200/80 pt-3">
         <p className="text-xs font-bold uppercase tracking-wide text-neutral-600">
-          Opções do grupo
+          {tPackages(locale, 'groupOptions')}
         </p>
         {group.items.map((item) => (
           <OptionItemEditor
@@ -643,10 +693,11 @@ function OptionGroupEditor({
             saving={savingId === item.id}
             onSave={(payload) => onSaveOption(item.id, payload)}
             onDelete={() => onDeleteOption(item.id)}
+            locale={locale}
           />
         ))}
         <BackofficeBtnOutline onClick={onAddOption}>
-          Adicionar opção
+          {tPackages(locale, 'addOption')}
         </BackofficeBtnOutline>
       </div>
     </div>
@@ -659,12 +710,14 @@ function OptionItemEditor({
   saving,
   onSave,
   onDelete,
+  locale,
 }: {
   item: PackageOptionGroupItem
   catalogItems: AdditionalItemOption[]
   saving: boolean
   onSave: (payload: Record<string, unknown>) => void
   onDelete: () => void
+  locale: AuthLocale
 }) {
   const [draft, setDraft] = useState(item)
 
@@ -683,7 +736,11 @@ function OptionItemEditor({
       <div className="sm:col-span-2 lg:col-span-3">
         <CatalogImageFrame
           src={visual.imageUrl}
-          alt={draft.label_pt?.trim() || draft.option_item_key?.trim() || 'Opção'}
+          alt={
+            draft.label_pt?.trim() ||
+            draft.option_item_key?.trim() ||
+            tPackages(locale, 'optionAlt')
+          }
           variant="catalogItem"
           itemType={visual.itemType ?? 'PRODUCT'}
           categoryPt={visual.categoryPt}
@@ -693,10 +750,13 @@ function OptionItemEditor({
           className="!inline-flex !w-20"
         />
       </div>
-      <BackofficeField label="Item do cadastro" className="sm:col-span-2 lg:col-span-3">
+      <BackofficeField
+        label={tPackages(locale, 'catalogItem')}
+        className="sm:col-span-2 lg:col-span-3"
+      >
         <AdditionalItemPicker
           catalogItems={catalogItems}
-          placeholder="Selecionar escolha do cadastro…"
+          placeholder={tPackages(locale, 'pickChoice')}
           value={String(draft.additional_item_id ?? '')}
           onChange={(id, additional) => {
             const name = (
@@ -715,19 +775,19 @@ function OptionItemEditor({
           }}
         />
       </BackofficeField>
-      <BackofficeField label="Chave da opção">
+      <BackofficeField label={tPackages(locale, 'optionKey')}>
         <BackofficeInput
           value={draft.option_item_key ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, option_item_key: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Rótulo PT">
+      <BackofficeField label={tCommon(locale, 'labelPt')}>
         <BackofficeInput
           value={draft.label_pt ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, label_pt: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Ordem">
+      <BackofficeField label={tCommon(locale, 'displayOrder')}>
         <BackofficeInput
           type="number"
           value={draft.display_order ?? 0}
@@ -738,9 +798,11 @@ function OptionItemEditor({
       </BackofficeField>
       <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-3">
         <BackofficeBtnPrimary disabled={saving} onClick={() => onSave(draft)}>
-          Salvar opção
+          {saving ? tCommon(locale, 'saving') : tPackages(locale, 'saveOption')}
         </BackofficeBtnPrimary>
-        <BackofficeBtnDanger onClick={onDelete}>Excluir opção</BackofficeBtnDanger>
+        <BackofficeBtnDanger onClick={onDelete}>
+          {tPackages(locale, 'deleteOption')}
+        </BackofficeBtnDanger>
       </div>
     </div>
   )

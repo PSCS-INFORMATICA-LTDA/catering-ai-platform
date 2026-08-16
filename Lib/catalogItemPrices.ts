@@ -1,7 +1,7 @@
 import { getCdlCompanyId } from './cdlCompany'
 import { getActiveBranchIdFromEnv } from './tenant/resolveTenant'
 import { getCatalogItemSalePrice } from './itemCatalog'
-import { supabase } from './supabase'
+import { getSupabaseServerClient } from './supabaseServer'
 
 export const CATALOG_ITEM_PRICES_TABLE = 'catalog_item_prices' as const
 
@@ -76,6 +76,7 @@ export async function fetchCurrentCatalogItemPrices(
   const now = new Date().toISOString()
   const companyId = getCdlCompanyId()
   const activeBranchId = branchId?.trim() || getActiveBranchIdFromEnv()
+  const supabase = getSupabaseServerClient()
 
   let query = supabase
     .from(CATALOG_ITEM_PRICES_TABLE)

@@ -1,6 +1,6 @@
 import { getCdlCompanyId } from './cdlCompany'
 import { buildPackagesListSelect } from './packagesTableSchema'
-import { supabase } from './supabase'
+import { getSupabaseServerClient } from './supabaseServer'
 
 export type PackageListItem = {
   id: string
@@ -35,6 +35,7 @@ type FetchPackagesOptions = {
 export async function fetchPackages(options: FetchPackagesOptions = {}) {
   const companyId = getCdlCompanyId()
 
+  const supabase = getSupabaseServerClient()
   let query = supabase
     .from('packages')
     .select(buildPackagesListSelect())

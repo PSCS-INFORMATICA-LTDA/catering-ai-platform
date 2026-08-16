@@ -1,0 +1,106 @@
+{
+  "fixture": "schedule-turnaround-qa-v1",
+  "environment": "DEV_ONLY",
+  "projectRefRequired": "yasprgtlqclwsjcshtls",
+  "companyId": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+  "customerId": "f2000000-0000-4000-8000-000000000001",
+  "packageId": "c2000000-0000-4000-8000-000000000001",
+  "teamCaioId": "a1000000-0000-4000-8000-000000000003",
+  "teamFilipeId": "a1000000-0000-4000-8000-000000000002",
+  "personPhilippeId": "b2800000-0000-4000-8000-000000000092",
+  "personJoaoId": "b2800000-0000-4000-8000-000000000093",
+  "testDate": "2027-11-15",
+  "cases": [
+    {
+      "key": "T01",
+      "label": "Âncora Equipe Caio 10:00–14:00",
+      "serviceOrderNumber": "TEST-DEV-OS-TURN-T01",
+      "quoteNumber": "TEST-DEV-QUOTE-TURN-T01",
+      "eventCode": "EVT-TURN-QA-T01",
+      "team": "caio",
+      "start": "10:00:00",
+      "end": "14:00:00",
+      "person": "philippe",
+      "scheduleAgenda": true,
+      "confirmPerson": true,
+      "ids": {
+        "quoteId": "f2200000-0000-4000-8000-000000000071",
+        "quoteVersionId": "f2300000-0000-4000-8000-000000000071",
+        "serviceOrderId": "f2400000-0000-4000-8000-000000000071",
+        "eventId": "f2100000-0000-4000-8000-000000000071",
+        "agendaEventId": "f2500000-0000-4000-8000-000000000071"
+      }
+    },
+    {
+      "key": "T02",
+      "label": "Tentativa Equipe Caio 15:00–19:00 (dentro da janela)",
+      "serviceOrderNumber": "TEST-DEV-OS-TURN-T02",
+      "quoteNumber": "TEST-DEV-QUOTE-TURN-T02",
+      "eventCode": "EVT-TURN-QA-T02",
+      "team": "caio",
+      "start": "15:00:00",
+      "end": "19:00:00",
+      "person": "philippe",
+      "scheduleAgenda": false,
+      "confirmPerson": false,
+      "compareAgainst": "T01",
+      "scope": "team",
+      "expectedCode": "TEAM_TURNAROUND_CONFLICT",
+      "expectedNext": "16:00",
+      "ids": {
+        "quoteId": "f2200000-0000-4000-8000-000000000072",
+        "quoteVersionId": "f2300000-0000-4000-8000-000000000072",
+        "serviceOrderId": "f2400000-0000-4000-8000-000000000072",
+        "eventId": "f2100000-0000-4000-8000-000000000072",
+        "agendaEventId": "f2500000-0000-4000-8000-000000000072"
+      }
+    },
+    {
+      "key": "T03",
+      "label": "Equipe Caio 16:00–20:00 (após janela)",
+      "serviceOrderNumber": "TEST-DEV-OS-TURN-T03",
+      "quoteNumber": "TEST-DEV-QUOTE-TURN-T03",
+      "eventCode": "EVT-TURN-QA-T03",
+      "team": "caio",
+      "start": "16:00:00",
+      "end": "20:00:00",
+      "person": "philippe",
+      "scheduleAgenda": true,
+      "confirmPerson": false,
+      "compareAgainst": "T01",
+      "scope": "team",
+      "expectedCode": null,
+      "ids": {
+        "quoteId": "f2200000-0000-4000-8000-000000000073",
+        "quoteVersionId": "f2300000-0000-4000-8000-000000000073",
+        "serviceOrderId": "f2400000-0000-4000-8000-000000000073",
+        "eventId": "f2100000-0000-4000-8000-000000000073",
+        "agendaEventId": "f2500000-0000-4000-8000-000000000073"
+      }
+    },
+    {
+      "key": "T04",
+      "label": "Philippe em Equipe Filipe 15:00–19:00 (conflito de pessoa)",
+      "serviceOrderNumber": "TEST-DEV-OS-TURN-T04",
+      "quoteNumber": "TEST-DEV-QUOTE-TURN-T04",
+      "eventCode": "EVT-TURN-QA-T04",
+      "team": "filipe",
+      "start": "15:00:00",
+      "end": "19:00:00",
+      "person": "philippe",
+      "scheduleAgenda": false,
+      "confirmPerson": false,
+      "compareAgainst": "T01",
+      "scope": "person",
+      "expectedCode": "PERSON_TURNAROUND_CONFLICT",
+      "expectedNext": "16:00",
+      "ids": {
+        "quoteId": "f2200000-0000-4000-8000-000000000074",
+        "quoteVersionId": "f2300000-0000-4000-8000-000000000074",
+        "serviceOrderId": "f2400000-0000-4000-8000-000000000074",
+        "eventId": "f2100000-0000-4000-8000-000000000074",
+        "agendaEventId": "f2500000-0000-4000-8000-000000000074"
+      }
+    }
+  ]
+}

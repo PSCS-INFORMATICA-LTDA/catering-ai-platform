@@ -6,10 +6,11 @@ import {
   getCompletionPercentage,
   getStepVisualStatus,
   isQuoteReadyToSave,
-  WIZARD_STEP_LABELS,
+  STEPS_COUNT,
   type StepStatusContext,
   type StepVisualStatus,
 } from '@/app/quotes/new/wizardStepStatus'
+import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 
 function stepSegmentClass(status: StepVisualStatus) {
   switch (status) {
@@ -32,17 +33,24 @@ export default function WizardCompletionProgress({
   const completedSteps = countCompletedSteps(stepStatusCtx)
   const percentage = getCompletionPercentage(stepStatusCtx)
   const ready = isQuoteReadyToSave(stepStatusCtx)
+  const language = stepStatusCtx.language ?? 'pt'
+  const stepLabels = getQuoteStrings(
+    language === 'en' || language === 'es' ? language : 'pt',
+  ).wizardSteps
 
   return (
     <section className="rounded-2xl border border-cdl-border bg-cdl-surface p-7 shadow-cdl sm:p-9">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="cdl-eyebrow">Progresso da cotação</p>
+          <p className="cdl-eyebrow">{tw(language, 'quoteProgress')}</p>
           <p className="mt-2 text-2xl font-bold text-cdl-fg sm:text-3xl">
-            {completedSteps} de {WIZARD_STEP_LABELS.length} etapas concluídas
+            {tw(language, 'stepsCompleted', {
+              done: completedSteps,
+              total: STEPS_COUNT,
+            })}
           </p>
           <p className="mt-1 text-sm text-cdl-text-secondary">
-            {percentage}% de conclusão
+            {tw(language, 'completionPercent', { pct: percentage })}
           </p>
         </div>
         <div
@@ -58,15 +66,17 @@ export default function WizardCompletionProgress({
             }`}
           >
             {ready
-              ? 'Pronto para gerar cotação'
-              : `Faltam ${countMandatoryPendingSteps(stepStatusCtx)} etapas obrigatórias`}
+              ? tw(language, 'readyToGenerate')
+              : tw(language, 'missingMandatory', {
+                  count: countMandatoryPendingSteps(stepStatusCtx),
+                })}
           </p>
         </div>
       </div>
       <div className="mt-5 flex h-1.5 gap-1 overflow-hidden rounded-full">
-        {WIZARD_STEP_LABELS.map((label, index) => (
+        {stepLabels.map((label, index) => (
           <div
-            key={label}
+            key={`${label}-${index}`}
             className={`flex-1 rounded-full transition-colors ${stepSegmentClass(getStepVisualStatus(index, stepStatusCtx))}`}
             title={label}
           />

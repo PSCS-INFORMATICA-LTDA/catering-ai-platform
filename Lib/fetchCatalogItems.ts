@@ -14,7 +14,7 @@ import {
   type CatalogItemUsage,
 } from './itemCatalog'
 import { getActiveBranchIdFromEnv } from './tenant/resolveTenant'
-import { supabase } from './supabase'
+import { getSupabaseServerClient } from './supabaseServer'
 
 export type { CatalogItemListItem, CatalogItemUsage, CatalogItemAudience } from './itemCatalog'
 
@@ -38,6 +38,7 @@ export async function fetchCatalogItems(
   const audience = options.audience ?? 'admin'
   const requireActive = options.activeOnly ?? audience === 'customer'
 
+  const supabase = getSupabaseServerClient()
   let query = supabase
     .from(CATALOG_ITEMS_TABLE)
     .select(buildCatalogItemsListSelect())

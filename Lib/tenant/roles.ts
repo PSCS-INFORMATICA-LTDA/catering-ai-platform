@@ -5,6 +5,7 @@ const ROLE_RANK: Record<CompanyRole, number> = {
   admin: 90,
   manager: 70,
   sales: 60,
+  finance: 55,
   operator: 50,
   kitchen: 40,
   viewer: 10,

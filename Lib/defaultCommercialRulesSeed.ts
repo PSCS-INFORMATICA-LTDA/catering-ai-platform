@@ -1,4 +1,8 @@
 import type { CommercialRuleValue } from './commercialRulesTableSchema'
+import {
+  SUPPLIER_GARNISH_KIT_RULE_KEY,
+  buildSupplierGarnishKitRuleValue,
+} from './supplierGarnishKitRule'
 
 export type CommercialRuleSeed = {
   rule_key: string
@@ -98,6 +102,11 @@ export const DEFAULT_COMMERCIAL_RULE_SEEDS: CommercialRuleSeed[] = [
       type: 'long_text',
       label_pt: 'Observações comerciais',
     },
+    active: true,
+  },
+  {
+    rule_key: SUPPLIER_GARNISH_KIT_RULE_KEY,
+    rule_value: buildSupplierGarnishKitRuleValue(),
     active: true,
   },
 ]

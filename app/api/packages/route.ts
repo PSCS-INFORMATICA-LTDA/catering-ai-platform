@@ -1,10 +1,11 @@
+import { rejectSpoofedCompanyId, requireApiPermission } from '@/Lib/auth/requireApi'
 import { getCdlCompanyId } from '@/Lib/cdlCompany'
 import { fetchPackages } from '@/Lib/fetchPackages'
 import {
   pickPackagesInsertPayload,
   type PackagesInsertPayload,
 } from '@/Lib/packagesTableSchema'
-import { supabase } from '@/Lib/supabase'
+import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -33,6 +34,9 @@ function packageMatchesSearch(
 }
 
 export async function GET(request: Request) {
+  const auth = await requireApiPermission('catalog.view')
+  if (!auth.ok) return auth.response
+
   const url = new URL(request.url)
   const query = url.searchParams.get('q')?.trim() ?? ''
   const activeFilter = url.searchParams.get('active')
@@ -61,6 +65,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireApiPermission('catalog.manage')
+  if (!auth.ok) return auth.response
+
   const companyId = getCdlCompanyId()
   if (!companyId?.trim()) {
     return Response.json({ error: 'company_id não configurado.' }, { status: 500 })
@@ -72,6 +79,9 @@ export async function POST(request: Request) {
   } catch {
     return Response.json({ error: 'Payload inválido.' }, { status: 400 })
   }
+
+  const spoof = rejectSpoofedCompanyId(auth.session, (body as { company_id?: string }).company_id)
+  if (spoof) return spoof
 
   if (!body.package_key?.toString().trim()) {
     return Response.json({ error: 'package_key é obrigatório.' }, { status: 400 })
@@ -93,7 +103,7 @@ export async function POST(request: Request) {
     updated_at: now,
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseServerClient()
     .from('packages')
     .insert(payload)
     .select('id')

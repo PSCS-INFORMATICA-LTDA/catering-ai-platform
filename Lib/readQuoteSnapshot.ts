@@ -1,5 +1,9 @@
 import type { GuestCounts } from './calculateQuoteTotals'
 import { logMissingOfficialGuestFields } from './quoteGuestFields'
+import {
+  isPricingBreakdown,
+  type PricingBreakdown,
+} from './pricing/pricingBreakdownTypes'
 
 export const QUOTE_SNAPSHOT_FINANCIAL_FIELDS = [
   'package_unit_price',
@@ -40,6 +44,7 @@ export type QuoteSnapshotRecord = {
   reservation_amount?: number | null
   balance_due?: number | null
   quote_total?: number | null
+  pricing_breakdown?: PricingBreakdown | Record<string, unknown> | null
 }
 
 export type QuoteSavedSnapshot = {
@@ -208,4 +213,23 @@ export function getChargedMilesFromSnapshot(
 ) {
   if (distance == null || freeLimit == null) return null
   return Math.max(0, distance - freeLimit)
+}
+
+/** Preferencial: breakdown canônico persistido; legado: colunas flat via readQuoteSnapshot. */
+export function readPricingBreakdown(
+  quote: QuoteSnapshotRecord,
+): PricingBreakdown | null {
+  const raw = quote.pricing_breakdown
+  if (isPricingBreakdown(raw)) return raw
+  return null
+}
+
+/** Total persistido — prefer breakdown.total quando disponível. */
+export function readPersistedQuoteTotal(quote: QuoteSnapshotRecord): number | null {
+  const breakdown = readPricingBreakdown(quote)
+  if (breakdown) return breakdown.total
+  if (quote.quote_total == null || Number.isNaN(Number(quote.quote_total))) {
+    return null
+  }
+  return Number(quote.quote_total)
 }

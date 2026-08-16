@@ -5,7 +5,7 @@ import {
   sortCustomersByRecency,
   type CustomerSearchRecord,
 } from './searchCustomers'
-import { supabase } from './supabase'
+import { getSupabaseServerClient } from './supabaseServer'
 
 export type CustomerListItem = CustomerSearchRecord & { id: string }
 
@@ -18,6 +18,7 @@ export async function fetchActiveCustomers() {
     }
   }
 
+  const supabase = getSupabaseServerClient()
   const { data, error } = await supabase
     .from('customers')
     .select(buildCustomersListSelect())
@@ -47,6 +48,7 @@ export async function fetchAllCustomers() {
     }
   }
 
+  const supabase = getSupabaseServerClient()
   const { data, error } = await supabase
     .from('customers')
     .select(buildCustomersListSelect())

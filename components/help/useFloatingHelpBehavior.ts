@@ -10,7 +10,11 @@ export function helpHintSeenKey(pathname: string): string {
   return `help_hint_seen_${pathname.split('?')[0] ?? '/'}`
 }
 
-export function useFloatingHelpBehavior(pathname: string, panelOpen: boolean) {
+export function useFloatingHelpBehavior(
+  pathname: string,
+  panelOpen: boolean,
+  locale?: string | null,
+) {
   const [hintVisible, setHintVisible] = useState(false)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -51,7 +55,7 @@ export function useFloatingHelpBehavior(pathname: string, panelOpen: boolean) {
   }
 
   return {
-    hintText: getHelpHintGreeting(),
+    hintText: getHelpHintGreeting(locale),
     hintVisible,
     dismissHint,
     clearHint: dismissHint,

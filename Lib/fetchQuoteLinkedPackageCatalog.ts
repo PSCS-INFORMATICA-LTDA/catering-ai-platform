@@ -4,7 +4,7 @@ import {
   resolvePackageCatalogImageUrl,
   type PackageCatalogRecord,
 } from '@/Lib/packageCatalogVisual'
-import { supabase } from '@/Lib/supabase'
+import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 type PackageRow = PackageCatalogRecord & {
   id: string
@@ -25,12 +25,17 @@ const EMPTY_CATALOG: QuoteLinkedPackageCatalog = {
   resolvedImageUrl: null,
 }
 
-async function fetchPackageById(packageId: string): Promise<PackageRow | null> {
-  const { data, error } = await supabase
+async function fetchPackageById(
+  packageId: string,
+  companyId?: string | null,
+): Promise<PackageRow | null> {
+  const db = getSupabaseServerClient()
+  let query = db
     .from('packages')
     .select(buildPackagesListSelect())
     .eq('id', packageId)
-    .maybeSingle()
+  if (companyId) query = query.eq('company_id', companyId)
+  const { data, error } = await query.maybeSingle()
 
   if (error) {
     console.error(
@@ -43,12 +48,17 @@ async function fetchPackageById(packageId: string): Promise<PackageRow | null> {
   return (data as PackageRow | null) ?? null
 }
 
-async function fetchPackageByKey(packageKey: string): Promise<PackageRow | null> {
-  const { data, error } = await supabase
+async function fetchPackageByKey(
+  packageKey: string,
+  companyId?: string | null,
+): Promise<PackageRow | null> {
+  const db = getSupabaseServerClient()
+  let query = db
     .from('packages')
     .select(buildPackagesListSelect())
     .eq('package_key', packageKey)
-    .maybeSingle()
+  if (companyId) query = query.eq('company_id', companyId)
+  const { data, error } = await query.maybeSingle()
 
   if (error) {
     console.error(
@@ -63,27 +73,30 @@ async function fetchPackageByKey(packageKey: string): Promise<PackageRow | null>
 
 async function fetchBasePackageForKey(
   packageKey: string,
+  companyId?: string | null,
 ): Promise<PackageRow | null> {
   const baseKey = getBasePackageKey(packageKey)
   if (!baseKey || baseKey === packageKey) return null
-  return fetchPackageByKey(baseKey)
+  return fetchPackageByKey(baseKey, companyId)
 }
 
 export async function fetchQuoteLinkedPackageCatalog(input: {
   packageId?: string | null
   packageKey?: string | null
+  companyId?: string | null
 }): Promise<QuoteLinkedPackageCatalog> {
   const packageId = input.packageId?.trim()
   const packageKey = input.packageKey?.trim()
+  const companyId = input.companyId?.trim() || null
 
   let linkedPackage: PackageRow | null = null
 
   if (packageId) {
-    linkedPackage = await fetchPackageById(packageId)
+    linkedPackage = await fetchPackageById(packageId, companyId)
   }
 
   if (!linkedPackage && packageKey) {
-    linkedPackage = await fetchPackageByKey(packageKey)
+    linkedPackage = await fetchPackageByKey(packageKey, companyId)
   }
 
   if (!linkedPackage) {
@@ -94,7 +107,7 @@ export async function fetchQuoteLinkedPackageCatalog(input: {
   const linkedKey = (linkedPackage.package_key ?? packageKey ?? '').trim()
 
   if (linkedKey.endsWith('+')) {
-    const basePackage = await fetchBasePackageForKey(linkedKey)
+    const basePackage = await fetchBasePackageForKey(linkedKey, companyId)
     if (basePackage && !catalogPackages.some((pkg) => pkg.id === basePackage.id)) {
       catalogPackages.push(basePackage)
     }

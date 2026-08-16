@@ -1,8 +1,12 @@
 'use client'
 
+import { useEffect, useMemo, useRef } from 'react'
 import AdditionalItemCard from '@/components/quotes/additionals/AdditionalItemCard'
-import type { QuoteAdditionalItem } from '@/Lib/quoteAdditionalDisplay'
-import { getQuoteStrings } from '@/Lib/quoteTranslations'
+import {
+  getLocalizedAdditionalLabel,
+  type QuoteAdditionalItem,
+} from '@/Lib/quoteAdditionalDisplay'
+import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 export default function AdditionalCategorySection({
@@ -11,59 +15,141 @@ export default function AdditionalCategorySection({
   items,
   expanded,
   selectedCount,
+  visited,
   quantities,
   billableGuestCount,
   language,
   onToggle,
   onChangeQty,
+  onReviewed,
 }: {
   categoryKey: string
   categoryLabel: string
   items: QuoteAdditionalItem[]
   expanded: boolean
   selectedCount: number
+  visited: boolean
   quantities: Record<string, number>
   billableGuestCount: number
   language: QuoteLanguage
   onToggle: () => void
   onChangeQty: (itemId: string, qty: number) => void
+  onReviewed?: () => void
 }) {
   const t = getQuoteStrings(language)
+  const sectionRef = useRef<HTMLElement>(null)
+  const reviewStatus = visited
+    ? tw(language, 'categoryReviewStatusReviewed')
+    : tw(language, 'categoryReviewStatusPending')
+  const itemNamesPreview = useMemo(
+    () =>
+      items
+        .map((item) => getLocalizedAdditionalLabel(item, language))
+        .filter((label) => label !== '—')
+        .join(' • '),
+    [items, language],
+  )
+  const contentId = `additional-category-content-${categoryKey}`
+
+  useEffect(() => {
+    if (visited || !onReviewed) return
+    const node = sectionRef.current
+    if (!node) return
+
+    let visibleTimer: number | undefined
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) {
+          if (visibleTimer) window.clearTimeout(visibleTimer)
+          visibleTimer = undefined
+          return
+        }
+        if (visibleTimer) return
+        visibleTimer = window.setTimeout(() => {
+          onReviewed()
+        }, 400)
+      },
+      { threshold: 0.35 },
+    )
+
+    observer.observe(node)
+    return () => {
+      observer.disconnect()
+      if (visibleTimer) window.clearTimeout(visibleTimer)
+    }
+  }, [visited, onReviewed])
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-cdl-border bg-cdl-surface shadow-cdl">
+    <section
+      ref={sectionRef}
+      id={`additional-category-${categoryKey}`}
+      data-category-key={categoryKey}
+      className="overflow-hidden rounded-2xl border border-cdl-border bg-cdl-surface shadow-cdl"
+    >
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={expanded}
-        className="flex w-full items-center justify-between gap-4 p-4 text-left transition-colors hover:bg-cdl-hover sm:p-5"
+        aria-controls={contentId}
+        className="w-full p-4 text-left transition-colors hover:bg-cdl-hover sm:p-5"
       >
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="text-base font-extrabold uppercase tracking-wide text-cdl-title sm:text-lg">
-            {categoryLabel}
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="text-base font-extrabold uppercase tracking-wide text-cdl-title sm:text-lg">
+                {categoryLabel}
+              </span>
+              <span className="text-sm font-medium text-cdl-muted">
+                {t.itemsCount(items.length)}
+              </span>
+            </div>
+
+            {!expanded && itemNamesPreview ? (
+              <p
+                data-additional-category-preview
+                className="mt-2 line-clamp-3 break-words text-sm leading-5 text-cdl-text-secondary"
+              >
+                {itemNamesPreview}
+              </p>
+            ) : null}
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span
+                className={`text-[11px] font-semibold uppercase tracking-wide ${
+                  visited ? 'text-cdl-muted' : 'text-cdl-text-secondary'
+                }`}
+              >
+                {reviewStatus}
+              </span>
+              {selectedCount > 0 ? (
+                <span className="rounded-full bg-[var(--brand-primary)] px-2.5 py-0.5 text-xs font-bold text-white">
+                  {t.selectedCount(selectedCount)}
+                </span>
+              ) : null}
+            </div>
+          </div>
+          <span
+            className={`mt-1 shrink-0 text-sm text-[var(--brand-primary)] transition-transform duration-200 ${
+              expanded ? 'rotate-180' : ''
+            }`}
+            aria-hidden
+          >
+            ▼
           </span>
-          <span className="text-sm text-cdl-muted">
-            {t.itemsCount(items.length)}
-          </span>
-          {selectedCount > 0 ? (
-            <span className="rounded-full bg-[var(--brand-primary)] px-2.5 py-0.5 text-xs font-bold text-white">
-              {t.selectedCount(selectedCount)}
-            </span>
-          ) : null}
         </div>
-        <span
-          className={`shrink-0 text-sm text-[var(--brand-primary)] transition-transform duration-200 ${
-            expanded ? 'rotate-180' : ''
-          }`}
-          aria-hidden
-        >
-          ▼
-        </span>
       </button>
 
       {expanded ? (
-        <div className="border-t border-cdl-border-subtle p-3 sm:p-4">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div
+          id={contentId}
+          role="region"
+          aria-label={categoryLabel}
+          className="border-t border-cdl-border-subtle p-3 sm:p-4"
+        >
+          <div
+            data-additional-items-grid
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"
+          >
             {items.map((item) => (
               <AdditionalItemCard
                 key={item.id}

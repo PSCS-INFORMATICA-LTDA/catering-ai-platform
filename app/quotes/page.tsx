@@ -1,11 +1,16 @@
 import { fetchQuoteList } from '../../Lib/fetchQuoteList'
 import QuotesDashboard from '../../components/QuotesDashboard'
+import { getAuthSession } from '@/Lib/auth/session'
+import { hasPermission } from '@/Lib/auth/permissions'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function QuotesPage() {
-  const { data, error } = await fetchQuoteList()
+  const [{ data, error }, session] = await Promise.all([
+    fetchQuoteList(),
+    getAuthSession(),
+  ])
 
   if (error) {
     return (
@@ -18,5 +23,9 @@ export default async function QuotesPage() {
     )
   }
 
-  return <QuotesDashboard initialQuotes={data ?? []} />
+  const canConvert = Boolean(
+    session?.isPlatformAdmin || hasPermission(session?.permissions, 'quotes.convert'),
+  )
+
+  return <QuotesDashboard initialQuotes={data ?? []} canConvert={canConvert} />
 }

@@ -1,10 +1,28 @@
 import {
-  IMPORTANT_RULES,
-  RESERVATION_PAYMENT_TEXT,
+  BALANCE_PERCENTAGE,
+  FOOD_STORAGE_FINE,
+  HOLIDAY_MIN_ORDER,
+  HOLIDAY_SURCHARGE_PERCENT,
+  LATE_PAYMENT_FEE_PER_DAY,
+  MILEAGE_BASE_LOCATION,
+  MILEAGE_FREE_LIMIT,
+  MILEAGE_RATE,
+  MILEAGE_UNIT,
+  MIN_ORDER_DEC_JAN,
+  MIN_ORDER_WEEKDAY,
+  MIN_ORDER_WEEKEND,
+  RESERVATION_PERCENTAGE,
 } from '../Lib/cdlCommercialRules'
 import { emphasizeRuleText } from '../Lib/emphasizeRuleText'
+import { tQuotesOrders } from '../Lib/i18n/quotesOrders'
+import { tw } from '../Lib/quoteTranslations'
+import type { QuoteLanguage } from '../Lib/quoteWizardTypes'
 
 type RulesVariant = 'summary' | 'pdf'
+
+function loc(language?: string | null): QuoteLanguage {
+  return language === 'en' || language === 'es' ? language : 'pt'
+}
 
 function RulesBlock({
   title,
@@ -49,17 +67,55 @@ function RulesBlock({
   )
 }
 
+function importantRuleItems(language: QuoteLanguage) {
+  const t = (key: Parameters<typeof tQuotesOrders>[1], vars?: Record<string, string | number>) =>
+    tQuotesOrders(language, key, vars)
+
+  return {
+    minimumOrder: [
+      t('ruleMinWeekday', { amount: MIN_ORDER_WEEKDAY }),
+      t('ruleMinWeekend', { amount: MIN_ORDER_WEEKEND }),
+    ],
+    mileage: [
+      t('ruleMileageBase', { base: MILEAGE_BASE_LOCATION }),
+      t('ruleMileageFree', { limit: MILEAGE_FREE_LIMIT, unit: MILEAGE_UNIT }),
+      t('ruleMileageRate', { rate: MILEAGE_RATE, unit: MILEAGE_UNIT }),
+    ],
+    reservation: [
+      t('ruleReservationPct', { pct: RESERVATION_PERCENTAGE }),
+      t('ruleBalancePct', { pct: BALANCE_PERCENTAGE }),
+    ],
+    foodPolicy: [
+      t('ruleFoodStorage'),
+      t('ruleFoodFine', { amount: FOOD_STORAGE_FINE }),
+    ],
+    latePayment: [t('ruleLatePayment', { amount: LATE_PAYMENT_FEE_PER_DAY })],
+    decemberJanuary: [
+      t('ruleDecJanMin', { amount: MIN_ORDER_DEC_JAN }),
+      t('ruleHolidaySurcharge', {
+        pct: HOLIDAY_SURCHARGE_PERCENT,
+        min: HOLIDAY_MIN_ORDER,
+      }),
+      t('ruleNoRefundDates'),
+    ],
+  }
+}
+
 export function CdlImportantRulesPanel({
   variant = 'summary',
   showReservationText = false,
+  language = 'pt',
 }: {
   variant?: RulesVariant
   showReservationText?: boolean
+  language?: string | null
 }) {
+  const locale = loc(language)
+  const rules = importantRuleItems(locale)
   const wrapperClass =
     variant === 'pdf'
-      ? 'quote-proposal-rules quote-print-section quote-print-keep'
-      : 'rounded-2xl border border-cdl-border bg-cdl-surface p-7 shadow-cdl sm:p-9'
+      ? 'quote-proposal-rules quote-print-section quote-print-rules'
+      : 'quote-print-rules rounded-2xl border border-cdl-border bg-cdl-surface p-7 shadow-cdl sm:p-9'
 
   const titleClass =
     variant === 'pdf'
@@ -68,10 +124,12 @@ export function CdlImportantRulesPanel({
 
   return (
     <section className={wrapperClass}>
-      <h2 className={titleClass}>Regras importantes</h2>
+      <h2 className={titleClass}>{tw(locale, 'importantRules')}</h2>
       {showReservationText && variant === 'summary' && (
         <p className="mt-4 text-sm leading-relaxed text-cdl-text-secondary">
-          {emphasizeRuleText(RESERVATION_PAYMENT_TEXT)}
+          {emphasizeRuleText(
+            tQuotesOrders(locale, 'docReservationPaymentText'),
+          )}
         </p>
       )}
       <div
@@ -82,33 +140,33 @@ export function CdlImportantRulesPanel({
         }
       >
         <RulesBlock
-          title="Pedido mínimo"
-          items={IMPORTANT_RULES.minimumOrder}
+          title={tQuotesOrders(locale, 'docMinOrderRuleTitle')}
+          items={rules.minimumOrder}
           variant={variant}
         />
         <RulesBlock
-          title="Milhagem"
-          items={IMPORTANT_RULES.mileage}
+          title={tQuotesOrders(locale, 'mileageLabel')}
+          items={rules.mileage}
           variant={variant}
         />
         <RulesBlock
-          title="Reserva"
-          items={IMPORTANT_RULES.reservation}
+          title={tQuotesOrders(locale, 'reservationLabel')}
+          items={rules.reservation}
           variant={variant}
         />
         <RulesBlock
-          title="Política de comida"
-          items={IMPORTANT_RULES.foodPolicy}
+          title={tQuotesOrders(locale, 'docFoodPolicyRuleTitle')}
+          items={rules.foodPolicy}
           variant={variant}
         />
         <RulesBlock
-          title="Multa de atraso"
-          items={IMPORTANT_RULES.latePayment}
+          title={tQuotesOrders(locale, 'docLatePaymentRuleTitle')}
+          items={rules.latePayment}
           variant={variant}
         />
         <RulesBlock
-          title="Dezembro / janeiro e feriados"
-          items={IMPORTANT_RULES.decemberJanuary}
+          title={tQuotesOrders(locale, 'docDecJanRuleTitle')}
+          items={rules.decemberJanuary}
           variant={variant}
         />
       </div>
@@ -116,29 +174,65 @@ export function CdlImportantRulesPanel({
   )
 }
 
-export function CdlPdfPoliciesSection() {
-  return (
-    <>
-      <CdlImportantRulesPanel variant="pdf" />
-      <section className="quote-proposal-rules quote-print-section quote-print-keep">
-        <h2 className="quote-proposal-section-title">
-          Política de cancelamento
-        </h2>
-        <ul className="quote-proposal-rules-list">
-          <li>
-            Cancelamentos e reagendamentos seguem as condições acordadas no
-            momento da reserva.
-          </li>
-          <li>
-            Em 24, 25 e 31 de dezembro e 1 de janeiro não há reembolso nem
-            reagendamento.
-          </li>
-          <li>
-            Eventos nessas datas de feriado têm acréscimo de 100% e pedido
-            mínimo de $2.000.
-          </li>
+export function CdlCancellationPolicySection({
+  variant = 'pdf',
+  language = 'pt',
+}: {
+  variant?: RulesVariant
+  language?: string | null
+}) {
+  const locale = loc(language)
+  const items = [
+    tQuotesOrders(locale, 'cancelPolicy1'),
+    tQuotesOrders(locale, 'cancelPolicy2'),
+    tQuotesOrders(locale, 'cancelPolicy3', {
+      pct: HOLIDAY_SURCHARGE_PERCENT,
+      min: HOLIDAY_MIN_ORDER,
+    }),
+  ]
+
+  if (variant === 'summary') {
+    return (
+      <section className="rounded-2xl border border-cdl-border bg-cdl-surface p-7 shadow-cdl sm:p-9">
+        <h2 className="cdl-section-title-lg">{tw(locale, 'cancellationPolicy')}</h2>
+        <ul className="mt-4 space-y-2 text-sm text-cdl-text-secondary">
+          {items.map((item) => (
+            <li key={item} className="flex gap-2">
+              <span className="text-cdl-title" aria-hidden>
+                •
+              </span>
+              <span>{emphasizeRuleText(item)}</span>
+            </li>
+          ))}
         </ul>
       </section>
+    )
+  }
+
+  return (
+    <section className="quote-proposal-rules quote-print-section">
+      <h2 className="quote-proposal-section-title">
+        {tw(locale, 'cancellationPolicy')}
+      </h2>
+      <ul className="quote-proposal-rules-list">
+        {items.map((item) => (
+          <li key={item}>{emphasizeRuleText(item)}</li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/** Regras + cancelamento (legado / PDF completo). Regras no fim; cancelamento por último. */
+export function CdlPdfPoliciesSection({
+  language = 'pt',
+}: {
+  language?: string | null
+}) {
+  return (
+    <>
+      <CdlImportantRulesPanel variant="pdf" language={language} />
+      <CdlCancellationPolicySection variant="pdf" language={language} />
     </>
   )
 }

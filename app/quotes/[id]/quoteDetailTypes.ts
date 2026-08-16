@@ -1,5 +1,7 @@
 import { getCatalogItemImageUrl } from '@/Lib/catalogItemVisual'
+import { resolveCatalogItemDisplayLabel } from '@/Lib/cdlPackageItemI18n'
 import type { PackageCatalogRecord } from '@/Lib/packageCatalogVisual'
+import type { PricingBreakdown } from '@/Lib/pricing/pricingBreakdownTypes'
 
 export type QuoteAdditionalItem = {
   item_id: string
@@ -71,6 +73,7 @@ export type QuoteDetail = {
   grill_photo_media_id?: string | null
   grill_rental_required?: boolean | null
   grill_rental_qty?: number | null
+  grill_rental_total?: number | null
   grill_notes?: string | null
   grill_masters_qty?: number | null
   assistants_qty?: number | null
@@ -87,11 +90,36 @@ export type QuoteDetail = {
   reservation_percentage?: number | null
   balance_due?: number | null
   quote_total?: number | null
+  minimum_order_amount?: number | null
+  minimum_order_applied?: boolean | null
+  holiday_surcharge_amount?: number | null
+  pricing_breakdown?: PricingBreakdown | Record<string, unknown> | null
+  reservation_confirmed_at?: string | null
+  reservation_confirmed_by?: string | null
+  currency_code?: string | null
+  proposal_token?: string | null
+  proposal_sent_at?: string | null
+  proposal_response?: string | null
+  proposal_accepted_at?: string | null
+  proposal_rejected_at?: string | null
+  proposal_follow_up_count?: number | null
+  proposal_last_follow_up_at?: string | null
+  team_presentation_time?: string | null
+  designated_team_id?: string | null
+  accepted_version_id?: string | null
+  converted_service_order_id?: string | null
   additional_items?: QuoteAdditionalItem[] | null
   package_selections?: Array<{
     option_group_id: string
     option_item_id: string
     package_id?: string | null
+  }> | null
+  /** Labels resolvidos das escolhas inclusas (não persistido). */
+  package_selection_labels?: Array<{
+    groupId: string
+    groupTitle: string
+    itemId: string
+    itemLabel: string
   }> | null
   /** Pacote(s) carregados do Supabase para revisão pública (não persistido). */
   packageCatalogPackages?: QuoteDetailPackageCatalogRow[] | null
@@ -101,12 +129,17 @@ export function formatCurrency(value: number | null | undefined) {
   return `$${Number(value ?? 0).toFixed(2)}`
 }
 
-export function formatDate(value: string | null | undefined) {
+export function formatDate(
+  value: string | null | undefined,
+  locale: string | null | undefined = 'pt',
+) {
   if (!value) return '—'
   const normalized = value.includes('T') ? value : `${value}T00:00:00`
   const date = new Date(normalized)
   if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString('pt-BR', {
+  const bcp =
+    locale === 'en' ? 'en-US' : locale === 'es' ? 'es' : 'pt-BR'
+  return date.toLocaleDateString(bcp, {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
@@ -120,8 +153,13 @@ export function formatTime(value: string | null | undefined) {
   return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`
 }
 
-export function formatBool(value: boolean | null | undefined) {
+export function formatBool(
+  value: boolean | null | undefined,
+  locale: string | null | undefined = 'pt',
+) {
   if (value === null || value === undefined) return '—'
+  if (locale === 'en') return value ? 'Yes' : 'No'
+  if (locale === 'es') return value ? 'Sí' : 'No'
   return value ? 'Sim' : 'Não'
 }
 
@@ -134,9 +172,16 @@ export function getAdditionalLabel(
   item: QuoteAdditionalItem,
   language: string,
 ) {
-  if (language === 'en') return item.label_en ?? item.label_pt ?? '—'
-  if (language === 'es') return item.label_es ?? item.label_pt ?? '—'
-  return item.label_pt ?? '—'
+  return (
+    resolveCatalogItemDisplayLabel(
+      {
+        pt: item.label_pt,
+        en: item.label_en,
+        es: item.label_es,
+      },
+      language,
+    ) || '—'
+  )
 }
 
 export function getAdditionalCategory(
@@ -148,16 +193,24 @@ export function getAdditionalCategory(
   return item.category_pt ?? 'Outros'
 }
 
-export function getPackageName(quote: QuoteDetail) {
-  if (quote.language === 'en') return quote.package_name_en ?? quote.package_name_pt
-  if (quote.language === 'es') return quote.package_name_es ?? quote.package_name_pt
+export function getPackageName(
+  quote: QuoteDetail,
+  language?: string | null,
+) {
+  const lang = language ?? quote.language ?? 'pt'
+  if (lang === 'en') return quote.package_name_en ?? quote.package_name_pt
+  if (lang === 'es') return quote.package_name_es ?? quote.package_name_pt
   return quote.package_name_pt
 }
 
-export function getPackageDescription(quote: QuoteDetail) {
+export function getPackageDescription(
+  quote: QuoteDetail,
+  language?: string | null,
+) {
   if (quote.package_description) return quote.package_description
-  if (quote.language === 'en') return quote.package_description_en
-  if (quote.language === 'es') return quote.package_description_es
+  const lang = language ?? quote.language ?? 'pt'
+  if (lang === 'en') return quote.package_description_en
+  if (lang === 'es') return quote.package_description_es
   return quote.package_description_pt
 }
 

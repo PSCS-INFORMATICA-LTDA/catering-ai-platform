@@ -1,24 +1,37 @@
 'use client'
 
+import { tChrome } from '@/Lib/i18n/chrome'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
+import { glassBtn } from '@/Lib/liquidGlass'
 import { useTheme } from './ThemeProvider'
 
 export function ThemeToggle({ className = '' }: { className?: string }) {
   const { theme, toggleTheme } = useTheme()
+  const locale = useAuthLocaleFromMe()
+  const isDark = theme === 'dark'
 
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      className={`inline-flex items-center gap-2 rounded-xl border border-cdl-border bg-cdl-surface px-3 py-2 text-xs font-bold uppercase tracking-wider text-cdl-accent shadow-cdl transition-colors hover:bg-cdl-hover ${className}`}
+      className={glassBtn('secondary', className)}
       aria-label={
-        theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'
+        isDark
+          ? tChrome(locale, 'themeActivateLight')
+          : tChrome(locale, 'themeActivateDark')
       }
-      title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
+      title={
+        isDark
+          ? tChrome(locale, 'themeLightTitle')
+          : tChrome(locale, 'themeDarkTitle')
+      }
     >
       <span aria-hidden className="text-base leading-none">
-        {theme === 'dark' ? '☀' : '☾'}
+        {isDark ? '☀' : '☾'}
       </span>
-      <span>{theme === 'dark' ? 'Claro' : 'Escuro'}</span>
+      <span>
+        {isDark ? tChrome(locale, 'themeLight') : tChrome(locale, 'themeDark')}
+      </span>
     </button>
   )
 }

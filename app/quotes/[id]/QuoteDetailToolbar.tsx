@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import AppMainNav from '@/components/AppMainNav'
 import DeleteQuoteButton from '@/components/DeleteQuoteButton'
 import QuotePdfDownload from './QuotePdfDownload'
+import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 export default function QuoteDetailToolbar({
   quoteId,
@@ -18,6 +19,8 @@ export default function QuoteDetailToolbar({
   eventDate?: string | null
   editHref?: string | null
 }) {
+  const locale = useAuthLocaleFromMe()
+
   function handlePrint() {
     const previousTitle = document.title
     document.title = `${quoteNumber} — Proposta BBQ At Home`
@@ -27,14 +30,12 @@ export default function QuoteDetailToolbar({
 
   return (
     <div className="no-print mb-8 flex flex-col gap-4">
-      <AppMainNav />
-
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <Link
         href="/quotes"
         className="inline-flex items-center text-sm text-cdl-muted transition-colors hover:text-cdl-brand"
       >
-        ← Voltar às cotações
+        ← {tQuotesOrders(locale, 'backToQuotes')}
       </Link>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -43,7 +44,7 @@ export default function QuoteDetailToolbar({
             href={editHref}
             className="inline-flex items-center justify-center rounded-xl border border-cdl-border bg-cdl-surface px-5 py-3 text-sm font-bold uppercase tracking-wider text-cdl-fg transition-colors hover:border-cdl-accent-border"
           >
-            Editar cotação
+            {tQuotesOrders(locale, 'editQuoteAction')}
           </Link>
         )}
         <button
@@ -51,7 +52,7 @@ export default function QuoteDetailToolbar({
           onClick={handlePrint}
           className="hidden items-center justify-center rounded-xl border border-cdl-border bg-cdl-surface px-5 py-3 text-sm font-bold uppercase tracking-wider text-cdl-fg transition-colors hover:border-cdl-accent-border md:inline-flex"
         >
-          Imprimir / PDF
+          {tQuotesOrders(locale, 'printPdfAction')}
         </button>
         <DeleteQuoteButton quoteId={quoteId} />
         <QuotePdfDownload

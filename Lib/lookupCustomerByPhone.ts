@@ -69,7 +69,7 @@ export async function lookupCustomerByPhone(
   if (!isUsablePhone(phone)) {
     return {
       customer: null,
-      error: { message: 'Telefone inválido (mínimo 10 dígitos).' },
+      error: { message: 'Telefone inválido. Informe o DDI (ex.: +5511983481803).' },
     }
   }
 

@@ -11,10 +11,13 @@ export type QuoteDraftInput = {
   packagePricePerPerson: number
   additionals: AdditionalLineInput[]
   mileageDistance: number
+  grillRentalRequired?: boolean
+  grillRentalQty?: number
   pricing: CommercialRulesSnapshot
   reservationPercentage?: number
   reservationAmountOverride?: number
   useCustomReservation?: boolean
+  eventDate?: string | null
 }
 
 export function calculateQuoteDraftFromSupabasePricing(
@@ -29,10 +32,20 @@ export function calculateQuoteDraftFromSupabasePricing(
     mileageDistance: input.mileageDistance,
     mileageFreeLimit: pricing.mileageFreeLimit,
     mileageRate: pricing.mileageRate,
+    grillRentalRequired: input.grillRentalRequired,
+    grillRentalQty: input.grillRentalQty,
     reservationPercentage:
       input.reservationPercentage ?? pricing.reservationPercentage,
     reservationAmountOverride: input.reservationAmountOverride,
     useCustomReservation: input.useCustomReservation ?? false,
+    eventDate: input.eventDate,
+    commercialMinimums: {
+      minOrderWeekday: pricing.minOrderWeekday,
+      minOrderWeekend: pricing.minOrderWeekend,
+      minOrderDecJan: pricing.minOrderDecJan,
+      holidaySurchargePercent: pricing.holidaySurchargePercent,
+      holidayMinOrder: pricing.holidayMinOrder,
+    },
   })
 }
 

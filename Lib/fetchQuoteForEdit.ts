@@ -10,7 +10,9 @@ import { fetchQuotePackageSelections } from './fetchPackageOptionGroups'
 import { fetchQuoteDetail } from './fetchQuoteDetail'
 import type { CommercialRulesSnapshot } from './supabaseCommercialRules'
 import { fetchSupabaseCommercialRules } from './supabaseCommercialRules'
-import { supabase } from './supabase'
+import { getActiveCompanyId } from '@/Lib/tenant/resolveTenant'
+import { getSupabaseServerClient } from './supabaseServer'
+import { tw } from './quoteTranslations'
 
 type QuoteRow = {
   event_id?: string | null
@@ -118,6 +120,7 @@ export type FetchQuoteForEditResult = {
 
 export async function fetchQuoteForEdit(
   quoteId: string,
+  language: string | null | undefined = 'pt',
 ): Promise<FetchQuoteForEditResult> {
   const fetchErrors: string[] = []
 
@@ -138,19 +141,23 @@ export async function fetchQuoteForEdit(
       packageSideItems: [],
       commercialRules,
       fetchErrors,
-      error: quoteRes.error ?? { message: 'Cotação não encontrada.' },
+      error: quoteRes.error ?? { message: tw(language, 'quoteNotFound') },
     }
   }
+
+  const companyId = getActiveCompanyId()
+  const supabase = getSupabaseServerClient()
 
   const { data: quoteRow, error: quoteRowError } = await supabase
     .from('quotes')
     .select('event_id, customer_id, package_id')
     .eq('id', quoteId)
+    .eq('company_id', companyId)
     .eq('active', true)
     .maybeSingle()
 
   if (quoteRowError) {
-    fetchErrors.push(`Cotação: ${quoteRowError.message}`)
+    fetchErrors.push(`${tw(language, 'fetchErrorQuote')}: ${quoteRowError.message}`)
   }
 
   const row = (quoteRow ?? {}) as QuoteRow
@@ -169,13 +176,19 @@ export async function fetchQuoteForEdit(
     catalogRes,
   ] = await Promise.all([
     eventId
-      ? supabase.from('events').select('*').eq('id', eventId).maybeSingle()
+      ? supabase
+          .from('events')
+          .select('*')
+          .eq('id', eventId)
+          .eq('company_id', companyId)
+          .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     customerId
       ? supabase
           .from('customers')
           .select(buildCustomersListSelect())
           .eq('id', customerId)
+          .eq('company_id', companyId)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     packageId
@@ -183,18 +196,21 @@ export async function fetchQuoteForEdit(
           .from('packages')
           .select(buildPackagesListSelect())
           .eq('id', packageId)
+          .or(`company_id.eq.${companyId},company_id.is.null`)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     supabase
       .from('quote_additional_items')
       .select('additional_item_id, quantity, unit_price, total_price')
-      .eq('quote_id', quoteId),
+      .eq('quote_id', quoteId)
+      .eq('company_id', companyId),
     fetchQuotePackageSelections(quoteId),
     loadPackageConfiguration(),
     supabase
       .from('packages')
       .select(buildPackagesListSelect())
       .eq('active', true)
+      .or(`company_id.eq.${companyId},company_id.is.null`)
       .order('display_order', { ascending: true }),
     fetchCatalogItems({
       activeOnly: true,
@@ -203,22 +219,32 @@ export async function fetchQuoteForEdit(
     }),
   ])
 
-  if (eventRes.error) fetchErrors.push(`Evento: ${eventRes.error.message}`)
-  if (customerRes.error) fetchErrors.push(`Cliente: ${customerRes.error.message}`)
+  if (eventRes.error) {
+    fetchErrors.push(`${tw(language, 'fetchErrorEvent')}: ${eventRes.error.message}`)
+  }
+  if (customerRes.error) {
+    fetchErrors.push(
+      `${tw(language, 'fetchErrorCustomers')}: ${customerRes.error.message}`,
+    )
+  }
   if (linkedPackageRes.error) {
-    fetchErrors.push(`Pacote vinculado: ${linkedPackageRes.error.message}`)
+    fetchErrors.push(
+      `${tw(language, 'fetchErrorLinkedPackage')}: ${linkedPackageRes.error.message}`,
+    )
   }
   if (quoteAdditionalsRes.error) {
-    fetchErrors.push(`Adicionais da cotação: ${quoteAdditionalsRes.error.message}`)
+    fetchErrors.push(
+      `${tw(language, 'fetchErrorQuoteAdditionals')}: ${quoteAdditionalsRes.error.message}`,
+    )
   }
   if (quoteSelectionsRes.error) {
     fetchErrors.push(
-      `Escolhas do pacote: ${quoteSelectionsRes.error.message}`,
+      `${tw(language, 'fetchErrorPackageSelections')}: ${quoteSelectionsRes.error.message}`,
     )
   }
   if (packageConfigurationRes.error) {
     fetchErrors.push(
-      `Configuração do pacote: ${packageConfigurationRes.error.message}`,
+      `${tw(language, 'fetchErrorPackageConfig')}: ${packageConfigurationRes.error.message}`,
     )
   }
 
@@ -228,9 +254,11 @@ export async function fetchQuoteForEdit(
     optionGroups: [],
     optionGroupItems: [],
   }
-  if (packagesRes.error) fetchErrors.push(`Pacotes: ${packagesRes.error.message}`)
+  if (packagesRes.error) {
+    fetchErrors.push(`${tw(language, 'fetchErrorPackages')}: ${packagesRes.error.message}`)
+  }
   if (catalogRes.error) {
-    fetchErrors.push(`Catálogo de itens: ${catalogRes.error.message}`)
+    fetchErrors.push(`${tw(language, 'fetchErrorCatalog')}: ${catalogRes.error.message}`)
   }
 
   const mappedAdditionals = mapQuoteAdditionalRows(

@@ -65,7 +65,7 @@ export default function QuoteStepper({
         ))}
       </div>
 
-      <ol className="-mx-0.5 flex gap-1 overflow-x-auto px-0.5 pb-0.5 snap-x snap-mandatory scroll-smooth lg:mx-0 lg:grid lg:grid-cols-8 lg:gap-1 lg:overflow-visible lg:pb-0">
+      <ol className="-mx-0.5 flex gap-1 overflow-x-auto px-0.5 pb-0.5 snap-x snap-mandatory scroll-smooth lg:mx-0 lg:grid lg:grid-cols-6 lg:gap-1 lg:overflow-visible lg:pb-0">
         {steps.map((label, index) => {
           const status = getStepStatus(index)
           const isCurrent = index === currentStep

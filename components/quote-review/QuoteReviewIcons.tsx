@@ -1,3 +1,5 @@
+import { tw } from '@/Lib/quoteTranslations'
+
 export function IconCalendar() {
   return (
     <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
@@ -29,7 +31,11 @@ export function IconLocation() {
   )
 }
 
-export function AdditionalPlaceholder() {
+export function AdditionalPlaceholder({
+  language = 'pt',
+}: {
+  language?: string | null
+}) {
   return (
     <div className="quote-proposal-placeholder" aria-hidden>
       <svg viewBox="0 0 24 24" fill="none" className="quote-proposal-placeholder-icon">
@@ -43,7 +49,7 @@ export function AdditionalPlaceholder() {
           strokeLinejoin="round"
         />
       </svg>
-      <span>Foto em atualização</span>
+      <span>{tw(language, 'photoUpdating')}</span>
     </div>
   )
 }

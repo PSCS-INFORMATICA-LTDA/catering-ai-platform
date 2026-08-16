@@ -18,11 +18,13 @@ import {
 } from '@/Lib/packageCatalogVisual'
 import {
   getDisplayableFixedPackageItems,
+  getPackageSideItemLabel,
   type PackageItem,
   type PackageSideItem,
 } from '@/Lib/packageConfiguration'
 import {
   getPackageDetailTitle,
+  getPackageHighlights,
   parsePackageHighlightsText,
 } from '@/Lib/packageDisplay'
 import {
@@ -35,6 +37,7 @@ import {
   type PackageOptionGroup,
 } from '@/Lib/packageOptionGroups'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 
 function formatCurrency(value: number) {
   return `$${value.toFixed(2)}`
@@ -82,9 +85,9 @@ export default function QuotePackageSummary({
 }) {
   const image = getPackageCatalogImage(pkg, allPackages)
   const variant = getPackageCatalogVariant(pkg)
-  const detailTitle = getPackageDetailTitle(pkg)
+  const detailTitle = getPackageDetailTitle(pkg, language)
   const priceOnRequest = isPackageCatalogPriceOnRequest(pkg)
-  const perPerson = 'pessoa'
+  const perPerson = getQuoteStrings(language).perPerson
   const basePackage = findBasePackage(pkg, allPackages)
   const sidesPricing =
     variant === 'with_sides'
@@ -122,12 +125,14 @@ export default function QuotePackageSummary({
     ? getQuoteDisplaySideItems(pkg.id, packageSideItems)
     : []
 
-  const highlightItems = parsePackageHighlightsText(pkg.package_highlights_pt)
+  const highlightItems = parsePackageHighlightsText(
+    getPackageHighlights(pkg, language) || pkg.package_highlights_pt,
+  )
 
   const breakdownRows = priceOnRequest
     ? [
         {
-          label: 'Valor do pacote',
+          label: tw(language, 'packageValue'),
           value: formatPackageCatalogPriceLabel(pkg, language, formatCurrency),
           emphasis: true,
         },
@@ -135,7 +140,7 @@ export default function QuotePackageSummary({
     : variant === 'without_sides'
       ? [
           {
-            label: 'Total por pessoa',
+            label: tw(language, 'totalPerPerson'),
             value: `${formatCurrency(packagePrice)} / ${perPerson}`,
             emphasis: true,
           },
@@ -144,22 +149,22 @@ export default function QuotePackageSummary({
           sidesPricing.basePricePerPerson != null
         ? [
             {
-              label: 'Pacote',
+              label: tw(language, 'packageValue'),
               value: `${formatCurrency(sidesPricing.basePricePerPerson)} / ${perPerson}`,
             },
             {
-              label: 'Guarnições',
+              label: tw(language, 'garnish'),
               value: `+ ${formatCurrency(sidesPricing.sidesPricePerPerson)} / ${perPerson}`,
             },
             {
-              label: 'Total por pessoa',
+              label: tw(language, 'totalPerPerson'),
               value: `${formatCurrency(sidesPricing.totalPerPerson)} / ${perPerson}`,
               emphasis: true,
             },
           ]
         : [
             {
-              label: 'Total por pessoa',
+              label: tw(language, 'totalPerPerson'),
               value: `${formatCurrency(totalPerPerson)} / ${perPerson}`,
               emphasis: true,
             },
@@ -177,7 +182,7 @@ export default function QuotePackageSummary({
         <PackageHeroImage
           src={image}
           alt={detailTitle}
-          fallbackLabel="Imagem do pacote"
+          fallbackLabel={tw(language, 'packageImage')}
           expand={!compact}
         />
       ) : null}
@@ -212,7 +217,9 @@ export default function QuotePackageSummary({
 
       {highlightItems.length > 0 ? (
         <section className={sectionClass}>
-          <p className="text-sm font-bold text-neutral-900">Destaque</p>
+          <p className="text-sm font-bold text-neutral-900">
+            {tw(language, 'packageHighlights')}
+          </p>
           <ul className="mt-2 space-y-1">
             {highlightItems.map((item) => (
               <li
@@ -227,7 +234,9 @@ export default function QuotePackageSummary({
       ) : null}
 
       <section className={sectionClass}>
-        <p className="text-sm font-bold text-neutral-900">Itens inclusos</p>
+        <p className="text-sm font-bold text-neutral-900">
+          {tw(language, 'includedItems')}
+        </p>
         {hasFixedItems ? (
           <div className="mt-2">
             <PackageFixedItemsByCategory
@@ -237,22 +246,24 @@ export default function QuotePackageSummary({
           </div>
         ) : isCustom ? (
           <p className="mt-2 text-sm text-neutral-600">
-            Pacote personalizado — itens definidos na cotação.
+            {tw(language, 'customPackageHint')}
           </p>
         ) : (
           <p className="mt-2 text-sm text-amber-800">
-            Itens do pacote em configuração.
+            {tw(language, 'itemsConfiguring')}
           </p>
         )}
       </section>
 
       {variant === 'with_sides' && configuredSides.length > 0 ? (
         <section className={`${sectionClass} border-amber-200 bg-amber-50/50`}>
-          <p className="text-sm font-bold text-amber-950">Guarnições inclusas</p>
+          <p className="text-sm font-bold text-amber-950">
+            {tw(language, 'includedSides')}
+          </p>
           <div className="mt-3 flex flex-wrap gap-3">
             {configuredSides.map((side) => {
               const label =
-                side.label_pt?.trim() || side.item_name?.trim() || '—'
+                getPackageSideItemLabel(side, language) || '—'
               const visual = resolveCatalogItemImageForLink(catalogItems, {
                 additional_item_id: side.additional_item_id,
                 image_url: side.image_url,
@@ -310,7 +321,9 @@ export default function QuotePackageSummary({
       ) : null}
 
       <section className={sectionClass}>
-        <p className="mb-2 text-sm font-bold text-neutral-900">Preço</p>
+        <p className="mb-2 text-sm font-bold text-neutral-900">
+          {tw(language, 'price')}
+        </p>
         <PriceBreakdownCard rows={breakdownRows} />
       </section>
     </div>

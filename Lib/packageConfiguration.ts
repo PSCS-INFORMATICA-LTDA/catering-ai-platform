@@ -8,6 +8,7 @@ import type {
   PackageOptionGroupItem,
   PackageOptionGroupRecord,
 } from '@/Lib/packageOptionGroups'
+import { resolveCatalogItemDisplayLabel } from '@/Lib/cdlPackageItemI18n'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
@@ -139,26 +140,33 @@ export function getPackageItemLabel(
   item: PackageItem,
   language: QuoteLanguage = 'pt',
 ): string {
-  if (language === 'en') {
-    return item.label_en?.trim() || item.label_pt?.trim() || item.item_key
-  }
-  if (language === 'es') {
-    return item.label_es?.trim() || item.label_pt?.trim() || item.item_key
-  }
-  return item.label_pt?.trim() || item.item_key
+  return (
+    resolveCatalogItemDisplayLabel(
+      {
+        pt: item.label_pt,
+        en: item.label_en,
+        es: item.label_es,
+      },
+      language,
+    ) || item.item_key
+  )
 }
 
 export function getPackageSideItemLabel(
   item: PackageSideItem,
   language: QuoteLanguage = 'pt',
 ): string {
-  if (language === 'en') {
-    return item.label_en?.trim() || item.label_pt?.trim() || item.item_key
-  }
-  if (language === 'es') {
-    return item.label_es?.trim() || item.label_pt?.trim() || item.item_key
-  }
-  return item.label_pt?.trim() || item.item_key
+  return (
+    resolveCatalogItemDisplayLabel(
+      {
+        pt: item.label_pt,
+        en: item.label_en,
+        es: item.label_es,
+        fallback: item.item_name,
+      },
+      language,
+    ) || item.item_key
+  )
 }
 
 export function getPackageItemsForPackage(

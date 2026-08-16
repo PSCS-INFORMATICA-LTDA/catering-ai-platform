@@ -8,6 +8,8 @@ import CompanyHelpAvatar from '@/components/help/CompanyHelpAvatar'
 import HelpMiniChat from '@/components/help/HelpMiniChat'
 import { isHelpHiddenRoute, isQuoteFlowRoute } from '@/components/help/helpContext'
 import { useFloatingHelpBehavior } from '@/components/help/useFloatingHelpBehavior'
+import { tHelp } from '@/Lib/i18n/help'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 export type FloatingCateringHelpProps = {
   disabled?: boolean
@@ -22,6 +24,7 @@ export default function FloatingCateringHelp({
   disabledRoutes = [],
 }: FloatingCateringHelpProps = {}) {
   const pathname = usePathname() ?? ''
+  const locale = useAuthLocaleFromMe()
   const { companyId, company } = useTenant()
   const [open, setOpen] = useState(false)
 
@@ -33,6 +36,7 @@ export default function FloatingCateringHelp({
   const { hintText, hintVisible, clearHint } = useFloatingHelpBehavior(
     pathname,
     open,
+    locale,
   )
 
   const hidden =
@@ -106,14 +110,14 @@ export default function FloatingCateringHelp({
         className={`fixed right-4 z-[9999] flex items-center gap-2 rounded-full border border-neutral-200 bg-white/95 shadow-[0_8px_24px_rgba(0,0,0,0.16)] transition hover:shadow-[0_10px_28px_rgba(0,0,0,0.2)] dark:border-neutral-700 dark:bg-neutral-900/95 sm:right-5 ${buttonBottomClass} ${
           open ? 'ring-2 ring-neutral-300 dark:ring-neutral-600' : ''
         }`}
-        aria-label="Abrir ajuda"
+        aria-label={tHelp(locale, 'openHelp')}
         aria-expanded={open}
       >
         <div className="h-10 w-10 shrink-0 p-0.5 sm:h-11 sm:w-11">
           <CompanyHelpAvatar brand={brand} size="sm" className="h-full w-full" />
         </div>
         <span className="hidden pr-3 text-xs font-semibold text-neutral-800 dark:text-neutral-100 md:inline">
-          Ajuda
+          {tHelp(locale, 'help')}
         </span>
       </button>
     </>

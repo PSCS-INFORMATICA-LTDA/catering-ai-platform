@@ -41,8 +41,10 @@ export type QuoteReviewData = {
   hasGrill: boolean | null
   grillPhotoRequired: boolean | null
   grillPhotoStatusLabel?: string | null
+  grillPhotoUrl?: string | null
   grillRentalRequired: boolean | null
   grillRentalQty: number | null
+  grillRentalTotal?: number | null
   grillNotes: string | null
   mileageBaseLocation: string | null
   mileageDistance: number | null
@@ -50,6 +52,10 @@ export type QuoteReviewData = {
   mileageRate: number | null
   mileageFee: number | null
   additionalTotal: number | null
+  holidaySurchargeAmount?: number | null
+  minimumOrderAdjustment?: number | null
+  minimumOrderApplied?: boolean
+  minimumOrderAmount?: number | null
   reservationPercentage: number | null
   reservationAmount: number | null
   balanceDue: number | null
