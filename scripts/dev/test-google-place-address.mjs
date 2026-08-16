@@ -44,6 +44,7 @@ check('T04 no postal_code with matching city/state', () => {
     expectedPostalCode: '32801', expectedCity: 'Orlando', expectedState: 'FL',
     selectedCity: 'Orlando', selectedState: 'FL',
   }), true)
+  assert.match(addressFieldsSource, /enrichGooglePlaceFromGeocoder/)
 })
 
 check('T05 no postal_code with mismatching city/state', () => {

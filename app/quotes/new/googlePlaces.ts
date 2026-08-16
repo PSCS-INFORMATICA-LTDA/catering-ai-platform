@@ -8,6 +8,11 @@ export type AddressValues = {
   zipCode: string
 }
 
+type GoogleAddressLike = {
+  address_components?: google.maps.GeocoderAddressComponent[]
+  formatted_address?: string
+}
+
 function getAddressComponent(
   components: google.maps.GeocoderAddressComponent[],
   type: string,
@@ -19,7 +24,7 @@ function getAddressComponent(
 }
 
 export function parseGooglePlace(
-  place: google.maps.places.PlaceResult,
+  place: GoogleAddressLike,
 ): AddressValues {
   const components = place.address_components ?? []
   const streetNumber = getAddressComponent(components, 'street_number')
@@ -48,5 +53,45 @@ export function parseGooglePlace(
     city,
     state,
     zipCode,
+  }
+}
+
+export async function enrichGooglePlaceFromGeocoder(
+  place: GoogleAddressLike,
+  parsed: AddressValues,
+): Promise<AddressValues> {
+  if (parsed.zipCode || !place.formatted_address) return parsed
+
+  const maps = globalThis.window?.google?.maps
+  if (!maps?.importLibrary) return parsed
+
+  try {
+    const { Geocoder } = (await maps.importLibrary(
+      'geocoding',
+    )) as google.maps.GeocodingLibrary
+    const service = new Geocoder()
+    const geocoded = await new Promise<AddressValues | null>((resolve) => {
+      service.geocode(
+        { address: place.formatted_address },
+        (results, status) => {
+          if (status !== 'OK' || !results?.[0]) {
+            resolve(null)
+            return
+          }
+          resolve(parseGooglePlace(results[0]))
+        },
+      )
+    })
+
+    if (!geocoded) return parsed
+    return {
+      address: parsed.address || geocoded.address,
+      addressNumber: parsed.addressNumber || geocoded.addressNumber,
+      city: parsed.city || geocoded.city,
+      state: parsed.state || geocoded.state,
+      zipCode: geocoded.zipCode,
+    }
+  } catch {
+    return parsed
   }
 }

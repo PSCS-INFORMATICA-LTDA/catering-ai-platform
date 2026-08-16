@@ -10,7 +10,10 @@ import {
   normalizePostalDigits,
 } from '@/Lib/cep'
 import type { AddressValues } from './googlePlaces'
-import { parseGooglePlace } from './googlePlaces'
+import {
+  enrichGooglePlaceFromGeocoder,
+  parseGooglePlace,
+} from './googlePlaces'
 import { tCommon } from '@/Lib/i18n/common'
 import { tw } from '../../../Lib/quoteTranslations'
 import type { QuoteLanguage } from '../../../Lib/quoteWizardTypes'
@@ -191,33 +194,41 @@ export default function AddressAutocompleteFields({
         })
         placeListener = autocomplete.addListener('place_changed', () => {
           if (!autocomplete) return
-          const selected = parseGooglePlace(autocomplete.getPlace())
-          const currentValues = valuesRef.current
-          const isCompatible = isSelectedPlaceCompatibleWithPostalCode({
-            expectedPostalCode: currentValues.zipCode,
-            selectedPostalCode: selected.zipCode,
-            expectedCity: currentValues.city,
-            expectedState: currentValues.state,
-            selectedCity: selected.city,
-            selectedState: selected.state,
-          })
+          const place = autocomplete.getPlace()
+          void (async () => {
+            const selected = await enrichGooglePlaceFromGeocoder(
+              place,
+              parseGooglePlace(place),
+            )
+            if (!active) return
 
-          if (!selected.address || !isCompatible) {
-            setAddressError(tw(loc, 'addressZipMismatch'))
-            setAddressQuery(selected.address || input.value)
-            onChangeRef.current({ address: '', addressNumber: '' })
-            return
-          }
+            const currentValues = valuesRef.current
+            const isCompatible = isSelectedPlaceCompatibleWithPostalCode({
+              expectedPostalCode: currentValues.zipCode,
+              selectedPostalCode: selected.zipCode,
+              expectedCity: currentValues.city,
+              expectedState: currentValues.state,
+              selectedCity: selected.city,
+              selectedState: selected.state,
+            })
 
-          setAddressError(null)
-          setAddressQuery(selected.address)
-          onChangeRef.current({
-            address: selected.address,
-            addressNumber: selected.addressNumber,
-            city: selected.city || currentValues.city,
-            state: selected.state || currentValues.state,
-            zipCode: formatPostalCode(currentValues.zipCode),
-          })
+            if (!selected.address || !isCompatible) {
+              setAddressError(tw(loc, 'addressZipMismatch'))
+              setAddressQuery(selected.address || input.value)
+              onChangeRef.current({ address: '', addressNumber: '' })
+              return
+            }
+
+            setAddressError(null)
+            setAddressQuery(selected.address)
+            onChangeRef.current({
+              address: selected.address,
+              addressNumber: selected.addressNumber,
+              city: selected.city || currentValues.city,
+              state: selected.state || currentValues.state,
+              zipCode: formatPostalCode(currentValues.zipCode),
+            })
+          })()
         })
       })
       .catch(() => setAddressError(tw(loc, 'googleLoadError')))
