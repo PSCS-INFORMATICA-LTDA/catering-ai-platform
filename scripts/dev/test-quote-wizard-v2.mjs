@@ -954,13 +954,19 @@ async function main() {
   } = await import('../../Lib/wizardAdditionalCategories.ts')
 
   try {
-    assert.match(wizardSrc, /additionalCategoryKeys\[0\]/)
-    assert.match(wizardSrc, /setVisitedAdditionalCategories/)
-    const progress = reviewProgress(['A', 'B', 'C'], new Set(['A']))
+    assert.match(
+      wizardSrc,
+      /openAdditionalCategories[^]*?useState<[^]*?Set<string>[^]*?>\(\(\) => new Set\(\)\)/,
+    )
+    assert.doesNotMatch(
+      wizardSrc,
+      /new Set\(\[additionalCategoryKeys\[0\]/,
+    )
+    const progress = reviewProgress(['A', 'B', 'C'], new Set())
     assert.equal(progress.total, 3)
-    assert.equal(progress.visited, 1)
-    assert.equal(progress.remaining, 2)
-    pass('A17 initial progress counts first category visited')
+    assert.equal(progress.visited, 0)
+    assert.equal(progress.remaining, 3)
+    pass('A17 categories start collapsed without an artificial review')
   } catch (e) {
     fail('A17 initial progress', e)
   }

@@ -1555,23 +1555,6 @@ export default function QuoteWizard({
     )
   }, [step, additionalCategoryKeys])
 
-  useEffect(() => {
-    if (step !== 3 || additionalCategoryKeys.length === 0) return
-
-    setOpenAdditionalCategories((prev) => {
-      if (prev.size > 0) return prev
-      return new Set([additionalCategoryKeys[0]!])
-    })
-
-    setVisitedAdditionalCategories((prev) => {
-      const firstKey = additionalCategoryKeys[0]
-      if (!firstKey || prev.has(firstKey)) return prev
-      const next = new Set(prev)
-      next.add(firstKey)
-      return next
-    })
-  }, [step, additionalCategoryKeys])
-
   const stepStatusCtx = useMemo<StepStatusContext>(
     () => ({
       state,
