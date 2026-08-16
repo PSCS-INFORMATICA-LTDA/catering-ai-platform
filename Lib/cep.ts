@@ -55,6 +55,65 @@ export function inferCountryFromPostalCode(
   return null
 }
 
+function normalizePostalTerritoryText(
+  value: string | null | undefined,
+): string {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase()
+}
+
+export type SelectedPlacePostalCompatibility = {
+  expectedPostalCode: string
+  selectedPostalCode?: string | null
+  expectedCity?: string | null
+  expectedState?: string | null
+  selectedCity?: string | null
+  selectedState?: string | null
+}
+
+/**
+ * Validates a selected Google Place against the territory already resolved
+ * from the user's ZIP/CEP. US ZIP+4 values share the same five-digit base;
+ * Brazilian CEPs must match all eight digits. Places without postal_code are
+ * accepted only when both city and state match the resolved postal territory.
+ */
+export function isSelectedPlaceCompatibleWithPostalCode({
+  expectedPostalCode,
+  selectedPostalCode,
+  expectedCity,
+  expectedState,
+  selectedCity,
+  selectedState,
+}: SelectedPlacePostalCompatibility): boolean {
+  const country = inferCountryFromPostalCode(expectedPostalCode)
+  const expectedDigits = normalizePostalDigits(expectedPostalCode)
+  const selectedDigits = normalizePostalDigits(selectedPostalCode)
+
+  if (!country || !expectedDigits) return false
+
+  if (selectedDigits) {
+    if (country === 'US') {
+      return expectedDigits.slice(0, 5) === selectedDigits.slice(0, 5)
+    }
+    return expectedDigits.length === 8 && selectedDigits === expectedDigits
+  }
+
+  const expectedCityKey = normalizePostalTerritoryText(expectedCity)
+  const expectedStateKey = normalizePostalTerritoryText(expectedState)
+  const selectedCityKey = normalizePostalTerritoryText(selectedCity)
+  const selectedStateKey = normalizePostalTerritoryText(selectedState)
+
+  return Boolean(
+    expectedCityKey &&
+      expectedStateKey &&
+      selectedCityKey === expectedCityKey &&
+      selectedStateKey === expectedStateKey,
+  )
+}
+
 export function postalCodeSaveError(
   value: string | null | undefined,
   required = false,

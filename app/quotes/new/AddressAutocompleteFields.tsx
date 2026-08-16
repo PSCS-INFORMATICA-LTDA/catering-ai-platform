@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   formatPostalCode,
   inferCountryFromPostalCode,
+  isSelectedPlaceCompatibleWithPostalCode,
   isUsablePostalCode,
   lookupPostalAddress,
   normalizePostalDigits,
@@ -104,6 +105,7 @@ export default function AddressAutocompleteFields({
   const loc: QuoteLanguage =
     language === 'en' || language === 'es' ? language : 'pt'
   const onChangeRef = useRef(onChange)
+  const valuesRef = useRef(values)
   const { ready, error, enabled } = useGooglePlacesReady(loc)
   const [lookupError, setLookupError] = useState<string | null>(null)
   const [looking, setLooking] = useState(false)
@@ -114,6 +116,10 @@ export default function AddressAutocompleteFields({
   useEffect(() => {
     onChangeRef.current = onChange
   }, [onChange])
+
+  useEffect(() => {
+    valuesRef.current = values
+  }, [values])
 
   const lastLookupRef = useRef('')
 
@@ -141,7 +147,8 @@ export default function AddressAutocompleteFields({
           setAddressQuery(addr.address)
           onChangeRef.current({
             zipCode: addr.zipCode,
-            address: addr.address,
+            address: '',
+            addressNumber: '',
             city: addr.city,
             state: addr.state,
           })
@@ -185,12 +192,19 @@ export default function AddressAutocompleteFields({
         placeListener = autocomplete.addListener('place_changed', () => {
           if (!autocomplete) return
           const selected = parseGooglePlace(autocomplete.getPlace())
-          const expectedZip = normalizePostalDigits(values.zipCode)
-          const selectedZip = normalizePostalDigits(selected.zipCode)
+          const currentValues = valuesRef.current
+          const isCompatible = isSelectedPlaceCompatibleWithPostalCode({
+            expectedPostalCode: currentValues.zipCode,
+            selectedPostalCode: selected.zipCode,
+            expectedCity: currentValues.city,
+            expectedState: currentValues.state,
+            selectedCity: selected.city,
+            selectedState: selected.state,
+          })
 
-          if (!selected.address || selectedZip !== expectedZip) {
+          if (!selected.address || !isCompatible) {
             setAddressError(tw(loc, 'addressZipMismatch'))
-            setAddressQuery('')
+            setAddressQuery(selected.address || input.value)
             onChangeRef.current({ address: '', addressNumber: '' })
             return
           }
@@ -200,9 +214,9 @@ export default function AddressAutocompleteFields({
           onChangeRef.current({
             address: selected.address,
             addressNumber: selected.addressNumber,
-            city: selected.city,
-            state: selected.state,
-            zipCode: selected.zipCode,
+            city: selected.city || currentValues.city,
+            state: selected.state || currentValues.state,
+            zipCode: formatPostalCode(currentValues.zipCode),
           })
         })
       })
@@ -230,9 +244,17 @@ export default function AddressAutocompleteFields({
             inputMode="numeric"
             autoComplete="postal-code"
             value={values.zipCode}
-            onChange={(e) =>
-              onChange({ zipCode: formatPostalCode(e.target.value) })
-            }
+            onChange={(e) => {
+              const zipCode = formatPostalCode(e.target.value)
+              const postalChanged =
+                normalizePostalDigits(zipCode) !==
+                normalizePostalDigits(valuesRef.current.zipCode)
+              setAddressError(null)
+              onChange({
+                zipCode,
+                ...(postalChanged ? { address: '', addressNumber: '' } : {}),
+              })
+            }}
             placeholder={tCommon(loc, 'postalCodePlaceholder')}
             className={getInputClassName(fieldCompletions?.zipCode)}
             aria-invalid={zipInvalid || Boolean(lookupError)}

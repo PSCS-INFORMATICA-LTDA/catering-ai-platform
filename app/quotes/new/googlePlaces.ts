@@ -1,4 +1,4 @@
-import { formatPostalCode } from '@/Lib/cep'
+import { formatPostalCode } from '../../../Lib/cep.ts'
 
 export type AddressValues = {
   address: string
@@ -27,15 +27,17 @@ export function parseGooglePlace(
   const city =
     getAddressComponent(components, 'locality') ||
     getAddressComponent(components, 'postal_town') ||
-    getAddressComponent(components, 'sublocality_level_1') ||
-    getAddressComponent(components, 'administrative_area_level_2')
+    getAddressComponent(components, 'administrative_area_level_2') ||
+    getAddressComponent(components, 'sublocality_level_1')
   const state = getAddressComponent(
     components,
     'administrative_area_level_1',
     true,
   )
+  const postalCode = getAddressComponent(components, 'postal_code')
+  const postalSuffix = getAddressComponent(components, 'postal_code_suffix')
   const zipCode = formatPostalCode(
-    getAddressComponent(components, 'postal_code'),
+    postalCode && postalSuffix ? `${postalCode}-${postalSuffix}` : postalCode,
   )
   return {
     address:
