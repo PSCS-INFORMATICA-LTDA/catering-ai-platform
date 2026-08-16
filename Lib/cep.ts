@@ -237,6 +237,58 @@ export type PostalLookupResult = {
   city: string
   state: string
   zipCode: string
+  location?: PostalLocation
+  bounds?: PostalBounds
+}
+
+export type PostalLocation = {
+  lat: number
+  lng: number
+}
+
+export type PostalBounds = google.maps.LatLngBoundsLiteral
+
+export function buildPostalBoundsAroundLocation(
+  location: PostalLocation,
+  radiusKm = 20,
+): PostalBounds {
+  const latitudeDelta = radiusKm / 111.32
+  const longitudeScale = Math.max(
+    Math.cos((location.lat * Math.PI) / 180),
+    0.2,
+  )
+  const longitudeDelta = radiusKm / (111.32 * longitudeScale)
+  return {
+    north: location.lat + latitudeDelta,
+    south: location.lat - latitudeDelta,
+    east: location.lng + longitudeDelta,
+    west: location.lng - longitudeDelta,
+  }
+}
+
+function readPostalGeometry(
+  result: google.maps.GeocoderResult,
+): Pick<PostalLookupResult, 'location' | 'bounds'> {
+  const point = result.geometry?.location
+  const viewport = result.geometry?.viewport
+  if (!point) return {}
+
+  const location = { lat: point.lat(), lng: point.lng() }
+  if (!viewport) {
+    return { location, bounds: buildPostalBoundsAroundLocation(location) }
+  }
+
+  const northEast = viewport.getNorthEast()
+  const southWest = viewport.getSouthWest()
+  return {
+    location,
+    bounds: {
+      north: northEast.lat(),
+      east: northEast.lng(),
+      south: southWest.lat(),
+      west: southWest.lng(),
+    },
+  }
 }
 
 function readComponent(
@@ -278,7 +330,8 @@ export async function geocodePostalCode(
           reject(new Error('GEOCODE_FAILED'))
           return
         }
-        const components = results[0].address_components
+        const result = results[0]
+        const components = result.address_components
         const city =
           readComponent(components, 'locality') ||
           readComponent(components, 'postal_town') ||
@@ -300,6 +353,7 @@ export async function geocodePostalCode(
           zipCode:
             formatPostalCode(readComponent(components, 'postal_code')) ||
             formatted,
+          ...readPostalGeometry(result),
         })
       },
     )
@@ -326,7 +380,14 @@ export async function lookupPostalAddress(
     if (!city || !state) {
       throw new Error('POSTAL_NOT_FOUND')
     }
-    return { address, city, state, zipCode: formatted }
+    return {
+      address,
+      city,
+      state,
+      zipCode: formatted,
+      location: google?.location,
+      bounds: google?.bounds,
+    }
   }
 
   return geocodePostalCode(zipCode, 'US')

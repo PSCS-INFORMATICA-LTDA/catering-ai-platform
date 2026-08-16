@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  buildPostalBoundsAroundLocation,
   isSelectedPlaceCompatibleWithPostalCode as compatible,
 } from '../../Lib/cep.ts'
 import { parseGooglePlace } from '../../app/quotes/new/googlePlaces.ts'
@@ -115,6 +116,20 @@ check('T12 changing ZIP invalidates and revalidates canonical selection', () => 
   assert.match(addressFieldsSource, /postalChanged/)
   assert.match(addressFieldsSource, /isSelectedPlaceCompatibleWithPostalCode/)
   assert.match(addressFieldsSource, /address: '',\s*addressNumber: '',/)
+})
+
+check('T13 postal center fallback creates strict local bounds', () => {
+  const center = { lat: 28.5421, lng: -81.379 }
+  const bounds = buildPostalBoundsAroundLocation(center)
+  assert.ok(bounds.south < center.lat && bounds.north > center.lat)
+  assert.ok(bounds.west < center.lng && bounds.east > center.lng)
+})
+
+check('T14 autocomplete uses ZIP bounds and strict restriction', () => {
+  assert.match(addressFieldsSource, /bounds,/)
+  assert.match(addressFieldsSource, /strictBounds: true/)
+  assert.match(addressFieldsSource, /setBounds\(bounds\)/)
+  assert.match(addressFieldsSource, /setComponentRestrictions/)
 })
 
 console.log('GOOGLE-PLACE-ADDRESS: PASS')

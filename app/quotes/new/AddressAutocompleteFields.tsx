@@ -9,6 +9,7 @@ import {
   lookupPostalAddress,
   normalizePostalDigits,
 } from '@/Lib/cep'
+import type { PostalLookupResult } from '@/Lib/cep'
 import type { AddressValues } from './googlePlaces'
 import {
   enrichGooglePlaceFromGeocoder,
@@ -114,7 +115,12 @@ export default function AddressAutocompleteFields({
   const [looking, setLooking] = useState(false)
   const [addressQuery, setAddressQuery] = useState(values.address)
   const [addressError, setAddressError] = useState<string | null>(null)
+  const [postalArea, setPostalArea] = useState<PostalLookupResult | null>(null)
   const addressInputRef = useRef<HTMLInputElement>(null)
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
+  const placeListenerRef = useRef<google.maps.MapsEventListener | null>(null)
+  const languageRef = useRef(loc)
+  const isMountedRef = useRef(true)
 
   useEffect(() => {
     onChangeRef.current = onChange
@@ -123,6 +129,20 @@ export default function AddressAutocompleteFields({
   useEffect(() => {
     valuesRef.current = values
   }, [values])
+
+  useEffect(() => {
+    languageRef.current = loc
+  }, [loc])
+
+  useEffect(
+    () => () => {
+      isMountedRef.current = false
+      placeListenerRef.current?.remove()
+      placeListenerRef.current = null
+      autocompleteRef.current = null
+    },
+    [],
+  )
 
   const lastLookupRef = useRef('')
   const postalLookupStreetRef = useRef('')
@@ -149,6 +169,7 @@ export default function AddressAutocompleteFields({
           if (cancelled) return
           lastLookupRef.current = digits
           postalLookupStreetRef.current = addr.address
+          setPostalArea(addr)
           setAddressQuery(addr.address)
           onChangeRef.current({
             zipCode: addr.zipCode,
@@ -163,6 +184,7 @@ export default function AddressAutocompleteFields({
           const code = err instanceof Error ? err.message : ''
           if (code === 'GOOGLE_UNAVAILABLE' && enabled && !ready) return
           lastLookupRef.current = digits
+          setPostalArea(null)
           setLookupError(tCommon(loc, 'postalNotFound'))
         })
         .finally(() => {
@@ -179,70 +201,89 @@ export default function AddressAutocompleteFields({
   useEffect(() => {
     const input = addressInputRef.current
     const country = inferCountryFromPostalCode(values.zipCode)
-    if (!input || !ready || !country) return
+    const bounds = postalArea?.bounds
+    if (!input || !ready || !country || !bounds) return
 
-    let active = true
-    let autocomplete: google.maps.places.Autocomplete | null = null
-    let placeListener: google.maps.MapsEventListener | null = null
+    let cancelled = false
 
     void window.google?.maps
       .importLibrary('places')
       .then(({ Autocomplete }) => {
-        if (!active) return
-        autocomplete = new Autocomplete(input, {
+        if (cancelled) return
+        const options: google.maps.places.AutocompleteOptions = {
           types: ['geocode'],
           componentRestrictions: { country: country.toLowerCase() },
           fields: ['address_components', 'formatted_address', 'geometry'],
-        })
-        placeListener = autocomplete.addListener('place_changed', () => {
-          if (!autocomplete) return
-          const place = autocomplete.getPlace()
-          void (async () => {
-            const selected = await enrichGooglePlaceFromGeocoder(
-              place,
-              parseGooglePlace(place),
-            )
-            if (!active) return
+          bounds,
+          strictBounds: true,
+        }
 
-            const currentValues = valuesRef.current
-            const isCompatible = isSelectedPlaceCompatibleWithPostalCode({
-              expectedPostalCode: currentValues.zipCode,
-              selectedPostalCode: selected.zipCode,
-              expectedCity: currentValues.city,
-              expectedState: currentValues.state,
-              selectedCity: selected.city,
-              selectedState: selected.state,
-              expectedAddress: postalLookupStreetRef.current,
-              selectedAddress: selected.address,
-            })
+        if (autocompleteRef.current) {
+          autocompleteRef.current.setComponentRestrictions(
+            options.componentRestrictions!,
+          )
+          autocompleteRef.current.setBounds(bounds)
+          autocompleteRef.current.setOptions({ strictBounds: true })
+          return
+        }
 
-            if (!selected.address || !isCompatible) {
-              setAddressError(tw(loc, 'addressZipMismatch'))
-              setAddressQuery(selected.address || input.value)
-              onChangeRef.current({ address: '', addressNumber: '' })
-              return
-            }
+        const autocomplete = new Autocomplete(input, options)
+        autocompleteRef.current = autocomplete
+        placeListenerRef.current = autocomplete.addListener(
+          'place_changed',
+          () => {
+            const currentAutocomplete = autocompleteRef.current
+            if (!currentAutocomplete) return
+            const place = currentAutocomplete.getPlace()
+            void (async () => {
+              const selected = await enrichGooglePlaceFromGeocoder(
+                place,
+                parseGooglePlace(place),
+              )
+              if (!isMountedRef.current) return
 
-            setAddressError(null)
-            setAddressQuery(selected.address)
-            onChangeRef.current({
-              address: selected.address,
-              addressNumber: selected.addressNumber,
-              city: selected.city || currentValues.city,
-              state: selected.state || currentValues.state,
-              zipCode: formatPostalCode(currentValues.zipCode),
-            })
-          })()
-        })
+              const currentValues = valuesRef.current
+              const isCompatible = isSelectedPlaceCompatibleWithPostalCode({
+                expectedPostalCode: currentValues.zipCode,
+                selectedPostalCode: selected.zipCode,
+                expectedCity: currentValues.city,
+                expectedState: currentValues.state,
+                selectedCity: selected.city,
+                selectedState: selected.state,
+                expectedAddress: postalLookupStreetRef.current,
+                selectedAddress: selected.address,
+              })
+
+              if (!selected.address || !isCompatible) {
+                setAddressError(
+                  tw(languageRef.current, 'addressZipMismatch'),
+                )
+                setAddressQuery(selected.address || input.value)
+                onChangeRef.current({ address: '', addressNumber: '' })
+                return
+              }
+
+              setAddressError(null)
+              setAddressQuery(selected.address)
+              onChangeRef.current({
+                address: selected.address,
+                addressNumber: selected.addressNumber,
+                city: selected.city || currentValues.city,
+                state: selected.state || currentValues.state,
+                zipCode: formatPostalCode(currentValues.zipCode),
+              })
+            })()
+          },
+        )
       })
-      .catch(() => setAddressError(tw(loc, 'googleLoadError')))
+      .catch(() =>
+        setAddressError(tw(languageRef.current, 'googleLoadError')),
+      )
 
     return () => {
-      active = false
-      placeListener?.remove()
-      autocomplete = null
+      cancelled = true
     }
-  }, [loc, ready, values.zipCode])
+  }, [postalArea, ready, values.zipCode])
 
   const zipDigits = normalizePostalDigits(values.zipCode)
   const zipInvalid = zipDigits.length >= 5 && !isUsablePostalCode(values.zipCode)
@@ -265,7 +306,11 @@ export default function AddressAutocompleteFields({
                 normalizePostalDigits(zipCode) !==
                 normalizePostalDigits(valuesRef.current.zipCode)
               setAddressError(null)
-              if (postalChanged) postalLookupStreetRef.current = ''
+              if (postalChanged) {
+                lastLookupRef.current = ''
+                postalLookupStreetRef.current = ''
+                setPostalArea(null)
+              }
               onChange({
                 zipCode,
                 ...(postalChanged ? { address: '', addressNumber: '' } : {}),
@@ -299,6 +344,7 @@ export default function AddressAutocompleteFields({
           type="text"
           autoComplete="off"
           value={addressQuery}
+          disabled={!postalArea && !lookupError}
           onChange={(e) => {
             setAddressQuery(e.target.value)
             setAddressError(null)
@@ -334,6 +380,7 @@ export default function AddressAutocompleteFields({
           <input
             type="text"
             value={values.city}
+            readOnly={Boolean(postalArea)}
             onChange={(e) => onChange({ city: e.target.value })}
             placeholder={tw(loc, 'cityPlaceholder')}
             className={getInputClassName(fieldCompletions?.city)}
@@ -348,6 +395,7 @@ export default function AddressAutocompleteFields({
           <input
             type="text"
             value={values.state}
+            readOnly={Boolean(postalArea)}
             onChange={(e) => onChange({ state: e.target.value })}
             placeholder={tw(loc, 'statePlaceholder')}
             className={getInputClassName(fieldCompletions?.state)}

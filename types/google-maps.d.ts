@@ -19,11 +19,25 @@ declare namespace google.maps {
     lng: number
   }
 
+  interface LatLngBoundsLiteral {
+    east: number
+    north: number
+    south: number
+    west: number
+  }
+
+  interface LatLngBounds {
+    getNorthEast(): LatLng
+    getSouthWest(): LatLng
+  }
+
   namespace places {
     interface AutocompleteOptions {
       types?: string[]
       componentRestrictions?: { country: string | string[] }
       fields?: string[]
+      bounds?: LatLngBounds | LatLngBoundsLiteral
+      strictBounds?: boolean
     }
 
     interface PlaceResult {
@@ -39,6 +53,9 @@ declare namespace google.maps {
       )
       addListener(eventName: string, handler: () => void): MapsEventListener
       getPlace(): PlaceResult
+      setBounds(bounds: LatLngBounds | LatLngBoundsLiteral): void
+      setComponentRestrictions(restrictions: { country: string | string[] }): void
+      setOptions(options: AutocompleteOptions): void
     }
 
     interface PlacesLibrary {
@@ -126,6 +143,10 @@ declare namespace google.maps {
   interface GeocoderResult {
     address_components: GeocoderAddressComponent[]
     formatted_address: string
+    geometry?: {
+      location?: LatLng
+      viewport?: LatLngBounds
+    }
   }
 
   class Geocoder {
