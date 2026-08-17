@@ -109,13 +109,15 @@ check('T10 missing Google street number stays empty', () => {
 })
 
 check('T11 editing address invalidates canonical selection', () => {
-  assert.match(addressFieldsSource, /onChange\(\{ address: '', addressNumber: '' \}\)/)
+  assert.match(addressFieldsSource, /clearCanonicalAddress/)
+  assert.match(addressFieldsSource, /addressPlaceId: null/)
+  assert.match(addressFieldsSource, /addressSource: null/)
 })
 
-check('T12 changing ZIP invalidates and revalidates canonical selection', () => {
-  assert.match(addressFieldsSource, /postalChanged/)
-  assert.match(addressFieldsSource, /isSelectedPlaceCompatibleWithPostalCode/)
-  assert.match(addressFieldsSource, /address: '',\s*addressNumber: '',/)
+check('T12 manual fallback can look up a postal code without pretending it is a Place', () => {
+  assert.match(addressFieldsSource, /lookupPostalAddress/)
+  assert.match(addressFieldsSource, /addressSource: 'manual'/)
+  assert.match(addressFieldsSource, /manualMode/)
 })
 
 check('T13 postal center fallback creates strict local bounds', () => {
@@ -125,11 +127,19 @@ check('T13 postal center fallback creates strict local bounds', () => {
   assert.ok(bounds.west < center.lng && bounds.east > center.lng)
 })
 
-check('T14 autocomplete uses ZIP bounds and strict restriction', () => {
-  assert.match(addressFieldsSource, /bounds,/)
-  assert.match(addressFieldsSource, /strictBounds: true/)
-  assert.match(addressFieldsSource, /setBounds\(bounds\)/)
-  assert.match(addressFieldsSource, /setComponentRestrictions/)
+check('T14 autocomplete restricts by allowed countries, not ZIP-first bounds', () => {
+  assert.match(addressFieldsSource, /componentRestrictions/)
+  assert.match(addressFieldsSource, /allowedCountries/)
+  assert.doesNotMatch(addressFieldsSource, /strictBounds:\s*true/)
+})
+
+check('T15 Google Places init does not call importLibrary on a missing maps object', () => {
+  assert.match(addressFieldsSource, /isGoogleMapsPlacesReady/)
+  assert.match(addressFieldsSource, /!maps\?\.importLibrary/)
+  assert.doesNotMatch(
+    addressFieldsSource,
+    /window\.google\?\.maps\s*\n\s*\.importLibrary/,
+  )
 })
 
 console.log('GOOGLE-PLACE-ADDRESS: PASS')

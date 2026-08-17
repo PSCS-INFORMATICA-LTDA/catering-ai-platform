@@ -67,35 +67,75 @@ function FieldCheck({ show }: { show: boolean }) {
   )
 }
 
+function isGoogleMapsPlacesReady() {
+  return typeof window.google?.maps?.importLibrary === 'function'
+}
+
 function useGooglePlacesReady(language: QuoteLanguage) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   const [ready, setReady] = useState(false)
   const [failed, setFailed] = useState(() => !apiKey)
 
   useEffect(() => {
-    if (!apiKey) {
-      return
+    if (!apiKey) return
+
+    let cancelled = false
+    let pollTimer: number | undefined
+
+    const markReady = () => {
+      if (cancelled || !isGoogleMapsPlacesReady()) return false
+      setReady(true)
+      setFailed(false)
+      return true
     }
-    if (window.google?.maps) {
-      const readyTimer = window.setTimeout(() => setReady(true), 0)
-      return () => window.clearTimeout(readyTimer)
-      return
+
+    const waitUntilReady = () => {
+      if (markReady()) return
+      let attempts = 0
+      pollTimer = window.setInterval(() => {
+        attempts += 1
+        if (markReady() || cancelled) {
+          if (pollTimer) window.clearInterval(pollTimer)
+          return
+        }
+        if (attempts >= 40) {
+          if (pollTimer) window.clearInterval(pollTimer)
+          if (!cancelled) setFailed(true)
+        }
+      }, 50)
+    }
+
+    if (isGoogleMapsPlacesReady()) {
+      const readyTimer = window.setTimeout(() => {
+        markReady()
+      }, 0)
+      return () => {
+        cancelled = true
+        window.clearTimeout(readyTimer)
+        if (pollTimer) window.clearInterval(pollTimer)
+      }
     }
 
     const scriptId = 'google-maps-places-script'
     const existing = document.getElementById(scriptId) as HTMLScriptElement | null
-    const handleReady = () => {
-      setReady(true)
-      setFailed(false)
+    const handleFailure = () => {
+      if (!cancelled) setFailed(true)
     }
-    const handleFailure = () => setFailed(true)
 
     if (existing) {
-      existing.addEventListener('load', handleReady)
+      existing.addEventListener('load', waitUntilReady)
       existing.addEventListener('error', handleFailure)
+      if (
+        existing.getAttribute('data-loaded') === 'true' ||
+        isGoogleMapsPlacesReady()
+      ) {
+        waitUntilReady()
+      }
       return () => {
-        existing.removeEventListener('load', handleReady)
+        cancelled = true
+        existing.removeEventListener('load', waitUntilReady)
         existing.removeEventListener('error', handleFailure)
+        if (pollTimer) window.clearInterval(pollTimer)
       }
     }
 
@@ -104,9 +144,17 @@ function useGooglePlacesReady(language: QuoteLanguage) {
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly&loading=async&libraries=places&language=${language}`
     script.async = true
     script.defer = true
-    script.onload = handleReady
+    script.onload = () => {
+      script.setAttribute('data-loaded', 'true')
+      waitUntilReady()
+    }
     script.onerror = handleFailure
     document.head.appendChild(script)
+
+    return () => {
+      cancelled = true
+      if (pollTimer) window.clearInterval(pollTimer)
+    }
   }, [apiKey, language])
 
   return { ready, unavailable: !apiKey || failed }
@@ -148,7 +196,7 @@ export default function AddressAutocompleteFields({
   const countries = useMemo(
     () => [
       ...new Set(
-        allowedCountries
+        (Array.isArray(allowedCountries) ? allowedCountries : ['US'])
           .map((country) => country.trim().toUpperCase())
           .filter(Boolean),
       ),
@@ -189,10 +237,13 @@ export default function AddressAutocompleteFields({
 
   useEffect(() => {
     const input = inputRef.current
-    if (!input || !ready || autocompleteRef.current) return
+    const maps = window.google?.maps
+    if (!input || !ready || autocompleteRef.current || !maps?.importLibrary) {
+      return
+    }
     let cancelled = false
 
-    void window.google?.maps
+    void maps
       .importLibrary('places')
       .then(({ Autocomplete }) => {
         if (cancelled) return

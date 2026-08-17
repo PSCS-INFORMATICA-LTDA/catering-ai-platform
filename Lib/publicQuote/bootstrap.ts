@@ -77,6 +77,12 @@ async function loadEnabledSettings(companyId: string) {
     featureResult.error ||
     !featureResult.data
   ) {
+    console.error('[public-quote] enabled settings unavailable', {
+      settingsError: Boolean(settingsError),
+      settingsFound: Boolean(settingsData),
+      featureError: Boolean(featureResult.error),
+      featureFound: Boolean(featureResult.data),
+    })
     return null
   }
   return settingsData as PublicQuoteSettingsRow
@@ -118,7 +124,13 @@ export async function resolvePublicQuoteTenant(
     .eq('slug', companySlug)
     .eq('active', true)
     .maybeSingle()
-  if (error) return null
+  if (error || !data) {
+    console.error('[public-quote] company slug lookup failed', {
+      hasError: Boolean(error),
+      found: Boolean(data),
+    })
+    return null
+  }
   return resolveTenantFromCompany(data, localeValue)
 }
 
