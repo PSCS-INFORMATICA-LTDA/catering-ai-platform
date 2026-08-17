@@ -68,13 +68,14 @@ export function resolveCatalogItemSalePrice(
 export async function fetchCurrentCatalogItemPrices(
   catalogItemIds: string[],
   branchId?: string | null,
+  companyIdOverride?: string | null,
 ): Promise<Map<string, number>> {
   const ids = [...new Set(catalogItemIds.map((id) => id.trim()).filter(Boolean))]
   const result = new Map<string, number>()
   if (ids.length === 0) return result
 
   const now = new Date().toISOString()
-  const companyId = getCdlCompanyId()
+  const companyId = companyIdOverride?.trim() || getCdlCompanyId()
   const activeBranchId = branchId?.trim() || getActiveBranchIdFromEnv()
   const supabase = getSupabaseServerClient()
 

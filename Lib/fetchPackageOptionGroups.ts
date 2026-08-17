@@ -73,12 +73,13 @@ function buildQueryDebug(
     packageId?: string | null
     packageIds?: string[] | null
     currentBranchId?: string | null
+    companyId?: string | null
   },
   partial: Partial<PackageOptionQueryDebug>,
 ): PackageOptionQueryDebug {
   const packageIds = resolvePackageIdsForQuery(options)
   return {
-    queryCompanyId: getCdlCompanyId(),
+    queryCompanyId: options.companyId?.trim() || getCdlCompanyId(),
     packageIds,
     packageIdsCount: packageIds.length,
     currentBranchId: options.currentBranchId?.trim() || null,
@@ -107,8 +108,10 @@ export async function fetchPackageOptionGroupsOnly(options?: {
   packageIds?: string[] | null
   includeInactive?: boolean
   currentBranchId?: string | null
+  companyId?: string | null
 }) {
-  const queryCompanyId = getCdlCompanyId().trim()
+  const queryCompanyId =
+    options?.companyId?.trim() || getCdlCompanyId().trim()
   const packageIds = resolvePackageIdsForQuery(options)
 
   if (packageIds.length === 0) {
@@ -141,7 +144,9 @@ export async function fetchPackageOptionGroupsOnly(options?: {
 
   let query = supabase
     .from('package_option_groups')
-    .select('*')
+    .select(
+      'id, company_id, package_id, option_group_key, group_key, label_pt, label_en, label_es, min_choices, max_choices, required, blocks_additional_items, display_order, active',
+    )
     .eq('company_id', queryCompanyId)
     .in('package_id', packageIds)
     .order('display_order', { ascending: true })
@@ -175,9 +180,10 @@ export async function fetchPackageOptionGroupsOnly(options?: {
 /** Etapa B — itens por option_group_id (não chama .in vazio). */
 export async function fetchPackageOptionGroupItems(
   optionGroupIds: string[],
-  options?: { includeInactive?: boolean },
+  options?: { includeInactive?: boolean; companyId?: string | null },
 ) {
-  const queryCompanyId = getCdlCompanyId().trim()
+  const queryCompanyId =
+    options?.companyId?.trim() || getCdlCompanyId().trim()
   const ids = [...new Set(optionGroupIds.filter((id) => id?.trim()))]
 
   if (ids.length === 0) {
@@ -209,7 +215,9 @@ export async function fetchPackageOptionGroupItems(
 
   let query = supabase
     .from('package_option_group_items')
-    .select('*')
+    .select(
+      'id, company_id, option_group_id, additional_item_id, option_item_key, label_pt, label_en, label_es, display_order, active, price_delta',
+    )
     .eq('company_id', queryCompanyId)
     .in('option_group_id', ids)
     .order('display_order', { ascending: true })
@@ -243,6 +251,7 @@ export async function loadPackageOptionChoices(options?: {
   packageIds?: string[] | null
   includeInactive?: boolean
   currentBranchId?: string | null
+  companyId?: string | null
 }) {
   const packageIds = resolvePackageIdsForQuery(options)
 
@@ -290,6 +299,7 @@ export async function loadPackageOptionChoices(options?: {
 
   const itemsRes = await fetchPackageOptionGroupItems(groupIds, {
     includeInactive: options?.includeInactive,
+    companyId: options?.companyId,
   })
 
   const groupItems = itemsRes.error ? [] : (itemsRes.data ?? [])
@@ -313,6 +323,7 @@ export async function fetchPackageOptionGroups(options?: {
   packageId?: string | null
   packageIds?: string[] | null
   includeInactive?: boolean
+  companyId?: string | null
 }) {
   const { groups, groupItems, error } = await loadPackageOptionChoices(options)
   if (error) {

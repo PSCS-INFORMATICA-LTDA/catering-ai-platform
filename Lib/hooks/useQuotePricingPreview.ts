@@ -16,6 +16,7 @@ export type UseQuotePricingPreviewInput = Omit<
 > & {
   packageId: string | null
   enabled?: boolean
+  endpoint?: string
 }
 
 export type UseQuotePricingPreviewResult = {
@@ -49,6 +50,7 @@ export function useQuotePricingPreview(
         grillRentalQty: input.grillRentalQty ?? 0,
         reservationPercentage: input.reservationPercentage ?? null,
         language: input.language ?? 'pt',
+        endpoint: input.endpoint ?? '/api/quotes/preview',
         refreshToken,
       }),
     [
@@ -63,16 +65,19 @@ export function useQuotePricingPreview(
       input.grillRentalQty,
       input.reservationPercentage,
       input.language,
+      input.endpoint,
       refreshToken,
     ],
   )
 
   useEffect(() => {
     if (input.enabled === false || !input.packageId?.trim()) {
-      setLoading(false)
-      setError(null)
-      setData(null)
-      return
+      const resetTimer = window.setTimeout(() => {
+        setLoading(false)
+        setError(null)
+        setData(null)
+      }, 0)
+      return () => window.clearTimeout(resetTimer)
     }
 
     const timer = window.setTimeout(async () => {
@@ -98,6 +103,7 @@ export function useQuotePricingPreview(
           language: input.language,
         },
         controller.signal,
+        input.endpoint,
       )
 
       if (seq !== requestSeq.current) return
@@ -117,7 +123,22 @@ export function useQuotePricingPreview(
     return () => {
       window.clearTimeout(timer)
     }
-  }, [serialized, input.enabled, input.packageId])
+  }, [
+    serialized,
+    input.enabled,
+    input.packageId,
+    input.additionals,
+    input.adultCount,
+    input.childrenUnder3Count,
+    input.children4To12Count,
+    input.eventDate,
+    input.mileageDistance,
+    input.grillRentalRequired,
+    input.grillRentalQty,
+    input.reservationPercentage,
+    input.language,
+    input.endpoint,
+  ])
 
   useEffect(() => {
     return () => {

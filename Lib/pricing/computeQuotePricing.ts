@@ -62,7 +62,7 @@ export async function computeQuotePricing(
     return resolved
   }
 
-  const rules = await fetchSupabaseCommercialRules()
+  const rules = await fetchSupabaseCommercialRules(resolved.context.companyId)
   const rulesError = validateCommercialRulesSnapshot(rules, {
     requireSupabaseSource: input.requireSupabaseRules === true,
   })

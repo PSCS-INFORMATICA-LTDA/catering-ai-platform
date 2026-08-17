@@ -15,6 +15,8 @@ export type PackageCatalogFields = {
   price?: number | null
   base_price?: number | null
   image_url?: string | null
+  currency_code?: string | null
+  card_theme_key?: string | null
 }
 
 export type PackageSidesPricingMode = 'breakdown' | 'total_included'

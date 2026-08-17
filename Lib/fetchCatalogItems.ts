@@ -29,12 +29,14 @@ export type FetchCatalogItemsOptions = {
   withCurrentPrices?: boolean
   /** Filial para preço vigente (fallback: env). */
   branchId?: string | null
+  /** Tenant explícito para boundaries públicos/server-side. */
+  companyId?: string | null
 }
 
 export async function fetchCatalogItems(
   options: FetchCatalogItemsOptions = {},
 ) {
-  const companyId = getCdlCompanyId()
+  const companyId = options.companyId?.trim() || getCdlCompanyId()
   const audience = options.audience ?? 'admin'
   const requireActive = options.activeOnly ?? audience === 'customer'
 
@@ -106,6 +108,7 @@ export async function fetchCatalogItems(
     const priceMap = await fetchCurrentCatalogItemPrices(
       rows.map((r) => r.id),
       branchId,
+      companyId,
     )
     rows = attachCurrentCatalogPrices(rows, priceMap)
   }

@@ -27,6 +27,10 @@ export type QuotePricingPreviewResponse = {
   }
   packagePricePerPerson: number
   resolvedAdditionals: QuoteAdditionalSaveLine[]
+  mileage?: {
+    distance: number
+    status: 'resolved' | 'pending_review'
+  }
 }
 
 export type QuotePricingPreviewError = {
@@ -38,11 +42,12 @@ export type QuotePricingPreviewError = {
 export async function fetchQuotePricingPreview(
   body: QuotePricingPreviewRequest,
   signal?: AbortSignal,
+  endpoint = '/api/quotes/preview',
 ): Promise<
   | { ok: true; data: QuotePricingPreviewResponse }
   | { ok: false; error: QuotePricingPreviewError }
 > {
-  const response = await fetch('/api/quotes/preview', {
+  const response = await fetch(endpoint, {
     method: 'POST',
     cache: 'no-store',
     headers: { 'Content-Type': 'application/json' },

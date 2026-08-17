@@ -1,5 +1,6 @@
 import { fetchCatalogItems } from '@/Lib/fetchCatalogItems'
 import { fetchPackages, type PackageListItem } from '@/Lib/fetchPackages'
+import { buildPackagesListSelect } from '@/Lib/packagesTableSchema'
 import type { QuoteAdditionalSaveLine } from '@/Lib/buildQuoteSavePayload'
 import {
   calcAdditionalLineTotal,
@@ -14,6 +15,7 @@ import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import type { PricingConfigurationError } from './pricingBreakdownTypes'
 
 export type QuotePricingSelectionInput = {
+  companyId?: string | null
   packageId: string
   additionals: Array<{ itemId: string; quantity: number }>
   guestCounts: GuestCounts
@@ -44,7 +46,7 @@ function isMissingPrice(value: number | null | undefined): boolean {
 export async function resolveQuotePricingInput(
   input: QuotePricingSelectionInput,
 ): Promise<ResolveQuotePricingResult> {
-  const companyId = getActiveCompanyId()?.trim()
+  const companyId = input.companyId?.trim() || getActiveCompanyId()?.trim()
   if (!companyId) {
     return {
       ok: false,
@@ -71,9 +73,10 @@ export async function resolveQuotePricingInput(
   const supabase = getSupabaseServerClient()
   const { data: packageRow, error: packageError } = await supabase
     .from('packages')
-    .select('*')
+    .select(buildPackagesListSelect())
     .eq('id', packageId)
-    .or(`company_id.eq.${companyId},company_id.is.null`)
+    .eq('active', true)
+    .eq('company_id', companyId)
     .maybeSingle()
 
   if (packageError) {
@@ -98,7 +101,7 @@ export async function resolveQuotePricingInput(
     }
   }
 
-  const pkg = packageRow as PackageListItem
+  const pkg = packageRow as unknown as PackageListItem
   if (isMissingPrice(pkg.price_per_person)) {
     return {
       ok: false,
@@ -123,6 +126,7 @@ export async function resolveQuotePricingInput(
       activeOnly: true,
       usage: 'additional',
       audience: 'customer',
+      companyId,
     })
     if (catalogRes.error) {
       return {
@@ -206,7 +210,10 @@ export async function resolveQuotePricingInput(
 /** Lista pacotes ativos do tenant — usado em QA e validação de edição. */
 export async function fetchTenantActivePackages() {
   const companyId = getActiveCompanyId()
-  const { data, error } = await fetchPackages({ activeOnly: true })
+  const { data, error } = await fetchPackages({
+    activeOnly: true,
+    companyId,
+  })
   return { companyId, data: data ?? [], error }
 }
 

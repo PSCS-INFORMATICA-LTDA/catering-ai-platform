@@ -442,14 +442,15 @@ export const getBlockedAdditionalItemIdsFromConfig =
 export async function fetchPackageItems(options?: {
   packageId?: string | null
   packageIds?: string[] | null
+  companyId?: string | null
 }) {
-  const companyId = getCdlCompanyId().trim()
+  const companyId = options?.companyId?.trim() || getCdlCompanyId().trim()
   const packageIds = resolvePackageIdsForQuery(options)
   const supabase = getSupabaseServerClient()
 
   let query = supabase
     .from('package_items')
-    .select('*')
+    .select(buildPackageItemsSelect())
     .eq('active', true)
     .order('display_order', { ascending: true })
 
@@ -476,14 +477,15 @@ export async function fetchPackageItems(options?: {
 export async function fetchPackageSideItems(options?: {
   packageId?: string | null
   packageIds?: string[] | null
+  companyId?: string | null
 }) {
-  const companyId = getCdlCompanyId().trim()
+  const companyId = options?.companyId?.trim() || getCdlCompanyId().trim()
   const packageIds = resolvePackageIdsForQuery(options)
   const supabase = getSupabaseServerClient()
 
   let query = supabase
     .from('package_side_items')
-    .select('*')
+    .select(buildPackageSideItemsSelect())
     .eq('active', true)
     .order('display_order', { ascending: true })
 
@@ -509,10 +511,14 @@ export async function fetchPackageSideItems(options?: {
 
 export async function loadPackageConfiguration(options?: {
   packageIds?: string[] | null
+  companyId?: string | null
 }) {
   const packageIds = options?.packageIds?.filter((id) => id?.trim()) ?? null
 
-  const queryScope = packageIds?.length ? { packageIds } : undefined
+  const queryScope = {
+    packageIds,
+    companyId: options?.companyId,
+  }
 
   const [itemsRes, sidesRes, choicesRes] = await Promise.all([
     fetchPackageItems(queryScope),

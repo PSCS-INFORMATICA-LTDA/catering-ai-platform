@@ -193,12 +193,18 @@ function parseCommercialRulesRows(rows: RuleRow[]): CommercialRulesSnapshot {
   return getFallbackCommercialRules()
 }
 
-export async function fetchSupabaseCommercialRules(): Promise<CommercialRulesSnapshot> {
-  const companyId = getActiveCompanyId()
+export async function fetchSupabaseCommercialRules(
+  companyIdOverride?: string | null,
+): Promise<CommercialRulesSnapshot> {
+  const companyId = companyIdOverride?.trim() || getActiveCompanyId()
   const supabase = getSupabaseServerClient()
 
   for (const table of RULE_TABLE_CANDIDATES) {
-    let query = supabase.from(table).select('*')
+    let query = supabase
+      .from(table)
+      .select(
+        'id, company_id, rule_key, rule_value, active, created_at, updated_at, rule_type',
+      )
     if (companyId?.trim()) {
       query = query.or(`company_id.eq.${companyId},company_id.is.null`)
     }
