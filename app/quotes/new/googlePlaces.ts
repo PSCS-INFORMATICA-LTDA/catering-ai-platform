@@ -6,12 +6,19 @@ export type AddressValues = {
   city: string
   state: string
   zipCode: string
+  addressFormatted?: string
+  addressPlaceId?: string | null
+  addressCountry?: string
+  addressLatitude?: number | null
+  addressLongitude?: number | null
+  addressSource?: 'google' | 'manual' | null
 }
 
 type GoogleAddressLike = {
   address_components?: google.maps.GeocoderAddressComponent[]
   formatted_address?: string
   geometry?: { location?: google.maps.LatLng }
+  place_id?: string
 }
 
 function getAddressComponent(
@@ -45,6 +52,8 @@ export function parseGooglePlace(
   const zipCode = formatPostalCode(
     postalCode && postalSuffix ? `${postalCode}-${postalSuffix}` : postalCode,
   )
+  const country = getAddressComponent(components, 'country', true).toUpperCase()
+  const location = place.geometry?.location
   return {
     address:
       route ||
@@ -54,6 +63,12 @@ export function parseGooglePlace(
     city,
     state,
     zipCode,
+    addressFormatted: place.formatted_address?.trim() || '',
+    addressPlaceId: place.place_id?.trim() || null,
+    addressCountry: country,
+    addressLatitude: location ? location.lat() : null,
+    addressLongitude: location ? location.lng() : null,
+    addressSource: 'google',
   }
 }
 
@@ -93,6 +108,15 @@ export async function enrichGooglePlaceFromGeocoder(
       city: parsed.city || geocoded.city,
       state: parsed.state || geocoded.state,
       zipCode: geocoded.zipCode || parsed.zipCode,
+      addressFormatted:
+        parsed.addressFormatted || geocoded.addressFormatted || '',
+      addressPlaceId: parsed.addressPlaceId || geocoded.addressPlaceId || null,
+      addressCountry: parsed.addressCountry || geocoded.addressCountry || '',
+      addressLatitude:
+        parsed.addressLatitude ?? geocoded.addressLatitude ?? null,
+      addressLongitude:
+        parsed.addressLongitude ?? geocoded.addressLongitude ?? null,
+      addressSource: 'google',
     }
   } catch {
     return parsed

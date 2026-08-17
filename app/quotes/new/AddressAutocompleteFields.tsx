@@ -1,29 +1,51 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   formatPostalCode,
   inferCountryFromPostalCode,
-  isSelectedPlaceCompatibleWithPostalCode,
   isUsablePostalCode,
   lookupPostalAddress,
   normalizePostalDigits,
 } from '@/Lib/cep'
-import type { PostalLookupResult } from '@/Lib/cep'
 import type { AddressValues } from './googlePlaces'
-import {
-  enrichGooglePlaceFromGeocoder,
-  parseGooglePlace,
-} from './googlePlaces'
+import { enrichGooglePlaceFromGeocoder, parseGooglePlace } from './googlePlaces'
 import { tCommon } from '@/Lib/i18n/common'
 import { tw } from '../../../Lib/quoteTranslations'
 import type { QuoteLanguage } from '../../../Lib/quoteWizardTypes'
 
 type FieldCompletion = 'filled' | 'empty'
 
+const ADDRESS_COPY = {
+  pt: {
+    search: 'Comece pelo endereço completo',
+    searchHint: 'Selecione uma sugestão do Google para confirmar o local.',
+    selected: 'Endereço confirmado',
+    selectionRequired: 'Selecione uma sugestão válida para continuar.',
+    countryBlocked: 'Este endereço está fora dos países atendidos.',
+    manual: 'O Google Places está indisponível. Preencha o endereço manualmente.',
+  },
+  en: {
+    search: 'Start with the full address',
+    searchHint: 'Choose a Google suggestion to confirm the location.',
+    selected: 'Address confirmed',
+    selectionRequired: 'Choose a valid suggestion to continue.',
+    countryBlocked: 'This address is outside the supported countries.',
+    manual: 'Google Places is unavailable. Enter the address manually.',
+  },
+  es: {
+    search: 'Comienza con la dirección completa',
+    searchHint: 'Elige una sugerencia de Google para confirmar el lugar.',
+    selected: 'Dirección confirmada',
+    selectionRequired: 'Elige una sugerencia válida para continuar.',
+    countryBlocked: 'Esta dirección está fuera de los países atendidos.',
+    manual: 'Google Places no está disponible. Completa la dirección manualmente.',
+  },
+} as const
+
 function getInputClassName(completion?: FieldCompletion) {
   const base =
-    'w-full rounded-xl border px-4 py-3.5 pr-10 text-base text-cdl-fg shadow-cdl outline-none transition-colors placeholder:text-cdl-faint focus:border-cdl-accent-border'
+    'w-full rounded-xl border px-4 py-3.5 pr-10 text-base text-cdl-fg shadow-cdl outline-none transition-colors placeholder:text-cdl-faint focus:border-cdl-accent-border disabled:cursor-not-allowed disabled:opacity-70'
   if (completion === 'filled') return `${base} cdl-field-filled`
   if (completion === 'empty') return `${base} cdl-field-empty`
   return `${base} border-cdl-border bg-cdl-inset`
@@ -45,48 +67,61 @@ function FieldCheck({ show }: { show: boolean }) {
   )
 }
 
-function useGooglePlacesReady(language: QuoteLanguage = 'pt') {
-  const [ready, setReady] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+function useGooglePlacesReady(language: QuoteLanguage) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+  const [ready, setReady] = useState(false)
+  const [failed, setFailed] = useState(() => !apiKey)
 
   useEffect(() => {
     if (!apiKey) {
-      setError(tw(language, 'googleApiKeyMissing'))
       return
     }
-
     if (window.google?.maps) {
-      setReady(true)
+      const readyTimer = window.setTimeout(() => setReady(true), 0)
+      return () => window.clearTimeout(readyTimer)
       return
     }
 
     const scriptId = 'google-maps-places-script'
-    const existingScript = document.getElementById(scriptId) as
-      | HTMLScriptElement
-      | null
-
-    function handleReady() {
+    const existing = document.getElementById(scriptId) as HTMLScriptElement | null
+    const handleReady = () => {
       setReady(true)
-      setError(null)
+      setFailed(false)
     }
+    const handleFailure = () => setFailed(true)
 
-    if (existingScript) {
-      existingScript.addEventListener('load', handleReady)
-      return () => existingScript.removeEventListener('load', handleReady)
+    if (existing) {
+      existing.addEventListener('load', handleReady)
+      existing.addEventListener('error', handleFailure)
+      return () => {
+        existing.removeEventListener('load', handleReady)
+        existing.removeEventListener('error', handleFailure)
+      }
     }
 
     const script = document.createElement('script')
     script.id = scriptId
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly`
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly&loading=async&libraries=places&language=${language}`
     script.async = true
     script.defer = true
     script.onload = handleReady
-    script.onerror = () => setError(tw(language, 'googleLoadError'))
+    script.onerror = handleFailure
     document.head.appendChild(script)
   }, [apiKey, language])
 
-  return { ready, error, enabled: Boolean(apiKey) }
+  return { ready, unavailable: !apiKey || failed }
+}
+
+function clearCanonicalAddress(): Partial<AddressValues> {
+  return {
+    address: '',
+    addressFormatted: '',
+    addressPlaceId: null,
+    addressCountry: '',
+    addressLatitude: null,
+    addressLongitude: null,
+    addressSource: null,
+  }
 }
 
 export default function AddressAutocompleteFields({
@@ -95,204 +130,252 @@ export default function AddressAutocompleteFields({
   className = '',
   fieldCompletions,
   language = 'pt',
+  allowedCountries = ['US'],
 }: {
   values: AddressValues
   onChange: (patch: Partial<AddressValues>) => void
   className?: string
   language?: QuoteLanguage | string | null
+  allowedCountries?: string[]
   fieldCompletions?: {
     city?: FieldCompletion
     state?: FieldCompletion
     zipCode?: FieldCompletion
   }
 }) {
-  const loc: QuoteLanguage =
-    language === 'en' || language === 'es' ? language : 'pt'
+  const loc: QuoteLanguage = language === 'en' || language === 'es' ? language : 'pt'
+  const copy = ADDRESS_COPY[loc]
+  const countries = useMemo(
+    () => [
+      ...new Set(
+        allowedCountries
+          .map((country) => country.trim().toUpperCase())
+          .filter(Boolean),
+      ),
+    ],
+    [allowedCountries],
+  )
+  const { ready, unavailable } = useGooglePlacesReady(loc)
+  const googleUnavailable = unavailable
+  const manualFallback = googleUnavailable
+  const manualMode = manualFallback
   const onChangeRef = useRef(onChange)
   const valuesRef = useRef(values)
-  const { ready, error, enabled } = useGooglePlacesReady(loc)
-  const [lookupError, setLookupError] = useState<string | null>(null)
-  const [looking, setLooking] = useState(false)
-  const [addressQuery, setAddressQuery] = useState(values.address)
-  const [addressError, setAddressError] = useState<string | null>(null)
-  const [postalArea, setPostalArea] = useState<PostalLookupResult | null>(null)
-  const addressInputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
-  const placeListenerRef = useRef<google.maps.MapsEventListener | null>(null)
-  const languageRef = useRef(loc)
-  const isMountedRef = useRef(true)
+  const listenerRef = useRef<google.maps.MapsEventListener | null>(null)
+  const mountedRef = useRef(true)
+  const [query, setQuery] = useState(
+    values.addressFormatted ||
+      [values.address, values.addressNumber].filter(Boolean).join(', '),
+  )
+  const [addressError, setAddressError] = useState<string | null>(null)
+  const [postalLookupError, setPostalLookupError] = useState<string | null>(null)
+  const [lookingUpPostal, setLookingUpPostal] = useState(false)
+  const lastPostalLookupRef = useRef('')
 
   useEffect(() => {
     onChangeRef.current = onChange
-  }, [onChange])
-
-  useEffect(() => {
     valuesRef.current = values
-  }, [values])
-
-  useEffect(() => {
-    languageRef.current = loc
-  }, [loc])
+  }, [onChange, values])
 
   useEffect(
     () => () => {
-      isMountedRef.current = false
-      placeListenerRef.current?.remove()
-      placeListenerRef.current = null
-      autocompleteRef.current = null
+      mountedRef.current = false
+      listenerRef.current?.remove()
     },
     [],
   )
 
-  const lastLookupRef = useRef('')
-  const postalLookupStreetRef = useRef('')
-
   useEffect(() => {
-    const digits = normalizePostalDigits(values.zipCode)
-    if (!isUsablePostalCode(values.zipCode)) {
-      setLookupError(null)
-      setLooking(false)
-      return
-    }
-    if (lastLookupRef.current === digits) return
-
-    const country = inferCountryFromPostalCode(values.zipCode)
-    if (country === 'US' && !enabled) return
-    if (country === 'US' && enabled && !ready) return
-
-    let cancelled = false
-    const timer = window.setTimeout(() => {
-      setLooking(true)
-      setLookupError(null)
-      void lookupPostalAddress(values.zipCode)
-        .then((addr) => {
-          if (cancelled) return
-          lastLookupRef.current = digits
-          postalLookupStreetRef.current = addr.address
-          setPostalArea(addr)
-          setAddressQuery(addr.address)
-          onChangeRef.current({
-            zipCode: addr.zipCode,
-            address: '',
-            addressNumber: '',
-            city: addr.city,
-            state: addr.state,
-          })
-        })
-        .catch((err: unknown) => {
-          if (cancelled) return
-          const code = err instanceof Error ? err.message : ''
-          if (code === 'GOOGLE_UNAVAILABLE' && enabled && !ready) return
-          lastLookupRef.current = digits
-          setPostalArea(null)
-          setLookupError(tCommon(loc, 'postalNotFound'))
-        })
-        .finally(() => {
-          if (!cancelled) setLooking(false)
-        })
-    }, 400)
-
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
-    }
-  }, [values.zipCode, loc, ready, enabled])
-
-  useEffect(() => {
-    const input = addressInputRef.current
-    const country = inferCountryFromPostalCode(values.zipCode)
-    const bounds = postalArea?.bounds
-    if (!input || !ready || !country || !bounds) return
-
+    const input = inputRef.current
+    if (!input || !ready || autocompleteRef.current) return
     let cancelled = false
 
     void window.google?.maps
       .importLibrary('places')
       .then(({ Autocomplete }) => {
         if (cancelled) return
-        const options: google.maps.places.AutocompleteOptions = {
-          types: ['geocode'],
-          componentRestrictions: { country: country.toLowerCase() },
-          fields: ['address_components', 'formatted_address', 'geometry'],
-          bounds,
-          strictBounds: true,
-        }
-
-        if (autocompleteRef.current) {
-          autocompleteRef.current.setComponentRestrictions(
-            options.componentRestrictions!,
-          )
-          autocompleteRef.current.setBounds(bounds)
-          autocompleteRef.current.setOptions({ strictBounds: true })
-          return
-        }
-
-        const autocomplete = new Autocomplete(input, options)
+        const autocomplete = new Autocomplete(input, {
+          types: ['address'],
+          componentRestrictions:
+            countries.length > 0
+              ? { country: countries.map((country) => country.toLowerCase()) }
+              : undefined,
+          fields: [
+            'place_id',
+            'address_components',
+            'formatted_address',
+            'geometry',
+          ],
+        })
         autocompleteRef.current = autocomplete
-        placeListenerRef.current = autocomplete.addListener(
-          'place_changed',
-          () => {
-            const currentAutocomplete = autocompleteRef.current
-            if (!currentAutocomplete) return
-            const place = currentAutocomplete.getPlace()
-            void (async () => {
-              const selected = await enrichGooglePlaceFromGeocoder(
-                place,
-                parseGooglePlace(place),
-              )
-              if (!isMountedRef.current) return
+        listenerRef.current = autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace()
+          void (async () => {
+            const selected = await enrichGooglePlaceFromGeocoder(
+              place,
+              parseGooglePlace(place),
+            )
+            if (!mountedRef.current) return
+            if (
+              countries.length > 0 &&
+              (!selected.addressCountry ||
+                !countries.includes(selected.addressCountry))
+            ) {
+              setAddressError(copy.countryBlocked)
+              setQuery(place.formatted_address || input.value)
+              onChangeRef.current(clearCanonicalAddress())
+              return
+            }
+            if (
+              !selected.address ||
+              !selected.city ||
+              !selected.state ||
+              !selected.zipCode
+            ) {
+              setAddressError(copy.selectionRequired)
+              setQuery(place.formatted_address || input.value)
+              onChangeRef.current(clearCanonicalAddress())
+              return
+            }
 
-              const currentValues = valuesRef.current
-              const isCompatible = isSelectedPlaceCompatibleWithPostalCode({
-                expectedPostalCode: currentValues.zipCode,
-                selectedPostalCode: selected.zipCode,
-                expectedCity: currentValues.city,
-                expectedState: currentValues.state,
-                selectedCity: selected.city,
-                selectedState: selected.state,
-                expectedAddress: postalLookupStreetRef.current,
-                selectedAddress: selected.address,
-              })
-
-              if (!selected.address || !isCompatible) {
-                setAddressError(
-                  tw(languageRef.current, 'addressZipMismatch'),
-                )
-                setAddressQuery(selected.address || input.value)
-                onChangeRef.current({ address: '', addressNumber: '' })
-                return
-              }
-
-              setAddressError(null)
-              setAddressQuery(selected.address)
-              onChangeRef.current({
-                address: selected.address,
-                addressNumber: selected.addressNumber,
-                city: selected.city || currentValues.city,
-                state: selected.state || currentValues.state,
-                zipCode: formatPostalCode(currentValues.zipCode),
-              })
-            })()
-          },
-        )
+            setAddressError(null)
+            setPostalLookupError(null)
+            setQuery(
+              selected.addressFormatted ||
+                place.formatted_address ||
+                selected.address,
+            )
+            onChangeRef.current(selected)
+          })()
+        })
       })
-      .catch(() =>
-        setAddressError(tw(languageRef.current, 'googleLoadError')),
-      )
+      .catch(() => setAddressError(tw(loc, 'googleLoadError')))
 
     return () => {
       cancelled = true
     }
-  }, [postalArea, ready, values.zipCode])
+  }, [copy.countryBlocked, copy.selectionRequired, countries, loc, ready])
+
+  useEffect(() => {
+    if (!manualMode) return
+    const digits = normalizePostalDigits(values.zipCode)
+    if (
+      !isUsablePostalCode(values.zipCode) ||
+      lastPostalLookupRef.current === digits
+    ) {
+      return
+    }
+
+    let cancelled = false
+    const timer = window.setTimeout(() => {
+      setLookingUpPostal(true)
+      setPostalLookupError(null)
+      void lookupPostalAddress(values.zipCode)
+        .then((result) => {
+          if (cancelled) return
+          lastPostalLookupRef.current = digits
+          onChangeRef.current({
+            address: valuesRef.current.address || result.address,
+            city: valuesRef.current.city || result.city,
+            state: valuesRef.current.state || result.state,
+            zipCode: result.zipCode,
+            addressCountry:
+              inferCountryFromPostalCode(result.zipCode) ?? '',
+            addressSource: 'manual',
+          })
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setPostalLookupError(tCommon(loc, 'postalNotFound'))
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLookingUpPostal(false)
+        })
+    }, 400)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [loc, manualMode, values.zipCode])
 
   const zipDigits = normalizePostalDigits(values.zipCode)
-  const zipInvalid = zipDigits.length >= 5 && !isUsablePostalCode(values.zipCode)
+  const zipInvalid =
+    zipDigits.length >= 5 && !isUsablePostalCode(values.zipCode)
+  const canonicalConfirmed =
+    values.addressSource === 'google' && Boolean(values.addressPlaceId)
+  const manualPatch = (patch: Partial<AddressValues>) =>
+    onChange({ ...patch, addressSource: 'manual', addressPlaceId: null })
 
   return (
-    <div
-      className={`grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,2.4fr)_minmax(0,0.8fr)_minmax(0,1.5fr)_minmax(0,0.9fr)] ${className}`}
-    >
-      <label className="flex flex-col gap-2">
+    <div className={`grid grid-cols-1 gap-4 lg:grid-cols-12 ${className}`}>
+      <label className="flex flex-col gap-2 lg:col-span-12">
+        <FieldLabel>{copy.search}</FieldLabel>
+        <div className="relative">
+          <input
+            ref={inputRef}
+            type="text"
+            autoComplete="street-address"
+            value={query}
+            onChange={(event) => {
+              const next = event.target.value
+              setQuery(next)
+              setAddressError(null)
+              if (manualMode) {
+                manualPatch({ address: next, addressFormatted: next })
+              } else {
+                onChange(clearCanonicalAddress())
+              }
+            }}
+            placeholder={tw(loc, 'addressPlaceholder')}
+            className={getInputClassName(
+              canonicalConfirmed || (manualMode && values.address)
+                ? 'filled'
+                : 'empty',
+            )}
+            aria-invalid={
+              Boolean(addressError) ||
+              (!manualMode && Boolean(query) && !canonicalConfirmed)
+            }
+          />
+          <FieldCheck
+            show={canonicalConfirmed || (manualMode && Boolean(values.address))}
+          />
+        </div>
+        <p
+          className={`text-xs ${
+            addressError
+              ? 'text-cdl-action'
+              : canonicalConfirmed
+                ? 'text-cdl-success'
+                : 'text-cdl-muted'
+          }`}
+        >
+          {addressError ??
+            (manualMode
+              ? copy.manual
+              : canonicalConfirmed
+                ? copy.selected
+                : copy.searchHint)}
+        </p>
+      </label>
+
+      <label className="flex flex-col gap-2 lg:col-span-2">
+        <FieldLabel>{tCommon(loc, 'streetNumber')}</FieldLabel>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={values.addressNumber}
+          onChange={(event) => onChange({ addressNumber: event.target.value })}
+          className={getInputClassName(
+            values.addressNumber ? 'filled' : undefined,
+          )}
+        />
+      </label>
+
+      <label className="flex flex-col gap-2 lg:col-span-3">
         <FieldLabel>{tCommon(loc, 'postalCode')}</FieldLabel>
         <div className="relative">
           <input
@@ -300,25 +383,14 @@ export default function AddressAutocompleteFields({
             inputMode="numeric"
             autoComplete="postal-code"
             value={values.zipCode}
-            onChange={(e) => {
-              const zipCode = formatPostalCode(e.target.value)
-              const postalChanged =
-                normalizePostalDigits(zipCode) !==
-                normalizePostalDigits(valuesRef.current.zipCode)
-              setAddressError(null)
-              if (postalChanged) {
-                lastLookupRef.current = ''
-                postalLookupStreetRef.current = ''
-                setPostalArea(null)
-              }
-              onChange({
-                zipCode,
-                ...(postalChanged ? { address: '', addressNumber: '' } : {}),
-              })
+            readOnly={!manualMode}
+            onChange={(event) => {
+              lastPostalLookupRef.current = ''
+              manualPatch({ zipCode: formatPostalCode(event.target.value) })
             }}
             placeholder={tCommon(loc, 'postalCodePlaceholder')}
             className={getInputClassName(fieldCompletions?.zipCode)}
-            aria-invalid={zipInvalid || Boolean(lookupError)}
+            aria-invalid={zipInvalid || Boolean(postalLookupError)}
           />
           <FieldCheck show={fieldCompletions?.zipCode === 'filled'} />
         </div>
@@ -326,62 +398,23 @@ export default function AddressAutocompleteFields({
           <p className="text-xs text-cdl-action">
             {tCommon(loc, 'invalidPostalCode')}
           </p>
-        ) : looking ? (
+        ) : lookingUpPostal ? (
           <p className="text-xs text-cdl-muted">
             {tCommon(loc, 'postalLookingUp')}
           </p>
-        ) : lookupError ? (
-          <p className="text-xs text-cdl-action">{lookupError}</p>
-        ) : error ? (
-          <p className="text-xs text-cdl-muted">{error}</p>
+        ) : postalLookupError ? (
+          <p className="text-xs text-cdl-action">{postalLookupError}</p>
         ) : null}
       </label>
 
-      <label className="flex flex-col gap-2">
-        <FieldLabel>{tCommon(loc, 'address')}</FieldLabel>
-        <input
-          ref={addressInputRef}
-          type="text"
-          autoComplete="off"
-          value={addressQuery}
-          disabled={!postalArea && !lookupError}
-          onChange={(e) => {
-            setAddressQuery(e.target.value)
-            setAddressError(null)
-            onChange({ address: '', addressNumber: '' })
-          }}
-          placeholder={tw(loc, 'addressPlaceholder')}
-          className={getInputClassName()}
-          aria-invalid={
-            Boolean(addressError) || Boolean(addressQuery && !values.address)
-          }
-        />
-        <p
-          className={`text-xs ${addressError ? 'text-cdl-action' : 'text-cdl-muted'}`}
-        >
-          {addressError ?? tw(loc, 'addressSelectionRequired')}
-        </p>
-      </label>
-
-      <label className="flex flex-col gap-2">
-        <FieldLabel>{tCommon(loc, 'streetNumber')}</FieldLabel>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={values.addressNumber}
-          onChange={(e) => onChange({ addressNumber: e.target.value })}
-          className={getInputClassName()}
-        />
-      </label>
-
-      <label className="flex flex-col gap-2">
+      <label className="flex flex-col gap-2 lg:col-span-4">
         <FieldLabel>{tCommon(loc, 'city')}</FieldLabel>
         <div className="relative">
           <input
             type="text"
             value={values.city}
-            readOnly={Boolean(postalArea)}
-            onChange={(e) => onChange({ city: e.target.value })}
+            readOnly={!manualMode}
+            onChange={(event) => manualPatch({ city: event.target.value })}
             placeholder={tw(loc, 'cityPlaceholder')}
             className={getInputClassName(fieldCompletions?.city)}
           />
@@ -389,14 +422,14 @@ export default function AddressAutocompleteFields({
         </div>
       </label>
 
-      <label className="flex flex-col gap-2">
+      <label className="flex flex-col gap-2 lg:col-span-3">
         <FieldLabel>{tCommon(loc, 'state')}</FieldLabel>
         <div className="relative">
           <input
             type="text"
             value={values.state}
-            readOnly={Boolean(postalArea)}
-            onChange={(e) => onChange({ state: e.target.value })}
+            readOnly={!manualMode}
+            onChange={(event) => manualPatch({ state: event.target.value })}
             placeholder={tw(loc, 'statePlaceholder')}
             className={getInputClassName(fieldCompletions?.state)}
           />

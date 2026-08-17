@@ -46,6 +46,9 @@ export type StepVisualStatus = 'complete' | 'pending' | 'error'
 export type WizardStateSnapshot = {
   customerId: string | null
   customerDraftPhone: string
+  customerDraftEmail: string
+  customerFirstName: string
+  customerLastName: string
   eventName: string
   eventDate: string
   startTime: string
@@ -55,6 +58,8 @@ export type WizardStateSnapshot = {
   city: string
   state: string
   zipCode: string
+  addressPlaceId?: string | null
+  addressSource?: 'google' | 'manual' | null
   adultCount: number
   childrenUnder3Count: number
   children4To12Count: number
@@ -64,6 +69,7 @@ export type WizardStateSnapshot = {
   grillPhotoStatus: GrillPhotoStatus
   grillPhotoAnswered: boolean
   grillPhotoUrl: string | null
+  grillPhotoReference?: string | null
   grillRentalRequired: boolean
   grillRentalQty: number
   grillNotes: string
@@ -111,7 +117,7 @@ export type PendingStepIssue = {
 }
 
 /** Etapas com validação obrigatória antes do save. */
-const MANDATORY_STEP_INDICES = [1, 2, 4] as const
+const MANDATORY_STEP_INDICES = [0, 1, 2, 4] as const
 
 function isFilled(value: string) {
   return value.trim().length > 0
@@ -120,7 +126,38 @@ function isFilled(value: string) {
 function hasLinkedCustomer(ctx: StepStatusContext): boolean {
   if (ctx.isEditMode) return Boolean(ctx.state.customerId)
   if (ctx.selectedCustomer || ctx.state.customerId) return true
-  return isUsablePhone(ctx.state.customerDraftPhone)
+  return (
+    isUsablePhone(ctx.state.customerDraftPhone) &&
+    isFilled(ctx.state.customerFirstName) &&
+    isFilled(ctx.state.customerLastName)
+  )
+}
+
+function contactIssue(
+  language: QuoteLanguage,
+  field: 'firstName' | 'lastName' | 'phone' | 'email',
+): string {
+  const copy = {
+    pt: {
+      firstName: 'Informe o primeiro nome.',
+      lastName: 'Informe o sobrenome.',
+      phone: 'Informe um telefone válido com DDI.',
+      email: 'Revise o e-mail informado.',
+    },
+    en: {
+      firstName: 'Enter the first name.',
+      lastName: 'Enter the last name.',
+      phone: 'Enter a valid phone number with country code.',
+      email: 'Check the email address.',
+    },
+    es: {
+      firstName: 'Ingresa el nombre.',
+      lastName: 'Ingresa el apellido.',
+      phone: 'Ingresa un teléfono válido con código de país.',
+      email: 'Revisa el correo electrónico.',
+    },
+  } as const
+  return copy[language][field]
 }
 
 function allAdditionalCategoriesVisited(ctx: StepStatusContext): boolean {
@@ -134,7 +171,10 @@ export function isGrillPhotoRequiredAndMissing(
   state: WizardStateSnapshot,
 ): boolean {
   if (!state.hasGrill) return false
-  return state.grillPhotoStatus !== 'received' || !state.grillPhotoUrl?.trim()
+  return (
+    state.grillPhotoStatus !== 'received' ||
+    (!state.grillPhotoUrl?.trim() && !state.grillPhotoReference?.trim())
+  )
 }
 
 export function getOperationalStepWarnings(
@@ -174,6 +214,23 @@ export function getStepIssues(
 
   switch (stepIndex) {
     case 0:
+      if (!ctx.isEditMode && !ctx.selectedCustomer && !state.customerId) {
+        if (!isFilled(state.customerFirstName)) {
+          issues.push(contactIssue(language, 'firstName'))
+        }
+        if (!isFilled(state.customerLastName)) {
+          issues.push(contactIssue(language, 'lastName'))
+        }
+        if (!isUsablePhone(state.customerDraftPhone)) {
+          issues.push(contactIssue(language, 'phone'))
+        }
+        if (
+          state.customerDraftEmail.trim() &&
+          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.customerDraftEmail.trim())
+        ) {
+          issues.push(contactIssue(language, 'email'))
+        }
+      }
       break
     case 1:
       if (!isFilled(state.eventName)) issues.push(tw(language, 'issueEventName'))
@@ -181,6 +238,19 @@ export function getStepIssues(
       if (!isFilled(state.startTime)) issues.push(tw(language, 'issueStartTime'))
       if (!isFilled(state.endTime)) issues.push(tw(language, 'issueEndTime'))
       if (!isFilled(state.address)) issues.push(tw(language, 'issueAddress'))
+      if (
+        !ctx.isEditMode &&
+        state.addressSource !== 'manual' &&
+        !state.addressPlaceId?.trim()
+      ) {
+        issues.push(
+          language === 'en'
+            ? 'Select the address from Google suggestions.'
+            : language === 'es'
+              ? 'Selecciona la dirección en las sugerencias de Google.'
+              : 'Selecione o endereço nas sugestões do Google.',
+        )
+      }
       if (!isFilled(state.city)) issues.push(tw(language, 'issueCity'))
       if (!isFilled(state.state)) issues.push(tw(language, 'issueState'))
       if (!isUsablePostalCode(state.zipCode)) issues.push(tw(language, 'issueZip'))
@@ -276,7 +346,7 @@ export function getStepVisualStatus(
   if (stepIndex === 5) {
     return isMandatoryStepComplete(5, ctx) && ctx.pricingPreviewReady
       ? 'complete'
-      : 'error'
+      : 'pending'
   }
 
   if (stepIndex === 0) {

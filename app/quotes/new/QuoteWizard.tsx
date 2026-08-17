@@ -51,6 +51,7 @@ import {
   getPackageLabel,
 } from '../../../Lib/packageFieldAccess'
 import QuoteWizardConfirmationStep from '../../../components/quote-review/QuoteWizardConfirmationStep'
+import PublicQuoteConfirmationStep from '../../../components/quote-review/PublicQuoteConfirmationStep'
 import { resolvePackageCatalogImageUrl } from '../../../Lib/packageCatalogVisual'
 import { calcAdditionalLineTotal } from '../../../Lib/calculateQuoteTotals'
 import type { CommercialRulesSnapshot } from '../../../Lib/supabaseCommercialRules'
@@ -109,6 +110,7 @@ import {
 import AddressAutocompleteFields from './AddressAutocompleteFields'
 import {
   getMandatoryPendingSteps,
+  getStepIssues,
   getStepVisualStatus,
   isGrillPhotoRequiredAndMissing,
   isQuoteReadyToSave,
@@ -158,6 +160,31 @@ export type Package = {
   image_url?: string | null
   item_type?: string | null
   category_pt?: string | null
+  card_theme_key?: string | null
+}
+
+export type PublicQuoteWizardContext = {
+  companyId: string
+  companySlug: string
+  branchId?: string | null
+  allowedCountries: string[]
+  consentVersion: string
+  consentLabel: string
+  privacyUrl?: string | null
+  supportWhatsappUrl?: string | null
+  currencyCode?: string
+}
+
+export type PublicQuoteSubmissionResult = {
+  quote: {
+    id: string
+    number?: string | null
+    eventName: string
+    eventDate: string
+    total?: number | null
+    currency?: string | null
+  }
+  alreadySubmitted?: boolean
 }
 
 export type AdditionalItem = {
@@ -187,6 +214,59 @@ export type AdditionalItem = {
 
 /** Item do catálogo mestre (`catalog_items`). */
 export type CatalogItem = AdditionalItem
+
+function buildPublicIntakeDraft(state: WizardState) {
+  return {
+    locale: state.language,
+    contact: {
+      firstName: state.customerFirstName.trim(),
+      lastName: state.customerLastName.trim(),
+      phone: state.customerDraftPhone.trim(),
+      email: state.customerDraftEmail.trim() || null,
+    },
+    event: {
+      eventName:
+        state.eventName.trim() ||
+        [state.customerFirstName, state.customerLastName]
+          .map((value) => value.trim())
+          .filter(Boolean)
+          .join(' '),
+      eventDate: state.eventDate,
+      startTime: state.startTime,
+      endTime: state.endTime,
+      adultCount: state.adultCount,
+      childrenUnder3Count: state.childrenUnder3Count,
+      children4To12Count: state.children4To12Count,
+      address: {
+        route: state.address,
+        number: state.addressNumber,
+        city: state.city,
+        region: state.state,
+        postalCode: state.zipCode,
+        country: state.addressCountry,
+        formattedAddress: state.addressFormatted,
+        placeId: state.addressPlaceId,
+        latitude: state.addressLatitude,
+        longitude: state.addressLongitude,
+        source: state.addressSource,
+      },
+    },
+    selection: {
+      packageId: state.packageId,
+      packageSelections: state.packageSelections,
+      additionals: Object.entries(state.additionals)
+        .filter(([, quantity]) => quantity > 0)
+        .map(([itemId, quantity]) => ({ itemId, quantity })),
+    },
+    grill: {
+      hasGrill: state.hasGrill,
+      photoReference: state.grillPhotoReference,
+      rentalRequired: state.grillRentalRequired,
+      rentalQty: state.grillRentalQty,
+      notes: state.grillNotes.trim() || null,
+    },
+  }
+}
 
 
 function formatDate(value: string, locale: string | null | undefined = 'pt') {
@@ -701,6 +781,7 @@ function InputField({
   completion,
   inputRef,
   onFocus,
+  autoComplete,
 }: {
   label: string
   type?: string
@@ -714,6 +795,7 @@ function InputField({
   completion?: FieldCompletion
   inputRef?: React.RefObject<HTMLInputElement | null>
   onFocus?: () => void
+  autoComplete?: string
 }) {
   return (
     <label className={`flex flex-col gap-2 ${className}`}>
@@ -728,6 +810,7 @@ function InputField({
           min={min}
           max={max}
           onFocus={onFocus}
+          autoComplete={autoComplete}
           onChange={(e) => onChange(e.target.value)}
           className={`w-full rounded-xl border px-4 py-3.5 pr-10 text-base text-cdl-fg shadow-cdl outline-none transition-colors placeholder:text-cdl-faint focus:border-cdl-accent-border ${fieldCompletionClass(completion)}`}
         />
@@ -884,7 +967,7 @@ function GrillPhotoStatusField({
 
 export { getStepVisualStatus } from './wizardStepStatus'
 
-export default function QuoteWizard({
+export default function QuoteWizardCore({
   customers,
   packages,
   catalogItems,
@@ -904,6 +987,9 @@ export default function QuoteWizard({
   linkedCustomer = null,
   initialStep = 0,
   initialUiLocale,
+  entryMode = 'authenticated',
+  publicContext,
+  onPublicSuccess,
 }: {
   customers: Customer[]
   packages: Package[]
@@ -925,16 +1011,30 @@ export default function QuoteWizard({
   linkedCustomer?: Customer | null
   initialStep?: number
   initialUiLocale?: string | null
+  entryMode?: 'authenticated' | 'public'
+  publicContext?: PublicQuoteWizardContext
+  onPublicSuccess?: (result: PublicQuoteSubmissionResult) => void
 }) {
   const itemCatalog = catalogItems ?? additionalItems ?? []
   const isEditMode = mode === 'edit' && Boolean(quoteId)
+  const isPublicMode = entryMode === 'public'
   const { branchId: tenantBranchId, companyId: tenantCompanyId } = useTenant()
   const [step, setStep] = useState(() =>
     Math.min(Math.max(initialStep, 0), WIZARD_STEP_COUNT - 1),
   )
-  const [state, setState] = useState<WizardState>(
-    () => initialState ?? createInitialWizardState(commercialRules),
-  )
+  const [state, setState] = useState<WizardState>(() => {
+    const base = initialState ?? createInitialWizardState(commercialRules)
+    if (!isPublicMode) return base
+    const language: QuoteLanguage =
+      initialUiLocale === 'en' || initialUiLocale === 'es' ? initialUiLocale : 'pt'
+    return {
+      ...base,
+      language,
+      branchId: publicContext?.branchId ?? base.branchId,
+      publicConsentVersion:
+        publicContext?.consentVersion ?? base.publicConsentVersion,
+    }
+  })
   const [customerSearch, setCustomerSearch] = useState('')
   const [customerSearchOpen, setCustomerSearchOpen] = useState(false)
   const customerSearchRef = useRef<HTMLDivElement>(null)
@@ -962,6 +1062,13 @@ export default function QuoteWizard({
   const [packageStepMessage, setPackageStepMessage] = useState<string | null>(
     null,
   )
+  const [navigationIssues, setNavigationIssues] = useState<string[]>([])
+  const [publicUploadError, setPublicUploadError] = useState<string | null>(null)
+  const [publicUploading, setPublicUploading] = useState(false)
+  const [publicAutosaveStatus, setPublicAutosaveStatus] = useState<
+    'idle' | 'saving' | 'saved' | 'error'
+  >('idle')
+  const publicIdempotencyKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!tenantBranchId || state.branchId) return
@@ -977,7 +1084,9 @@ export default function QuoteWizard({
   >(() => packageOptionGroupItems)
   const [packageOptionQueryDebugState, setPackageOptionQueryDebugState] =
     useState<PackageOptionQueryDebug | null>(() => packageOptionQueryDebug)
-  const uiLocale = useAuthLocaleFromMe(initialUiLocale)
+  const uiLocale = useAuthLocaleFromMe(initialUiLocale, {
+    disabled: isPublicMode,
+  })
   const quoteStrings = useMemo(
     () => getQuoteStrings(uiLocale),
     [uiLocale],
@@ -986,9 +1095,14 @@ export default function QuoteWizard({
   const w = quoteStrings.wizard
 
   const debugCompanyId =
-    tenantCompanyId?.trim() || CDL_DEFAULT_COMPANY_ID
+    publicContext?.companyId?.trim() ||
+    tenantCompanyId?.trim() ||
+    CDL_DEFAULT_COMPANY_ID
   const debugBranchId =
-    state.branchId?.trim() || tenantBranchId?.trim() || null
+    state.branchId?.trim() ||
+    publicContext?.branchId?.trim() ||
+    tenantBranchId?.trim() ||
+    null
   const queryPackageIds = useMemo(
     () => packages.map((pkg) => pkg.id).filter(Boolean),
     [packages],
@@ -1054,6 +1168,7 @@ export default function QuoteWizard({
   ])
 
   useEffect(() => {
+    if (isPublicMode) return
     const packageId = state.packageId?.trim()
     if (!packageId) return
 
@@ -1125,7 +1240,7 @@ export default function QuoteWizard({
     return () => {
       cancelled = true
     }
-  }, [state.packageId, debugBranchId])
+  }, [state.packageId, debugBranchId, isPublicMode])
 
   useEffect(() => {
     setLocalCustomers((current) => {
@@ -1384,6 +1499,9 @@ export default function QuoteWizard({
     reservationPercentage: state.reservationPercentage,
     language: state.language,
     enabled: Boolean(state.packageId?.trim()),
+    endpoint: isPublicMode
+      ? '/api/public/quote-intake/preview'
+      : '/api/quotes/preview',
   })
 
   const pricingBreakdown: PricingBreakdown | null =
@@ -1591,8 +1709,92 @@ export default function QuoteWizard({
     ],
   )
 
-  function handleGrillPhotoSelected(file: File | null) {
+  const publicDraftSerialized = useMemo(
+    () => JSON.stringify(buildPublicIntakeDraft(state)),
+    [state],
+  )
+
+  useEffect(() => {
+    if (!isPublicMode) return
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => {
+      setPublicAutosaveStatus('saving')
+      void fetch('/api/public/quote-intake/session', {
+        method: 'PATCH',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          draft: JSON.parse(publicDraftSerialized) as unknown,
+          currentStep: step,
+          website: '',
+        }),
+        signal: controller.signal,
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error('autosave_failed')
+          setPublicAutosaveStatus('saved')
+        })
+        .catch((error: unknown) => {
+          if (error instanceof DOMException && error.name === 'AbortError') return
+          setPublicAutosaveStatus('error')
+        })
+    }, 750)
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [isPublicMode, publicDraftSerialized, step])
+
+  async function handleGrillPhotoSelected(file: File | null) {
     if (!file) return
+    if (isPublicMode) {
+      const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
+      if (!allowedTypes.has(file.type) || file.size > 5 * 1024 * 1024) {
+        setPublicUploadError(
+          uiLocale === 'en'
+            ? 'Use a JPG, PNG or WebP image up to 5 MB.'
+            : uiLocale === 'es'
+              ? 'Usa una imagen JPG, PNG o WebP de hasta 5 MB.'
+              : 'Use uma imagem JPG, PNG ou WebP de até 5 MB.',
+        )
+        return
+      }
+      setPublicUploading(true)
+      setPublicUploadError(null)
+      try {
+        const body = new FormData()
+        body.set('photo', file)
+        body.set('website', '')
+        const response = await fetch('/api/public/quote-intake/upload', {
+          method: 'POST',
+          body,
+        })
+        const result = (await response.json().catch(() => null)) as
+          | { photo?: { reference?: string; previewUrl?: string }; error?: string }
+          | null
+        if (!response.ok || !result?.photo?.reference) {
+          throw new Error(result?.error || 'upload_failed')
+        }
+        updateState({
+          grillPhotoUrl: result.photo.previewUrl || null,
+          grillPhotoReference: result.photo.reference,
+          grillPhotoStatus: 'received',
+          grillPhotoRequired: true,
+          grillPhotoAnswered: true,
+        })
+      } catch {
+        setPublicUploadError(
+          uiLocale === 'en'
+            ? 'We could not upload the photo. Please try again.'
+            : uiLocale === 'es'
+              ? 'No pudimos subir la foto. Inténtalo de nuevo.'
+              : 'Não foi possível enviar a foto. Tente novamente.',
+        )
+      } finally {
+        setPublicUploading(false)
+      }
+      return
+    }
     const url = URL.createObjectURL(file)
     updateState({
       grillPhotoUrl: url,
@@ -1603,7 +1805,27 @@ export default function QuoteWizard({
   }
 
   function updateState(patch: Partial<WizardState>) {
+    setNavigationIssues([])
     setState((prev) => ({ ...prev, ...patch }))
+  }
+
+  function updateContactIdentity(
+    field: 'customerFirstName' | 'customerLastName',
+    value: string,
+  ) {
+    setNavigationIssues([])
+    setState((prev) => {
+      const next = { ...prev, [field]: value }
+      const fullName = [next.customerFirstName, next.customerLastName]
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .join(' ')
+      return {
+        ...next,
+        customerDraftName: fullName,
+        eventName: isEditMode ? prev.eventName : fullName,
+      }
+    })
   }
 
   function selectCustomer(customerId: string) {
@@ -1695,7 +1917,9 @@ export default function QuoteWizard({
   }
 
   useEffect(() => {
-    if (isEditMode) return
+    // Customer matching is deliberately server-side on submit. The browser
+    // never receives search results or confirmation that a phone already exists.
+    if (isEditMode || entryMode === 'authenticated' || isPublicMode) return
     if (!isUsablePhone(state.customerDraftPhone)) return
     if (
       state.customerId &&
@@ -1713,6 +1937,8 @@ export default function QuoteWizard({
     return () => window.clearTimeout(timer)
   }, [
     isEditMode,
+    entryMode,
+    isPublicMode,
     state.customerDraftPhone,
     state.customerDraftName,
     state.customerDraftEmail,
@@ -1797,6 +2023,14 @@ export default function QuoteWizard({
     const categoryKeys = additionalCategoryKeysRef.current
     const visitedCategories = visitedAdditionalCategoriesRef.current
 
+    if (step === 0 || step === 1 || step === 4) {
+      const issues = getStepIssues(step, stepStatusCtx)
+      if (issues.length > 0) {
+        setNavigationIssues(issues)
+        return
+      }
+    }
+
     if (step === 2 && !state.packageId) {
       setPackageStepMessage(w.selectPackageToContinue)
       return
@@ -1815,10 +2049,6 @@ export default function QuoteWizard({
         }
       }
     }
-    if (step === 4 && !state.grillSetupAnswered) {
-      updateState({ grillSetupAnswered: true })
-    }
-
     const nextStep = resolveNextWizardStep({
       step,
       packageId: state.packageId,
@@ -1952,6 +2182,7 @@ export default function QuoteWizard({
     state.hasGrill,
     state.grillPhotoStatus,
     state.grillPhotoUrl,
+    state.grillPhotoReference,
     state.grillRentalRequired,
     state.grillRentalQty,
     uiLocale,
@@ -2014,6 +2245,77 @@ export default function QuoteWizard({
       return
     }
 
+    if (isPublicMode) {
+      if (!state.publicConsentAccepted || !publicContext?.consentVersion) {
+        setSaveErrorInfo(
+          buildSaveQuoteError(
+            'validation',
+            new Error('Consentimento obrigatório.'),
+          ),
+        )
+        return
+      }
+      if (!pricingBreakdown) {
+        setSaveErrorInfo(
+          buildSaveQuoteError(
+            'validation',
+            new Error('A estimativa ainda está sendo calculada.'),
+          ),
+        )
+        return
+      }
+
+      setSaving(true)
+      setSaveErrorInfo(null)
+      try {
+        publicIdempotencyKeyRef.current ??= crypto.randomUUID()
+        const response = await fetch('/api/public/quote-intake/submit', {
+          method: 'POST',
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            idempotencyKey: publicIdempotencyKeyRef.current,
+            submission: buildPublicIntakeDraft({
+              ...state,
+              eventName:
+                state.eventName.trim() ||
+                [state.customerFirstName, state.customerLastName]
+                  .map((value) => value.trim())
+                  .filter(Boolean)
+                  .join(' '),
+            }),
+            consent: {
+              accepted: true,
+              version: publicContext.consentVersion,
+            },
+            website: '',
+          }),
+        })
+        const result = (await response.json().catch(() => null)) as
+          | PublicQuoteSubmissionResult
+          | { error?: string }
+          | null
+        if (
+          !response.ok ||
+          !result ||
+          !('quote' in result) ||
+          !result.quote?.id
+        ) {
+          throw new Error(
+            result && 'error' in result && result.error
+              ? result.error
+              : 'public_submit_failed',
+          )
+        }
+        onPublicSuccess?.(result)
+      } catch (error) {
+        setSaveErrorInfo(buildSaveQuoteError('quote', error))
+      } finally {
+        setSaving(false)
+      }
+      return
+    }
+
     setSaving(true)
     setSaveErrorInfo(null)
 
@@ -2024,6 +2326,7 @@ export default function QuoteWizard({
 
     const payload: QuoteSaveInput = {
       language: state.language,
+      source: 'assisted_self_service',
       customerId: customerIdToSave,
       customerDraft:
         !isEditMode && !customerIdToSave && isUsablePhone(state.customerDraftPhone)
@@ -2126,23 +2429,75 @@ export default function QuoteWizard({
   }
 
   return (
-    <main className="quotes-pscs min-h-screen bg-cdl-bg px-4 py-4 pb-28 text-cdl-fg sm:px-8 sm:py-6 sm:pb-28">
+    <main
+      className={`quotes-pscs min-h-screen bg-cdl-bg px-4 pb-28 text-cdl-fg sm:px-8 sm:pb-28 ${
+        isPublicMode ? 'py-6 sm:py-10' : 'py-4 sm:py-6'
+      }`}
+    >
       <div className="mx-auto max-w-6xl">
-        <div className="mb-3 flex flex-col gap-2">
-          <AdminCompactMenu language={uiLocale} />
-          <Link
-            href={isEditMode && quoteId ? `/quotes/${quoteId}` : '/quotes'}
-            className="inline-flex items-center text-sm text-cdl-muted transition-colors hover:text-cdl-brand"
-          >
-            {isEditMode ? quoteStrings.backToQuote : quoteStrings.backToQuotes}
-          </Link>
-        </div>
-
-        <QuoteStepHeader
-          step={step}
-          language={uiLocale}
-          isEditMode={isEditMode}
-        />
+        {isPublicMode ? (
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--brand-primary)]">
+                {uiLocale === 'en'
+                  ? `Step ${step + 1} of ${WIZARD_STEP_COUNT}`
+                  : uiLocale === 'es'
+                    ? `Paso ${step + 1} de ${WIZARD_STEP_COUNT}`
+                    : `Etapa ${step + 1} de ${WIZARD_STEP_COUNT}`}
+              </p>
+              <h1 className="mt-1 text-2xl font-black tracking-tight text-cdl-title sm:text-3xl">
+                {wizardSteps[step]}
+              </h1>
+            </div>
+            <p
+              className={`text-xs ${
+                publicAutosaveStatus === 'error'
+                  ? 'text-amber-700'
+                  : 'text-cdl-muted'
+              }`}
+              aria-live="polite"
+            >
+              {publicAutosaveStatus === 'saving'
+                ? uiLocale === 'en'
+                  ? 'Saving…'
+                  : uiLocale === 'es'
+                    ? 'Guardando…'
+                    : 'Salvando…'
+                : publicAutosaveStatus === 'saved'
+                  ? uiLocale === 'en'
+                    ? 'Saved'
+                    : uiLocale === 'es'
+                      ? 'Guardado'
+                      : 'Salvo'
+                  : publicAutosaveStatus === 'error'
+                    ? uiLocale === 'en'
+                      ? 'Will retry'
+                      : uiLocale === 'es'
+                        ? 'Reintentaremos'
+                        : 'Tentaremos novamente'
+                    : ''}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="mb-3 flex flex-col gap-2">
+              <AdminCompactMenu language={uiLocale} />
+              <Link
+                href={isEditMode && quoteId ? `/quotes/${quoteId}` : '/quotes'}
+                className="inline-flex items-center text-sm text-cdl-muted transition-colors hover:text-cdl-brand"
+              >
+                {isEditMode
+                  ? quoteStrings.backToQuote
+                  : quoteStrings.backToQuotes}
+              </Link>
+            </div>
+            <QuoteStepHeader
+              step={step}
+              language={uiLocale}
+              isEditMode={isEditMode}
+            />
+          </>
+        )}
 
         <QuoteStepper
           steps={wizardSteps}
@@ -2150,16 +2505,52 @@ export default function QuoteWizard({
           additionalsCount={additionalsCount}
           language={uiLocale}
           getStepStatus={(index) => getStepVisualStatus(index, stepStatusCtx)}
-          onStepClick={setStep}
+          onStepClick={(nextStep) => {
+            if (
+              nextStep <= step ||
+              getStepVisualStatus(nextStep, stepStatusCtx) === 'complete'
+            ) {
+              setNavigationIssues([])
+              setStep(nextStep)
+            }
+          }}
         />
 
         {fetchErrors.length > 0 && (
           <div className="mb-6 rounded-3xl border border-red-500/40 bg-cdl-surface p-4 text-sm text-red-400">
-            {fetchErrors.map((msg) => (
-              <p key={msg}>{msg}</p>
-            ))}
+            {isPublicMode ? (
+              <p>
+                {uiLocale === 'en'
+                  ? 'Some options could not be loaded. Refresh and try again.'
+                  : uiLocale === 'es'
+                    ? 'No se pudieron cargar algunas opciones. Actualiza e inténtalo de nuevo.'
+                    : 'Algumas opções não puderam ser carregadas. Atualize e tente novamente.'}
+              </p>
+            ) : (
+              fetchErrors.map((msg) => <p key={msg}>{msg}</p>)
+            )}
           </div>
         )}
+
+        {navigationIssues.length > 0 ? (
+          <div
+            role="alert"
+            className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+          >
+            <p className="font-bold">
+              {uiLocale === 'en'
+                ? 'Complete the highlighted information:'
+                : uiLocale === 'es'
+                  ? 'Completa la información destacada:'
+                  : 'Complete as informações destacadas:'}
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {navigationIssues.map((issue) => (
+                <li key={issue}>{issue}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         {step === 0 && isEditMode ? (
           <SectionCard>
@@ -2208,7 +2599,8 @@ export default function QuoteWizard({
 
         {step === 0 && !isEditMode && (
           <SectionCard>
-            <div className="sm:col-span-2">
+            {!isPublicMode ? (
+              <div className="sm:col-span-2">
               <label className="flex flex-col gap-2">
                 <span className="cdl-eyebrow">{quoteStrings.documentLanguage}</span>
                 <select
@@ -2228,45 +2620,72 @@ export default function QuoteWizard({
                   {quoteStrings.documentLanguageHint}
                 </p>
               </label>
-            </div>
-            {!selectedCustomer ? (
-              <div className="sm:col-span-2 rounded-xl border border-cdl-warning-border bg-cdl-warning-soft px-4 py-3">
-                <p className="text-sm leading-relaxed text-cdl-text-secondary">
-                  {quoteStrings.customerNotLinked}
-                </p>
               </div>
             ) : null}
 
             <div className="grid grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-2">
               <InputField
+                label={
+                  uiLocale === 'en'
+                    ? 'First name'
+                    : uiLocale === 'es'
+                      ? 'Nombre'
+                      : 'Primeiro nome'
+                }
+                value={state.customerFirstName}
+                onChange={(value) =>
+                  updateContactIdentity('customerFirstName', value)
+                }
+                autoComplete="given-name"
+                completion={getFieldCompletion(state.customerFirstName)}
+              />
+              <InputField
+                label={
+                  uiLocale === 'en'
+                    ? 'Last name'
+                    : uiLocale === 'es'
+                      ? 'Apellido'
+                      : 'Sobrenome'
+                }
+                value={state.customerLastName}
+                onChange={(value) =>
+                  updateContactIdentity('customerLastName', value)
+                }
+                autoComplete="family-name"
+                completion={getFieldCompletion(state.customerLastName)}
+              />
+              <InputField
                 label={w.customerPhone}
+                type="tel"
                 value={state.customerDraftPhone}
-                onChange={(v) =>
+                onChange={(value) =>
                   updateState({
-                    customerDraftPhone: v,
+                    customerDraftPhone: value,
+                    customerId: null,
                     customerPhoneLinkError: null,
                   })
                 }
                 placeholder={tCommon(uiLocale, 'phonePlaceholder')}
+                autoComplete="tel"
                 completion={
-                  selectedCustomer || isUsablePhone(state.customerDraftPhone)
-                    ? 'filled'
-                    : 'empty'
+                  isUsablePhone(state.customerDraftPhone) ? 'filled' : 'empty'
                 }
               />
               <InputField
-                label={w.customerName}
-                value={state.customerDraftName}
-                onChange={(v) => updateState({ customerDraftName: v })}
-                placeholder={w.contactNamePlaceholder}
-                completion={getFieldCompletion(state.customerDraftName)}
-              />
-              <InputField
-                label={w.customerEmail}
+                label={`${w.customerEmail} (${
+                  uiLocale === 'en'
+                    ? 'optional'
+                    : uiLocale === 'es'
+                      ? 'opcional'
+                      : 'opcional'
+                })`}
                 value={state.customerDraftEmail}
-                onChange={(v) => updateState({ customerDraftEmail: v })}
+                type="email"
+                onChange={(value) =>
+                  updateState({ customerDraftEmail: value })
+                }
                 placeholder="email@exemplo.com"
-                className="sm:col-span-2"
+                autoComplete="email"
                 completion={getFieldCompletion(state.customerDraftEmail)}
               />
             </div>
@@ -2277,135 +2696,36 @@ export default function QuoteWizard({
                 {tCommon(uiLocale, 'invalidPhone')}
               </p>
             ) : null}
-            {state.customerPhoneLinking ? (
-              <p className="sm:col-span-2 text-sm text-cdl-muted">
-                {w.linkingCustomer}
-              </p>
-            ) : null}
-            {state.customerPhoneLinkError ? (
-              <p className="sm:col-span-2 text-sm text-cdl-action">
-                {state.customerPhoneLinkError}
-              </p>
-            ) : null}
-            {customerLinkSuccess ? (
-              <p className="sm:col-span-2 text-sm font-semibold text-cdl-success">
-                {customerLinkSuccess}
-              </p>
-            ) : null}
-            {selectedCustomer ? (
-              <div className="sm:col-span-2 rounded-xl border border-cdl-success-border bg-cdl-success-soft px-4 py-3">
-                <p className="text-xs font-bold uppercase tracking-wider text-cdl-success">
-                  {w.customerLinked}
-                </p>
-                <p className="mt-1 font-bold text-cdl-fg">
-                  {getCustomerName(selectedCustomer)}
-                </p>
-                {selectedCustomer.ab_number ? (
-                  <p className="mt-1 text-xs text-cdl-muted">
-                    {selectedCustomer.ab_number}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-
-            <div className="sm:col-span-2" ref={customerSearchRef}>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                <div className="relative min-w-0 flex-1">
-                  <InputField
-                    label={w.searchExistingCustomer}
-                    value={customerSearch}
-                    onChange={(value) => {
-                      setCustomerSearch(value)
-                      setCustomerLinkSuccess(null)
-                      setCustomerSearchOpen(true)
-                    }}
-                    onFocus={() => {
-                      setCustomerSearchOpen(true)
-                      void refreshCustomersFromApi(customerSearch)
-                    }}
-                    placeholder={w.searchCustomerPlaceholder}
-                  />
-                  {customerSearchOpen && customerSearch.trim().length >= 1 ? (
-                    <div
-                      className="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 max-h-72 overflow-y-auto rounded-xl border border-cdl-border bg-cdl-surface shadow-lg"
-                      role="listbox"
-                      aria-label={w.customersFound}
-                    >
-                      {customersRefreshing ? (
-                        <p className="px-4 py-3 text-sm text-cdl-muted">
-                          {w.searching}
-                        </p>
-                      ) : customerSuggestions.length === 0 ? (
-                        <p className="px-4 py-3 text-sm text-cdl-muted">
-                          {w.noCustomersFound}
-                        </p>
-                      ) : (
-                        customerSuggestions.map((customer) => {
-                          const selected = state.customerId === customer.id
-                          return (
-                            <button
-                              key={customer.id}
-                              type="button"
-                              role="option"
-                              aria-selected={selected}
-                              onClick={() => {
-                                selectCustomer(customer.id)
-                                setCustomerSearch(getCustomerName(customer))
-                                setCustomerSearchOpen(false)
-                              }}
-                              className={`flex w-full flex-col gap-0.5 border-b border-cdl-border-subtle px-4 py-3 text-left last:border-b-0 ${
-                                selected
-                                  ? 'bg-cdl-success-soft'
-                                  : 'hover:bg-cdl-inset'
-                              }`}
-                            >
-                              <span className="text-sm font-bold text-cdl-fg">
-                                {getCustomerName(customer)}
-                                {selected ? (
-                                  <span className="ml-2 text-cdl-success">✓</span>
-                                ) : null}
-                              </span>
-                              <span className="text-xs text-cdl-muted">
-                                {[customer.phone, customer.email, customer.ab_number]
-                                  .filter(Boolean)
-                                  .join(' · ')}
-                              </span>
-                            </button>
-                          )
-                        })
-                      )}
-                    </div>
-                  ) : null}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCustomerSearchOpen(true)
-                    void refreshCustomersFromApi(customerSearch)
-                  }}
-                  disabled={customersRefreshing}
-                  className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-xl border border-cdl-border bg-cdl-surface px-4 py-3 text-xs font-bold uppercase tracking-wider text-cdl-fg disabled:opacity-50"
-                >
-                  {customersRefreshing ? w.refreshing : w.refresh}
-                </button>
-              </div>
-              <p className="mt-2 text-xs text-cdl-muted">
-                {w.searchHint}
-              </p>
-            </div>
+            <p className="sm:col-span-2 rounded-xl border border-cdl-border-subtle bg-cdl-inset px-4 py-3 text-sm leading-relaxed text-cdl-muted">
+              {uiLocale === 'en'
+                ? 'We use these details only to prepare and follow up on your event request.'
+                : uiLocale === 'es'
+                  ? 'Usamos estos datos solo para preparar y dar seguimiento a tu solicitud.'
+                  : 'Usamos estes dados somente para preparar e acompanhar a sua solicitação.'}
+            </p>
           </SectionCard>
         )}
 
         {step === 1 && (
           <SectionCard>
             <div className="grid grid-cols-1 gap-4 sm:col-span-2">
-              <InputField
-                label={w.eventName}
-                value={state.eventName}
-                onChange={(v) => updateState({ eventName: v })}
-                placeholder={w.eventNamePlaceholder}
-                completion={getFieldCompletion(state.eventName)}
-              />
+              {isEditMode ? (
+                <InputField
+                  label={w.eventName}
+                  value={state.eventName}
+                  onChange={(value) => updateState({ eventName: value })}
+                  placeholder={w.eventNamePlaceholder}
+                  completion={getFieldCompletion(state.eventName)}
+                />
+              ) : (
+                <p className="rounded-xl border border-cdl-border-subtle bg-cdl-inset px-4 py-3 text-sm text-cdl-muted">
+                  {uiLocale === 'en'
+                    ? `Request for ${state.customerDraftName || 'your event'}`
+                    : uiLocale === 'es'
+                      ? `Solicitud para ${state.customerDraftName || 'tu evento'}`
+                      : `Solicitação para ${state.customerDraftName || 'seu evento'}`}
+                </p>
+              )}
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
                 <DatePickerField
                   label={w.eventDate}
@@ -2470,6 +2790,12 @@ export default function QuoteWizard({
                   city: state.city,
                   state: state.state,
                   zipCode: state.zipCode,
+                  addressFormatted: state.addressFormatted,
+                  addressPlaceId: state.addressPlaceId,
+                  addressCountry: state.addressCountry,
+                  addressLatitude: state.addressLatitude,
+                  addressLongitude: state.addressLongitude,
+                  addressSource: state.addressSource,
                 }}
                 fieldCompletions={{
                   city: getFieldCompletion(state.city),
@@ -2480,6 +2806,7 @@ export default function QuoteWizard({
                 }}
                 onChange={(patch) => updateState(patch)}
                 language={uiLocale}
+                allowedCountries={publicContext?.allowedCountries}
               />
             </div>
           </SectionCard>
@@ -2521,7 +2848,7 @@ export default function QuoteWizard({
               stepMessage={packageStepMessage}
             />
 
-            {process.env.NODE_ENV !== 'production' ? (
+            {!isPublicMode && process.env.NODE_ENV !== 'production' ? (
               <PackageOptionsDebugPanel
                 companyId={debugCompanyId}
                 selectedPackage={selectedPackage}
@@ -2606,53 +2933,109 @@ export default function QuoteWizard({
             ) : null}
             <SectionCard>
             <div className="grid grid-cols-1 gap-5 sm:col-span-2 sm:grid-cols-2">
-              <CheckboxField
-                label={w.hasGrill}
-                checked={state.hasGrill}
-                onChange={(v) =>
-                  updateState(
-                    v
-                      ? {
-                          hasGrill: true,
-                          grillSetupAnswered: true,
-                          grillPhotoStatus: 'pending',
-                          grillPhotoRequired: true,
-                          grillPhotoAnswered: false,
+              <fieldset className="sm:col-span-2">
+                <legend className="cdl-eyebrow">{w.hasGrill}</legend>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  {[
+                    {
+                      value: true,
+                      label:
+                        uiLocale === 'en'
+                          ? 'Yes, there is a grill'
+                          : uiLocale === 'es'
+                            ? 'Sí, hay parrilla'
+                            : 'Sim, há churrasqueira',
+                    },
+                    {
+                      value: false,
+                      label:
+                        uiLocale === 'en'
+                          ? 'No grill on site'
+                          : uiLocale === 'es'
+                            ? 'No hay parrilla'
+                            : 'Não há churrasqueira',
+                    },
+                  ].map((option) => {
+                    const selected =
+                      state.grillSetupAnswered &&
+                      state.hasGrill === option.value
+                    return (
+                      <button
+                        key={String(option.value)}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() =>
+                          updateState(
+                            option.value
+                              ? {
+                                  hasGrill: true,
+                                  grillSetupAnswered: true,
+                                  grillPhotoStatus: 'pending',
+                                  grillPhotoRequired: true,
+                                  grillPhotoAnswered: false,
+                                  grillRentalRequired: false,
+                                  grillRentalQty: 0,
+                                }
+                              : {
+                                  hasGrill: false,
+                                  grillSetupAnswered: true,
+                                  grillPhotoStatus: 'not_applicable',
+                                  grillPhotoRequired: false,
+                                  grillPhotoAnswered: true,
+                                  grillPhotoUrl: null,
+                                  grillPhotoReference: null,
+                                },
+                          )
                         }
-                      : {
-                          hasGrill: false,
-                          grillSetupAnswered: true,
-                          grillPhotoStatus: 'not_applicable',
-                          grillPhotoRequired: false,
-                          grillPhotoAnswered: true,
-                        },
-                  )
-                }
-              />
-              <GrillPhotoStatusField
-                value={state.grillPhotoStatus}
-                disabled={!state.hasGrill}
-                onChange={setGrillPhotoStatus}
-                language={uiLocale}
-              />
-              <div className="sm:col-span-2">
+                        className={`min-h-16 rounded-2xl border px-4 py-3 text-sm font-bold transition ${
+                          selected
+                            ? 'border-[var(--brand-primary-2)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,white)] text-[var(--brand-primary)] ring-2 ring-[color-mix(in_srgb,var(--brand-primary-2)_24%,transparent)]'
+                            : 'border-cdl-border bg-cdl-surface text-cdl-title hover:border-cdl-accent-border'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </fieldset>
+
+              {isEditMode ? (
+                <div className="sm:col-span-2">
+                  <GrillPhotoStatusField
+                    value={state.grillPhotoStatus}
+                    disabled={!state.hasGrill}
+                    onChange={setGrillPhotoStatus}
+                    language={uiLocale}
+                  />
+                </div>
+              ) : null}
+
+              {state.grillSetupAnswered && state.hasGrill ? (
+                <div className="sm:col-span-2 rounded-2xl border border-cdl-border bg-cdl-inset p-5">
                 <input
                   ref={grillPhotoInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   capture="environment"
                   className="hidden"
-                  onChange={(e) =>
-                    handleGrillPhotoSelected(e.target.files?.[0] ?? null)
-                  }
+                  onChange={(e) => {
+                    void handleGrillPhotoSelected(e.target.files?.[0] ?? null)
+                  }}
                 />
                 <button
                   type="button"
-                  disabled={!state.hasGrill}
+                  disabled={publicUploading}
                   onClick={() => grillPhotoInputRef.current?.click()}
                   className="inline-flex items-center justify-center rounded-xl border border-cdl-border bg-cdl-inset px-4 py-3 text-xs font-bold uppercase tracking-wider text-cdl-fg disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {w.attachGrillPhoto}
+                  {publicUploading
+                    ? uiLocale === 'en'
+                      ? 'Uploading…'
+                      : uiLocale === 'es'
+                        ? 'Subiendo…'
+                        : 'Enviando…'
+                    : w.attachGrillPhoto}
                 </button>
                 {state.grillPhotoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -2665,32 +3048,46 @@ export default function QuoteWizard({
                 <p className="mt-3 rounded-xl border border-cdl-border-subtle bg-cdl-inset px-4 py-3 text-sm leading-relaxed text-cdl-text-secondary">
                   {w.grillPhotoHint}
                 </p>
+                {publicUploadError ? (
+                  <p className="mt-3 text-sm text-cdl-action" role="alert">
+                    {publicUploadError}
+                  </p>
+                ) : null}
               </div>
-              <CheckboxField
-                label={w.grillRentalRequired}
-                checked={state.grillRentalRequired}
-                onChange={(v) =>
-                  updateState({
-                    grillRentalRequired: v,
-                    grillSetupAnswered: true,
-                    grillRentalQty: v ? Math.max(1, state.grillRentalQty) : 0,
-                  })
-                }
-              />
-              <QuantityField
-                label={w.grillRentalQty}
-                value={state.grillRentalQty}
-                min={state.grillRentalRequired ? 1 : 0}
-                disabled={!state.grillRentalRequired}
-                placeholder={state.grillRentalRequired ? '1' : '0'}
-                onChange={(v) =>
-                  updateState({
-                    grillRentalQty: state.grillRentalRequired
-                      ? Math.max(1, v)
-                      : 0,
-                  })
-                }
-              />
+              ) : null}
+
+              {state.grillSetupAnswered && !state.hasGrill ? (
+                <>
+                  <div className="sm:col-span-1">
+                    <CheckboxField
+                      label={w.grillRentalRequired}
+                      checked={state.grillRentalRequired}
+                      onChange={(value) =>
+                        updateState({
+                          grillRentalRequired: value,
+                          grillRentalQty: value
+                            ? Math.max(1, state.grillRentalQty)
+                            : 0,
+                        })
+                      }
+                    />
+                  </div>
+                  <QuantityField
+                    label={w.grillRentalQty}
+                    value={state.grillRentalQty}
+                    min={state.grillRentalRequired ? 1 : 0}
+                    disabled={!state.grillRentalRequired}
+                    placeholder={state.grillRentalRequired ? '1' : '0'}
+                    onChange={(value) =>
+                      updateState({
+                        grillRentalQty: state.grillRentalRequired
+                          ? Math.max(1, value)
+                          : 0,
+                      })
+                    }
+                  />
+                </>
+              ) : null}
               <div className="sm:col-span-2">
                 <label className="flex flex-col gap-2">
                   <span className="cdl-eyebrow">
@@ -2711,47 +3108,87 @@ export default function QuoteWizard({
         )}
 
         {step === 5 && (
-          <QuoteWizardConfirmationStep
-            state={state}
-            breakdown={pricingBreakdown}
-            pricingLoading={pricingPreview.loading}
-            pricingError={pricingPreview.error}
-            customerName={
-              isEditMode
-                ? editCustomerDisplayName
-                : selectedCustomer
-                  ? getCustomerName(selectedCustomer)
-                  : state.customerDraftName.trim() ||
-                    w.customerNotLinkedShort
-            }
-            packageName={
-              selectedPackage ? getPackageName(selectedPackage, uiLocale) : null
-            }
-            packageImageUrl={packageImageUrl}
-            selectedPackage={selectedPackage}
-            allPackages={packages}
-            packageOptionGroups={flatOptionGroups}
-            packageOptionGroupItems={flatOptionGroupItems}
-            packageItems={packageItems}
-            packageSideItems={packageSideItems}
-            fromWithSidesSection={fromWithSidesSection}
-            additionals={reviewAdditionals}
-            stepStatusCtx={stepStatusCtx}
-            mandatoryPendingSteps={mandatoryPendingSteps}
-            quoteReady={quoteReady}
-            saving={saving}
-            saveErrorInfo={saveErrorInfo}
-            isEditMode={isEditMode}
-            quoteId={quoteId}
-            uiLanguage={uiLocale}
-            onGoToStep={setStep}
-            onBack={goBack}
-            onSave={() => void handleSaveQuote(false)}
-            onDistanceChange={(distance) => {
-              distanceManualRef.current = true
-              updateState({ distance })
-            }}
-          />
+          isPublicMode ? (
+            <PublicQuoteConfirmationStep
+              state={state}
+              breakdown={pricingBreakdown}
+              packageName={
+                selectedPackage
+                  ? getPackageName(selectedPackage, uiLocale)
+                  : null
+              }
+              currency={
+                selectedPackage?.currency_code ||
+                publicContext?.currencyCode ||
+                'USD'
+              }
+              language={uiLocale}
+              consentLabel={publicContext?.consentLabel || ''}
+              privacyUrl={publicContext?.privacyUrl}
+              mileageReviewRequired={
+                pricingPreview.data?.mileage?.status === 'pending_review'
+              }
+              saving={saving}
+              error={Boolean(saveErrorInfo || pricingPreview.error)}
+              onConsentChange={(accepted) =>
+                updateState({
+                  publicConsentAccepted: accepted,
+                  publicConsentVersion:
+                    publicContext?.consentVersion ?? null,
+                })
+              }
+              onGoToStep={(nextStep) => {
+                setNavigationIssues([])
+                setStep(nextStep)
+              }}
+              onBack={goBack}
+              onSubmit={() => void handleSaveQuote(false)}
+            />
+          ) : (
+            <QuoteWizardConfirmationStep
+              state={state}
+              breakdown={pricingBreakdown}
+              pricingLoading={pricingPreview.loading}
+              pricingError={pricingPreview.error}
+              customerName={
+                isEditMode
+                  ? editCustomerDisplayName
+                  : selectedCustomer
+                    ? getCustomerName(selectedCustomer)
+                    : state.customerDraftName.trim() ||
+                      w.customerNotLinkedShort
+              }
+              packageName={
+                selectedPackage
+                  ? getPackageName(selectedPackage, uiLocale)
+                  : null
+              }
+              packageImageUrl={packageImageUrl}
+              selectedPackage={selectedPackage}
+              allPackages={packages}
+              packageOptionGroups={flatOptionGroups}
+              packageOptionGroupItems={flatOptionGroupItems}
+              packageItems={packageItems}
+              packageSideItems={packageSideItems}
+              fromWithSidesSection={fromWithSidesSection}
+              additionals={reviewAdditionals}
+              stepStatusCtx={stepStatusCtx}
+              mandatoryPendingSteps={mandatoryPendingSteps}
+              quoteReady={quoteReady}
+              saving={saving}
+              saveErrorInfo={saveErrorInfo}
+              isEditMode={isEditMode}
+              quoteId={quoteId}
+              uiLanguage={uiLocale}
+              onGoToStep={setStep}
+              onBack={goBack}
+              onSave={() => void handleSaveQuote(false)}
+              onDistanceChange={(distance) => {
+                distanceManualRef.current = true
+                updateState({ distance })
+              }}
+            />
+          )
         )}
 
         {step !== 5 ? (

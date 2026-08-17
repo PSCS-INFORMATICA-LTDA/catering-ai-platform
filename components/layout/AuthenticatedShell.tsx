@@ -4,26 +4,20 @@ import type { ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { ThemeToggle } from '@/components/ThemeToggle'
-
-function isPublicPath(pathname: string): boolean {
-  if (pathname === '/') return true
-  if (pathname.startsWith('/login')) return true
-  if (pathname.startsWith('/auth')) return true
-  if (pathname.startsWith('/customer-quote')) return true
-  if (pathname.startsWith('/quote-request')) return true
-  if (pathname.startsWith('/proposta/')) return true
-  if (pathname.startsWith('/designacao-equipe/')) return true
-  if (pathname.startsWith('/confirmacao-equipe/')) return true
-  if (pathname.startsWith('/confirmacao-guarnicao/')) return true
-  if (pathname.startsWith('/conferencia-saida/')) return true
-  return false
-}
+import {
+  isPublicQuotePathname,
+  isPublicRoutePathname,
+} from '@/Lib/publicRoutes'
 
 /** Shell lateral nas telas autenticadas; páginas públicas ficam limpas. */
 export function AuthenticatedShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? '/'
 
-  if (isPublicPath(pathname)) {
+  if (isPublicQuotePathname(pathname)) {
+    return <div className="relative min-h-full">{children}</div>
+  }
+
+  if (isPublicRoutePathname(pathname)) {
     return (
       <>
         <div className="no-print pointer-events-none fixed top-4 right-4 z-50 sm:top-6 sm:right-6">

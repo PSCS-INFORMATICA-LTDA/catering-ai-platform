@@ -1,4 +1,3 @@
-import { fetchActiveCustomers } from '../../../Lib/fetchCustomers'
 import { fetchCatalogItems } from '../../../Lib/fetchCatalogItems'
 import { fetchPackages } from '../../../Lib/fetchPackages'
 import { loadPackageConfiguration } from '../../../Lib/packageConfiguration'
@@ -9,7 +8,6 @@ import {
 import { fetchSupabaseCommercialRules } from '../../../Lib/supabaseCommercialRules'
 import QuoteWizard, {
   type CatalogItem,
-  type Customer,
   type Package,
 } from './QuoteWizard'
 import { getAuthSession } from '@/Lib/auth/session'
@@ -73,9 +71,8 @@ export default async function NewQuotePage({
   const session = await getAuthSession()
   const locale = resolveAuthLocale(session?.appUser?.preferred_language)
 
-  const [customersRes, packagesRes, catalogRes, commercialRules] =
+  const [packagesRes, catalogRes, commercialRules] =
     await Promise.all([
-      fetchActiveCustomers(),
       fetchPackages({ activeOnly: true }),
       fetchCatalogItems({
         activeOnly: true,
@@ -90,11 +87,6 @@ export default async function NewQuotePage({
     packageIds: packages.map((pkg) => pkg.id),
   })
 
-  if (customersRes.error) {
-    fetchErrors.push(
-      `${tw(locale, 'fetchErrorCustomers')}: ${customersRes.error.message}`,
-    )
-  }
   if (packagesRes.error) {
     fetchErrors.push(
       `${tw(locale, 'fetchErrorPackages')}: ${packagesRes.error.message}`,
@@ -132,7 +124,6 @@ export default async function NewQuotePage({
     optionGroupItems: [],
   }
 
-  const customers = (customersRes.data ?? []) as Customer[]
   const catalogItems = (catalogRes.data ?? []) as unknown as CatalogItem[]
   const { state: initialState, step: initialStep } = buildPrefillState(
     commercialRules,
@@ -141,7 +132,7 @@ export default async function NewQuotePage({
 
   return (
     <QuoteWizard
-      customers={customers}
+      customers={[]}
       packages={packages}
       catalogItems={catalogItems}
       packageOptionGroups={packageConfiguration.optionGroups}

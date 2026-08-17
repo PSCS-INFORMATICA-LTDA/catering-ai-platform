@@ -8,6 +8,8 @@ export type WizardState = {
   language: QuoteLanguage
   customerId: string | null
   customerDraftPhone: string
+  customerFirstName: string
+  customerLastName: string
   customerDraftName: string
   customerDraftEmail: string
   customerPhoneLinking: boolean
@@ -24,12 +26,19 @@ export type WizardState = {
   city: string
   state: string
   zipCode: string
+  addressFormatted: string
+  addressPlaceId: string | null
+  addressCountry: string
+  addressLatitude: number | null
+  addressLongitude: number | null
+  addressSource: 'google' | 'manual' | null
   hasGrill: boolean
   grillSetupAnswered: boolean
   grillPhotoRequired: boolean
   grillPhotoStatus: GrillPhotoStatus
   grillPhotoAnswered: boolean
   grillPhotoUrl: string | null
+  grillPhotoReference: string | null
   grillRentalRequired: boolean
   grillRentalQty: number
   grillNotes: string
@@ -46,6 +55,8 @@ export type WizardState = {
   reservationPercentage: number
   reservationAmount: number
   reservationNotes: string
+  publicConsentAccepted: boolean
+  publicConsentVersion: string | null
 }
 
 export function createInitialWizardState(
@@ -55,6 +66,8 @@ export function createInitialWizardState(
     language: 'pt',
     customerId: null,
     customerDraftPhone: '',
+    customerFirstName: '',
+    customerLastName: '',
     customerDraftName: '',
     customerDraftEmail: '',
     customerPhoneLinking: false,
@@ -71,12 +84,19 @@ export function createInitialWizardState(
     city: '',
     state: '',
     zipCode: '',
+    addressFormatted: '',
+    addressPlaceId: null,
+    addressCountry: '',
+    addressLatitude: null,
+    addressLongitude: null,
+    addressSource: null,
     hasGrill: false,
     grillSetupAnswered: false,
     grillPhotoRequired: false,
     grillPhotoStatus: 'not_applicable',
     grillPhotoAnswered: false,
     grillPhotoUrl: null,
+    grillPhotoReference: null,
     grillRentalRequired: false,
     grillRentalQty: 0,
     grillNotes: '',
@@ -91,6 +111,8 @@ export function createInitialWizardState(
     reservationPercentage: rules.reservationPercentage,
     reservationAmount: 0,
     reservationNotes: '',
+    publicConsentAccepted: false,
+    publicConsentVersion: null,
   }
 }
 

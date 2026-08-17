@@ -8,7 +8,10 @@ import {
   parsePackageHighlightsText,
   sortPackagesByCommercialTier,
 } from '@/Lib/packageDisplay'
-import { getPackageHasGarnish } from '@/Lib/packageFieldAccess'
+import {
+  getPackageDescription,
+  getPackageHasGarnish,
+} from '@/Lib/packageFieldAccess'
 import type { PackageCatalogFields } from '@/Lib/packageCatalogVisual'
 import {
   getPackageSideItemLabel,
@@ -20,6 +23,7 @@ import type { PackageOptionGroup } from '@/Lib/packageOptionGroups'
 import type { CatalogItemListItem } from '@/Lib/itemCatalog'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import { tw } from '@/Lib/quoteTranslations'
+import { getPackageCatalogPrice } from '@/Lib/packageCatalogVisual'
 
 type PackageRow = PackageCatalogFields & {
   id: string
@@ -28,6 +32,30 @@ type PackageRow = PackageCatalogFields & {
   package_highlights_es?: string | null
 }
 type GarnishGroup = 'with' | 'without'
+
+const THEME_CLASS: Record<string, string> = {
+  gold: 'from-amber-50 to-yellow-100 text-amber-950 border-amber-300',
+  bronze: 'from-orange-50 to-amber-100 text-orange-950 border-orange-300',
+  navy: 'from-slate-800 to-blue-950 text-white border-blue-700',
+  emerald: 'from-emerald-50 to-teal-100 text-emerald-950 border-emerald-300',
+  burgundy: 'from-rose-900 to-red-950 text-white border-rose-800',
+  slate: 'from-slate-50 to-slate-200 text-slate-950 border-slate-300',
+}
+
+function packageTheme(pkg: PackageRow): string {
+  const key = pkg.card_theme_key?.trim().toLowerCase() || 'slate'
+  return THEME_CLASS[key] ?? THEME_CLASS.slate
+}
+
+function formatPackagePrice(pkg: PackageRow, language: QuoteLanguage): string {
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-US' : 'pt-BR'
+  const currency = pkg.currency_code?.trim() || 'USD'
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 2,
+  }).format(getPackageCatalogPrice(pkg))
+}
 
 function PackageSelectionCard({
   pkg,
@@ -50,7 +78,8 @@ function PackageSelectionCard({
     ? getPackageSideItemsForPackage(pkg.id, packageSideItems).map((item) =>
         getPackageSideItemLabel(item, language),
       )
-    : []
+      : []
+  const description = getPackageDescription(pkg, language)
 
   const activeClass =
     'border-[var(--brand-primary-2)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,white)] shadow-sm ring-2 ring-[color-mix(in_srgb,var(--brand-primary-2)_28%,transparent)]'
@@ -60,13 +89,27 @@ function PackageSelectionCard({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`grid w-full grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-3 rounded-2xl border p-3 text-left transition sm:gap-4 sm:p-4 ${
+      className={`group grid w-full grid-cols-1 overflow-hidden rounded-2xl border text-left transition sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] ${
         active
           ? activeClass
           : 'border-cdl-border bg-cdl-surface hover:border-neutral-300 hover:bg-cdl-hover'
       }`}
     >
-      <span className="flex min-w-0 flex-col items-start justify-center">
+      <span className={`relative flex min-w-0 flex-col items-start justify-center border-b bg-gradient-to-br p-4 sm:border-r sm:border-b-0 sm:p-5 ${packageTheme(pkg)}`}>
+        {active ? (
+          <span
+            className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-sm font-black text-emerald-700 shadow-sm"
+            aria-label={
+              language === 'en'
+                ? 'Selected'
+                : language === 'es'
+                  ? 'Seleccionado'
+                  : 'Selecionado'
+            }
+          >
+            ✓
+          </span>
+        ) : null}
         <span
           className={`inline-flex max-w-full rounded-full px-2 py-0.5 text-[9px] font-bold uppercase leading-4 tracking-wide sm:text-[10px] ${
             withSides
@@ -76,12 +119,20 @@ function PackageSelectionCard({
         >
           {tw(language, withSides ? 'withSides' : 'withoutSides')}
         </span>
-        <span className="mt-2 break-words text-base font-extrabold leading-tight tracking-tight text-cdl-title sm:text-lg">
+        <span className="mt-3 break-words text-lg font-black leading-tight tracking-tight sm:text-xl">
           {getPackageCascadeFriendlyLabel(pkg, language)}
+        </span>
+        {description ? (
+          <span className="mt-2 line-clamp-3 text-xs leading-5 opacity-80">
+            {description}
+          </span>
+        ) : null}
+        <span className="mt-4 rounded-full bg-white/80 px-3 py-1 text-xs font-black text-slate-950 shadow-sm">
+          {formatPackagePrice(pkg, language)}
         </span>
       </span>
 
-      <span className="min-w-0 border-l border-cdl-border pl-3 sm:pl-4">
+      <span className="min-w-0 p-4 sm:p-5">
         {highlights.length > 0 ? (
           <span className="block">
             <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-cdl-muted sm:text-xs">

@@ -39,6 +39,7 @@ export type QuotePackageSelectionSaveLine = {
 
 export type QuoteSaveInput = {
   language?: 'pt' | 'en' | 'es' | null
+  source?: 'assisted_self_service' | 'wizard' | 'manual'
   customerId: string | null
   /** Rascunho do wizard — cliente criado somente no save final. */
   customerDraft?: QuoteCustomerDraft | null
@@ -295,7 +296,7 @@ export function buildQuoteSavePayload(
           active: true,
           company_id: getCdlCompanyId(),
           ...(input.branchId?.trim() ? { branch_id: input.branchId.trim() } : {}),
-          source: 'wizard',
+          source: input.source ?? 'assisted_self_service',
           quote_status: 'draft',
           quote_date: quoteDate,
           expiration_date: addDaysIso(now, 30),

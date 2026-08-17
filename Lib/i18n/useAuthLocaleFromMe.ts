@@ -11,10 +11,14 @@ import { useAuthLocale } from '@/Lib/i18n/useAuthLocale'
  * primeiro paint e atualiza assim que a sessão responde, para evitar
  * mismatch de hidratação.
  */
-export function useAuthLocaleFromMe(initial?: string | null): AuthLocale {
+export function useAuthLocaleFromMe(
+  initial?: string | null,
+  options: { disabled?: boolean } = {},
+): AuthLocale {
   const { locale, setLocale } = useAuthLocale(initial)
 
   useEffect(() => {
+    if (options.disabled) return
     let cancelled = false
     try {
       const stored = window.localStorage.getItem('catering.auth.locale')
@@ -35,7 +39,7 @@ export function useAuthLocaleFromMe(initial?: string | null): AuthLocale {
     return () => {
       cancelled = true
     }
-  }, [setLocale])
+  }, [options.disabled, setLocale])
 
   useEffect(() => {
     if (typeof document === 'undefined') return

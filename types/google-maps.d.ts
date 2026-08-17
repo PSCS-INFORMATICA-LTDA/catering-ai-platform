@@ -41,6 +41,7 @@ declare namespace google.maps {
     }
 
     interface PlaceResult {
+      place_id?: string
       address_components?: GeocoderAddressComponent[]
       formatted_address?: string
       geometry?: { location?: LatLng }
@@ -141,6 +142,7 @@ declare namespace google.maps {
   }
 
   interface GeocoderResult {
+    place_id?: string
     address_components: GeocoderAddressComponent[]
     formatted_address: string
     geometry?: {

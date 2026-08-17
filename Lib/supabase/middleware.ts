@@ -1,26 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { safeInternalNext } from '@/Lib/auth/safeNext'
-
-const PUBLIC_PREFIXES = [
-  '/login',
-  '/auth/',
-  '/customer-quote',
-  '/quote-request',
-  '/proposta/',
-  '/designacao-equipe/',
-  '/confirmacao-guarnicao/',
-  '/confirmacao-equipe/',
-  '/conferencia-saida/',
-  '/api/public/',
-]
-
-function isPublicPath(pathname: string): boolean {
-  if (pathname === '/') return true
-  return PUBLIC_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(p.endsWith('/') ? p : `${p}/`) || pathname.startsWith(p),
-  )
-}
+import { isPublicRoutePathname } from '@/Lib/publicRoutes'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -60,7 +41,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const isApi = pathname.startsWith('/api/')
-  const isPublic = isPublicPath(pathname)
+  const isPublic = isPublicRoutePathname(pathname)
 
   if (!user && !isPublic) {
     if (isApi) {
