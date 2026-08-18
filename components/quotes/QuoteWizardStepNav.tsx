@@ -13,6 +13,7 @@ export default function QuoteWizardStepNav({
   packageStepNextDisabled,
   additionalsStepNextDisabled,
   grillStepPendingIssuesCount,
+  keepPackageNextVisible = false,
   onBack,
   onNext,
   onPackageNextBlockedClick,
@@ -26,6 +27,7 @@ export default function QuoteWizardStepNav({
   packageStepNextDisabled: boolean
   additionalsStepNextDisabled: boolean
   grillStepPendingIssuesCount: number
+  keepPackageNextVisible?: boolean
   onBack: () => void
   onNext: () => void
   onPackageNextBlockedClick: () => void
@@ -36,7 +38,8 @@ export default function QuoteWizardStepNav({
 
   if (step >= wizardStepCount - 1) return null
 
-  const hideGlobalNext = step === 2 && Boolean(packageId)
+  const hideGlobalNext =
+    step === 2 && Boolean(packageId) && !keepPackageNextVisible
   const nextDisabled =
     step === wizardStepCount - 1 ||
     (step === 2 && packageStepNextDisabled) ||

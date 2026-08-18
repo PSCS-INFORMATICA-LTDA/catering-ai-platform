@@ -56,12 +56,19 @@ function hasExplicitNonUsCountryCode(raw) {
 
 function formatPublicPhoneInput(raw) {
   const trimmed = raw.trim()
-  if (!trimmed || trimmed === '+' || trimmed === '+1') return '+1 '
-  if (hasExplicitNonUsCountryCode(trimmed)) {
-    const digits = toE164Digits(trimmed.replace(/^00/, '+')).slice(0, 15)
+  if (!trimmed) return '+1 '
+  if (trimmed === '+') return '+'
+  const compact = trimmed.replace(/\s+/g, '')
+  if (/^\+(?!1)\d/.test(compact) || compact.includes('+55')) {
+    const start = compact.includes('+') ? compact.slice(compact.indexOf('+')) : compact
+    const digits = toE164Digits(start).slice(0, 15)
     return digits ? `+${digits}` : '+'
   }
-  const digits = toE164Digits(trimmed)
+  let digits = toE164Digits(trimmed)
+  if (digits.startsWith('155') && digits.length >= 13) {
+    digits = digits.slice(1)
+    return `+${digits}`
+  }
   const national = (digits.startsWith('1') ? digits.slice(1) : digits).slice(0, 10)
   const area = national.slice(0, 3)
   const prefix = national.slice(3, 6)
@@ -99,11 +106,17 @@ test('phone defaults to US +1', () => {
 })
 
 test('phone keeps explicit international +55', () => {
+  assert.equal(formatPublicPhoneInput('+'), '+')
   const formatted = formatPublicPhoneInput('+55 11 97618-2170')
   assert.match(formatted, /\+55/)
   assert.doesNotMatch(formatted, /^\+1/)
+  assert.match(formatPublicPhoneInput('+15511976182170'), /\+55/)
   assert.equal(toPublicPhoneE164('+55 11 97618-2170'), '+5511976182170')
   assert.equal(isUsablePublicPhone('+55 11 97618-2170'), true)
+  const phoneSource = source('Lib/publicQuote/phone.ts')
+  assert.match(phoneSource, /if \(trimmed === '\+'\) return '\+'/)
+  const nav = source('components/quotes/QuoteWizardStepNav.tsx')
+  assert.match(nav, /keepPackageNextVisible/)
 })
 
 test('phone rejects invalid numbers', () => {

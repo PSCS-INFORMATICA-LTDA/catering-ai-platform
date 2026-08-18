@@ -3308,6 +3308,7 @@ export default function QuoteWizardCore({
             packageStepNextDisabled={packageStepNextDisabled}
             additionalsStepNextDisabled={additionalsStepNextDisabled}
             grillStepPendingIssuesCount={grillStepPendingIssues.length}
+            keepPackageNextVisible={isPublicMode}
             onBack={goBack}
             onNext={goNext}
             onPackageNextBlockedClick={() => {

@@ -56,15 +56,28 @@ function formatInternationalDisplay(raw: string): string {
  */
 export function formatPublicPhoneInput(raw: string): string {
   const trimmed = raw.trim()
-  if (!trimmed || trimmed === '+' || trimmed === PUBLIC_PHONE_US_PREFIX) {
-    return getPublicPhoneDefault()
+  if (!trimmed) return getPublicPhoneDefault()
+  if (trimmed === '+') return '+'
+
+  const compact = trimmed.replace(/\s+/g, '')
+  const explicitOther = compact.match(/^\+(\d{1,3})/)
+  if (explicitOther && explicitOther[1] !== '1') {
+    return formatInternationalDisplay(trimmed)
+  }
+  if (compact.includes('+55') || compact.includes('+34') || compact.includes('+44')) {
+    const international = compact.slice(compact.indexOf('+'))
+    return formatInternationalDisplay(international)
+  }
+
+  const digits = toE164Digits(trimmed)
+  if (digits.startsWith('155') && digits.length >= 13) {
+    return formatInternationalDisplay(`+${digits.slice(1)}`)
   }
 
   if (hasExplicitNonUsCountryCode(trimmed)) {
     return formatInternationalDisplay(trimmed)
   }
 
-  const digits = toE164Digits(trimmed)
   const national = digits.startsWith('1') ? digits.slice(1) : digits
   return formatNanpDisplay(national)
 }
@@ -72,17 +85,16 @@ export function formatPublicPhoneInput(raw: string): string {
 export function toPublicPhoneE164(raw: string): string | null {
   const trimmed = raw.trim()
   if (!trimmed) return null
-
-  if (hasExplicitNonUsCountryCode(trimmed)) {
-    const digits = toE164Digits(trimmed)
+  const formatted = formatPublicPhoneInput(trimmed)
+  const digits = toE164Digits(formatted)
+  if (!digits) return null
+  if (formatted.startsWith('+') && !formatted.startsWith('+1')) {
     if (digits.length < 8 || digits.length > 15) return null
     if (BRAZIL_E164.test(digits) || isUsablePhone(`+${digits}`)) {
       return `+${digits}`
     }
     return digits.length >= 11 ? `+${digits}` : null
   }
-
-  const digits = toE164Digits(trimmed)
   const nanp = digits.startsWith('1') ? digits : `1${digits}`
   if (NANP_E164.test(nanp)) return `+${nanp}`
   return null
