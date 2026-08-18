@@ -9,6 +9,8 @@ import CatalogImageFrame from '../../../components/CatalogImageFrame'
 import QuoteStepHeader from '../../../components/quotes/QuoteStepHeader'
 import QuoteStepper from '../../../components/quotes/QuoteStepper'
 import QuotePackageStepExplorer from '../../../components/quotes/QuotePackageStepExplorer'
+import PublicPackageCatalog from '../../../components/quotes/PublicPackageCatalog'
+import PublicPhoneField from '../../../components/quotes/PublicPhoneField'
 import QuoteWizardStepNav from '../../../components/quotes/QuoteWizardStepNav'
 import AdditionalCategorySection from '../../../components/quotes/additionals/AdditionalCategorySection'
 import { useAutoEventDistance } from '@/Lib/hooks/useAutoEventDistance'
@@ -73,6 +75,20 @@ import { getCatalogItemImageUrl } from '../../../Lib/catalogItemVisual'
 import { filterCatalogItems } from '../../../Lib/itemCatalog'
 import { isUsablePostalCode } from '../../../Lib/cep'
 import { isUsablePhone, normalizePhone } from '../../../Lib/normalizePhone'
+import {
+  deriveEventEndTime,
+  resolveServiceDurationMinutes,
+} from '@/Lib/publicQuote/eventDuration'
+import {
+  findPackageByIdOrKey,
+  resolvePackageIdForPersistence,
+} from '@/Lib/publicQuote/packageLookup'
+import {
+  getPublicPhoneDefault,
+  isUsablePublicPhone,
+  toPublicPhoneE164,
+} from '@/Lib/publicQuote/phone'
+import type { PublicLocationBias } from '@/Lib/publicQuote/locationBias'
 import {
   dedupeCustomersList,
   filterCustomersBySearch,
@@ -173,6 +189,8 @@ export type PublicQuoteWizardContext = {
   privacyUrl?: string | null
   supportWhatsappUrl?: string | null
   currencyCode?: string
+  serviceDurationMinutes?: number
+  locationBias?: PublicLocationBias | null
 }
 
 export type PublicQuoteSubmissionResult = {
@@ -209,19 +227,30 @@ export type AdditionalItem = {
   image_url?: string | null
   image_status?: string | null
   item_type?: string | null
+  operational_item?: boolean | null
+  can_be_additional?: boolean | null
+  can_be_package_item?: boolean | null
+  can_be_side_item?: boolean | null
+  can_be_option_choice?: boolean | null
   active?: boolean | null
+  customer_visible?: boolean | null
 }
 
 /** Item do catálogo mestre (`catalog_items`). */
 export type CatalogItem = AdditionalItem
 
-function buildPublicIntakeDraft(state: WizardState) {
+function buildPublicIntakeDraft(
+  state: WizardState,
+  persistedPackageId?: string | null,
+) {
   return {
     locale: state.language,
     contact: {
       firstName: state.customerFirstName.trim(),
       lastName: state.customerLastName.trim(),
-      phone: state.customerDraftPhone.trim(),
+      phone:
+        toPublicPhoneE164(state.customerDraftPhone) ||
+        state.customerDraftPhone.trim(),
       email: state.customerDraftEmail.trim() || null,
     },
     event: {
@@ -252,7 +281,7 @@ function buildPublicIntakeDraft(state: WizardState) {
       },
     },
     selection: {
-      packageId: state.packageId,
+      packageId: persistedPackageId || state.packageId,
       packageSelections: state.packageSelections,
       additionals: Object.entries(state.additionals)
         .filter(([, quantity]) => quantity > 0)
@@ -349,21 +378,6 @@ function parseTimeParts(value: string) {
 
 function toTimeValue(hours: number, minutes: number) {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
-}
-
-function addHoursToTime(time: string, hoursToAdd: number) {
-  const parsed = parseTimeParts(time)
-  if (!parsed) return ''
-
-  const totalMinutes =
-    parsed.hours * 60 + parsed.minutes + hoursToAdd * 60
-  const normalized =
-    ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60)
-
-  return toTimeValue(
-    Math.floor(normalized / 60),
-    normalized % 60,
-  )
 }
 
 function CalendarIcon() {
@@ -573,6 +587,7 @@ function TimePickerField({
   className = '',
   completion,
   language = 'pt',
+  readOnly = false,
 }: {
   label: string
   value: string
@@ -580,6 +595,7 @@ function TimePickerField({
   className?: string
   completion?: FieldCompletion
   language?: QuoteLanguage | string | null
+  readOnly?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -625,10 +641,19 @@ function TimePickerField({
       <div className="relative">
         <button
           type="button"
-          onClick={() => setOpen((current) => !current)}
-          className={`flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3.5 pr-10 text-left text-base outline-none transition-colors hover:border-cdl-accent-border focus:border-cdl-accent-border ${fieldCompletionClass(completion)}`}
-          aria-expanded={open}
-          aria-haspopup="dialog"
+          onClick={() => {
+            if (readOnly) return
+            setOpen((current) => !current)
+          }}
+          disabled={readOnly}
+          className={`flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3.5 pr-10 text-left text-base outline-none transition-colors ${
+            readOnly
+              ? 'cursor-not-allowed bg-cdl-inset text-cdl-muted'
+              : 'hover:border-cdl-accent-border focus:border-cdl-accent-border'
+          } ${fieldCompletionClass(completion)}`}
+          aria-expanded={readOnly ? undefined : open}
+          aria-haspopup={readOnly ? undefined : 'dialog'}
+          aria-readonly={readOnly || undefined}
         >
           <span className={selected ? 'text-cdl-fg' : 'text-cdl-faint'}>
             {selected ? formatTime(value) : tw(language, 'selectTime')}
@@ -638,7 +663,7 @@ function TimePickerField({
         <FieldCheck show={completion === 'filled'} />
       </div>
 
-      {open && (
+      {open && !readOnly && (
         <div
           role="dialog"
           aria-label={tw(language, 'timePickerOf', { label })}
@@ -1033,6 +1058,8 @@ export default function QuoteWizardCore({
       branchId: publicContext?.branchId ?? base.branchId,
       publicConsentVersion:
         publicContext?.consentVersion ?? base.publicConsentVersion,
+      customerDraftPhone:
+        base.customerDraftPhone.trim() || getPublicPhoneDefault(),
     }
   })
   const [customerSearch, setCustomerSearch] = useState('')
@@ -1301,7 +1328,18 @@ export default function QuoteWizardCore({
     : state.customerId
       ? w.linkedCustomerNotFound
       : CUSTOMER_DISPLAY_NAME_EMPTY
-  const selectedPackage = packages.find((p) => p.id === state.packageId) ?? null
+  const selectedPackageRef = useRef<Package | null>(null)
+  const selectedPackage =
+    findPackageByIdOrKey(packages, state.packageId) ??
+    selectedPackageRef.current
+  useEffect(() => {
+    const found = findPackageByIdOrKey(packages, state.packageId)
+    if (found) selectedPackageRef.current = found
+  }, [packages, state.packageId])
+
+  const serviceDurationMinutes = resolveServiceDurationMinutes(
+    publicContext?.serviceDurationMinutes,
+  )
 
   const packageImageUrl = useMemo(
     () =>
@@ -1502,6 +1540,26 @@ export default function QuoteWizardCore({
     endpoint: isPublicMode
       ? '/api/public/quote-intake/preview'
       : '/api/quotes/preview',
+    event: isPublicMode
+      ? {
+          eventDate: state.eventDate,
+          startTime: state.startTime,
+          endTime: state.endTime,
+          address: {
+            route: state.address,
+            number: state.addressNumber,
+            city: state.city,
+            region: state.state,
+            postalCode: state.zipCode,
+            country: state.addressCountry,
+            formattedAddress: state.addressFormatted,
+            placeId: state.addressPlaceId,
+            latitude: state.addressLatitude,
+            longitude: state.addressLongitude,
+            source: state.addressSource,
+          },
+        }
+      : undefined,
   })
 
   const pricingBreakdown: PricingBreakdown | null =
@@ -1710,8 +1768,14 @@ export default function QuoteWizardCore({
   )
 
   const publicDraftSerialized = useMemo(
-    () => JSON.stringify(buildPublicIntakeDraft(state)),
-    [state],
+    () =>
+      JSON.stringify(
+        buildPublicIntakeDraft(
+          state,
+          resolvePackageIdForPersistence(packages, state.packageId),
+        ),
+      ),
+    [state, packages],
   )
 
   useEffect(() => {
@@ -2016,7 +2080,9 @@ export default function QuoteWizardCore({
       flatOptionGroups,
       flatOptionGroupItems,
     )
-    updateState({ packageId, packageSelections: prunedSelections })
+    const found = findPackageByIdOrKey(packages, packageId)
+    if (found) selectedPackageRef.current = found
+    updateState({ packageId: found?.id ?? packageId, packageSelections: prunedSelections })
   }
 
   function goNext() {
@@ -2233,7 +2299,7 @@ export default function QuoteWizardCore({
 
     const packageForSave =
       selectedPackage ??
-      packages.find((pkg) => pkg.id === state.packageId) ??
+      findPackageByIdOrKey(packages, state.packageId) ??
       null
 
     if (!packageForSave) {
@@ -2501,6 +2567,7 @@ export default function QuoteWizardCore({
 
         <QuoteStepper
           steps={wizardSteps}
+          shortSteps={quoteStrings.wizardStepsShort}
           currentStep={step}
           additionalsCount={additionalsCount}
           language={uiLocale}
@@ -2625,13 +2692,7 @@ export default function QuoteWizardCore({
 
             <div className="grid grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-2">
               <InputField
-                label={
-                  uiLocale === 'en'
-                    ? 'First name'
-                    : uiLocale === 'es'
-                      ? 'Nombre'
-                      : 'Primeiro nome'
-                }
+                label={w.firstName}
                 value={state.customerFirstName}
                 onChange={(value) =>
                   updateContactIdentity('customerFirstName', value)
@@ -2640,13 +2701,7 @@ export default function QuoteWizardCore({
                 completion={getFieldCompletion(state.customerFirstName)}
               />
               <InputField
-                label={
-                  uiLocale === 'en'
-                    ? 'Last name'
-                    : uiLocale === 'es'
-                      ? 'Apellido'
-                      : 'Sobrenome'
-                }
+                label={w.lastName}
                 value={state.customerLastName}
                 onChange={(value) =>
                   updateContactIdentity('customerLastName', value)
@@ -2654,23 +2709,37 @@ export default function QuoteWizardCore({
                 autoComplete="family-name"
                 completion={getFieldCompletion(state.customerLastName)}
               />
-              <InputField
-                label={w.customerPhone}
-                type="tel"
-                value={state.customerDraftPhone}
-                onChange={(value) =>
-                  updateState({
-                    customerDraftPhone: value,
-                    customerId: null,
-                    customerPhoneLinkError: null,
-                  })
-                }
-                placeholder={tCommon(uiLocale, 'phonePlaceholder')}
-                autoComplete="tel"
-                completion={
-                  isUsablePhone(state.customerDraftPhone) ? 'filled' : 'empty'
-                }
-              />
+              {isPublicMode ? (
+                <PublicPhoneField
+                  value={state.customerDraftPhone}
+                  language={uiLocale}
+                  onChange={(value) =>
+                    updateState({
+                      customerDraftPhone: value,
+                      customerId: null,
+                      customerPhoneLinkError: null,
+                    })
+                  }
+                />
+              ) : (
+                <InputField
+                  label={w.customerPhone}
+                  type="tel"
+                  value={state.customerDraftPhone}
+                  onChange={(value) =>
+                    updateState({
+                      customerDraftPhone: value,
+                      customerId: null,
+                      customerPhoneLinkError: null,
+                    })
+                  }
+                  placeholder={tCommon(uiLocale, 'phonePlaceholder')}
+                  autoComplete="tel"
+                  completion={
+                    isUsablePhone(state.customerDraftPhone) ? 'filled' : 'empty'
+                  }
+                />
+              )}
               <InputField
                 label={`${w.customerEmail} (${
                   uiLocale === 'en'
@@ -2690,18 +2759,17 @@ export default function QuoteWizardCore({
               />
             </div>
 
-            {normalizePhone(state.customerDraftPhone).length >= 10 &&
-            !isUsablePhone(state.customerDraftPhone) ? (
+            {(isPublicMode
+              ? state.customerDraftPhone.replace(/\D/g, '').length >= 4 &&
+                !isUsablePublicPhone(state.customerDraftPhone)
+              : normalizePhone(state.customerDraftPhone).length >= 10 &&
+                !isUsablePhone(state.customerDraftPhone)) ? (
               <p className="sm:col-span-2 text-sm text-cdl-action">
                 {tCommon(uiLocale, 'invalidPhone')}
               </p>
             ) : null}
             <p className="sm:col-span-2 rounded-xl border border-cdl-border-subtle bg-cdl-inset px-4 py-3 text-sm leading-relaxed text-cdl-muted">
-              {uiLocale === 'en'
-                ? 'We use these details only to prepare and follow up on your event request.'
-                : uiLocale === 'es'
-                  ? 'Usamos estos datos solo para preparar y dar seguimiento a tu solicitud.'
-                  : 'Usamos estes dados somente para preparar e acompanhar a sua solicitação.'}
+              {w.contactPrivacyHint}
             </p>
           </SectionCard>
         )}
@@ -2742,9 +2810,10 @@ export default function QuoteWizardCore({
                     setState((prev) => ({
                       ...prev,
                       startTime: v,
-                      endTime: endTimeCustomized
-                        ? prev.endTime
-                        : addHoursToTime(v, 4),
+                      endTime:
+                        isPublicMode || !endTimeCustomized
+                          ? deriveEventEndTime(v, serviceDurationMinutes)
+                          : prev.endTime,
                     }))
                   }
                   completion={getFieldCompletion(state.startTime)}
@@ -2754,14 +2823,16 @@ export default function QuoteWizardCore({
                     label={w.endTime}
                     language={uiLocale}
                     value={state.endTime}
+                    readOnly={isPublicMode}
                     onChange={(v) => {
+                      if (isPublicMode) return
                       setEndTimeCustomized(true)
                       updateState({ endTime: v })
                     }}
                     completion={getFieldCompletion(state.endTime)}
                   />
                   <p className="mt-2 text-xs text-cdl-subtle">
-                    {w.endTimeHint}
+                    {isPublicMode ? w.endTimeHintPublic : w.endTimeHint}
                   </p>
                 </div>
               </div>
@@ -2807,6 +2878,9 @@ export default function QuoteWizardCore({
                 onChange={(patch) => updateState(patch)}
                 language={uiLocale}
                 allowedCountries={publicContext?.allowedCountries}
+                locationBias={
+                  isPublicMode ? publicContext?.locationBias ?? null : null
+                }
               />
             </div>
           </SectionCard>
@@ -2821,32 +2895,47 @@ export default function QuoteWizardCore({
                   : w.noPackages}
               </div>
             ) : null}
-            <QuotePackageStepExplorer
-              packagesWithoutSides={packagesWithoutSides}
-              packagesWithSides={packagesWithSides}
-              allPackages={packages}
-              selectedPackageId={state.packageId}
-              language={state.language}
-              sidesPricePerPerson={commercialRules.sidesPricePerPerson}
-              optionGroupsForPackage={optionGroupsForPackage}
-              packageItems={packageItems}
-              packageSideItems={packageSideItems}
-              catalogItems={itemCatalog}
-              selections={state.packageSelections}
-              onSelectionChange={handlePackageSelectionChange}
-              pendingSelectionGroupIds={pendingSelectionGroupIds}
-              onSelect={handlePackageSelect}
-              onNext={goNext}
-              nextDisabled={packageStepNextDisabled}
-              onNextBlockedClick={() => {
-                if (!state.packageId) {
-                  setPackageStepMessage(w.selectPackageToContinue)
-                  return
-                }
-                setPackageSelectionAttempted(true)
-              }}
-              stepMessage={packageStepMessage}
-            />
+            {isPublicMode ? (
+              <PublicPackageCatalog
+                packagesWithoutSides={packagesWithoutSides}
+                packagesWithSides={packagesWithSides}
+                allPackages={packages}
+                selectedPackageId={state.packageId}
+                language={state.language}
+                optionGroupsForPackage={optionGroupsForPackage}
+                selections={state.packageSelections}
+                onSelectionChange={handlePackageSelectionChange}
+                pendingSelectionGroupIds={pendingSelectionGroupIds}
+                onSelect={handlePackageSelect}
+              />
+            ) : (
+              <QuotePackageStepExplorer
+                packagesWithoutSides={packagesWithoutSides}
+                packagesWithSides={packagesWithSides}
+                allPackages={packages}
+                selectedPackageId={state.packageId}
+                language={state.language}
+                sidesPricePerPerson={commercialRules.sidesPricePerPerson}
+                optionGroupsForPackage={optionGroupsForPackage}
+                packageItems={packageItems}
+                packageSideItems={packageSideItems}
+                catalogItems={itemCatalog}
+                selections={state.packageSelections}
+                onSelectionChange={handlePackageSelectionChange}
+                pendingSelectionGroupIds={pendingSelectionGroupIds}
+                onSelect={handlePackageSelect}
+                onNext={goNext}
+                nextDisabled={packageStepNextDisabled}
+                onNextBlockedClick={() => {
+                  if (!state.packageId) {
+                    setPackageStepMessage(w.selectPackageToContinue)
+                    return
+                  }
+                  setPackageSelectionAttempted(true)
+                }}
+                stepMessage={packageStepMessage}
+              />
+            )}
 
             {!isPublicMode && process.env.NODE_ENV !== 'production' ? (
               <PackageOptionsDebugPanel
@@ -3112,11 +3201,29 @@ export default function QuoteWizardCore({
             <PublicQuoteConfirmationStep
               state={state}
               breakdown={pricingBreakdown}
+              pricingLoading={pricingPreview.loading}
+              pricingError={pricingPreview.error}
+              onRetryPricing={pricingPreview.refresh}
+              customerName={
+                [state.customerFirstName, state.customerLastName]
+                  .filter(Boolean)
+                  .join(' ')
+                  .trim() || w.customerNotLinkedShort
+              }
               packageName={
                 selectedPackage
                   ? getPackageName(selectedPackage, uiLocale)
                   : null
               }
+              packageImageUrl={packageImageUrl}
+              selectedPackage={selectedPackage}
+              allPackages={packages}
+              packageOptionGroups={flatOptionGroups}
+              packageOptionGroupItems={flatOptionGroupItems}
+              packageItems={packageItems}
+              packageSideItems={packageSideItems}
+              fromWithSidesSection={fromWithSidesSection}
+              additionals={reviewAdditionals}
               currency={
                 selectedPackage?.currency_code ||
                 publicContext?.currencyCode ||
@@ -3129,7 +3236,7 @@ export default function QuoteWizardCore({
                 pricingPreview.data?.mileage?.status === 'pending_review'
               }
               saving={saving}
-              error={Boolean(saveErrorInfo || pricingPreview.error)}
+              submitError={Boolean(saveErrorInfo)}
               onConsentChange={(accepted) =>
                 updateState({
                   publicConsentAccepted: accepted,

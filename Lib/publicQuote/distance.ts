@@ -6,6 +6,11 @@ import type { PublicQuoteDraft } from './types'
 export type PublicQuoteMileageResult = {
   distance: number
   status: 'resolved' | 'pending_review'
+  reason?:
+    | 'missing_origin'
+    | 'missing_destination'
+    | 'missing_maps_key'
+    | 'lookup_failed'
 }
 
 function mapsApiKey() {
@@ -118,11 +123,21 @@ export async function resolvePublicQuoteMileageDistance(
 ): Promise<PublicQuoteMileageResult> {
   const origin = originValue.trim()
   const destination = destinationAddress(draft)
-  if (!origin || !destination) {
+  if (!origin) {
     if (options.required) {
       throw new PublicQuoteHttpError(422, 'invalid_payload')
     }
-    return { distance: 0, status: 'pending_review' }
+    return { distance: 0, status: 'pending_review', reason: 'missing_origin' }
+  }
+  if (!destination) {
+    if (options.required) {
+      throw new PublicQuoteHttpError(422, 'invalid_payload')
+    }
+    return {
+      distance: 0,
+      status: 'pending_review',
+      reason: 'missing_destination',
+    }
   }
 
   const apiKey = mapsApiKey()
@@ -130,7 +145,7 @@ export async function resolvePublicQuoteMileageDistance(
     if (options.required) {
       throw new PublicQuoteHttpError(503, 'server_error')
     }
-    return { distance: 0, status: 'pending_review' }
+    return { distance: 0, status: 'pending_review', reason: 'missing_maps_key' }
   }
 
   try {
@@ -145,7 +160,7 @@ export async function resolvePublicQuoteMileageDistance(
   if (options.required) {
     throw new PublicQuoteHttpError(503, 'server_error')
   }
-  return { distance: 0, status: 'pending_review' }
+  return { distance: 0, status: 'pending_review', reason: 'lookup_failed' }
 }
 
 export async function computePublicQuoteMileageDistance(

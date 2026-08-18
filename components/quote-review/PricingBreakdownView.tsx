@@ -187,10 +187,12 @@ export function PricingPreviewStatus({
   loading,
   error,
   language,
+  onRetry,
 }: {
   loading: boolean
   error: { message: string; code?: string } | null
   language: QuoteLanguage
+  onRetry?: () => void
 }) {
   if (loading) {
     return (
@@ -200,10 +202,28 @@ export function PricingPreviewStatus({
     )
   }
   if (error) {
+    const message =
+      error.code === 'timeout'
+        ? tw(language, 'pricingTimeout')
+        : error.message || tw(language, 'pricingCalcError')
     return (
-      <p className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-        {error.message || tw(language, 'pricingCalcError')}
-      </p>
+      <div className="space-y-3">
+        <p
+          role="alert"
+          className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-800"
+        >
+          {message}
+        </p>
+        {onRetry ? (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="rounded-xl border border-cdl-border px-4 py-2 text-sm font-bold"
+          >
+            {tw(language, 'pricingRetry')}
+          </button>
+        ) : null}
+      </div>
     )
   }
   return null

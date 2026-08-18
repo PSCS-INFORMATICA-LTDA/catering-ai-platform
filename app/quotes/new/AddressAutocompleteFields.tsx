@@ -179,12 +179,18 @@ export default function AddressAutocompleteFields({
   fieldCompletions,
   language = 'pt',
   allowedCountries = ['US'],
+  locationBias = null,
 }: {
   values: AddressValues
   onChange: (patch: Partial<AddressValues>) => void
   className?: string
   language?: QuoteLanguage | string | null
   allowedCountries?: string[]
+  locationBias?: {
+    lat: number
+    lng: number
+    radiusMeters: number
+  } | null
   fieldCompletions?: {
     city?: FieldCompletion
     state?: FieldCompletion
@@ -238,7 +244,20 @@ export default function AddressAutocompleteFields({
   useEffect(() => {
     const input = inputRef.current
     const maps = window.google?.maps
-    if (!input || !ready || autocompleteRef.current || !maps?.importLibrary) {
+    if (!input || !ready || !maps?.importLibrary) {
+      return
+    }
+    if (autocompleteRef.current) {
+      if (locationBias) {
+        const bounds = new maps.Circle({
+          center: { lat: locationBias.lat, lng: locationBias.lng },
+          radius: locationBias.radiusMeters,
+        }).getBounds()
+        if (bounds) {
+          autocompleteRef.current.setBounds(bounds)
+          autocompleteRef.current.setOptions({ strictBounds: false })
+        }
+      }
       return
     }
     let cancelled = false
@@ -259,6 +278,15 @@ export default function AddressAutocompleteFields({
             'formatted_address',
             'geometry',
           ],
+          ...(locationBias
+            ? {
+                bounds: new maps.Circle({
+                  center: { lat: locationBias.lat, lng: locationBias.lng },
+                  radius: locationBias.radiusMeters,
+                }).getBounds() ?? undefined,
+                strictBounds: false,
+              }
+            : {}),
         })
         autocompleteRef.current = autocomplete
         listenerRef.current = autocomplete.addListener('place_changed', () => {
@@ -307,7 +335,7 @@ export default function AddressAutocompleteFields({
     return () => {
       cancelled = true
     }
-  }, [copy.countryBlocked, copy.selectionRequired, countries, loc, ready])
+  }, [copy.countryBlocked, copy.selectionRequired, countries, loc, locationBias, ready])
 
   useEffect(() => {
     if (!manualMode) return

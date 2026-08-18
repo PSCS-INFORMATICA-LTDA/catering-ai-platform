@@ -33,6 +33,7 @@ function stepBadgeClass(status: StepVisualStatus, isCurrent: boolean) {
 
 export default function QuoteStepper({
   steps,
+  shortSteps,
   currentStep,
   additionalsCount = 0,
   language = 'pt',
@@ -40,6 +41,7 @@ export default function QuoteStepper({
   onStepClick,
 }: {
   steps: readonly string[]
+  shortSteps?: readonly string[]
   currentStep: number
   additionalsCount?: number
   language?: QuoteLanguage
@@ -77,7 +79,7 @@ export default function QuoteStepper({
           return (
             <li
               key={label}
-              className="min-w-[3.5rem] shrink-0 snap-center lg:min-w-0"
+              className="min-w-[3.25rem] shrink-0 snap-center lg:min-w-0"
             >
               <button
                 type="button"
@@ -91,7 +93,10 @@ export default function QuoteStepper({
                 >
                   {status === 'complete' ? '✓' : status === 'error' ? '!' : index + 1}
                 </span>
-                <span className="w-full text-center text-[7px] font-semibold uppercase leading-tight tracking-wide lg:text-[8px] xl:text-[9px]">
+                <span className="w-full text-center text-[8px] font-semibold uppercase leading-tight tracking-wide sm:hidden">
+                  {(shortSteps?.[index] || label).slice(0, 8)}
+                </span>
+                <span className="hidden w-full text-center text-[8px] font-semibold uppercase leading-tight tracking-wide sm:block lg:text-[9px] xl:text-[10px]">
                   {label}
                 </span>
               </button>

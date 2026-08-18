@@ -6,6 +6,8 @@ import { loadPackageConfiguration } from '@/Lib/packageConfiguration'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { fetchSupabaseCommercialRules } from '@/Lib/supabaseCommercialRules'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import { resolveServiceDurationMinutes } from './eventDuration'
+import { resolvePublicLocationBias } from './locationBias'
 import {
   normalizePublicCompanySlug,
   parsePublicQuoteLocale,
@@ -275,6 +277,11 @@ function sanitizeCatalogItem(row: Record<string, unknown>) {
     display_order: Number(row.display_order ?? 0),
     image_url: safePublicUrl(row.image_url),
     item_type: typeof row.item_type === 'string' ? row.item_type : null,
+    operational_item: row.operational_item === true,
+    can_be_package_item: row.can_be_package_item === true,
+    can_be_side_item: row.can_be_side_item === true,
+    can_be_additional: row.can_be_additional === true,
+    can_be_option_choice: row.can_be_option_choice === true,
     active: true,
     customer_visible: true,
   }
@@ -333,6 +340,25 @@ function sanitizeOptionGroup(row: Record<string, unknown>) {
   }
 }
 
+async function loadServiceDurationMinutes(companyId: string): Promise<number> {
+  const supabase = getSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('commercial_rules')
+    .select('rule_key, rule_value, active')
+    .eq('company_id', companyId)
+    .eq('rule_key', 'service_duration_minutes')
+    .maybeSingle()
+  if (error || !data || data.active === false) {
+    return resolveServiceDurationMinutes(null)
+  }
+  const raw = data.rule_value
+  const value =
+    raw && typeof raw === 'object' && 'value' in raw
+      ? Number((raw as { value: unknown }).value)
+      : Number(raw)
+  return resolveServiceDurationMinutes(Number.isFinite(value) ? value : null)
+}
+
 function sanitizeOptionItem(row: Record<string, unknown>) {
   return {
     id: String(row.id),
@@ -378,8 +404,12 @@ export async function getPublicQuoteBootstrap(
   const packages = packagesResult.data ?? []
   if (packages.length === 0) return null
 
-  const [catalogResult, configurationResult, commercialRules] =
-    await Promise.all([
+  const [
+    catalogResult,
+    configurationResult,
+    commercialRules,
+    serviceDurationMinutes,
+  ] = await Promise.all([
       fetchCatalogItems({
         activeOnly: true,
         usage: 'additional',
@@ -393,6 +423,7 @@ export async function getPublicQuoteBootstrap(
         companyId: company.id,
       }),
       fetchSupabaseCommercialRules(company.id),
+      loadServiceDurationMinutes(company.id),
     ])
   if (catalogResult.error || configurationResult.error) return null
 
@@ -458,6 +489,8 @@ export async function getPublicQuoteBootstrap(
         phone: settings.support_phone?.trim() || null,
         whatsappUrl: safePublicUrl(settings.support_whatsapp_url),
       },
+      serviceDurationMinutes,
+      locationBias: resolvePublicLocationBias({ companySlug: company.slug }),
     },
     branches: (branchData ?? []).map((branch) => ({
       id: String(branch.id),

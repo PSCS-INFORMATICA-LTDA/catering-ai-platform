@@ -100,6 +100,7 @@ type QuoteStrings = {
     currentCustomer: string
   stepSubtitles: Record<number, string>
   wizardSteps: string[]
+  wizardStepsShort: string[]
   next: string
   back: string
   select: string
@@ -182,6 +183,17 @@ type QuoteStrings = {
     startTime: string
     endTime: string
     endTimeHint: string
+    endTimeHintPublic: string
+    publicPhoneHint: string
+    publicPhonePlaceholder: string
+    firstName: string
+    lastName: string
+    contactPrivacyHint: string
+    publicPackageOptionsTitle: string
+    publicPackageChooseHint: string
+    pricingRetry: string
+    pricingTimeout: string
+    pricingMissingPackage: string
     adults: string
     childrenUnder3: string
     children4to12: string
@@ -415,6 +427,12 @@ type QuoteStrings = {
     importantRules: string
     cancellationPolicy: string
     extrasCount: string
+    mileagePendingReview: string
+    privacyLink: string
+    publicSubmitRequest: string
+    publicSubmittingRequest: string
+    consentRequired: string
+    publicSubmitError: string
   }
 }
 
@@ -446,6 +464,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       'Adicionais',
       'Churrasco',
       'Confirmação',
+    ],
+    wizardStepsShort: [
+      'Cliente',
+      'Evento',
+      'Pacote',
+      'Extras',
+      'BBQ',
+      'Revisão',
     ],
     next: 'Próximo',
     back: 'Voltar',
@@ -534,6 +560,22 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       endTime: 'Horário fim',
       endTimeHint:
         'Preenchido automaticamente com +4h. Você pode alterar se quiser.',
+      endTimeHintPublic:
+        'Calculado automaticamente a partir do horário de início. Não é possível editar.',
+      publicPhoneHint:
+        'Padrão Estados Unidos (+1). Se o número for de outro país, comece com o DDI, por exemplo +55.',
+      publicPhonePlaceholder: '+1 (407) 555-1234',
+      firstName: 'Primeiro nome',
+      lastName: 'Sobrenome',
+      contactPrivacyHint:
+        'Usamos estes dados somente para preparar e acompanhar a sua solicitação.',
+      publicPackageOptionsTitle: 'Opções deste pacote',
+      publicPackageChooseHint:
+        'Toque no pacote para selecionar. Depois complete apenas as opções obrigatórias.',
+      pricingRetry: 'Tentar novamente',
+      pricingTimeout: 'A estimativa demorou demais. Tente novamente.',
+      pricingMissingPackage:
+        'Selecione um pacote para calcular a estimativa.',
       adults: 'Adultos',
       childrenUnder3: 'Crianças até 3 anos',
       children4to12: 'Crianças 4 a 12 anos',
@@ -785,6 +827,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       importantRules: 'Regras importantes',
       cancellationPolicy: 'Política de cancelamento',
       extrasCount: '{count} adicional{plural}',
+      mileagePendingReview:
+        'Deslocamento pendente de revisão. A equipe confirma o valor final antes da aprovação.',
+      privacyLink: 'Privacidade',
+      publicSubmitRequest: 'Enviar solicitação',
+      publicSubmittingRequest: 'Enviando com segurança…',
+      consentRequired: 'Aceite o consentimento para enviar.',
+      publicSubmitError:
+        'Não foi possível enviar agora. Revise os dados e tente novamente.',
     },
   },
   en: {
@@ -814,6 +864,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       'Extras',
       'BBQ',
       'Confirmation',
+    ],
+    wizardStepsShort: [
+      'Client',
+      'Event',
+      'Pack',
+      'Extras',
+      'BBQ',
+      'Review',
     ],
     next: 'Next',
     back: 'Back',
@@ -899,6 +957,21 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       startTime: 'Start time',
       endTime: 'End time',
       endTimeHint: 'Filled automatically with +4h. You can change it if needed.',
+      endTimeHintPublic:
+        'Calculated automatically from the start time. This field cannot be edited.',
+      publicPhoneHint:
+        'United States default (+1). For another country, start with the country code, for example +55.',
+      publicPhonePlaceholder: '+1 (407) 555-1234',
+      firstName: 'First name',
+      lastName: 'Last name',
+      contactPrivacyHint:
+        'We use these details only to prepare and follow up on your event request.',
+      publicPackageOptionsTitle: 'Options for this package',
+      publicPackageChooseHint:
+        'Tap a package to select it. Then complete only the required options.',
+      pricingRetry: 'Try again',
+      pricingTimeout: 'The estimate took too long. Please try again.',
+      pricingMissingPackage: 'Select a package to calculate the estimate.',
       adults: 'Adults',
       childrenUnder3: 'Children up to 3 years',
       children4to12: 'Children 4 to 12 years',
@@ -1148,6 +1221,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       importantRules: 'Important rules',
       cancellationPolicy: 'Cancellation policy',
       extrasCount: '{count} extra{plural}',
+      mileagePendingReview:
+        'Travel is pending review. The team confirms the final amount before approval.',
+      privacyLink: 'Privacy',
+      publicSubmitRequest: 'Send request',
+      publicSubmittingRequest: 'Sending securely…',
+      consentRequired: 'Accept the consent to submit.',
+      publicSubmitError:
+        'We could not submit right now. Review the details and try again.',
     },
   },
   es: {
@@ -1177,6 +1258,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       'Adicionales',
       'Parrilla',
       'Confirmación',
+    ],
+    wizardStepsShort: [
+      'Cliente',
+      'Evento',
+      'Pack',
+      'Extra',
+      'BBQ',
+      'Revisión',
     ],
     next: 'Siguiente',
     back: 'Volver',
@@ -1265,6 +1354,21 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       endTime: 'Horario de fin',
       endTimeHint:
         'Completado automáticamente con +4h. Puede cambiarlo si desea.',
+      endTimeHintPublic:
+        'Calculado automáticamente a partir del horario de inicio. No se puede editar.',
+      publicPhoneHint:
+        'Predeterminado Estados Unidos (+1). Si el número es de otro país, empiece con el código, por ejemplo +55.',
+      publicPhonePlaceholder: '+1 (407) 555-1234',
+      firstName: 'Nombre',
+      lastName: 'Apellido',
+      contactPrivacyHint:
+        'Usamos estos datos solo para preparar y dar seguimiento a tu solicitud.',
+      publicPackageOptionsTitle: 'Opciones de este paquete',
+      publicPackageChooseHint:
+        'Toque el paquete para seleccionarlo. Luego complete solo las opciones obligatorias.',
+      pricingRetry: 'Intentar de nuevo',
+      pricingTimeout: 'La estimación tardó demasiado. Inténtelo de nuevo.',
+      pricingMissingPackage: 'Seleccione un paquete para calcular la estimación.',
       adults: 'Adultos',
       childrenUnder3: 'Niños hasta 3 años',
       children4to12: 'Niños de 4 a 12 años',
@@ -1516,6 +1620,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       importantRules: 'Reglas importantes',
       cancellationPolicy: 'Política de cancelación',
       extrasCount: '{count} adicional{plural}',
+      mileagePendingReview:
+        'El desplazamiento está pendiente de revisión. El equipo confirma el valor final antes de la aprobación.',
+      privacyLink: 'Privacidad',
+      publicSubmitRequest: 'Enviar solicitud',
+      publicSubmittingRequest: 'Enviando de forma segura…',
+      consentRequired: 'Acepta el consentimiento para enviar.',
+      publicSubmitError:
+        'No pudimos enviar ahora. Revisa los datos e inténtalo de nuevo.',
     },
   },
 }

@@ -21,6 +21,7 @@ import {
   type WizardState,
 } from '@/Lib/quoteWizardTypes'
 import type { CommercialRulesSnapshot } from '@/Lib/supabaseCommercialRules'
+import { getPublicPhoneDefault } from '@/Lib/publicQuote/phone'
 
 export type PublicQuotePageBootstrap = {
   company: {
@@ -38,6 +39,12 @@ export type PublicQuotePageBootstrap = {
     allowedLocales: QuoteLanguage[]
     allowedCountries: string[]
     heroImageUrl: string | null
+    serviceDurationMinutes?: number
+    locationBias?: {
+      lat: number
+      lng: number
+      radiusMeters: number
+    } | null
     landing: {
       eyebrow: string
       title: string
@@ -205,7 +212,7 @@ function hydrateDraft(
     customerFirstName: firstName,
     customerLastName: lastName,
     customerDraftName: [firstName, lastName].filter(Boolean).join(' '),
-    customerDraftPhone: draft.contact?.phone || '',
+    customerDraftPhone: draft.contact?.phone || getPublicPhoneDefault(),
     customerDraftEmail: draft.contact?.email || '',
     eventName:
       draft.event?.eventName || [firstName, lastName].filter(Boolean).join(' '),
@@ -460,6 +467,8 @@ export default function PublicQuoteExperience({
             privacyUrl: bootstrap.settings.consent.privacyUrl,
             supportWhatsappUrl: bootstrap.settings.support.whatsappUrl,
             currencyCode: bootstrap.company.currencyCode,
+            serviceDurationMinutes: bootstrap.settings.serviceDurationMinutes,
+            locationBias: bootstrap.settings.locationBias ?? null,
           }}
           onPublicSuccess={setSuccess}
         />

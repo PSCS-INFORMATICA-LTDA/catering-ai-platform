@@ -1,4 +1,6 @@
-import { isUsablePhone, normalizePhone } from '@/Lib/normalizePhone'
+import { isUsablePhone } from '@/Lib/normalizePhone'
+import { isValidEventTimeWindow } from './eventDuration'
+import { toPublicPhoneE164 } from './phone'
 import { parsePublicQuoteLocale, PublicQuoteHttpError } from './security'
 import type { PublicQuoteDraft } from './types'
 
@@ -170,11 +172,12 @@ export function validateCompletePublicQuoteDraft(
   if (
     !isPersonName(draft.contact.firstName) ||
     !isPersonName(draft.contact.lastName) ||
-    !isUsablePhone(draft.contact.phone)
+    !(toPublicPhoneE164(draft.contact.phone) || isUsablePhone(draft.contact.phone))
   ) {
     throw new PublicQuoteHttpError(400, 'invalid_payload')
   }
-  draft.contact.phone = normalizePhone(draft.contact.phone)
+  draft.contact.phone =
+    toPublicPhoneE164(draft.contact.phone) || draft.contact.phone
   if (
     draft.contact.email &&
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.contact.email)
@@ -192,7 +195,11 @@ export function validateCompletePublicQuoteDraft(
   }
   const start = timeToMinutes(draft.event.startTime)
   const end = timeToMinutes(draft.event.endTime)
-  if (start == null || end == null || end <= start) {
+  if (
+    start == null ||
+    end == null ||
+    !isValidEventTimeWindow(draft.event.startTime, draft.event.endTime)
+  ) {
     throw new PublicQuoteHttpError(400, 'invalid_payload')
   }
   if (draft.event.adultCount < 1) {

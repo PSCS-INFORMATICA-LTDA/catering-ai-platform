@@ -6,6 +6,10 @@ import {
 } from '@/Lib/pricing/computeQuotePricing'
 import { resolvePublicQuoteMileageDistance } from '@/Lib/publicQuote/distance'
 import {
+  hasConfirmedGoogleAddress,
+  mergePublicQuotePreviewDraft,
+} from '@/Lib/publicQuote/previewDraft'
+import {
   assertRequestOrigin,
   PublicQuoteHttpError,
   publicErrorResponse,
@@ -16,13 +20,21 @@ import {
   loadPublicQuoteSession,
   loadPublicQuoteSessionTenant,
 } from '@/Lib/publicQuote/session'
-import { sanitizePublicQuoteDraft } from '@/Lib/publicQuote/validation'
 import { fetchSupabaseCommercialRules } from '@/Lib/supabaseCommercialRules'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const NO_STORE = { 'Cache-Control': 'no-store, max-age=0' }
+
+const MILEAGE_ERROR_MESSAGE: Record<string, string> = {
+  missing_origin:
+    'Mileage origin is not configured for this company. The estimate cannot be completed.',
+  missing_maps_key:
+    'Distance lookup is not configured. The estimate cannot be completed.',
+  lookup_failed:
+    'We could not calculate the travel distance for this address. Please try again.',
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,12 +57,28 @@ export async function POST(request: NextRequest) {
     if ('error' in parsed) {
       throw new PublicQuoteHttpError(400, 'invalid_payload')
     }
-    const draft = sanitizePublicQuoteDraft(session.draft)
+    const draft = mergePublicQuotePreviewDraft(session.draft, body)
     const rules = await fetchSupabaseCommercialRules(session.company_id)
     const mileage = await resolvePublicQuoteMileageDistance(
       draft,
       rules.mileageBaseLocation,
     )
+
+    if (hasConfirmedGoogleAddress(draft) && mileage.status !== 'resolved') {
+      const code = mileage.reason || 'lookup_failed'
+      if (code !== 'missing_destination') {
+        return NextResponse.json(
+          {
+            error:
+              MILEAGE_ERROR_MESSAGE[code] || MILEAGE_ERROR_MESSAGE.lookup_failed,
+            code,
+            field: 'mileage',
+          },
+          { status: 422, headers: NO_STORE },
+        )
+      }
+    }
+
     const result = await computeQuotePricing({
       ...parsed,
       companyId: session.company_id,

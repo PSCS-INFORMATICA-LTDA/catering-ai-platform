@@ -14,6 +14,24 @@ export type QuotePricingPreviewRequest = {
   grillRentalQty?: number
   reservationPercentage?: number | null
   language?: 'pt' | 'en' | 'es' | null
+  event?: {
+    eventDate?: string
+    startTime?: string
+    endTime?: string
+    address?: {
+      route?: string
+      number?: string
+      city?: string
+      region?: string
+      postalCode?: string
+      country?: string
+      formattedAddress?: string
+      placeId?: string | null
+      latitude?: number | null
+      longitude?: number | null
+      source?: 'google' | 'manual' | null
+    }
+  }
 }
 
 export type QuotePricingPreviewResponse = {

@@ -10,6 +10,7 @@ import type {
 import type { PackageListItem } from '@/Lib/fetchPackages'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import type { CommercialRulesSnapshot } from '@/Lib/supabaseCommercialRules'
+import type { PublicLocationBias } from './locationBias'
 
 export const PUBLIC_QUOTE_LOCALES = ['pt', 'en', 'es'] as const
 
@@ -47,6 +48,8 @@ export type PublicQuoteBootstrap = {
       phone: string | null
       whatsappUrl: string | null
     }
+    serviceDurationMinutes: number
+    locationBias: PublicLocationBias | null
   }
   branches: Array<{
     id: string
