@@ -13,6 +13,7 @@ import { enrichGooglePlaceFromGeocoder, parseGooglePlace } from './googlePlaces'
 import { tCommon } from '@/Lib/i18n/common'
 import { tw } from '../../../Lib/quoteTranslations'
 import type { QuoteLanguage } from '../../../Lib/quoteWizardTypes'
+import { locationBiasToLatLngBoundsLiteral } from '@/Lib/publicQuote/locationBias'
 
 type FieldCompletion = 'filled' | 'empty'
 
@@ -249,14 +250,10 @@ export default function AddressAutocompleteFields({
     }
     if (autocompleteRef.current) {
       if (locationBias) {
-        const bounds = new maps.Circle({
-          center: { lat: locationBias.lat, lng: locationBias.lng },
-          radius: locationBias.radiusMeters,
-        }).getBounds()
-        if (bounds) {
-          autocompleteRef.current.setBounds(bounds)
-          autocompleteRef.current.setOptions({ strictBounds: false })
-        }
+        autocompleteRef.current.setBounds(
+          locationBiasToLatLngBoundsLiteral(locationBias),
+        )
+        autocompleteRef.current.setOptions({ strictBounds: false })
       }
       return
     }
@@ -280,10 +277,7 @@ export default function AddressAutocompleteFields({
           ],
           ...(locationBias
             ? {
-                bounds: new maps.Circle({
-                  center: { lat: locationBias.lat, lng: locationBias.lng },
-                  radius: locationBias.radiusMeters,
-                }).getBounds() ?? undefined,
+                bounds: locationBiasToLatLngBoundsLiteral(locationBias),
                 strictBounds: false,
               }
             : {}),

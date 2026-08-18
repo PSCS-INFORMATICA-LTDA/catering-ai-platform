@@ -32,3 +32,17 @@ export function locationBiasToCircleOptions(bias: PublicLocationBias) {
     radius: bias.radiusMeters,
   }
 }
+
+/** Approximate circle as LatLngBoundsLiteral for legacy Places Autocomplete. */
+export function locationBiasToLatLngBoundsLiteral(bias: PublicLocationBias) {
+  const latDelta = bias.radiusMeters / 111_320
+  const lngDelta =
+    bias.radiusMeters /
+    (111_320 * Math.max(Math.cos((bias.lat * Math.PI) / 180), 0.2))
+  return {
+    north: bias.lat + latDelta,
+    south: bias.lat - latDelta,
+    east: bias.lng + lngDelta,
+    west: bias.lng - lngDelta,
+  }
+}

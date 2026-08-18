@@ -47,7 +47,7 @@ function PackageCatalogCard({
   const image = getPackageCatalogImage(pkg, allPackages)
   const variant = getPackageCatalogVariant(pkg)
   const price = formatPackagePrice(pkg, language)
-  const selectedLabel = tw(language, 'selected')
+  const selectedLabel = getQuoteStrings(language).selected
 
   return (
     <button
