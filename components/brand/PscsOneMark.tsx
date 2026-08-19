@@ -2,7 +2,7 @@ type PscsOneMarkProps = {
   className?: string
   /** Kept for callers; the official black/red mark is never recolored. */
   onDark?: boolean
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | 'footer'
   /** `icon` crops to the left emblem so a wordmark is not repeated next to text. */
   variant?: 'full' | 'icon'
 }
@@ -16,22 +16,27 @@ export function PscsOneMark({
   size = 'md',
   variant = 'full',
 }: PscsOneMarkProps) {
-  const compact = size === 'sm'
   const icon = variant === 'icon'
-  const height = compact ? 'h-3.5' : 'h-7'
+  const height =
+    size === 'footer' ? 'h-[22px]' : size === 'sm' ? 'h-3.5' : 'h-7'
+  const box =
+    size === 'footer'
+      ? icon
+        ? 'h-[22px] w-[22px] p-0'
+        : 'h-[22px] px-1 py-0'
+      : size === 'sm'
+        ? icon
+          ? 'h-3.5 w-3.5 p-0'
+          : 'px-1 py-0.5'
+        : icon
+          ? 'h-7 w-7 p-0'
+          : 'px-2 py-1'
   return (
     <span
       data-pscs-one-mark
       data-pscs-one-variant={variant}
-      className={`inline-flex items-center justify-center overflow-hidden rounded-md bg-white ${
-        icon
-          ? compact
-            ? 'h-3.5 w-3.5 p-0'
-            : 'h-7 w-7 p-0'
-          : compact
-            ? 'px-1 py-0.5'
-            : 'px-2 py-1'
-      } ${className}`}
+      data-pscs-one-size={size}
+      className={`inline-flex items-center justify-center overflow-hidden rounded-md bg-white ${box} ${className}`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img

@@ -94,7 +94,7 @@ test('TEST 1 new quote only unlocks Cliente', () => {
   assert.match(statusSrc, /export type StepVisualStatus = .*'locked'/)
   assert.match(statusSrc, /export function getMaxReachableStep/)
   assert.match(statusSrc, /export function canNavigateToStep/)
-  assert.doesNotMatch(statusSrc, /currentStep > 3/)
+  assert.doesNotMatch(statusSrc, /areAllAdditionalCategoriesVisited/)
   const wizard = source('app/quotes/new/QuoteWizard.tsx')
   assert.match(wizard, /canNavigateToStep\(nextStep, stepStatusCtx\)/)
   assert.match(wizard, /getMaxReachableStep\(stepStatusCtx\)/)
@@ -138,21 +138,30 @@ test('TEST 4 selected package unlocks extras', () => {
   assert.equal(canNavigate(4, complete), false)
 })
 
-/* TEST 5 extras review */
-test('TEST 5 unreviewed extras block BBQ', () => {
-  assert.equal(
-    areAllAdditionalCategoriesVisited(['GUARNICOES', 'BOVINO'], new Set()),
-    false,
-  )
-  const complete = [true, true, true, false, false, false]
-  assert.equal(visualStatus(4, complete), 'locked')
+/* TEST 5 extras never gates BBQ on review/visit */
+test('TEST 5 extras Next does not require category review', () => {
+  const complete = [true, true, true, true, false, false]
+  assert.equal(visualStatus(4, complete), 'pending')
+  assert.equal(canNavigate(4, complete), true)
   const advance = source('Lib/wizardStepAdvance.ts')
-  assert.match(advance, /areAllAdditionalCategoriesVisited/)
-  assert.doesNotMatch(advance, /return true\n}/)
+  assert.match(advance, /export function canAdvanceFromAdditionalsStep/)
+  assert.match(
+    advance,
+    /export function canAdvanceFromAdditionalsStep[\s\S]*?return true/,
+  )
+  const statusSrc = source('app/quotes/new/wizardStepStatus.ts')
+  assert.match(statusSrc, /if \(index === 3\) \{/)
+  assert.match(statusSrc, /if \(ctx\.currentStep < 3\) return 3/)
+  const wizard = source('app/quotes/new/QuoteWizard.tsx')
+  assert.match(wizard, /const additionalsStepNextDisabled = false/)
+  assert.doesNotMatch(
+    wizard,
+    /if \(remaining\.length > 0\) \{\s*handleAdditionalsNextBlockedClick/,
+  )
 })
 
 /* TEST 6 no purchase still valid */
-test('TEST 6 reviewing all extras without purchase unlocks BBQ', () => {
+test('TEST 6 extras may be skipped with zero purchase', () => {
   const visited = new Set(['GUARNICOES', 'BOVINO'])
   assert.equal(
     areAllAdditionalCategoriesVisited(['GUARNICOES', 'BOVINO'], visited),

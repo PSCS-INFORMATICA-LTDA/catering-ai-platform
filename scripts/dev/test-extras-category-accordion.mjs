@@ -97,9 +97,12 @@ check('T08 mobile layout has one column and no horizontal squeeze', () => {
   assert.match(itemSrc, /grid-cols-\[7\.5rem_minmax\(0,1fr\)\]/)
 })
 
-check('T09 Next stays disabled until every category is reviewed', () => {
-  assert.match(wizardSrc, /additionalsStepNextDisabled/)
-  assert.match(advanceSrc, /areAllAdditionalCategoriesVisited/)
+check('T09 Next is enabled without reviewing every category', () => {
+  assert.match(wizardSrc, /const additionalsStepNextDisabled = false/)
+  assert.match(
+    advanceSrc,
+    /export function canAdvanceFromAdditionalsStep[\s\S]*?return true/,
+  )
 })
 
 check('T10 Next stays enabled with selected extras', () => {

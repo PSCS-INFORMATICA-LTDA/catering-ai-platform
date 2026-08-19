@@ -9,11 +9,6 @@ import { isUsablePostalCode } from '@/Lib/cep'
 import { isUsablePhone } from '@/Lib/normalizePhone'
 import { isUsablePublicPhone } from '@/Lib/publicQuote/phone'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
-import {
-  areAllAdditionalCategoriesVisited,
-  getAdditionalCategoryReviewProgress,
-  getVisibleAdditionalCategoryKeys,
-} from '@/Lib/wizardAdditionalCategories'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 export const WIZARD_STEP_LABELS = [
@@ -99,7 +94,7 @@ export type StepStatusContext = {
   commercialRules?: CommercialRulesSnapshot
   isEditMode?: boolean
   language?: QuoteLanguage | string | null
-  /** Categorias de adicionais que devem ser visitadas (keys). */
+  /** Visible extras category keys. Visit tracking is UX-only and never gates Next. */
   additionalCategoryKeys?: string[]
   additionalCategoryGroups?: ReadonlyArray<{
     categoryKey: string
@@ -165,13 +160,6 @@ function contactIssue(
     },
   } as const
   return copy[language][field]
-}
-
-function allAdditionalCategoriesVisited(ctx: StepStatusContext): boolean {
-  const keys =
-    ctx.additionalCategoryKeys ??
-    getVisibleAdditionalCategoryKeys(ctx.additionalCategoryGroups ?? [])
-  return areAllAdditionalCategoriesVisited(keys, ctx.visitedAdditionalCategories)
 }
 
 export function isGrillPhotoRequiredAndMissing(
@@ -292,27 +280,8 @@ export function getStepIssues(
       }
       break
     }
-    case 3: {
-      const keys =
-        ctx.additionalCategoryKeys ??
-        getVisibleAdditionalCategoryKeys(ctx.additionalCategoryGroups ?? [])
-      if (
-        keys.length > 0 &&
-        !areAllAdditionalCategoriesVisited(keys, ctx.visitedAdditionalCategories)
-      ) {
-        const progress = getAdditionalCategoryReviewProgress(
-          keys,
-          ctx.visitedAdditionalCategories,
-        )
-        issues.push(
-          tw(language, 'categoriesReviewRequired', {
-            remaining: progress.remaining,
-            total: progress.total,
-          }),
-        )
-      }
+    case 3:
       break
-    }
     case 4:
       if (!state.grillSetupAnswered) {
         issues.push(tw(language, 'issueHasGrill'))
@@ -373,12 +342,12 @@ export function isStepContentComplete(
     return hasLinkedCustomer(ctx) && getStepIssues(0, ctx).length === 0
   }
   if (stepIndex === 3) {
-    return allAdditionalCategoriesVisited(ctx)
+    return ctx.currentStep > 3
   }
   if (stepIndex === 5) {
     return (
       areMandatoryStepsComplete(ctx) &&
-      isStepContentComplete(3, ctx) &&
+      ctx.currentStep > 3 &&
       Boolean(ctx.pricingPreviewReady)
     )
   }
@@ -388,6 +357,10 @@ export function isStepContentComplete(
 /** Primeira etapa ainda inválida, ou a última se 1–5 estiverem válidas. */
 export function getMaxReachableStep(ctx: StepStatusContext): number {
   for (let index = 0; index < STEPS_COUNT - 1; index += 1) {
+    if (index === 3) {
+      if (ctx.currentStep < 3) return 3
+      continue
+    }
     if (!isStepContentComplete(index, ctx)) return index
   }
   return STEPS_COUNT - 1

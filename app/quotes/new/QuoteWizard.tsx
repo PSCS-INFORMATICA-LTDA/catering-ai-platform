@@ -29,11 +29,7 @@ import {
   getVisibleAdditionalCategoryKeys,
   pruneVisitedAdditionalCategories,
 } from '@/Lib/wizardAdditionalCategories'
-import {
-  canAdvanceFromAdditionalsStep,
-  resolveNextWizardStep,
-  WIZARD_STEP_COUNT,
-} from '@/Lib/wizardStepAdvance'
+import { resolveNextWizardStep, WIZARD_STEP_COUNT } from '@/Lib/wizardStepAdvance'
 import {
   ADDITIONAL_CATEGORY_EXPOSE_FALLBACK_BOTTOM_PX,
   isExtrasExposeScrollJump,
@@ -2227,16 +2223,6 @@ export default function QuoteWizardCore({
         }
       }
     }
-    if (step === 3) {
-      const remaining = getUnvisitedAdditionalCategoryKeys(
-        categoryKeys,
-        visitedCategories,
-      )
-      if (remaining.length > 0) {
-        handleAdditionalsNextBlockedClick()
-        return
-      }
-    }
     const nextStep = resolveNextWizardStep({
       step,
       packageId: state.packageId,
@@ -2346,17 +2332,7 @@ export default function QuoteWizardCore({
     state.packageSelections,
   ])
 
-  const allAdditionalCategoriesVisited = useMemo(
-    () =>
-      canAdvanceFromAdditionalsStep(
-        additionalCategoryKeys,
-        visitedAdditionalCategories,
-      ),
-    [additionalCategoryKeys, visitedAdditionalCategories],
-  )
-
-  const additionalsStepNextDisabled =
-    additionalCategoryKeys.length > 0 && !allAdditionalCategoriesVisited
+  const additionalsStepNextDisabled = false
 
   const grillStepPendingIssues = useMemo(() => {
     const issues: string[] = []
@@ -2437,19 +2413,13 @@ export default function QuoteWizardCore({
     if (isPublicMode) {
       if (!state.publicConsentAccepted || !publicContext?.consentVersion) {
         setSaveErrorInfo(
-          buildSaveQuoteError(
-            'validation',
-            new Error('Consentimento obrigatório.'),
-          ),
+          buildSaveQuoteError('validation', new Error(w.consentRequired)),
         )
         return
       }
       if (!pricingBreakdown) {
         setSaveErrorInfo(
-          buildSaveQuoteError(
-            'validation',
-            new Error('A estimativa ainda está sendo calculada.'),
-          ),
+          buildSaveQuoteError('validation', new Error(w.pricingCalcError)),
         )
         return
       }

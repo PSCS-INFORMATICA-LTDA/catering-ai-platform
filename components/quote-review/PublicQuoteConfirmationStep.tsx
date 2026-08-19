@@ -263,12 +263,24 @@ export default function PublicQuoteConfirmationStep({
           ) : null}
           <button
             type="button"
+            data-testid="public-quote-submit"
             disabled={!canSubmit}
             onClick={onSubmit}
             className="cdl-btn-primary min-h-12 px-8 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? w.publicSubmittingRequest : w.publicSubmitRequest}
           </button>
+          {!canSubmit && !saving ? (
+            <p
+              data-submit-blocked-reason
+              role="status"
+              className="text-center text-xs font-semibold text-cdl-muted sm:text-left"
+            >
+              {!breakdown || pricingLoading || pricingError
+                ? pricingMessage || w.pricingCalcError
+                : w.consentRequired}
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

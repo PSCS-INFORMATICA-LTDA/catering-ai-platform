@@ -164,7 +164,6 @@ async function main() {
   try {
     assert.match(wizardSrc, /visitedAdditionalCategories/)
     assert.match(wizardSrc, /markAdditionalCategoryVisited/)
-    assert.match(stepStatusSrc, /allAdditionalCategoriesVisited/)
     pass('T12 additional categories visited state')
   } catch (e) {
     fail('T12 additional categories visited state', e)
@@ -172,8 +171,8 @@ async function main() {
 
   // T13 — additional selection remains optional
   try {
-    assert.match(stepStatusSrc, /allAdditionalCategoriesVisited/)
     assert.doesNotMatch(stepStatusSrc, /additionalsCount > 0/)
+    assert.match(wizardSrc, /const additionalsStepNextDisabled = false/)
     pass('T13 additional selection remains optional')
   } catch (e) {
     fail('T13 additional selection remains optional', e)
@@ -368,10 +367,9 @@ async function main() {
   }
 
   try {
-    assert.match(wizardSrc, /additionalsStepNextDisabled/)
-    assert.match(wizardSrc, /allAdditionalCategoriesVisited/)
-    pass('H03 Next availability follows extras review')
-    pass('H04 Next stays gated by unreviewed categories')
+    assert.match(wizardSrc, /const additionalsStepNextDisabled = false/)
+    pass('H03 Next is enabled as soon as extras opens')
+    pass('H04 Next is not gated by unreviewed categories')
   } catch (e) {
     fail('H03–H04 category visit gating', e)
   }
@@ -876,7 +874,7 @@ async function main() {
   try {
     let visited = markVisited(markVisited(new Set(), 'GUARNICOES'), 'BOVINO')
     assert.equal(allVisited(requiredKeys, visited), true)
-    pass('A05 zero selected + all visited enables next')
+    pass('A05 zero selected still enables next without review')
     pass('A13 all visited canGoNext')
   } catch (e) {
     fail('A05/A13 all visited', e)
@@ -1005,17 +1003,20 @@ async function main() {
   }
 
   try {
-    assert.match(wizardSrc, /additionalsStepNextDisabled/)
-    assert.match(wizardSrc, /canAdvanceFromAdditionalsStep/)
+    assert.match(wizardSrc, /const additionalsStepNextDisabled = false/)
+    assert.match(
+      wizardAdvanceSrc,
+      /export function canAdvanceFromAdditionalsStep[\s\S]*?return true/,
+    )
     assert.doesNotMatch(stepStatusSrc, /additionalsCount > 0/)
-    pass('A21 zero selections + all visited enables next')
+    pass('A21 zero selections enables next without review')
   } catch (e) {
     fail('A21 zero selections next enabled', e)
   }
 
   try {
-    assert.match(wizardSrc, /additionalsStepNextDisabled/)
-    pass('A22 remaining categories lock next until reviewed')
+    assert.match(wizardSrc, /const additionalsStepNextDisabled = false/)
+    pass('A22 remaining categories do not lock next')
   } catch (e) {
     fail('A22 next disabled', e)
   }
@@ -1077,11 +1078,6 @@ async function main() {
 
   function simulateResolveNextWizardStep(ctx) {
     if (ctx.step === 3) {
-      const keys = ctx.additionalCategoryKeys ?? []
-      const visited = ctx.visitedAdditionalCategories ?? new Set()
-      if (keys.length > 0 && !keys.every((key) => visited.has(key))) {
-        return ctx.step
-      }
       return ctx.step + 1
     }
     return ctx.step
@@ -1152,9 +1148,12 @@ async function main() {
   }
 
   try {
-    assert.match(wizardSrc, /additionalsStepNextDisabled/)
-    assert.match(wizardSrc, /canAdvanceFromAdditionalsStep/)
-    pass('N04 Próximo respects extras review gate')
+    assert.match(wizardSrc, /const additionalsStepNextDisabled = false/)
+    assert.match(
+      wizardAdvanceSrc,
+      /export function canAdvanceFromAdditionalsStep[\s\S]*?return true/,
+    )
+    pass('N04 Próximo stays enabled on extras')
   } catch (e) {
     fail('N04 next enabled', e)
   }
@@ -1200,9 +1199,9 @@ async function main() {
     const pending = sampleAdvanceCtx({
       visitedAdditionalCategories: new Set(['GUARNICOES']),
     })
-    assert.equal(simulateResolveNextWizardStep(pending), 3)
+    assert.equal(simulateResolveNextWizardStep(pending), 4)
     assert.equal(allVisited(['GUARNICOES', 'BOVINO'], pending.visitedAdditionalCategories), false)
-    pass('N09 pending category blocks advance')
+    pass('N09 pending category does not block advance')
   } catch (e) {
     fail('N09 pending blocks advance', e)
   }

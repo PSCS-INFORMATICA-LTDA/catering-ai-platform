@@ -329,7 +329,8 @@ test('TEST 32 Powered by PSCS One is discreet', () => {
   assert.match(experience, /data-powered-by/)
   assert.match(experience, /data-footer-cdl-logo/)
   assert.match(experience, /data-footer-since-pioneer/)
-  assert.match(experience, /size="sm"/)
+  assert.match(experience, /size="footer"/)
+  assert.match(mark, /h-\[22px\]/)
   assert.equal(
     tw('pt', 'footerSincePioneer'),
     'Desde 2017 · Pioneira em Orlando, Flórida',

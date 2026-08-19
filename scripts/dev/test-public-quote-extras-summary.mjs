@@ -303,24 +303,27 @@ test('TEST 18 Next stays pinned to the bottom during the extras step', () => {
   assert.match(stepNavSrc, /data-testid="wizard-global-next"/)
 })
 
-test('TEST 19 Next starts disabled while summaries are pending', () => {
-  assert.match(wizardSrc, /additionalCategoryKeys\.length > 0 && !allAdditionalCategoriesVisited/)
-  assert.match(stepNavSrc, /step === 3 && additionalsStepNextDisabled/)
+test('TEST 19 Next is enabled as soon as extras opens', () => {
+  assert.match(wizardSrc, /const additionalsStepNextDisabled = false/)
+  assert.doesNotMatch(
+    wizardSrc,
+    /additionalCategoryKeys\.length > 0 && !allAdditionalCategoriesVisited/,
+  )
   assert.equal(
     getUnvisitedAdditionalCategoryKeys(['A', 'B'], new Set(['A'])).length,
     1,
   )
 })
 
-test('TEST 20 Next enables once every summary was reached', () => {
+test('TEST 20 Next stays enabled with zero categories reviewed', () => {
   const keys = ['A', 'B', 'C']
-  let visited = new Set()
-  for (const key of keys) {
-    visited = markAdditionalCategoryVisitedInSet(visited, key)
-  }
-  assert.equal(getUnvisitedAdditionalCategoryKeys(keys, visited).length, 0)
-  assert.equal(areAllAdditionalCategoriesVisited(keys, visited), true)
-  assert.match(wizardSrc, /canAdvanceFromAdditionalsStep/)
+  assert.equal(getUnvisitedAdditionalCategoryKeys(keys, new Set()).length, 3)
+  assert.equal(areAllAdditionalCategoriesVisited(keys, new Set()), false)
+  const advance = source('Lib/wizardStepAdvance.ts')
+  assert.match(
+    advance,
+    /export function canAdvanceFromAdditionalsStep[\s\S]*?return true/,
+  )
 })
 
 test('TEST 21b muted exposure is re-evaluated so review can never dead-end', () => {

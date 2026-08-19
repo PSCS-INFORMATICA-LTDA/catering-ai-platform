@@ -679,9 +679,10 @@ export default function PublicQuoteExperience({
           </div>
           <p
             data-powered-by
-            className="flex flex-wrap items-center justify-center gap-1.5 text-[10px] tracking-wide text-cdl-faint"
+            aria-label={copy.poweredBy}
+            className="flex flex-wrap items-center justify-center gap-1.5 text-[10px] leading-[22px] tracking-wide text-cdl-faint"
           >
-            <PscsOneMark size="sm" variant="icon" className="!p-0" />
+            <PscsOneMark size="footer" variant="icon" className="!p-0" />
             <span>{copy.poweredBy}</span>
           </p>
           <div className="flex flex-wrap justify-center gap-4 text-xs text-cdl-muted">
