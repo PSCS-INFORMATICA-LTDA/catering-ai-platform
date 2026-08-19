@@ -36,9 +36,11 @@ export function getAdditionalsRemainingCategoryKeys(
 }
 
 export function canAdvanceFromAdditionalsStep(
-  _additionalCategoryKeys: readonly string[] = [],
-  _visitedAdditionalCategories: ReadonlySet<string> = new Set(),
+  additionalCategoryKeys: readonly string[] = [],
+  visitedAdditionalCategories: ReadonlySet<string> = new Set(),
 ): boolean {
+  void additionalCategoryKeys
+  void visitedAdditionalCategories
   return true
 }
 
