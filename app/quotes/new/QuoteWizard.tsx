@@ -1572,12 +1572,14 @@ export default function QuoteWizardCore({
     childrenUnder3Count: state.childrenUnder3Count,
     children4To12Count: state.children4To12Count,
     eventDate: state.eventDate,
-    mileageDistance: state.distance,
+    mileageDistance: isPublicMode ? 0 : state.distance,
     grillRentalRequired: state.grillRentalRequired,
     grillRentalQty: state.grillRentalQty,
     reservationPercentage: isPublicMode ? null : state.reservationPercentage,
     language: state.language,
-    enabled: Boolean(state.packageId?.trim()),
+    enabled:
+      Boolean(state.packageId?.trim()) &&
+      (!isPublicMode || step === 5),
     endpoint: isPublicMode
       ? '/api/public/quote-intake/preview'
       : '/api/quotes/preview',

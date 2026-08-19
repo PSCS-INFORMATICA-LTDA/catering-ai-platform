@@ -237,6 +237,7 @@ test('pricing confirmation never treats empty breakdown as infinite loading', ()
   assert.match(hook, /}, \[serialized, input\.enabled, input\.packageId\]/)
   const wizard = source('app/quotes/new/QuoteWizard.tsx')
   assert.match(wizard, /publicPreviewEvent/)
+  assert.match(wizard, /!isPublicMode \|\| step === 5/)
 })
 
 test('public package step is image-first and does not dump highlights', () => {
