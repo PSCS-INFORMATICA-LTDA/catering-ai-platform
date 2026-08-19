@@ -26,6 +26,7 @@ export default function AdditionalCategorySection({
   quantities,
   billableGuestCount,
   language,
+  exposeEpoch = 0,
   onToggle,
   onExpose,
   onChangeQty,
@@ -40,6 +41,8 @@ export default function AdditionalCategorySection({
   quantities: Record<string, number>
   billableGuestCount: number
   language: QuoteLanguage
+  /** Bumped by the wizard to re-evaluate summaries already on screen. */
+  exposeEpoch?: number
   onToggle: () => void
   onExpose: () => void
   onChangeQty: (itemId: string, qty: number) => void
@@ -72,7 +75,7 @@ export default function AdditionalCategorySection({
     )
     exposeObserver.observe(sentinel)
     return () => exposeObserver.disconnect()
-  }, [categoryKey])
+  }, [categoryKey, exposeEpoch])
 
   const contentId = `additional-category-content-${categoryKey}`
   const summaryId = `additional-category-summary-${categoryKey}`

@@ -317,6 +317,13 @@ test('TEST 20 Next enables once every summary was reached', () => {
   assert.match(wizardSrc, /canAdvanceFromAdditionalsStep/)
 })
 
+test('TEST 21b muted exposure is re-evaluated so review can never dead-end', () => {
+  assert.match(wizardSrc, /setExtrasExposeEpoch\(\(epoch\) => epoch \+ 1\)/)
+  assert.match(wizardSrc, /exposeEpoch=\{extrasExposeEpoch\}/)
+  assert.match(sectionSrc, /\}, \[categoryKey, exposeEpoch\]\)/)
+  assert.match(wizardSrc, /window\.scrollTo\(\{ top: 0, behavior: 'auto' \}\)/)
+})
+
 test('TEST 21 blocked Next scrolls to the pending summary without opening it', () => {
   const start = wizardSrc.indexOf('function handleAdditionalsNextBlockedClick')
   assert.ok(start > 0)

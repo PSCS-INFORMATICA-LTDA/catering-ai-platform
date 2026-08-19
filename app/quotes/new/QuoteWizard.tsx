@@ -1084,6 +1084,7 @@ export default function QuoteWizardCore({
   const visitedAdditionalCategoriesRef = useRef(visitedAdditionalCategories)
   const additionalCategoryKeysRef = useRef<string[]>([])
   const extrasExposeArmedRef = useRef(true)
+  const [extrasExposeEpoch, setExtrasExposeEpoch] = useState(0)
   visitedAdditionalCategoriesRef.current = visitedAdditionalCategories
   const grillPhotoInputRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
@@ -1547,10 +1548,16 @@ export default function QuoteWizardCore({
     markAdditionalCategoryVisited(categoryKey)
   }
 
+  /**
+   * A programmatic scroll must not mark every category it flies over. Exposure
+   * is muted until the customer scrolls again, and the epoch then rebuilds the
+   * observers so a summary already on screen is still counted.
+   */
   function armExtrasExposeAfterUserScroll() {
     extrasExposeArmedRef.current = false
     const arm = () => {
       extrasExposeArmedRef.current = true
+      setExtrasExposeEpoch((epoch) => epoch + 1)
     }
     window.addEventListener('wheel', arm, { once: true, passive: true })
     window.addEventListener('touchmove', arm, { once: true, passive: true })
@@ -1751,6 +1758,13 @@ export default function QuoteWizardCore({
       setAdditionalsReviewPrompt(false)
     }
   }, [step])
+
+  useEffect(() => {
+    // Every step starts at its own beginning: landing mid-page would count
+    // extras summaries the customer never saw.
+    if (!isPublicMode || typeof window === 'undefined') return
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [isPublicMode, step])
 
   useEffect(() => {
     if (step !== 3) return
@@ -3031,6 +3045,7 @@ export default function QuoteWizardCore({
                     billableGuestCount={billableGuestCount}
                     language={uiLocale}
                     onToggle={() => toggleAdditionalCategory(categoryKey)}
+                    exposeEpoch={extrasExposeEpoch}
                     onExpose={() => handleAdditionalCategoryExpose(categoryKey)}
                     onChangeQty={setAdditionalQty}
                   />
