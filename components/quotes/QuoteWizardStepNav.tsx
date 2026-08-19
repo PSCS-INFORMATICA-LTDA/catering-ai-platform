@@ -12,6 +12,7 @@ export default function QuoteWizardStepNav({
   packageStepMessage,
   packageStepNextDisabled,
   additionalsStepNextDisabled,
+  additionalsReviewMessage,
   grillStepPendingIssuesCount,
   keepPackageNextVisible = false,
   sticky = false,
@@ -27,6 +28,7 @@ export default function QuoteWizardStepNav({
   packageStepMessage: string | null
   packageStepNextDisabled: boolean
   additionalsStepNextDisabled: boolean
+  additionalsReviewMessage?: string | null
   grillStepPendingIssuesCount: number
   keepPackageNextVisible?: boolean
   sticky?: boolean
@@ -36,7 +38,6 @@ export default function QuoteWizardStepNav({
   onAdditionalsNextBlockedClick: () => void
 }) {
   const quoteStrings = getQuoteStrings(language)
-  const w = quoteStrings.wizard
 
   if (step >= wizardStepCount - 1) return null
 
@@ -59,6 +60,15 @@ export default function QuoteWizardStepNav({
       {step === 2 && !packageId && packageStepMessage ? (
         <p className="text-center text-sm font-medium text-[var(--brand-primary)] sm:text-right">
           {packageStepMessage}
+        </p>
+      ) : null}
+      {step === 3 && additionalsReviewMessage ? (
+        <p
+          data-additionals-review-hint
+          role="status"
+          className="min-w-0 text-center text-sm font-medium text-[var(--brand-primary)] sm:text-right"
+        >
+          {additionalsReviewMessage}
         </p>
       ) : null}
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">

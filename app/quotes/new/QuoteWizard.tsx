@@ -1105,6 +1105,7 @@ export default function QuoteWizardCore({
   >('idle')
   const [emphasizedAdditionalCategory, setEmphasizedAdditionalCategory] =
     useState<string | null>(null)
+  const [additionalsReviewPrompt, setAdditionalsReviewPrompt] = useState(false)
   const publicIdempotencyKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -1725,12 +1726,12 @@ export default function QuoteWizardCore({
   function handleAdditionalsNextBlockedClick() {
     const firstPending = pendingAdditionalCategories[0]
     if (!firstPending) return
-    setNavigationIssues([
-      tw(uiLocale, 'categoriesReviewRequired', {
-        remaining: unvisitedAdditionalCategoryCount,
-        total: additionalCategoryKeys.length,
-      }),
-    ])
+    const reviewMessage = tw(uiLocale, 'categoriesReviewRequired', {
+      remaining: unvisitedAdditionalCategoryCount,
+      total: additionalCategoryKeys.length,
+    })
+    setAdditionalsReviewPrompt(true)
+    setNavigationIssues([reviewMessage])
     setEmphasizedAdditionalCategory(firstPending.categoryKey)
     setOpenAdditionalCategories((prev) => {
       const next = new Set(prev)
@@ -1746,6 +1747,7 @@ export default function QuoteWizardCore({
   useEffect(() => {
     if (step !== 3) {
       setOpenAdditionalCategories(new Set())
+      setAdditionalsReviewPrompt(false)
     }
   }, [step])
 
@@ -3362,6 +3364,14 @@ export default function QuoteWizardCore({
             packageStepMessage={packageStepMessage}
             packageStepNextDisabled={packageStepNextDisabled}
             additionalsStepNextDisabled={additionalsStepNextDisabled}
+            additionalsReviewMessage={
+              additionalsReviewPrompt && additionalsStepNextDisabled
+                ? tw(uiLocale, 'categoriesReviewRequired', {
+                    remaining: unvisitedAdditionalCategoryCount,
+                    total: additionalCategoryKeys.length,
+                  })
+                : null
+            }
             grillStepPendingIssuesCount={grillStepPendingIssues.length}
             keepPackageNextVisible={isPublicMode}
             sticky={isPublicMode}

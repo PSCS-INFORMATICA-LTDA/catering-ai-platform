@@ -29,7 +29,7 @@ export default function PackageCatalogHeroArt({
     variant === 'with_sides' ? getPackageSidesDescription(language) : null
 
   return (
-    <span className="relative block w-full min-w-0">
+    <span className="@container relative block w-full min-w-0">
       {image ? (
         // The art carries printed commercial copy, so it must keep its
         // natural ratio and never be cropped.
@@ -49,13 +49,13 @@ export default function PackageCatalogHeroArt({
       {heroPrice ? (
         <span
           data-package-hero-price
-          className="pointer-events-none absolute right-[3%] top-[7%] flex w-[46%] min-w-0 flex-col items-end"
+          className="pointer-events-none absolute right-0 top-0 z-10 flex w-[48%] min-w-0 flex-col items-end pt-[3.5%] pr-[2%]"
         >
-          <span className="rounded-sm bg-black/75 px-2 py-1 text-right shadow-lg">
-            <span className="block text-[clamp(1.6rem,8vw,2.85rem)] font-black leading-none tracking-tight text-white">
+          <span className="flex w-full flex-col items-end rounded-sm bg-[#14100c] px-[8%] py-[7%] shadow-[0_0_22px_16px_#14100c]">
+            <span className="block w-full text-right font-black leading-none tracking-tight text-white [font-size:clamp(1.9rem,18cqw,4.6rem)]">
               {heroPrice}
             </span>
-            <span className="mt-1 inline-block max-w-full bg-[#c4161c] px-2 py-0.5 text-[clamp(0.5rem,1.7vw,0.72rem)] font-black uppercase leading-tight tracking-wide text-white">
+            <span className="mt-[7%] inline-block max-w-full bg-[#c4161c] px-[8%] py-[3.5%] text-center font-black uppercase leading-tight tracking-wide text-white [font-size:clamp(0.42rem,3.15cqw,0.8rem)]">
               {caption}
             </span>
           </span>
@@ -64,7 +64,7 @@ export default function PackageCatalogHeroArt({
       {garnishLine ? (
         <span
           data-package-hero-garnish
-          className="pointer-events-none absolute inset-x-[5%] bottom-[5%] min-w-0 rounded-md bg-black/75 px-3 py-1.5 text-center text-[clamp(0.58rem,1.8vw,0.78rem)] font-semibold leading-snug text-amber-200"
+          className="pointer-events-none absolute inset-x-[4%] bottom-[4%] z-10 min-w-0 rounded-md bg-[#14100c] px-3 py-1.5 text-center text-[clamp(0.58rem,1.8vw,0.78rem)] font-semibold leading-snug text-amber-200"
         >
           {garnishLine}
         </span>

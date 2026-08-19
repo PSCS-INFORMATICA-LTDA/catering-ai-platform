@@ -263,6 +263,9 @@ test('TEST 14 Feijão preto is the garnish overlay, not tropeiro', () => {
   assert.match(hero, /getPackageSidesDescription/)
   assert.match(hero, /data-package-hero-price/)
   assert.match(hero, /data-package-hero-garnish/)
+  assert.match(hero, /@container/)
+  assert.match(hero, /bg-\[#14100c\]/)
+  assert.doesNotMatch(hero, /bg-black\/75/)
   assert.match(catalog, /data-package-price-breakdown/)
   assert.match(catalog, /data-package-display-total/)
   assert.doesNotMatch(hero, /tropeiro/i)
@@ -326,6 +329,9 @@ test('TEST 17 extras review UI no longer shows REVISADA', () => {
   assert.match(wizard, /handleAdditionalsNextBlockedClick/)
   assert.match(wizard, /scrollToAdditionalCategory/)
   assert.match(wizard, /additionalsStepNextDisabled/)
+  const stepNav = source('components/quotes/QuoteWizardStepNav.tsx')
+  assert.match(stepNav, /data-additionals-review-hint/)
+  assert.match(stepNav, /additionalsReviewMessage/)
 })
 
 test('inline package options remain under the selected card', () => {
