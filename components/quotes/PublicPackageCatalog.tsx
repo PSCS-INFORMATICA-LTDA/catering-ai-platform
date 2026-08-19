@@ -320,7 +320,7 @@ export default function PublicPackageCatalog({
         <section data-package-group="with_sides" className="min-w-0">
           <PackageGroupToggle
             group="with_sides"
-            title={tw(language, 'withSides')}
+            title={tw(language, 'withSidesGroupTitle')}
             hint={tw(language, 'withSidesGroupHint')}
             count={packagesWithSides.length}
             expanded={openGroup === 'with_sides'}
@@ -337,7 +337,7 @@ export default function PublicPackageCatalog({
         <section data-package-group="without_sides" className="min-w-0">
           <PackageGroupToggle
             group="without_sides"
-            title={tw(language, 'withoutSides')}
+            title={tw(language, 'withoutSidesGroupTitle')}
             hint={tw(language, 'withoutSidesGroupHint')}
             count={packagesWithoutSides.length}
             expanded={openGroup === 'without_sides'}

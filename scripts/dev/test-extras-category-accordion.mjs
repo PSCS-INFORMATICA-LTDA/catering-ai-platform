@@ -41,8 +41,7 @@ check('T02 closed category renders localized item count', () => {
 check('T03 expanded category reveals localized item names and prices', () => {
   assert.match(categorySrc, /<AdditionalItemCard/)
   assert.match(itemSrc, /getLocalizedAdditionalLabel\(item, language\)/)
-  assert.match(itemSrc, /getAdditionalUnitPrice/)
-  assert.doesNotMatch(categorySrc, /data-additional-category-preview/)
+  assert.match(itemSrc, /getAdditionalPriceLabel/)
 })
 
 check('T04 categories start collapsed and expand below their header', () => {
@@ -52,6 +51,22 @@ check('T04 categories start collapsed and expand below their header', () => {
   assert.match(categorySrc, /\{expanded \? \(/)
   assert.match(categorySrc, /IntersectionObserver/)
   assert.match(categorySrc, /data-additional-category-sentinel/)
+})
+
+check('T03b collapsed category summarizes every item with price and unit', () => {
+  assert.match(categorySrc, /data-additional-category-summary/)
+  assert.match(categorySrc, /data-additional-summary-item/)
+  assert.match(categorySrc, /items\.map\(\(item\) => \{/)
+  assert.match(categorySrc, /getAdditionalPriceLabel\(item, language\)/)
+  assert.match(categorySrc, /getAdditionalChargeUnitLabel\(item, language\)/)
+  assert.doesNotMatch(categorySrc, /slice\(0,\s*\d/)
+})
+
+check('T04b nothing expands without an explicit customer action', () => {
+  assert.doesNotMatch(categorySrc, /shouldAutoOpenAdditionalCategory/)
+  assert.doesNotMatch(categorySrc, /onEnterReadingZone/)
+  assert.doesNotMatch(wizardSrc, /handleAdditionalCategoryReadingZone/)
+  assert.match(categorySrc, /onClick=\{onToggle\}/)
 })
 
 check('T05 expanded category renders lazy item images', () => {

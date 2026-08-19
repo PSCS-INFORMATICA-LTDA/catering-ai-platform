@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import AdminCompactMenu from '../../../components/quotes/AdminCompactMenu'
 import { useTenant } from '../../../components/tenant/TenantProvider'
 import CatalogImageFrame from '../../../components/CatalogImageFrame'
@@ -1542,24 +1542,6 @@ export default function QuoteWizardCore({
     })
   }
 
-  const handleAdditionalCategoryReadingZone = useCallback(
-    (categoryKey: string) => {
-      if (!categoryKey) return
-      setOpenAdditionalCategories((prev) => {
-        if (prev.has(categoryKey)) return prev
-        const keys = additionalCategoryKeysRef.current
-        const index = keys.indexOf(categoryKey)
-        if (index < 0) return prev
-        const previousOpen = keys.slice(0, index).every((key) => prev.has(key))
-        if (!previousOpen) return prev
-        const next = new Set(prev)
-        next.add(categoryKey)
-        return next
-      })
-    },
-    [],
-  )
-
   function handleAdditionalCategoryExpose(categoryKey: string) {
     if (!extrasExposeArmedRef.current) return
     markAdditionalCategoryVisited(categoryKey)
@@ -1751,17 +1733,13 @@ export default function QuoteWizardCore({
     target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
+  /** Takes the customer to the first pending summary — never expands it. */
   function handleAdditionalsNextBlockedClick() {
     const firstPending = pendingAdditionalCategories[0]
     if (!firstPending) return
     setAdditionalsReviewPrompt(true)
     setEmphasizedAdditionalCategory(firstPending.categoryKey)
     armExtrasExposeAfterUserScroll()
-    setOpenAdditionalCategories((prev) => {
-      const next = new Set(prev)
-      next.add(firstPending.categoryKey)
-      return next
-    })
     window.setTimeout(() => {
       scrollToAdditionalCategory(firstPending.categoryKey)
     }, 50)
@@ -3053,9 +3031,6 @@ export default function QuoteWizardCore({
                     billableGuestCount={billableGuestCount}
                     language={uiLocale}
                     onToggle={() => toggleAdditionalCategory(categoryKey)}
-                    onEnterReadingZone={() =>
-                      handleAdditionalCategoryReadingZone(categoryKey)
-                    }
                     onExpose={() => handleAdditionalCategoryExpose(categoryKey)}
                     onChangeQty={setAdditionalQty}
                   />
@@ -3367,6 +3342,17 @@ export default function QuoteWizardCore({
           )
         )}
 
+        {step !== 5 && isPublicMode ? (
+          // The action bar stays pinned at the bottom, so the content keeps a
+          // reserve of its height (plus the iOS safe area) to never hide the
+          // last package, category, item or price behind it.
+          <div
+            aria-hidden
+            data-wizard-cta-spacer
+            className="h-[calc(7rem+env(safe-area-inset-bottom))]"
+          />
+        ) : null}
+
         {step !== 5 ? (
           <QuoteWizardStepNav
             step={step}
@@ -3378,7 +3364,7 @@ export default function QuoteWizardCore({
             additionalsStepNextDisabled={additionalsStepNextDisabled}
             additionalsReviewMessage={
               additionalsReviewPrompt && additionalsStepNextDisabled
-                ? tw(uiLocale, 'additionalsKeepScrolling')
+                ? tw(uiLocale, 'additionalsReviewAllCategories')
                 : null
             }
             grillStepPendingIssuesCount={grillStepPendingIssues.length}

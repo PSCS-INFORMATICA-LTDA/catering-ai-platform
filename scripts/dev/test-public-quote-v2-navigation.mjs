@@ -17,10 +17,7 @@ import {
   packageSidesMathHolds,
   resolvePackageSidesPricing,
 } from '../../Lib/packageCatalogVisual.ts'
-import {
-  shouldAutoOpenAdditionalCategory,
-  shouldExposeAdditionalCategory,
-} from '../../Lib/additionalCategoryExposure.ts'
+import { shouldExposeAdditionalCategory } from '../../Lib/additionalCategoryExposure.ts'
 import { resolveQuotePdfPackagePerPersonBreakdown } from '../../Lib/quotePdfPackagePresentation.ts'
 import { isPublicCatalogFixturePackage } from '../../Lib/publicQuote/catalogVisibility.ts'
 import { isPublicGrillDraftAnswered } from '../../Lib/publicQuote/grillDraft.ts'
@@ -256,6 +253,8 @@ test('TEST 11 package groups use structured package_key suffix', () => {
   assert.match(catalog, /data-package-group="with_sides"/)
   assert.match(catalog, /data-package-group="without_sides"/)
   assert.match(catalog, /data-package-group-toggle/)
+  assert.match(catalog, /withSidesGroupTitle/)
+  assert.match(catalog, /withoutSidesGroupTitle/)
   assert.match(catalog, /withSidesGroupHint/)
   assert.match(catalog, /withoutSidesGroupHint/)
   assert.doesNotMatch(catalog, /package\.name\.includes/)
@@ -268,8 +267,9 @@ test('TEST 11 package groups use structured package_key suffix', () => {
 
 test('TEST 12 EN/ES catalog copy stays in i18n, not baked into the hero', () => {
   const translations = source('Lib/quoteTranslations.ts')
-  assert.match(translations, /Keep scrolling to review all additional items/)
-  assert.match(translations, /Sigue desplazándote para revisar todos los adicionales/)
+  assert.match(translations, /Percorra todas as categorias antes de continuar/)
+  assert.match(translations, /Review all categories before continuing\./)
+  assert.match(translations, /Revisa todas las categorías antes de continuar/)
   assert.match(translations, /Packages that include the side dishes/)
   assert.match(translations, /Paquetes que incluyen los acompañamientos/)
   const hero = source('components/quotes/PackageCatalogHeroArt.tsx')
@@ -346,7 +346,7 @@ test('TEST 16 mobile overflow contracts exist', () => {
   assert.doesNotMatch(stepper, /overflow-x-auto/)
 })
 
-test('TEST 17 extras review uses scroll exposure instead of mandatory clicks', () => {
+test('TEST 17 extras review tracks summary exposure and never auto-opens', () => {
   const extras = source(
     'components/quotes/additionals/AdditionalCategorySection.tsx',
   )
@@ -354,7 +354,11 @@ test('TEST 17 extras review uses scroll exposure instead of mandatory clicks', (
   assert.match(extras, /IntersectionObserver/)
   assert.match(extras, /data-additional-category-sentinel/)
   assert.match(extras, /data-category-reviewed/)
-  assert.doesNotMatch(extras, /data-additional-category-preview/)
+  assert.match(extras, /data-additional-category-summary/)
+  assert.doesNotMatch(extras, /shouldAutoOpenAdditionalCategory/)
+  const exposure = source('Lib/additionalCategoryExposure.ts')
+  assert.doesNotMatch(exposure, /READING_ZONE/)
+  assert.doesNotMatch(exposure, /shouldAutoOpenAdditionalCategory/)
   const wizard = source('app/quotes/new/QuoteWizard.tsx')
   assert.doesNotMatch(
     wizard,
@@ -363,19 +367,12 @@ test('TEST 17 extras review uses scroll exposure instead of mandatory clicks', (
   assert.match(wizard, /handleAdditionalsNextBlockedClick/)
   assert.match(wizard, /handleAdditionalCategoryExpose/)
   assert.match(wizard, /extrasExposeArmedRef/)
-  assert.match(wizard, /additionalsKeepScrolling/)
+  assert.match(wizard, /additionalsReviewAllCategories/)
   assert.doesNotMatch(wizard, /markAdditionalCategoryVisited\(category\)/)
+  assert.doesNotMatch(wizard, /handleAdditionalCategoryReadingZone/)
   const stepNav = source('components/quotes/QuoteWizardStepNav.tsx')
   assert.match(stepNav, /data-additionals-review-hint/)
   assert.match(stepNav, /additionalsReviewMessage/)
-  assert.equal(
-    shouldAutoOpenAdditionalCategory({ isIntersecting: true, intersectionRatio: 0.5 }),
-    true,
-  )
-  assert.equal(
-    shouldAutoOpenAdditionalCategory({ isIntersecting: true, intersectionRatio: 0.1 }),
-    false,
-  )
   assert.equal(
     shouldExposeAdditionalCategory({ isIntersecting: true, intersectionRatio: 0.6 }),
     true,

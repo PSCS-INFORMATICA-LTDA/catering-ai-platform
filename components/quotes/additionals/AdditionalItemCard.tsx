@@ -2,23 +2,21 @@
 
 import {
   calcAdditionalLineTotalForItem,
+  formatAdditionalPrice,
   getAdditionalChargeUnitLabel,
   getAdditionalImage,
   getAdditionalPackLabel,
+  getAdditionalPriceLabel,
   getAdditionalTotalWeight,
-  getAdditionalUnitPrice,
   getLocalizedAdditionalLabel,
-  hasAdditionalPrice,
   isPerPersonAdditional,
   normalizeAdditionalQuantity,
   type QuoteAdditionalItem,
 } from '@/Lib/quoteAdditionalDisplay'
-import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
+import { getQuoteStrings } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
-function formatCurrency(value: number) {
-  return `$${value.toFixed(2)}`
-}
+const formatCurrency = formatAdditionalPrice
 
 function formatWeightUom(uom: string) {
   if (uom === 'LB') return 'lb'
@@ -44,10 +42,7 @@ export default function AdditionalItemCard({
   const t = getQuoteStrings(language)
   const image = getAdditionalImage(item)
   const label = getLocalizedAdditionalLabel(item, language)
-  const unitPrice = getAdditionalUnitPrice(item)
-  const priceLabel = hasAdditionalPrice(item)
-    ? formatCurrency(unitPrice)
-    : tw(language, 'priceUnavailable')
+  const priceLabel = getAdditionalPriceLabel(item, language)
   const chargeUnitLabel = getAdditionalChargeUnitLabel(item, language)
   const perPerson = isPerPersonAdditional(item)
   const normalizedQty = normalizeAdditionalQuantity(item, quantity)

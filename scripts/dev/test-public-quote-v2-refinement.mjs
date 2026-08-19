@@ -324,9 +324,14 @@ test('missing additional price is reported instead of assumed as zero', () => {
   assert.equal(hasPrice({ id: 'c', sale_price: 0, price: 0 }), false)
   const display = source('Lib/quoteAdditionalDisplay.ts')
   assert.match(display, /hasAdditionalPrice/)
+  const priceDisplay = source('Lib/additionalPriceDisplay.ts')
+  assert.match(priceDisplay, /priceUnavailable/)
   const card = source('components/quotes/additionals/AdditionalItemCard.tsx')
-  assert.match(card, /hasAdditionalPrice/)
-  assert.match(card, /priceUnavailable/)
+  assert.match(card, /getAdditionalPriceLabel/)
+  const section = source(
+    'components/quotes/additionals/AdditionalCategorySection.tsx',
+  )
+  assert.match(section, /getAdditionalPriceLabel/)
 })
 
 test('expanded additional cards show a price with unit and value', () => {
@@ -335,7 +340,7 @@ test('expanded additional cards show a price with unit and value', () => {
   )
   assert.match(section, /data-additional-items-grid/)
   assert.match(section, /<AdditionalItemCard/)
-  assert.doesNotMatch(section, /data-additional-category-preview/)
+  assert.match(section, /data-additional-category-summary/)
   const card = source('components/quotes/additionals/AdditionalItemCard.tsx')
   assert.match(card, /getAdditionalChargeUnitLabel/)
   assert.match(card, /grid-cols-\[7\.5rem_minmax\(0,1fr\)\]/)

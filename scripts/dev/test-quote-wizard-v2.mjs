@@ -843,7 +843,7 @@ async function main() {
     assert.ok(visited.has('GUARNICOES'))
     assert.match(wizardSrc, /toggleAdditionalCategory/)
     assert.match(wizardSrc, /handleAdditionalCategoryExpose/)
-    assert.match(wizardSrc, /handleAdditionalCategoryReadingZone/)
+    assert.doesNotMatch(wizardSrc, /handleAdditionalCategoryReadingZone/)
     assert.match(
       read('components/quotes/additionals/AdditionalCategorySection.tsx'),
       /IntersectionObserver/,

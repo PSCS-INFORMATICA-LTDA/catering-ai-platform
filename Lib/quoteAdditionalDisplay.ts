@@ -69,6 +69,11 @@ export function getAdditionalUnitPrice(item: QuoteAdditionalItem): number {
   return getAdditionalItemPrice(item)
 }
 
+export {
+  formatAdditionalPrice,
+  getAdditionalPriceLabel,
+} from '@/Lib/additionalPriceDisplay'
+
 export function normalizeAdditionalQuantity(
   item: QuoteAdditionalItem,
   quantity: number,

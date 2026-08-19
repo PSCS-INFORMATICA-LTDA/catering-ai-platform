@@ -4,11 +4,14 @@ import { useEffect, useRef } from 'react'
 import AdditionalItemCard from '@/components/quotes/additionals/AdditionalItemCard'
 import {
   ADDITIONAL_CATEGORY_EXPOSE_ZONE,
-  ADDITIONAL_CATEGORY_READING_ZONE,
-  shouldAutoOpenAdditionalCategory,
   shouldExposeAdditionalCategory,
 } from '@/Lib/additionalCategoryExposure'
-import type { QuoteAdditionalItem } from '@/Lib/quoteAdditionalDisplay'
+import {
+  getAdditionalChargeUnitLabel,
+  getAdditionalPriceLabel,
+  getLocalizedAdditionalLabel,
+  type QuoteAdditionalItem,
+} from '@/Lib/quoteAdditionalDisplay'
 import { getQuoteStrings } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
@@ -24,7 +27,6 @@ export default function AdditionalCategorySection({
   billableGuestCount,
   language,
   onToggle,
-  onEnterReadingZone,
   onExpose,
   onChangeQty,
 }: {
@@ -39,45 +41,20 @@ export default function AdditionalCategorySection({
   billableGuestCount: number
   language: QuoteLanguage
   onToggle: () => void
-  onEnterReadingZone: () => void
   onExpose: () => void
   onChangeQty: (itemId: string, qty: number) => void
 }) {
   const t = getQuoteStrings(language)
-  const headerRef = useRef<HTMLButtonElement>(null)
   const sentinelRef = useRef<HTMLSpanElement>(null)
-  const onEnterReadingZoneRef = useRef(onEnterReadingZone)
   const onExposeRef = useRef(onExpose)
-  onEnterReadingZoneRef.current = onEnterReadingZone
-  onExposeRef.current = onExpose
 
   useEffect(() => {
-    const header = headerRef.current
-    if (!header || typeof IntersectionObserver === 'undefined') return
-
-    const openObserver = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (shouldAutoOpenAdditionalCategory(entry)) {
-            onEnterReadingZoneRef.current()
-          }
-        }
-      },
-      {
-        root: null,
-        rootMargin: ADDITIONAL_CATEGORY_READING_ZONE.rootMargin,
-        threshold: ADDITIONAL_CATEGORY_READING_ZONE.threshold,
-      },
-    )
-    openObserver.observe(header)
-    return () => openObserver.disconnect()
-  }, [categoryKey])
+    onExposeRef.current = onExpose
+  }, [onExpose])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
-    if (!expanded || !sentinel || typeof IntersectionObserver === 'undefined') {
-      return
-    }
+    if (!sentinel || typeof IntersectionObserver === 'undefined') return
 
     const exposeObserver = new IntersectionObserver(
       (entries) => {
@@ -95,9 +72,10 @@ export default function AdditionalCategorySection({
     )
     exposeObserver.observe(sentinel)
     return () => exposeObserver.disconnect()
-  }, [categoryKey, expanded, items.length])
+  }, [categoryKey])
 
   const contentId = `additional-category-content-${categoryKey}`
+  const summaryId = `additional-category-summary-${categoryKey}`
 
   return (
     <section
@@ -111,12 +89,11 @@ export default function AdditionalCategorySection({
       }`}
     >
       <button
-        ref={headerRef}
         type="button"
         data-additional-category-header
         onClick={onToggle}
         aria-expanded={expanded}
-        aria-controls={contentId}
+        aria-controls={expanded ? contentId : summaryId}
         className="w-full p-4 text-left transition-colors hover:bg-cdl-hover sm:p-5"
       >
         <div className="flex min-w-0 items-start gap-3">
@@ -171,14 +148,55 @@ export default function AdditionalCategorySection({
               />
             ))}
           </div>
-          <span
-            ref={sentinelRef}
-            data-additional-category-sentinel
-            aria-hidden
-            className="block h-px w-full"
-          />
         </div>
-      ) : null}
+      ) : (
+        // Collapsed categories still list every item with its registered price
+        // and charge unit, so the customer can read before deciding to open.
+        <ul
+          id={summaryId}
+          data-additional-category-summary
+          className="border-t border-cdl-border-subtle px-4 py-3 sm:px-5"
+        >
+          {items.map((item) => {
+            const quantity = quantities[item.id] ?? 0
+            return (
+              <li
+                key={item.id}
+                data-additional-summary-item
+                className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1 text-sm leading-snug"
+              >
+                <span
+                  className="shrink-0 text-[var(--brand-primary)]"
+                  aria-hidden
+                >
+                  •
+                </span>
+                <span className="min-w-0 flex-1 break-words text-cdl-text">
+                  {getLocalizedAdditionalLabel(item, language)}
+                  {quantity > 0 ? (
+                    <span className="ml-2 font-bold text-[var(--brand-primary)]">
+                      ×{quantity}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="min-w-0 shrink-0 break-words text-right text-cdl-muted">
+                  <span className="font-semibold text-cdl-title">
+                    {getAdditionalPriceLabel(item, language)}
+                  </span>{' '}
+                  {getAdditionalChargeUnitLabel(item, language)}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      <span
+        ref={sentinelRef}
+        data-additional-category-sentinel
+        aria-hidden
+        className="block h-px w-full"
+      />
     </section>
   )
 }
