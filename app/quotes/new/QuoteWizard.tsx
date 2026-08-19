@@ -125,7 +125,9 @@ import {
 } from '../../../Lib/quoteWizardTypes'
 import AddressAutocompleteFields from './AddressAutocompleteFields'
 import {
+  canNavigateToStep,
   getMandatoryPendingSteps,
+  getMaxReachableStep,
   getStepIssues,
   getStepVisualStatus,
   isGrillPhotoRequiredAndMissing,
@@ -242,6 +244,7 @@ export type CatalogItem = AdditionalItem
 function buildPublicIntakeDraft(
   state: WizardState,
   persistedPackageId?: string | null,
+  reviewedCategoryKeys: string[] = [],
 ) {
   return {
     locale: state.language,
@@ -286,8 +289,10 @@ function buildPublicIntakeDraft(
       additionals: Object.entries(state.additionals)
         .filter(([, quantity]) => quantity > 0)
         .map(([itemId, quantity]) => ({ itemId, quantity })),
+      reviewedCategoryKeys,
     },
     grill: {
+      setupAnswered: state.grillSetupAnswered,
       hasGrill: state.hasGrill,
       photoReference: state.grillPhotoReference,
       rentalRequired: state.grillRentalRequired,
@@ -1015,6 +1020,7 @@ export default function QuoteWizardCore({
   entryMode = 'authenticated',
   publicContext,
   onPublicSuccess,
+  initialReviewedCategoryKeys,
 }: {
   customers: Customer[]
   packages: Package[]
@@ -1039,6 +1045,7 @@ export default function QuoteWizardCore({
   entryMode?: 'authenticated' | 'public'
   publicContext?: PublicQuoteWizardContext
   onPublicSuccess?: (result: PublicQuoteSubmissionResult) => void
+  initialReviewedCategoryKeys?: string[]
 }) {
   const itemCatalog = catalogItems ?? additionalItems ?? []
   const isEditMode = mode === 'edit' && Boolean(quoteId)
@@ -1069,7 +1076,9 @@ export default function QuoteWizardCore({
     Set<string>
   >(() => new Set())
   const [visitedAdditionalCategories, setVisitedAdditionalCategories] =
-    useState<Set<string>>(() => new Set())
+    useState<Set<string>>(
+      () => new Set(initialReviewedCategoryKeys?.filter(Boolean) ?? []),
+    )
   const visitedAdditionalCategoriesRef = useRef(visitedAdditionalCategories)
   const additionalCategoryKeysRef = useRef<string[]>([])
   visitedAdditionalCategoriesRef.current = visitedAdditionalCategories
@@ -1094,6 +1103,8 @@ export default function QuoteWizardCore({
   const [publicAutosaveStatus, setPublicAutosaveStatus] = useState<
     'idle' | 'saving' | 'saved' | 'error'
   >('idle')
+  const [emphasizedAdditionalCategory, setEmphasizedAdditionalCategory] =
+    useState<string | null>(null)
   const publicIdempotencyKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -1714,28 +1725,23 @@ export default function QuoteWizardCore({
   function handleAdditionalsNextBlockedClick() {
     const firstPending = pendingAdditionalCategories[0]
     if (!firstPending) return
-    scrollToAdditionalCategory(firstPending.categoryKey)
+    setNavigationIssues([
+      tw(uiLocale, 'categoriesReviewRequired', {
+        remaining: unvisitedAdditionalCategoryCount,
+        total: additionalCategoryKeys.length,
+      }),
+    ])
+    setEmphasizedAdditionalCategory(firstPending.categoryKey)
     setOpenAdditionalCategories((prev) => {
       const next = new Set(prev)
       next.add(firstPending.categoryKey)
       return next
     })
     markAdditionalCategoryVisited(firstPending.categoryKey)
+    window.setTimeout(() => {
+      scrollToAdditionalCategory(firstPending.categoryKey)
+    }, 50)
   }
-
-  useEffect(() => {
-    if (step !== 3) return
-    function markSeenIfScrolled() {
-      const reached =
-        window.innerHeight + window.scrollY >=
-        document.documentElement.scrollHeight - 96
-      if (!reached) return
-      setVisitedAdditionalCategories(new Set(additionalCategoryKeys))
-    }
-    markSeenIfScrolled()
-    window.addEventListener('scroll', markSeenIfScrolled, { passive: true })
-    return () => window.removeEventListener('scroll', markSeenIfScrolled)
-  }, [step, additionalCategoryKeys])
 
   useEffect(() => {
     if (step !== 3) {
@@ -1803,15 +1809,23 @@ export default function QuoteWizardCore({
     ],
   )
 
+  useEffect(() => {
+    const maxReachable = getMaxReachableStep(stepStatusCtx)
+    if (step > maxReachable) {
+      setStep(maxReachable)
+    }
+  }, [step, stepStatusCtx])
+
   const publicDraftSerialized = useMemo(
     () =>
       JSON.stringify(
         buildPublicIntakeDraft(
           state,
           resolvePackageIdForPersistence(packages, state.packageId),
+          [...visitedAdditionalCategories],
         ),
       ),
-    [state, packages],
+    [state, packages, visitedAdditionalCategories],
   )
 
   useEffect(() => {
@@ -2107,6 +2121,7 @@ export default function QuoteWizardCore({
   function handlePackageSelect(packageId: string | null) {
     if (!packageId) {
       updateState({ packageId: null, packageSelections: {} })
+      setVisitedAdditionalCategories(new Set())
       return
     }
 
@@ -2118,6 +2133,9 @@ export default function QuoteWizardCore({
     )
     const found = findPackageByIdOrKey(packages, packageId)
     if (found) selectedPackageRef.current = found
+    if (found?.id !== state.packageId) {
+      setVisitedAdditionalCategories(new Set())
+    }
     updateState({ packageId: found?.id ?? packageId, packageSelections: prunedSelections })
   }
 
@@ -2149,6 +2167,16 @@ export default function QuoteWizardCore({
           setPackageStepMessage(issues[0])
           return
         }
+      }
+    }
+    if (step === 3) {
+      const remaining = getUnvisitedAdditionalCategoryKeys(
+        categoryKeys,
+        visitedCategories,
+      )
+      if (remaining.length > 0) {
+        handleAdditionalsNextBlockedClick()
+        return
       }
     }
     const nextStep = resolveNextWizardStep({
@@ -2269,7 +2297,8 @@ export default function QuoteWizardCore({
     [additionalCategoryKeys, visitedAdditionalCategories],
   )
 
-  const additionalsStepNextDisabled = false
+  const additionalsStepNextDisabled =
+    additionalCategoryKeys.length > 0 && !allAdditionalCategoriesVisited
 
   const grillStepPendingIssues = useMemo(() => {
     const issues: string[] = []
@@ -2532,11 +2561,11 @@ export default function QuoteWizardCore({
 
   return (
     <main
-      className={`quotes-pscs min-h-screen bg-cdl-bg px-4 pb-28 text-cdl-fg sm:px-8 sm:pb-28 ${
+      className={`quotes-pscs min-h-screen min-w-0 max-w-full bg-cdl-bg px-4 pb-28 text-cdl-fg sm:px-8 sm:pb-28 ${
         isPublicMode ? 'py-6 sm:py-10' : 'py-4 sm:py-6'
       }`}
     >
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto min-w-0 max-w-6xl">
         {isPublicMode ? (
           <div className="mb-5 flex items-center justify-between gap-4">
             <div>
@@ -2609,13 +2638,9 @@ export default function QuoteWizardCore({
           language={uiLocale}
           getStepStatus={(index) => getStepVisualStatus(index, stepStatusCtx)}
           onStepClick={(nextStep) => {
-            if (
-              nextStep <= step ||
-              getStepVisualStatus(nextStep, stepStatusCtx) === 'complete'
-            ) {
-              setNavigationIssues([])
-              setStep(nextStep)
-            }
+            if (!canNavigateToStep(nextStep, stepStatusCtx)) return
+            setNavigationIssues([])
+            setStep(nextStep)
           }}
         />
 
@@ -2938,6 +2963,7 @@ export default function QuoteWizardCore({
                 allPackages={packages}
                 selectedPackageId={state.packageId}
                 language={state.language}
+                sidesPricePerPerson={commercialRules.sidesPricePerPerson}
                 optionGroupsForPackage={optionGroupsForPackage}
                 selections={state.packageSelections}
                 onSelectionChange={handlePackageSelectionChange}
@@ -2989,18 +3015,7 @@ export default function QuoteWizardCore({
         )}
 
         {step === 3 && (
-          <div
-            className="space-y-6"
-            onScroll={(event) => {
-              const target = event.currentTarget
-              if (
-                target.scrollTop + target.clientHeight >=
-                target.scrollHeight - 48
-              ) {
-                setVisitedAdditionalCategories(new Set(additionalCategoryKeys))
-              }
-            }}
-          >
+          <div className="min-w-0 space-y-6">
             <p className="text-sm text-cdl-muted">
               {quoteStrings.additionalsStepHint}
             </p>
@@ -3023,12 +3038,12 @@ export default function QuoteWizardCore({
                     expanded={openAdditionalCategories.has(categoryKey)}
                     selectedCount={selectedCountByCategory[categoryKey] ?? 0}
                     visited={visitedAdditionalCategories.has(categoryKey)}
+                    emphasize={emphasizedAdditionalCategory === categoryKey}
                     quantities={state.additionals}
                     billableGuestCount={billableGuestCount}
                     language={uiLocale}
                     onToggle={() => toggleAdditionalCategory(categoryKey)}
                     onChangeQty={setAdditionalQty}
-                    onReviewed={() => markAdditionalCategoryVisited(categoryKey)}
                   />
                 ),
                 )}
@@ -3281,6 +3296,7 @@ export default function QuoteWizardCore({
                 })
               }
               onGoToStep={(nextStep) => {
+                if (!canNavigateToStep(nextStep, stepStatusCtx)) return
                 setNavigationIssues([])
                 setStep(nextStep)
               }}
@@ -3323,7 +3339,10 @@ export default function QuoteWizardCore({
               isEditMode={isEditMode}
               quoteId={quoteId}
               uiLanguage={uiLocale}
-              onGoToStep={setStep}
+              onGoToStep={(nextStep) => {
+                if (!canNavigateToStep(nextStep, stepStatusCtx)) return
+                setStep(nextStep)
+              }}
               onBack={goBack}
               onSave={() => void handleSaveQuote(false)}
               onDistanceChange={(distance) => {

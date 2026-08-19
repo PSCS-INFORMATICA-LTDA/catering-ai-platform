@@ -227,7 +227,7 @@ export function getPackageSidesDescription(language: QuoteLanguage): string {
     return 'Sides: white rice, black beans, vinaigrette, farofa and cassava.'
   }
   if (language === 'es') {
-    return 'Guarniciones: arroz blanco, feijão preto, vinagrete, farofa y mandioca.'
+    return 'Guarniciones: arroz blanco, frijoles negros, vinagreta, farofa y yuca.'
   }
   return 'Guarnições: arroz branco, feijão preto, vinagrete, farofa e mandioca.'
 }
@@ -255,4 +255,44 @@ export function getPackagePriceLineLabel(
   if (kind === 'package') return 'Pacote'
   if (kind === 'sides') return 'Guarnições'
   return 'Total'
+}
+
+export function getPackagePriceCaption(language: QuoteLanguage): string {
+  if (language === 'en') return 'DOLLARS PER PERSON'
+  if (language === 'es') return 'DÓLARES POR PERSONA'
+  return 'DÓLARES POR PESSOA'
+}
+
+export function formatPackageHeroPrice(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return ''
+  const rounded = Math.round(value * 100) / 100
+  if (Number.isInteger(rounded)) return `$${rounded}`
+  return `$${rounded.toFixed(2)}`
+}
+
+export function packageSidesMathHolds(
+  pkg: PackageCatalogFields,
+  basePackage: PackageCatalogFields | null,
+  sidesPricePerPerson: number,
+): boolean {
+  const pricing = resolvePackageSidesPricing(
+    pkg,
+    basePackage,
+    sidesPricePerPerson,
+  )
+  if (!pricing) return true
+  if (pricing.basePricePerPerson == null) return false
+  if (pricing.sidesPricePerPerson <= 0) {
+    return (
+      Math.abs(pricing.basePricePerPerson - pricing.totalPerPerson) <
+      PRICE_TOLERANCE
+    )
+  }
+  return (
+    Math.abs(
+      pricing.basePricePerPerson +
+        pricing.sidesPricePerPerson -
+        pricing.totalPerPerson,
+    ) < PRICE_TOLERANCE
+  )
 }

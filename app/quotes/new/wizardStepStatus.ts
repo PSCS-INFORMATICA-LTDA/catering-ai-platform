@@ -3,10 +3,7 @@ import {
   isCustomPackage,
   validatePackageSelections,
 } from '@/Lib/packageOptionGroups'
-import {
-  getFallbackCommercialRules,
-  type CommercialRulesSnapshot,
-} from '@/Lib/supabaseCommercialRules'
+import type { CommercialRulesSnapshot } from '@/Lib/supabaseCommercialRules'
 import type { GrillPhotoStatus } from '@/Lib/grillPhotoStatus'
 import { isUsablePostalCode } from '@/Lib/cep'
 import { isUsablePhone } from '@/Lib/normalizePhone'
@@ -14,6 +11,7 @@ import { isUsablePublicPhone } from '@/Lib/publicQuote/phone'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import {
   areAllAdditionalCategoriesVisited,
+  getAdditionalCategoryReviewProgress,
   getVisibleAdditionalCategoryKeys,
 } from '@/Lib/wizardAdditionalCategories'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
@@ -41,8 +39,8 @@ function stepLabel(
 
 export const STEPS_COUNT = WIZARD_STEP_LABELS.length
 
-/** Verde = concluído · Amarelo = pendente · Vermelho = erro (confirmação) */
-export type StepVisualStatus = 'complete' | 'pending' | 'error'
+/** Verde = concluído · Atual/pendente · Bloqueado · Vermelho = erro (confirmação) */
+export type StepVisualStatus = 'complete' | 'pending' | 'error' | 'locked'
 
 export type WizardStateSnapshot = {
   customerId: string | null
@@ -217,7 +215,7 @@ export function getStepIssues(
   stepIndex: number,
   ctx: StepStatusContext,
 ): string[] {
-  const { state, selectedPackage } = ctx
+  const { state } = ctx
   const issues: string[] = []
   const language = loc(ctx)
 
@@ -294,8 +292,27 @@ export function getStepIssues(
       }
       break
     }
-    case 3:
+    case 3: {
+      const keys =
+        ctx.additionalCategoryKeys ??
+        getVisibleAdditionalCategoryKeys(ctx.additionalCategoryGroups ?? [])
+      if (
+        keys.length > 0 &&
+        !areAllAdditionalCategoriesVisited(keys, ctx.visitedAdditionalCategories)
+      ) {
+        const progress = getAdditionalCategoryReviewProgress(
+          keys,
+          ctx.visitedAdditionalCategories,
+        )
+        issues.push(
+          tw(language, 'categoriesReviewRequired', {
+            remaining: progress.remaining,
+            total: progress.total,
+          }),
+        )
+      }
       break
+    }
     case 4:
       if (!state.grillSetupAnswered) {
         issues.push(tw(language, 'issueHasGrill'))
@@ -348,27 +365,55 @@ export function getMandatoryPendingSteps(
     }))
 }
 
+export function isStepContentComplete(
+  stepIndex: number,
+  ctx: StepStatusContext,
+): boolean {
+  if (stepIndex === 0) {
+    return hasLinkedCustomer(ctx) && getStepIssues(0, ctx).length === 0
+  }
+  if (stepIndex === 3) {
+    return allAdditionalCategoriesVisited(ctx)
+  }
+  if (stepIndex === 5) {
+    return (
+      areMandatoryStepsComplete(ctx) &&
+      isStepContentComplete(3, ctx) &&
+      Boolean(ctx.pricingPreviewReady)
+    )
+  }
+  return getStepIssues(stepIndex, ctx).length === 0
+}
+
+/** Primeira etapa ainda inválida, ou a última se 1–5 estiverem válidas. */
+export function getMaxReachableStep(ctx: StepStatusContext): number {
+  for (let index = 0; index < STEPS_COUNT - 1; index += 1) {
+    if (!isStepContentComplete(index, ctx)) return index
+  }
+  return STEPS_COUNT - 1
+}
+
+export function canNavigateToStep(
+  stepIndex: number,
+  ctx: StepStatusContext,
+): boolean {
+  if (!Number.isInteger(stepIndex)) return false
+  if (stepIndex < 0 || stepIndex >= STEPS_COUNT) return false
+  return stepIndex <= getMaxReachableStep(ctx)
+}
+
 export function getStepVisualStatus(
   stepIndex: number,
   ctx: StepStatusContext,
 ): StepVisualStatus {
+  if (stepIndex < 0 || stepIndex >= STEPS_COUNT) return 'locked'
+  if (stepIndex > getMaxReachableStep(ctx)) return 'locked'
+
   if (stepIndex === 5) {
-    return isMandatoryStepComplete(5, ctx) && ctx.pricingPreviewReady
-      ? 'complete'
-      : 'pending'
+    return isStepContentComplete(5, ctx) ? 'complete' : 'pending'
   }
 
-  if (stepIndex === 0) {
-    return hasLinkedCustomer(ctx) ? 'complete' : 'pending'
-  }
-
-  if (stepIndex === 3) {
-    return ctx.currentStep > 3 || allAdditionalCategoriesVisited(ctx)
-      ? 'complete'
-      : 'pending'
-  }
-
-  return isMandatoryStepComplete(stepIndex, ctx) ? 'complete' : 'pending'
+  return isStepContentComplete(stepIndex, ctx) ? 'complete' : 'pending'
 }
 
 /** @deprecated Use getStepVisualStatus */

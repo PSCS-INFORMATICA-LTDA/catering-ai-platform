@@ -106,9 +106,12 @@ check('T08 mobile card has no image or horizontal overflow', () => {
 })
 
 check('T09 desktop keeps the balanced two-area card', () => {
-  assert.match(cardSource, /sm:gap-4/)
-  assert.match(cardSource, /sm:p-4/)
-  assert.match(cardSource, /border-l border-cdl-border/)
+  assert.match(
+    cardSource,
+    /sm:grid-cols-\[minmax\(0,2fr\)_minmax\(0,3fr\)\]/,
+  )
+  assert.match(cardSource, /sm:p-5/)
+  assert.match(cardSource, /sm:border-r sm:border-b-0/)
 })
 
 check('T10 Portuguese labels are present', () => {

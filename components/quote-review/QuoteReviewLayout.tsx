@@ -29,7 +29,7 @@ import type { QuoteReviewAdditional, QuoteReviewData } from './quoteReviewTypes'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import { tCommon } from '@/Lib/i18n/common'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
-import { formatMilesWithKilometers } from '@/Lib/units'
+import { formatDistanceForDisplay } from '@/Lib/units'
 import PricingBreakdownView from './PricingBreakdownView'
 import type {
   PricingBreakdown,
@@ -100,6 +100,18 @@ function groupAdditionals(items: QuoteReviewAdditional[]) {
     category,
     items: categoryItems,
   }))
+}
+
+function formatReviewDistance(
+  miles: number | null | undefined,
+  lang: 'pt' | 'en' | 'es',
+  unit: QuoteReviewData['distanceDisplayUnit'],
+) {
+  return formatDistanceForDisplay(miles, unit ?? 'both', {
+    miles: tw(lang, 'mileageDistanceMiles'),
+    kilometers: tw(lang, 'mileageDistanceKm'),
+    both: tw(lang, 'mileageDistanceMiKm'),
+  })
 }
 
 function getChargedMiles(
@@ -451,11 +463,12 @@ function ConfirmationProposalBody({
                   {tw(lang, 'mileageTotalDistance')}
                 </span>
                 <p className="quote-proposal-value">
-                  {formatMilesWithKilometers(
+                  {formatReviewDistance(
                     mileageMetadata?.distance != null
                       ? Number(mileageMetadata.distance)
                       : null,
-                    tw(lang, 'mileageDistanceMiKm'),
+                    lang,
+                    data.distanceDisplayUnit,
                   ) ?? '—'}
                 </p>
               </div>
@@ -951,19 +964,24 @@ export default function QuoteReviewLayout({
         <ProposalSection title={t.review.mileageSection} className="quote-proposal-section--compact">
           <div className="quote-proposal-mileage-grid">
             <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">{w.baseLocation}</span>
+              <span className="quote-proposal-label">{tw(lang, 'mileageOrigin')}</span>
               <p className="quote-proposal-value">
                 {displayValue(data.mileageBaseLocation)}
               </p>
+            </div>
+            <div className="quote-proposal-info-cell">
+              <span className="quote-proposal-label">{tw(lang, 'mileageDestination')}</span>
+              <p className="quote-proposal-value">{displayValue(eventLocation)}</p>
             </div>
             <div className="quote-proposal-info-cell">
               <span className="quote-proposal-label">
                 {tQuotesOrders(lang, 'docMileageDistance')}
               </span>
               <p className="quote-proposal-value">
-                {formatMilesWithKilometers(
+                {formatReviewDistance(
                   data.mileageDistance,
-                  tw(lang, 'mileageDistanceMiKm'),
+                  lang,
+                  data.distanceDisplayUnit,
                 ) ?? '—'}
               </p>
             </div>

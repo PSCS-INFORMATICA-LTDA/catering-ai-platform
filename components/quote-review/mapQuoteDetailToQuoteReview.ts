@@ -494,6 +494,9 @@ export function mapQuoteDetailToQuoteReview(
         : snapshot.mileageFreeLimit,
     mileageRate: mileageLine?.unit_price ?? snapshot.mileageRate,
     mileageFee: mileageLine?.amount ?? snapshot.mileageFee,
+    distanceDisplayUnit:
+      breakdown.rules_applied.distanceDisplayUnit ??
+      getFallbackCommercialRules().distanceDisplayUnit,
     additionalTotal: breakdown.lines.some(
       (line) => line.line_key === 'additional_item',
     )

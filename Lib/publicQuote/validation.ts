@@ -87,6 +87,13 @@ export function sanitizePublicQuoteDraft(value: unknown): PublicQuoteDraft {
     itemId,
     quantity,
   }))
+  const rawReviewed = Array.isArray(selection.reviewedCategoryKeys)
+    ? selection.reviewedCategoryKeys
+        .slice(0, 80)
+        .map((key) => shortText(String(key), 80))
+        .filter(Boolean)
+    : []
+  const reviewedCategoryKeys = [...new Set(rawReviewed)]
 
   return {
     locale: parsePublicQuoteLocale(root.locale) ?? 'pt',
@@ -128,8 +135,10 @@ export function sanitizePublicQuoteDraft(value: unknown): PublicQuoteDraft {
       packageId: shortText(selection.packageId, 64),
       packageSelections,
       additionals,
+      reviewedCategoryKeys,
     },
     grill: {
+      setupAnswered: grill.setupAnswered === true,
       hasGrill: grill.hasGrill === true,
       photoReference: nullableText(grill.photoReference, 500),
       rentalRequired: grill.rentalRequired === true,

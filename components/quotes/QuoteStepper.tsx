@@ -12,6 +12,9 @@ function stepSegmentClass(status: StepVisualStatus, isCurrent: boolean) {
 }
 
 function stepButtonClass(status: StepVisualStatus, isCurrent: boolean) {
+  if (status === 'locked' && !isCurrent) {
+    return 'cursor-not-allowed bg-cdl-surface text-cdl-muted opacity-45'
+  }
   if (status === 'error') {
     return 'bg-red-50 text-red-800 ring-1 ring-red-200'
   }
@@ -28,6 +31,7 @@ function stepBadgeClass(status: StepVisualStatus, isCurrent: boolean) {
   if (isCurrent) return 'bg-[var(--brand-primary)] text-white'
   if (status === 'complete') return 'bg-emerald-500 text-white'
   if (status === 'error') return 'bg-red-500 text-white'
+  if (status === 'locked') return 'bg-cdl-inset text-cdl-muted'
   return 'bg-cdl-inset text-cdl-muted'
 }
 
@@ -67,7 +71,7 @@ export default function QuoteStepper({
         ))}
       </div>
 
-      <ol className="-mx-0.5 flex gap-1 overflow-x-auto px-0.5 pb-0.5 snap-x snap-mandatory scroll-smooth lg:mx-0 lg:grid lg:grid-cols-6 lg:gap-1 lg:overflow-visible lg:pb-0">
+      <ol className="-mx-0.5 flex max-w-full gap-1 px-0.5 pb-0.5 lg:mx-0 lg:grid lg:grid-cols-6 lg:gap-1 lg:overflow-visible lg:pb-0">
         {steps.map((label, index) => {
           const status = getStepStatus(index)
           const isCurrent = index === currentStep
@@ -79,14 +83,19 @@ export default function QuoteStepper({
           return (
             <li
               key={label}
-              className="min-w-[3.25rem] shrink-0 snap-center lg:min-w-0"
+              className="min-w-0 flex-1 lg:min-w-0"
             >
               <button
                 type="button"
-                onClick={() => onStepClick(index)}
+                onClick={() => {
+                  if (status === 'locked') return
+                  onStepClick(index)
+                }}
+                disabled={status === 'locked'}
+                aria-disabled={status === 'locked'}
                 title={stepTitle}
                 aria-current={isCurrent ? 'step' : undefined}
-                className={`flex w-full flex-col items-center gap-0.5 rounded-lg px-0.5 py-1.5 transition-colors lg:py-2 ${stepButtonClass(status, isCurrent)}`}
+                className={`flex w-full min-w-0 flex-col items-center gap-0.5 rounded-lg px-0.5 py-1.5 transition-colors lg:py-2 ${stepButtonClass(status, isCurrent)}`}
               >
                 <span
                   className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-black lg:h-5 lg:w-5 lg:text-[10px] ${stepBadgeClass(status, isCurrent)}`}

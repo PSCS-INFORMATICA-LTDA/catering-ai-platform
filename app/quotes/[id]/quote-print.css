@@ -11,6 +11,8 @@
   font-family: var(--font-proposal-sans), 'Montserrat', system-ui, sans-serif;
   color: var(--proposal-dark);
   background: var(--proposal-light);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .quote-proposal .quote-proposal-title,
@@ -322,10 +324,13 @@
 
 .quote-proposal-value {
   margin-top: 0.2rem;
+  min-width: 0;
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--proposal-dark);
   line-height: 1.4;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .quote-proposal-grid-2 {
@@ -377,6 +382,7 @@
 
 .quote-proposal-mileage-compact {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 0.75rem;
 }
@@ -575,12 +581,18 @@
 
 .quote-proposal-event-row {
   display: flex;
+  min-width: 0;
   gap: 0.85rem;
   align-items: flex-start;
   padding: 0.65rem 0.75rem;
   border-radius: 0.75rem;
   background: var(--proposal-light);
   border: 1px solid var(--proposal-border);
+}
+
+.quote-proposal-event-copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .quote-proposal-event-icon {
@@ -598,11 +610,19 @@
 .quote-proposal-info-grid,
 .quote-proposal-mileage-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.65rem;
 }
 
+@media (min-width: 640px) {
+  .quote-proposal-info-grid,
+  .quote-proposal-mileage-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
 .quote-proposal-info-cell {
+  min-width: 0;
   padding: 0.65rem 0.75rem;
   border-radius: 0.65rem;
   border: 1px solid var(--proposal-border);
@@ -1241,7 +1261,7 @@
   }
 
   .quote-proposal-mileage-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
 
   .quote-proposal-section--compact {

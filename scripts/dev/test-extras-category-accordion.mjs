@@ -40,7 +40,6 @@ check('T02 closed category renders localized item count', () => {
 
 check('T03 closed category previews localized item names', () => {
   assert.match(categorySrc, /getLocalizedAdditionalLabel\(item, language\)/)
-  assert.match(categorySrc, /\.join\(' • '\)/)
   assert.match(categorySrc, /data-additional-category-preview/)
 })
 
@@ -76,12 +75,12 @@ check('T08 mobile layout has one column and no horizontal squeeze', () => {
     /grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4/,
   )
   assert.match(categorySrc, /overflow-hidden rounded-2xl/)
-  assert.match(itemSrc, /grid-cols-\[5\.75rem_minmax\(0,1fr\)\]/)
+  assert.match(itemSrc, /grid-cols-\[7\.5rem_minmax\(0,1fr\)\]/)
 })
 
-check('T09 Next stays enabled after opening or closing categories', () => {
-  assert.match(wizardSrc, /additionalsStepNextDisabled = false/)
-  assert.match(advanceSrc, /canAdvanceFromAdditionalsStep[^]*?return true/)
+check('T09 Next stays disabled until every category is reviewed', () => {
+  assert.match(wizardSrc, /additionalsStepNextDisabled/)
+  assert.match(advanceSrc, /areAllAdditionalCategoriesVisited/)
 })
 
 check('T10 Next stays enabled with selected extras', () => {
@@ -110,8 +109,7 @@ check('T13 Portuguese and Spanish labels remain driven by i18n', () => {
 })
 
 check('T14 long category previews are clamped cleanly', () => {
-  assert.match(categorySrc, /line-clamp-3/)
-  assert.match(categorySrc, /break-words/)
+  assert.match(categorySrc, /min-w-0 truncate/)
 })
 
 check('T15 items without an image keep a stable fallback', () => {

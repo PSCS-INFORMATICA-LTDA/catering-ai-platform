@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import AdditionalItemCard from '@/components/quotes/additionals/AdditionalItemCard'
 import {
   getAdditionalChargeUnitLabel,
@@ -28,12 +28,12 @@ export default function AdditionalCategorySection({
   expanded,
   selectedCount,
   visited,
+  emphasize = false,
   quantities,
   billableGuestCount,
   language,
   onToggle,
   onChangeQty,
-  onReviewed,
 }: {
   categoryKey: string
   categoryLabel: string
@@ -41,18 +41,15 @@ export default function AdditionalCategorySection({
   expanded: boolean
   selectedCount: number
   visited: boolean
+  emphasize?: boolean
   quantities: Record<string, number>
   billableGuestCount: number
   language: QuoteLanguage
   onToggle: () => void
   onChangeQty: (itemId: string, qty: number) => void
-  onReviewed?: () => void
 }) {
   const t = getQuoteStrings(language)
   const sectionRef = useRef<HTMLElement>(null)
-  const reviewStatus = visited
-    ? tw(language, 'categoryReviewStatusReviewed')
-    : tw(language, 'categoryReviewStatusPending')
   const menuRows = useMemo(
     () =>
       items.map((item) => ({
@@ -68,40 +65,17 @@ export default function AdditionalCategorySection({
   )
   const contentId = `additional-category-content-${categoryKey}`
 
-  useEffect(() => {
-    if (visited || !onReviewed) return
-    const node = sectionRef.current
-    if (!node) return
-
-    let visibleTimer: number | undefined
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry?.isIntersecting) {
-          if (visibleTimer) window.clearTimeout(visibleTimer)
-          visibleTimer = undefined
-          return
-        }
-        if (visibleTimer) return
-        visibleTimer = window.setTimeout(() => {
-          onReviewed()
-        }, 400)
-      },
-      { threshold: 0.35 },
-    )
-
-    observer.observe(node)
-    return () => {
-      observer.disconnect()
-      if (visibleTimer) window.clearTimeout(visibleTimer)
-    }
-  }, [visited, onReviewed])
-
   return (
     <section
       ref={sectionRef}
       id={`additional-category-${categoryKey}`}
       data-category-key={categoryKey}
-      className="overflow-hidden rounded-2xl border border-cdl-border bg-cdl-surface shadow-cdl"
+      data-category-reviewed={visited ? 'true' : 'false'}
+      className={`overflow-hidden rounded-2xl border bg-cdl-surface shadow-cdl transition ${
+        emphasize
+          ? 'border-[var(--brand-primary)] ring-2 ring-[color-mix(in_srgb,var(--brand-primary)_35%,transparent)]'
+          : 'border-cdl-border'
+      }`}
     >
       <button
         type="button"
@@ -129,7 +103,7 @@ export default function AdditionalCategorySection({
                 {menuRows.map((row) => (
                   <li
                     key={row.id}
-                    className="flex items-baseline gap-2 text-sm leading-5"
+                    className="flex min-w-0 items-baseline gap-2 text-sm leading-5"
                   >
                     <span
                       className={`min-w-0 truncate ${
@@ -148,7 +122,7 @@ export default function AdditionalCategorySection({
                     <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-cdl-title">
                       {row.price ?? tw(language, 'priceUnavailable')}
                     </span>
-                    <span className="shrink-0 whitespace-nowrap text-xs text-cdl-muted">
+                    <span className="min-w-0 shrink-0 text-xs text-cdl-muted">
                       {row.chargeUnit}
                     </span>
                   </li>
@@ -156,20 +130,13 @@ export default function AdditionalCategorySection({
               </ul>
             ) : null}
 
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span
-                className={`text-[11px] font-semibold uppercase tracking-wide ${
-                  visited ? 'text-cdl-muted' : 'text-cdl-text-secondary'
-                }`}
-              >
-                {reviewStatus}
-              </span>
-              {selectedCount > 0 ? (
+            {selectedCount > 0 ? (
+              <div className="mt-2">
                 <span className="rounded-full bg-[var(--brand-primary)] px-2.5 py-0.5 text-xs font-bold text-white">
                   {t.selectedCount(selectedCount)}
                 </span>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
           </div>
           <span
             className={`mt-1 shrink-0 text-sm text-[var(--brand-primary)] transition-transform duration-200 ${

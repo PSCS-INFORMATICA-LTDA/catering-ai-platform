@@ -368,10 +368,10 @@ async function main() {
   }
 
   try {
-    assert.match(wizardSrc, /additionalsStepNextDisabled = false/)
+    assert.match(wizardSrc, /additionalsStepNextDisabled/)
     assert.match(wizardSrc, /allAdditionalCategoriesVisited/)
-    pass('H03 Next stays available on additionals')
-    pass('H04 Next enabled without category lock')
+    pass('H03 Next availability follows extras review')
+    pass('H04 Next stays gated by unreviewed categories')
   } catch (e) {
     fail('H03–H04 category visit gating', e)
   }
@@ -841,8 +841,10 @@ async function main() {
   try {
     let visited = markVisited(new Set(), 'GUARNICOES')
     assert.ok(visited.has('GUARNICOES'))
-    assert.match(wizardSrc, /onReviewed=\{\(\) => markAdditionalCategoryVisited\(categoryKey\)\}/)
-    assert.match(
+    assert.match(wizardSrc, /toggleAdditionalCategory/)
+    assert.match(wizardSrc, /markAdditionalCategoryVisited\(category\)/)
+    assert.match(wizardSrc, /openAdditionalCategories/)
+    assert.doesNotMatch(
       read('components/quotes/additionals/AdditionalCategorySection.tsx'),
       /IntersectionObserver/,
     )
@@ -910,9 +912,12 @@ async function main() {
   }
 
   try {
-    assert.doesNotMatch(wizardSrc, /setVisitedAdditionalCategories\(new Set\(\)\)/)
     assert.match(wizardSrc, /uiLocale/)
     assert.match(wizardSrc, /getVisibleAdditionalCategoryKeys/)
+    assert.match(
+      wizardSrc,
+      /if \(found\?\.id !== state\.packageId\) \{\s*setVisitedAdditionalCategories\(new Set\(\)\)/,
+    )
     pass('A11 locale change keeps visited keys stable')
   } catch (e) {
     fail('A11 locale visited', e)
@@ -1004,8 +1009,8 @@ async function main() {
   }
 
   try {
-    assert.match(wizardSrc, /additionalsStepNextDisabled = false/)
-    pass('A22 remaining categories do not lock next')
+    assert.match(wizardSrc, /additionalsStepNextDisabled/)
+    pass('A22 remaining categories lock next until reviewed')
   } catch (e) {
     fail('A22 next disabled', e)
   }
@@ -1037,14 +1042,14 @@ async function main() {
   try {
     assert.match(
       read('components/quotes/additionals/AdditionalCategorySection.tsx'),
+      /data-category-reviewed/,
+    )
+    assert.doesNotMatch(
+      read('components/quotes/additionals/AdditionalCategorySection.tsx'),
       /categoryReviewStatusReviewed/,
     )
-    assert.match(
-      read('components/quotes/additionals/AdditionalCategorySection.tsx'),
-      /categoryReviewStatusPending/,
-    )
     assert.match(wizardSrc, /visited=\{visitedAdditionalCategories\.has\(categoryKey\)\}/)
-    pass('A26 reviewed/pending indicator per category')
+    pass('A26 reviewed state stays internal without REVISADA label')
   } catch (e) {
     fail('A26 category indicator', e)
   }
@@ -1067,6 +1072,11 @@ async function main() {
 
   function simulateResolveNextWizardStep(ctx) {
     if (ctx.step === 3) {
+      const keys = ctx.additionalCategoryKeys ?? []
+      const visited = ctx.visitedAdditionalCategories ?? new Set()
+      if (keys.length > 0 && !keys.every((key) => visited.has(key))) {
+        return ctx.step
+      }
       return ctx.step + 1
     }
     return ctx.step
@@ -1137,9 +1147,9 @@ async function main() {
   }
 
   try {
-    assert.match(wizardSrc, /additionalsStepNextDisabled = false/)
+    assert.match(wizardSrc, /additionalsStepNextDisabled/)
     assert.match(wizardSrc, /canAdvanceFromAdditionalsStep/)
-    pass('N04 Próximo stays enabled on additionals')
+    pass('N04 Próximo respects extras review gate')
   } catch (e) {
     fail('N04 next enabled', e)
   }
@@ -1185,9 +1195,9 @@ async function main() {
     const pending = sampleAdvanceCtx({
       visitedAdditionalCategories: new Set(['GUARNICOES']),
     })
-    assert.equal(simulateResolveNextWizardStep(pending), 4)
+    assert.equal(simulateResolveNextWizardStep(pending), 3)
     assert.equal(allVisited(['GUARNICOES', 'BOVINO'], pending.visitedAdditionalCategories), false)
-    pass('N09 pending category still advances')
+    pass('N09 pending category blocks advance')
   } catch (e) {
     fail('N09 pending blocks advance', e)
   }

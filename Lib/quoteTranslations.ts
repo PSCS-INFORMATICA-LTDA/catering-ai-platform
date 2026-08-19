@@ -201,6 +201,8 @@ type QuoteStrings = {
     chargeUnitFixed: string
     priceUnavailable: string
     mileageDistanceMiKm: string
+    mileageDistanceMiles: string
+    mileageDistanceKm: string
     mileageRuleLabel: string
     mileageRuleSummary: string
     adults: string
@@ -593,6 +595,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       chargeUnitFixed: 'valor fixo',
       priceUnavailable: 'Preço a confirmar',
       mileageDistanceMiKm: '{mi} mi ({km} km)',
+      mileageDistanceMiles: '{mi} mi',
+      mileageDistanceKm: '{km} km',
       mileageRuleLabel: 'Regra aplicada',
       mileageRuleSummary:
         'Até {included} mi inclusas. Acima disso, {rate} por milha.',
@@ -1000,6 +1004,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       chargeUnitFixed: 'fixed price',
       priceUnavailable: 'Price to confirm',
       mileageDistanceMiKm: '{mi} mi ({km} km)',
+      mileageDistanceMiles: '{mi} mi',
+      mileageDistanceKm: '{km} km',
       mileageRuleLabel: 'Applied rule',
       mileageRuleSummary:
         'Up to {included} mi included. Above that, {rate} per mile.',
@@ -1408,6 +1414,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       chargeUnitFixed: 'precio fijo',
       priceUnavailable: 'Precio por confirmar',
       mileageDistanceMiKm: '{mi} mi ({km} km)',
+      mileageDistanceMiles: '{mi} mi',
+      mileageDistanceKm: '{km} km',
       mileageRuleLabel: 'Regla aplicada',
       mileageRuleSummary:
         'Hasta {included} mi incluidas. Por encima, {rate} por milla.',

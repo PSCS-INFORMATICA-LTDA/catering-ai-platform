@@ -208,6 +208,7 @@ export function mapWizardToQuoteReview(
     mileageFreeLimit: state.freeLimit ?? commercialRules.mileageFreeLimit,
     mileageRate: state.rate ?? commercialRules.mileageRate,
     mileageFee: quoteTotals.mileageFee,
+    distanceDisplayUnit: commercialRules.distanceDisplayUnit,
     additionalTotal: quoteTotals.additionalTotal,
     holidaySurchargeAmount: quoteTotals.holidaySurchargeAmount,
     minimumOrderAdjustment: quoteTotals.minimumOrderAdjustment,

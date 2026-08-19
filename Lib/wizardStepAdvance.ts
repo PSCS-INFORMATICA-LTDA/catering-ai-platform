@@ -1,4 +1,5 @@
 import {
+  areAllAdditionalCategoriesVisited,
   getUnvisitedAdditionalCategoryKeys,
 } from './wizardAdditionalCategories'
 import {
@@ -38,10 +39,13 @@ export function getAdditionalsRemainingCategoryKeys(
 }
 
 export function canAdvanceFromAdditionalsStep(
-  _additionalCategoryKeys: readonly string[],
-  _visitedAdditionalCategories: ReadonlySet<string>,
+  additionalCategoryKeys: readonly string[],
+  visitedAdditionalCategories: ReadonlySet<string>,
 ): boolean {
-  return true
+  return areAllAdditionalCategoriesVisited(
+    additionalCategoryKeys,
+    visitedAdditionalCategories,
+  )
 }
 
 export function canAdvanceFromWizardStep(ctx: WizardAdvanceContext): boolean {
@@ -68,6 +72,7 @@ export function canAdvanceFromWizardStep(ctx: WizardAdvanceContext): boolean {
         ctx.visitedAdditionalCategories,
       )
     case 4: {
+      if (!ctx.state.grillSetupAnswered) return false
       if (isGrillPhotoRequiredAndMissing(ctx.state)) return false
       if (ctx.state.grillRentalRequired && ctx.state.grillRentalQty <= 0) {
         return false

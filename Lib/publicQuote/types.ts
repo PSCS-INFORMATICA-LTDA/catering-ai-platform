@@ -119,8 +119,10 @@ export type PublicQuoteDraft = {
     packageId: string
     packageSelections: Record<string, string>
     additionals: Array<{ itemId: string; quantity: number }>
+    reviewedCategoryKeys: string[]
   }
   grill: {
+    setupAnswered: boolean
     hasGrill: boolean
     photoReference: string | null
     rentalRequired: boolean

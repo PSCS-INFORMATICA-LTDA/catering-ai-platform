@@ -12,6 +12,10 @@ import {
   RESERVATION_PERCENTAGE,
   SIDES_PRICE_PER_PERSON,
 } from './cdlCommercialRules'
+import {
+  parseDistanceDisplayUnit,
+  type DistanceDisplayUnit,
+} from './units'
 import { getActiveCompanyId } from '@/Lib/tenant/resolveTenant'
 import { getSupabaseServerClient } from './supabaseServer'
 
@@ -21,6 +25,8 @@ export type CommercialRulesSnapshot = {
   mileageRate: number
   reservationPercentage: number
   sidesPricePerPerson: number
+  /** Presentation only. Mileage pricing always uses miles. */
+  distanceDisplayUnit: DistanceDisplayUnit
   minOrderWeekday: number
   minOrderWeekend: number
   minOrderDecJan: number
@@ -59,6 +65,7 @@ export function getFallbackCommercialRules(): CommercialRulesSnapshot {
     mileageRate: MILEAGE_RATE,
     reservationPercentage: RESERVATION_PERCENTAGE,
     sidesPricePerPerson: SIDES_PRICE_PER_PERSON,
+    distanceDisplayUnit: 'both',
     minOrderWeekday: MIN_ORDER_WEEKDAY,
     minOrderWeekend: MIN_ORDER_WEEKEND,
     minOrderDecJan: MIN_ORDER_DEC_JAN,
@@ -107,6 +114,9 @@ function mapKeyValueRules(rows: RuleRow[]): CommercialRulesSnapshot {
     sidesPricePerPerson: toNumber(
       byKey.get('sides_price_per_person'),
       fallback.sidesPricePerPerson,
+    ),
+    distanceDisplayUnit: parseDistanceDisplayUnit(
+      byKey.get('distance_display_unit'),
     ),
     minOrderWeekday: toNumber(
       byKey.get('min_order_weekday'),
@@ -160,6 +170,9 @@ function mapSingleRowRules(row: RuleRow): CommercialRulesSnapshot {
     sidesPricePerPerson: toNumber(
       row.sides_price_per_person,
       fallback.sidesPricePerPerson,
+    ),
+    distanceDisplayUnit: parseDistanceDisplayUnit(
+      row.distance_display_unit,
     ),
     minOrderWeekday: toNumber(row.min_order_weekday, fallback.minOrderWeekday),
     minOrderWeekend: toNumber(row.min_order_weekend, fallback.minOrderWeekend),

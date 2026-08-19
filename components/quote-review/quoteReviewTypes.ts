@@ -55,6 +55,7 @@ export type QuoteReviewData = {
   mileageFreeLimit: number | null
   mileageRate: number | null
   mileageFee: number | null
+  distanceDisplayUnit?: import('@/Lib/units').DistanceDisplayUnit
   additionalTotal: number | null
   holidaySurchargeAmount?: number | null
   minimumOrderAdjustment?: number | null

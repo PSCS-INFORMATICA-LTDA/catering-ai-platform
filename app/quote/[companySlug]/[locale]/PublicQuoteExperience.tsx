@@ -22,6 +22,7 @@ import {
 } from '@/Lib/quoteWizardTypes'
 import type { CommercialRulesSnapshot } from '@/Lib/supabaseCommercialRules'
 import { sanitizeStoredPublicPhone } from '@/Lib/publicQuote/phone'
+import { isPublicGrillDraftAnswered } from '@/Lib/publicQuote/grillDraft'
 
 export type PublicQuotePageBootstrap = {
   company: {
@@ -111,8 +112,10 @@ type IntakeDraft = {
     packageId?: string | null
     packageSelections?: Record<string, string>
     additionals?: Array<{ itemId: string; quantity: number }>
+    reviewedCategoryKeys?: string[]
   }
   grill?: {
+    setupAnswered?: boolean
     hasGrill?: boolean
     photoReference?: string | null
     rentalRequired?: boolean
@@ -184,6 +187,7 @@ function hydrateDraft(
   branchId: string | null,
   consentVersion: string,
   draft?: IntakeDraft | null,
+  currentStep = 0,
 ): WizardState {
   const base = createInitialWizardState(rules)
   if (!draft) {
@@ -203,7 +207,8 @@ function hydrateDraft(
   const lastName = draft.contact?.lastName?.trim() || ''
   const address = draft.event?.address
   const photoReference = draft.grill?.photoReference?.trim() || null
-  const hasGrill = Boolean(draft.grill?.hasGrill)
+  const grillSetupAnswered = isPublicGrillDraftAnswered(draft.grill, currentStep)
+  const hasGrill = grillSetupAnswered ? Boolean(draft.grill?.hasGrill) : false
 
   return {
     ...base,
@@ -237,8 +242,7 @@ function hydrateDraft(
     packageSelections: draft.selection?.packageSelections || {},
     additionals,
     hasGrill,
-    grillSetupAnswered:
-      typeof draft.grill?.hasGrill === 'boolean',
+    grillSetupAnswered,
     grillPhotoRequired: hasGrill,
     grillPhotoStatus: hasGrill
       ? photoReference
@@ -278,6 +282,7 @@ export default function PublicQuoteExperience({
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState(false)
   const [restoredDraft, setRestoredDraft] = useState<IntakeDraft | null>(null)
+  const [restoredStep, setRestoredStep] = useState(0)
   const [success, setSuccess] =
     useState<PublicQuoteSubmissionResult | null>(null)
   const defaultBranch =
@@ -292,6 +297,7 @@ export default function PublicQuoteExperience({
         defaultBranch?.id ?? null,
         bootstrap.settings.consent.version,
         restoredDraft,
+        restoredStep,
       ),
     [
       bootstrap.commercialRules,
@@ -299,6 +305,7 @@ export default function PublicQuoteExperience({
       defaultBranch?.id,
       locale,
       restoredDraft,
+      restoredStep,
     ],
   )
 
@@ -318,13 +325,18 @@ export default function PublicQuoteExperience({
         }),
       })
       const result = (await response.json().catch(() => null)) as
-        | { session?: { draft?: IntakeDraft | null } }
+        | { session?: { draft?: IntakeDraft | null; currentStep?: number } }
         | { error?: string }
         | null
       if (!response.ok || !result || !('session' in result)) {
         throw new Error('session_start_failed')
       }
       setRestoredDraft(result.session?.draft ?? null)
+      setRestoredStep(
+        Number.isFinite(Number(result.session?.currentStep))
+          ? Math.max(0, Math.min(5, Number(result.session?.currentStep)))
+          : 0,
+      )
       setStarted(true)
     } catch {
       setStartError(true)
@@ -456,6 +468,10 @@ export default function PublicQuoteExperience({
           commercialRules={bootstrap.commercialRules}
           fetchErrors={[]}
           initialState={initialState}
+          initialStep={restoredStep}
+          initialReviewedCategoryKeys={
+            restoredDraft?.selection?.reviewedCategoryKeys
+          }
           initialUiLocale={locale}
           publicContext={{
             companyId: bootstrap.company.id,

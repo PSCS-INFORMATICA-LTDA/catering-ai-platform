@@ -246,7 +246,9 @@ test('replacing the destination invalidates the previous distance', () => {
 
 test('package art keeps its natural ratio and is never cropped', () => {
   const catalog = source('components/quotes/PublicPackageCatalog.tsx')
-  assert.match(catalog, /className="block h-auto w-full"/)
+  const hero = source('components/quotes/PackageCatalogHeroArt.tsx')
+  assert.match(hero, /className="block h-auto w-full"/)
+  assert.doesNotMatch(hero, /object-cover/)
   assert.doesNotMatch(catalog, /object-cover/)
   assert.doesNotMatch(catalog, /aspect-\[/)
   assert.match(catalog, /grid-cols-1 items-start gap-5 lg:grid-cols-2/)
@@ -397,8 +399,8 @@ test('miles convert to kilometers for display only', () => {
   )
   assert.equal(formatMilesWithKilometers(null, '{mi} mi ({km} km)'), null)
   const layout = source('components/quote-review/QuoteReviewLayout.tsx')
-  assert.match(layout, /formatMilesWithKilometers/)
-  assert.match(layout, /mileageDistanceMiKm/)
+  assert.match(layout, /formatDistanceForDisplay/)
+  assert.match(layout, /mileageDistanceMiles/)
 })
 
 test('mileage missing config is explicit in the preview route', () => {
@@ -533,6 +535,8 @@ test('PT/EN/ES cover new public quote strings', () => {
     'chargeUnitFixed',
     'priceUnavailable',
     'mileageDistanceMiKm',
+    'mileageDistanceMiles',
+    'mileageDistanceKm',
   ]) {
     const matches = translations.match(new RegExp(`${key}:`, 'g')) || []
     assert.ok(
