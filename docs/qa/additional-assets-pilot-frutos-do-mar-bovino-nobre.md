@@ -62,6 +62,9 @@ ITEM_010 has a clean asset bound. On package BBQCHO+ (and other packages that al
 
 No wizard/pricing/UI code changed. `npm run lint` / `npx tsc --noEmit` / `npm run build` were not required for this assets-only revision. There is still no `npm test` / `npm run typecheck` script.
 
+## Notes for Philippe
+
 - There is no standalone catalog item named only “Wagyu”. The existing Wagyu photograph was **TOMAHAWK (WAGYU)**.
 - Fraldinha Wagyu / Picanha Wagyu in this category are premium extras, not Bovino Tradicional Fraldinha / Picanha Angus.
 - Generated steaks are AI food photos in the locked CDL extras style; they are not studio shots of CDL inventory.
+
