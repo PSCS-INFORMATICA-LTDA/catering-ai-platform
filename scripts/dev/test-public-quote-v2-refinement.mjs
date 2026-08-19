@@ -249,7 +249,7 @@ test('package art keeps its natural ratio and is never cropped', () => {
   assert.match(catalog, /className="block h-auto w-full"/)
   assert.doesNotMatch(catalog, /object-cover/)
   assert.doesNotMatch(catalog, /aspect-\[/)
-  assert.match(catalog, /grid-cols-1 gap-5 lg:grid-cols-2/)
+  assert.match(catalog, /grid-cols-1 items-start gap-5 lg:grid-cols-2/)
 })
 
 test('package options render inline right below the selected package', () => {

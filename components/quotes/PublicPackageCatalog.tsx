@@ -146,7 +146,7 @@ export default function PublicPackageCatalog({
   return (
     <div className="space-y-5">
       <p className="text-sm text-cdl-muted">{t.wizard.publicPackageChooseHint}</p>
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
         {catalog.map((pkg) => {
           const active = selectedPackageId === pkg.id
           const selectableGroups = active
