@@ -13,6 +13,7 @@ import {
 } from '../../Lib/additionalPriceDisplay.ts'
 import {
   getAdditionalCategoryExposeRootMargin,
+  isExtrasExposeScrollJump,
   shouldExposeAdditionalCategory,
 } from '../../Lib/additionalCategoryExposure.ts'
 import { getPublicPackageSidesGroup } from '../../Lib/packageCatalogVisual.ts'
@@ -338,6 +339,17 @@ test('TEST 21 blocked Next scrolls to the pending summary without opening it', (
   assert.match(blocked, /setEmphasizedAdditionalCategory/)
   assert.doesNotMatch(blocked, /setOpenAdditionalCategories/)
   assert.match(wizardSrc, /additionalsReviewAllCategories/)
+})
+
+test('TEST 21c End/Home jumps do not review skipped summaries', () => {
+  assert.equal(isExtrasExposeScrollJump(2000, 844), true)
+  assert.equal(isExtrasExposeScrollJump(80, 844), false)
+  assert.match(wizardSrc, /isExtrasExposeScrollJump/)
+  assert.match(wizardSrc, /extrasExposeArmedRef\.current = false/)
+  assert.doesNotMatch(
+    wizardSrc,
+    /isExtrasExposeScrollJump[\s\S]{0,200}setOpenAdditionalCategories/,
+  )
 })
 
 test('TEST 22 back navigation preserves review and selections', () => {

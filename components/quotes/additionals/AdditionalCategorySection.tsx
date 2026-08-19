@@ -95,6 +95,7 @@ export default function AdditionalCategorySection({
           ? 'border-[var(--brand-primary)] ring-2 ring-[color-mix(in_srgb,var(--brand-primary)_35%,transparent)]'
           : 'border-cdl-border'
       }`}
+      style={{ scrollMarginBottom: ctaReservePx }}
     >
       <button
         type="button"

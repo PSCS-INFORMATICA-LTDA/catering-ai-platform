@@ -34,7 +34,10 @@ import {
   resolveNextWizardStep,
   WIZARD_STEP_COUNT,
 } from '@/Lib/wizardStepAdvance'
-import { ADDITIONAL_CATEGORY_EXPOSE_FALLBACK_BOTTOM_PX } from '@/Lib/additionalCategoryExposure'
+import {
+  ADDITIONAL_CATEGORY_EXPOSE_FALLBACK_BOTTOM_PX,
+  isExtrasExposeScrollJump,
+} from '@/Lib/additionalCategoryExposure'
 import { getQuoteStrings, tw } from '../../../Lib/quoteTranslations'
 import { useAuthLocaleFromMe } from '../../../Lib/i18n/useAuthLocaleFromMe'
 import {
@@ -1785,6 +1788,29 @@ export default function QuoteWizardCore({
     const observer = new ResizeObserver(updateReserve)
     observer.observe(node)
     return () => observer.disconnect()
+  }, [isPublicMode, step])
+
+  useEffect(() => {
+    if (!isPublicMode || step !== 3) return
+    let lastY = window.scrollY
+    let settleTimer = 0
+    const onScroll = () => {
+      const y = window.scrollY
+      const delta = Math.abs(y - lastY)
+      lastY = y
+      if (!isExtrasExposeScrollJump(delta, window.innerHeight)) return
+      extrasExposeArmedRef.current = false
+      window.clearTimeout(settleTimer)
+      settleTimer = window.setTimeout(() => {
+        extrasExposeArmedRef.current = true
+        setExtrasExposeEpoch((epoch) => epoch + 1)
+      }, 120)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.clearTimeout(settleTimer)
+    }
   }, [isPublicMode, step])
 
   useEffect(() => {
