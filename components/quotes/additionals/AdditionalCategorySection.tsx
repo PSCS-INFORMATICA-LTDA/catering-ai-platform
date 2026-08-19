@@ -6,6 +6,7 @@ import {
   ADDITIONAL_CATEGORY_EXPOSE_FALLBACK_BOTTOM_PX,
   ADDITIONAL_CATEGORY_EXPOSE_ZONE,
   getAdditionalCategoryExposeRootMargin,
+  isAdditionalCategorySentinelInView,
   shouldExposeAdditionalCategory,
 } from '@/Lib/additionalCategoryExposure'
 import {
@@ -67,9 +68,17 @@ export default function AdditionalCategorySection({
     const exposeObserver = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          if (shouldExposeAdditionalCategory(entry)) {
-            onExposeRef.current()
+          if (!shouldExposeAdditionalCategory(entry)) continue
+          if (
+            !isAdditionalCategorySentinelInView(
+              entry.target.getBoundingClientRect(),
+              window.innerHeight,
+              ctaReservePx,
+            )
+          ) {
+            continue
           }
+          onExposeRef.current()
         }
       },
       {

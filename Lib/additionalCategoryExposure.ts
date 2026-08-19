@@ -35,6 +35,18 @@ export function isExtrasExposeScrollJump(
   return Math.abs(deltaPx) > viewport * 0.9
 }
 
+export function isAdditionalCategorySentinelInView(
+  rect: { top: number; bottom: number },
+  viewportHeight: number,
+  bottomInsetPx: number,
+): boolean {
+  const inset =
+    Number.isFinite(bottomInsetPx) && bottomInsetPx > 0 ? bottomInsetPx : 0
+  const bandBottom = viewportHeight - inset
+  if (bandBottom <= 0) return false
+  return rect.bottom > 0 && rect.top < bandBottom
+}
+
 export function shouldExposeAdditionalCategory(entry: {
   isIntersecting: boolean
   intersectionRatio: number

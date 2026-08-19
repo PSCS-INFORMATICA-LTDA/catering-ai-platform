@@ -13,6 +13,7 @@ import {
 } from '../../Lib/additionalPriceDisplay.ts'
 import {
   getAdditionalCategoryExposeRootMargin,
+  isAdditionalCategorySentinelInView,
   isExtrasExposeScrollJump,
   shouldExposeAdditionalCategory,
 } from '../../Lib/additionalCategoryExposure.ts'
@@ -344,6 +345,15 @@ test('TEST 21 blocked Next scrolls to the pending summary without opening it', (
 test('TEST 21c End/Home jumps do not review skipped summaries', () => {
   assert.equal(isExtrasExposeScrollJump(2000, 844), true)
   assert.equal(isExtrasExposeScrollJump(80, 844), false)
+  assert.equal(
+    isAdditionalCategorySentinelInView({ top: 200, bottom: 201 }, 844, 176),
+    true,
+  )
+  assert.equal(
+    isAdditionalCategorySentinelInView({ top: 900, bottom: 901 }, 844, 176),
+    false,
+  )
+  assert.match(sectionSrc, /isAdditionalCategorySentinelInView/)
   assert.match(wizardSrc, /isExtrasExposeScrollJump/)
   assert.match(wizardSrc, /extrasExposeArmedRef\.current = false/)
   assert.doesNotMatch(

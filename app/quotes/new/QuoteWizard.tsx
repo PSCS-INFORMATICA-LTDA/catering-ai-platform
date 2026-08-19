@@ -1793,18 +1793,27 @@ export default function QuoteWizardCore({
   useEffect(() => {
     if (!isPublicMode || step !== 3) return
     let lastY = window.scrollY
+    let lastT = performance.now()
     let settleTimer = 0
     const onScroll = () => {
+      const now = performance.now()
       const y = window.scrollY
       const delta = Math.abs(y - lastY)
+      const speed = delta / Math.max(now - lastT, 1)
       lastY = y
-      if (!isExtrasExposeScrollJump(delta, window.innerHeight)) return
+      lastT = now
+      if (
+        !isExtrasExposeScrollJump(delta, window.innerHeight) &&
+        speed < 2
+      ) {
+        return
+      }
       extrasExposeArmedRef.current = false
       window.clearTimeout(settleTimer)
       settleTimer = window.setTimeout(() => {
         extrasExposeArmedRef.current = true
         setExtrasExposeEpoch((epoch) => epoch + 1)
-      }, 120)
+      }, 160)
     }
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => {
