@@ -388,6 +388,7 @@ test('TEST 38 Landing watermark is a centered circular clip', () => {
   assert.match(experience, /overflow-hidden rounded-full/)
   assert.match(experience, /left-1\/2 top-1\/2/)
   assert.match(experience, /-translate-x-1\/2 -translate-y-1\/2/)
+  assert.match(experience, /clipPath: 'circle\(46%\)'/)
   assert.doesNotMatch(experience, /-right-8 bottom-\[-12%\]/)
 })
 

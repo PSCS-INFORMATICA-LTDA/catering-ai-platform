@@ -563,13 +563,14 @@ export default function PublicQuoteExperience({
               <div
                 data-landing-watermark
                 aria-hidden
-                className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[min(68vw,26rem)] w-[min(68vw,26rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full opacity-[0.10] sm:h-[min(52vw,30rem)] sm:w-[min(52vw,30rem)]"
+                className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[min(68vw,26rem)] w-[min(68vw,26rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full opacity-[0.12] sm:h-[min(52vw,30rem)] sm:w-[min(52vw,30rem)]"
+                style={{ clipPath: 'circle(46%)' }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={bootstrap.company.logoUrl}
                   alt=""
-                  className="h-full w-full scale-[1.04] object-cover object-center"
+                  className="h-full w-full scale-[1.22] object-cover object-center"
                 />
               </div>
             ) : null}
