@@ -45,7 +45,22 @@ Only `image_url`, `image_status`, `image_notes`, `updated_at` were updated on th
 
 BOVINO TRADICIONAL ALTERADO: **NÃO**
 
-## Notes for Philippe
+## Browser QA (DEV public quote)
+
+Live extras cards on https://catering-ai-agenda-dev.vercel.app (no redeploy needed; `image_url` is read from DEV catalog).
+
+- PT / EN / ES use the **same** `*_clean_v1_20260819.webp` files. Only the UI name/UOM copy changes (Lagosta / Lobster / Langosta).
+- Lagosta card: no “LAGOSTA” in the photo; product fills the square; official CDL emblem bottom-right.
+- Select still works (Lagosta → Selecionado + check badge; Ribeye → Selecionado). Prices unchanged.
+- Viewports 375 / 390 / 430 / 1440: no horizontal overflow.
+
+### Fraldinha Wagyu in extras
+
+ITEM_010 has a clean asset bound. On package BBQCHO+ (and other packages that already include Fraldinha as a package item with `blocks_additional_item=true`) the extras list hides that catalog row. That is existing package-block logic, not an image failure. Category header then shows **6 itens** instead of 7.
+
+## App checks
+
+No wizard/pricing/UI code changed. `npm run lint` / `npx tsc --noEmit` / `npm run build` were not required for this assets-only revision. There is still no `npm test` / `npm run typecheck` script.
 
 - There is no standalone catalog item named only “Wagyu”. The existing Wagyu photograph was **TOMAHAWK (WAGYU)**.
 - Fraldinha Wagyu / Picanha Wagyu in this category are premium extras, not Bovino Tradicional Fraldinha / Picanha Angus.
