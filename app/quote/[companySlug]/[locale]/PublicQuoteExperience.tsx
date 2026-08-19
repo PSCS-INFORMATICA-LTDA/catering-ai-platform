@@ -34,7 +34,6 @@ import {
   publicQuoteCopyrightLine,
   PublicQuoteBrandLockup,
 } from '@/components/quotes/PublicQuoteBrandLockup'
-import { getPackageCatalogImage } from '@/Lib/packageCatalogVisual'
 import {
   collectPublicHeroImages,
   PUBLIC_QUOTE_HERO_VIDEO_SRCS,
@@ -315,11 +314,8 @@ export default function PublicQuoteExperience({
     () =>
       collectPublicHeroImages({
         heroImageUrl: bootstrap.settings.heroImageUrl,
-        packageImageUrls: bootstrap.packages.map((pkg) =>
-          getPackageCatalogImage(pkg, bootstrap.packages),
-        ),
       }),
-    [bootstrap.packages, bootstrap.settings.heroImageUrl],
+    [bootstrap.settings.heroImageUrl],
   )
   const initialState = useMemo(
     () =>
