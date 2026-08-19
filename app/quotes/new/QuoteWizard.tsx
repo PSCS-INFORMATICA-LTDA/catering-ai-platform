@@ -34,6 +34,7 @@ import {
   resolveNextWizardStep,
   WIZARD_STEP_COUNT,
 } from '@/Lib/wizardStepAdvance'
+import { ADDITIONAL_CATEGORY_EXPOSE_FALLBACK_BOTTOM_PX } from '@/Lib/additionalCategoryExposure'
 import { getQuoteStrings, tw } from '../../../Lib/quoteTranslations'
 import { useAuthLocaleFromMe } from '../../../Lib/i18n/useAuthLocaleFromMe'
 import {
@@ -1085,6 +1086,10 @@ export default function QuoteWizardCore({
   const additionalCategoryKeysRef = useRef<string[]>([])
   const extrasExposeArmedRef = useRef(true)
   const [extrasExposeEpoch, setExtrasExposeEpoch] = useState(0)
+  const stepNavRef = useRef<HTMLDivElement>(null)
+  const [ctaReservePx, setCtaReservePx] = useState(
+    ADDITIONAL_CATEGORY_EXPOSE_FALLBACK_BOTTOM_PX,
+  )
   visitedAdditionalCategoriesRef.current = visitedAdditionalCategories
   const grillPhotoInputRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
@@ -1764,6 +1769,22 @@ export default function QuoteWizardCore({
     // extras summaries the customer never saw.
     if (!isPublicMode || typeof window === 'undefined') return
     window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [isPublicMode, step])
+
+  useEffect(() => {
+    if (!isPublicMode) return
+    const node = stepNavRef.current
+    if (!node) return
+
+    const updateReserve = () => {
+      const height = Math.ceil(node.getBoundingClientRect().height)
+      if (height > 0) setCtaReservePx(height)
+    }
+    updateReserve()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const observer = new ResizeObserver(updateReserve)
+    observer.observe(node)
+    return () => observer.disconnect()
   }, [isPublicMode, step])
 
   useEffect(() => {
@@ -3046,6 +3067,7 @@ export default function QuoteWizardCore({
                     language={uiLocale}
                     onToggle={() => toggleAdditionalCategory(categoryKey)}
                     exposeEpoch={extrasExposeEpoch}
+                    ctaReservePx={ctaReservePx}
                     onExpose={() => handleAdditionalCategoryExpose(categoryKey)}
                     onChangeQty={setAdditionalQty}
                   />
@@ -3358,13 +3380,14 @@ export default function QuoteWizardCore({
         )}
 
         {step !== 5 && isPublicMode ? (
-          // The action bar stays pinned at the bottom, so the content keeps a
-          // reserve of its height (plus the iOS safe area) to never hide the
-          // last package, category, item or price behind it.
+          // The action bar stays pinned at the bottom. Reserve its measured
+          // height so the last package, category, item or price never sits
+          // behind Voltar/Próximo. Safe-area is already inside the nav.
           <div
             aria-hidden
             data-wizard-cta-spacer
-            className="h-[calc(7rem+env(safe-area-inset-bottom))]"
+            data-cta-reserve-px={ctaReservePx}
+            style={{ height: ctaReservePx }}
           />
         ) : null}
 
@@ -3385,6 +3408,7 @@ export default function QuoteWizardCore({
             grillStepPendingIssuesCount={grillStepPendingIssues.length}
             keepPackageNextVisible={isPublicMode}
             sticky={isPublicMode}
+            containerRef={stepNavRef}
             onBack={goBack}
             onNext={goNext}
             onPackageNextBlockedClick={() => {

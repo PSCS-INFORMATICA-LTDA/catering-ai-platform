@@ -1,5 +1,6 @@
 'use client'
 
+import type { Ref } from 'react'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 
@@ -16,6 +17,7 @@ export default function QuoteWizardStepNav({
   grillStepPendingIssuesCount,
   keepPackageNextVisible = false,
   sticky = false,
+  containerRef,
   onBack,
   onNext,
   onPackageNextBlockedClick,
@@ -32,6 +34,7 @@ export default function QuoteWizardStepNav({
   grillStepPendingIssuesCount: number
   keepPackageNextVisible?: boolean
   sticky?: boolean
+  containerRef?: Ref<HTMLDivElement>
   onBack: () => void
   onNext: () => void
   onPackageNextBlockedClick: () => void
@@ -51,6 +54,8 @@ export default function QuoteWizardStepNav({
 
   return (
     <div
+      ref={containerRef}
+      data-wizard-step-nav
       className={
         sticky
           ? 'sticky bottom-0 z-30 mt-8 space-y-3 border-t border-cdl-border bg-[color-mix(in_srgb,var(--brand-bg)_92%,white)] pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm'

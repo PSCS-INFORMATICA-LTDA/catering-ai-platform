@@ -11,7 +11,10 @@ import {
   getAdditionalPriceLabel,
   getAdditionalPriceValue,
 } from '../../Lib/additionalPriceDisplay.ts'
-import { shouldExposeAdditionalCategory } from '../../Lib/additionalCategoryExposure.ts'
+import {
+  getAdditionalCategoryExposeRootMargin,
+  shouldExposeAdditionalCategory,
+} from '../../Lib/additionalCategoryExposure.ts'
 import { getPublicPackageSidesGroup } from '../../Lib/packageCatalogVisual.ts'
 import { pickLocalizedText } from '../../Lib/i18n/locales.ts'
 import {
@@ -320,7 +323,7 @@ test('TEST 20 Next enables once every summary was reached', () => {
 test('TEST 21b muted exposure is re-evaluated so review can never dead-end', () => {
   assert.match(wizardSrc, /setExtrasExposeEpoch\(\(epoch\) => epoch \+ 1\)/)
   assert.match(wizardSrc, /exposeEpoch=\{extrasExposeEpoch\}/)
-  assert.match(sectionSrc, /\}, \[categoryKey, exposeEpoch\]\)/)
+  assert.match(sectionSrc, /\}, \[categoryKey, exposeEpoch, ctaReservePx\]\)/)
   assert.match(wizardSrc, /window\.scrollTo\(\{ top: 0, behavior: 'auto' \}\)/)
 })
 
@@ -357,8 +360,17 @@ test('TEST 23 a new quote resets the review state', () => {
 
 test('TEST 24 the pinned CTA reserves space so the last content stays visible', () => {
   assert.match(wizardSrc, /data-wizard-cta-spacer/)
-  assert.match(wizardSrc, /env\(safe-area-inset-bottom\)/)
+  assert.match(wizardSrc, /data-cta-reserve-px=\{ctaReservePx\}/)
+  assert.match(wizardSrc, /style=\{\{ height: ctaReservePx \}\}/)
+  assert.match(wizardSrc, /ResizeObserver/)
+  assert.match(wizardSrc, /containerRef=\{stepNavRef\}/)
+  assert.match(stepNavSrc, /sticky bottom-0/)
   assert.match(stepNavSrc, /pb-\[max\(0\.75rem,env\(safe-area-inset-bottom\)\)\]/)
+  assert.doesNotMatch(wizardSrc, /h-\[calc\(7rem/)
+  assert.equal(
+    getAdditionalCategoryExposeRootMargin(160),
+    '0px 0px -160px 0px',
+  )
 })
 
 test('TEST 25 summary rows cannot create horizontal overflow', () => {

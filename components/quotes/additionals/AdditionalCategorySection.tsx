@@ -3,7 +3,9 @@
 import { useEffect, useRef } from 'react'
 import AdditionalItemCard from '@/components/quotes/additionals/AdditionalItemCard'
 import {
+  ADDITIONAL_CATEGORY_EXPOSE_FALLBACK_BOTTOM_PX,
   ADDITIONAL_CATEGORY_EXPOSE_ZONE,
+  getAdditionalCategoryExposeRootMargin,
   shouldExposeAdditionalCategory,
 } from '@/Lib/additionalCategoryExposure'
 import {
@@ -27,6 +29,7 @@ export default function AdditionalCategorySection({
   billableGuestCount,
   language,
   exposeEpoch = 0,
+  ctaReservePx = ADDITIONAL_CATEGORY_EXPOSE_FALLBACK_BOTTOM_PX,
   onToggle,
   onExpose,
   onChangeQty,
@@ -43,6 +46,8 @@ export default function AdditionalCategorySection({
   language: QuoteLanguage
   /** Bumped by the wizard to re-evaluate summaries already on screen. */
   exposeEpoch?: number
+  /** Sticky CTA height so a summary behind Voltar/Próximo is not counted. */
+  ctaReservePx?: number
   onToggle: () => void
   onExpose: () => void
   onChangeQty: (itemId: string, qty: number) => void
@@ -69,13 +74,13 @@ export default function AdditionalCategorySection({
       },
       {
         root: null,
-        rootMargin: ADDITIONAL_CATEGORY_EXPOSE_ZONE.rootMargin,
+        rootMargin: getAdditionalCategoryExposeRootMargin(ctaReservePx),
         threshold: ADDITIONAL_CATEGORY_EXPOSE_ZONE.threshold,
       },
     )
     exposeObserver.observe(sentinel)
     return () => exposeObserver.disconnect()
-  }, [categoryKey, exposeEpoch])
+  }, [categoryKey, exposeEpoch, ctaReservePx])
 
   const contentId = `additional-category-content-${categoryKey}`
   const summaryId = `additional-category-summary-${categoryKey}`
