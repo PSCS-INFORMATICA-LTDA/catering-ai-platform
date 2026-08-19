@@ -145,9 +145,27 @@ async function resumeMatchingSession(
 ) {
   try {
     const session = await loadPublicQuoteSession(request)
-    return session.company_id === companyId && session.locale === locale
-      ? session
-      : null
+    if (session.company_id !== companyId) return null
+    if (session.locale === locale) return session
+
+    // Same tenant cookie, different public locale (PT/EN/ES). Keep the draft
+    // and step so the language switcher does not wipe an in-progress quote.
+    const draft = sanitizePublicQuoteDraft({
+      ...(session.draft && typeof session.draft === 'object'
+        ? (session.draft as Record<string, unknown>)
+        : {}),
+      locale,
+    })
+    const supabase = getSupabaseServerClient()
+    const { data, error } = await supabase
+      .from('public_quote_intake_sessions')
+      .update({ locale, draft })
+      .eq('id', session.id)
+      .eq('status', 'active')
+      .select(SESSION_SELECT)
+      .single()
+    if (error || !data) return session
+    return toSession(data) as PublicQuoteIntakeSession
   } catch (error) {
     if (error instanceof PublicQuoteHttpError && error.status < 500) return null
     throw error

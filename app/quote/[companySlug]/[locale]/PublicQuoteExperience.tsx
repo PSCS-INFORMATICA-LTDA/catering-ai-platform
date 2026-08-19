@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import QuoteWizardCore, {
   type CatalogItem,
   type Package,
@@ -23,6 +23,10 @@ import {
 import type { CommercialRulesSnapshot } from '@/Lib/supabaseCommercialRules'
 import { sanitizeStoredPublicPhone } from '@/Lib/publicQuote/phone'
 import { isPublicGrillDraftAnswered } from '@/Lib/publicQuote/grillDraft'
+import {
+  publicQuoteActiveStorageKey,
+  publicQuoteSessionHasProgress,
+} from '@/Lib/publicQuote/sessionProgress'
 import PublicLocaleSwitcher from '@/components/quotes/PublicLocaleSwitcher'
 
 export type PublicQuotePageBootstrap = {
@@ -289,6 +293,8 @@ export default function PublicQuoteExperience({
   const [restoredStep, setRestoredStep] = useState(0)
   const [success, setSuccess] =
     useState<PublicQuoteSubmissionResult | null>(null)
+  const activeStorageKey = publicQuoteActiveStorageKey(bootstrap.company.slug)
+  const autoResumeAttemptedRef = useRef(false)
   const defaultBranch =
     bootstrap.branches.find((branch) => branch.isDefault) ??
     bootstrap.branches[0] ??
@@ -313,7 +319,7 @@ export default function PublicQuoteExperience({
     ],
   )
 
-  async function startQuote() {
+  async function startQuote(options: { auto?: boolean } = {}) {
     if (starting) return
     setStarting(true)
     setStartError(false)
@@ -335,19 +341,46 @@ export default function PublicQuoteExperience({
       if (!response.ok || !result || !('session' in result)) {
         throw new Error('session_start_failed')
       }
-      setRestoredDraft(result.session?.draft ?? null)
-      setRestoredStep(
-        Number.isFinite(Number(result.session?.currentStep))
-          ? Math.max(0, Math.min(5, Number(result.session?.currentStep)))
-          : 0,
-      )
+      const draft = result.session?.draft ?? null
+      const step = Number.isFinite(Number(result.session?.currentStep))
+        ? Math.max(0, Math.min(5, Number(result.session?.currentStep)))
+        : 0
+      const hasProgress = publicQuoteSessionHasProgress(draft, step)
+      if (options.auto && !hasProgress) {
+        try {
+          sessionStorage.removeItem(activeStorageKey)
+        } catch {
+          /* ignore quota / private mode */
+        }
+        return
+      }
+      setRestoredDraft(draft)
+      setRestoredStep(step)
+      try {
+        sessionStorage.setItem(activeStorageKey, '1')
+      } catch {
+        /* ignore quota / private mode */
+      }
       setStarted(true)
     } catch {
-      setStartError(true)
+      if (!options.auto) setStartError(true)
     } finally {
       setStarting(false)
     }
   }
+
+  useEffect(() => {
+    if (autoResumeAttemptedRef.current || started || success) return
+    try {
+      if (sessionStorage.getItem(activeStorageKey) !== '1') return
+    } catch {
+      return
+    }
+    autoResumeAttemptedRef.current = true
+    void startQuote({ auto: true })
+    // Public locale routes remount this tree; resume only from the storage flag.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStorageKey, locale])
 
   const style = {
     '--brand-primary': bootstrap.company.primaryColor,
@@ -445,6 +478,13 @@ export default function PublicQuoteExperience({
               ) : null}
               <Link
                 href={`/quote/${bootstrap.company.slug}/${locale}`}
+                onClick={() => {
+                  try {
+                    sessionStorage.removeItem(activeStorageKey)
+                  } catch {
+                    /* ignore quota / private mode */
+                  }
+                }}
                 className="inline-flex min-h-12 items-center justify-center rounded-xl border border-cdl-border px-6 text-sm font-bold"
               >
                 {copy.restart}
@@ -454,7 +494,7 @@ export default function PublicQuoteExperience({
         </main>
       ) : started ? (
         <QuoteWizardCore
-          key={restoredDraft ? 'restored' : 'new'}
+          key={`${locale}-${restoredDraft ? 'restored' : 'new'}`}
           entryMode="public"
           customers={[]}
           packages={bootstrap.packages}

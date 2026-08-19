@@ -14,6 +14,7 @@ import {
 } from '../../Lib/packageCatalogVisual.ts'
 import { formatMileageQuantity } from '../../Lib/units.ts'
 import { tw } from '../../Lib/quoteTranslations.ts'
+import { publicQuoteSessionHasProgress } from '../../Lib/publicQuote/sessionProgress.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const source = (relativePath) => readFileSync(join(ROOT, relativePath), 'utf8')
@@ -54,6 +55,7 @@ const mark = source('components/brand/PscsOneMark.tsx')
 const sidebar = source('components/layout/CateringSidebar.tsx')
 const authShell = source('components/auth/AuthGlassShell.tsx')
 const translations = source('Lib/quoteTranslations.ts')
+const sessionSrc = source('Lib/publicQuote/session.ts')
 
 test('TEST 1 Public header uses tenant logo', () => {
   assert.match(experience, /data-tenant-logo/)
@@ -88,7 +90,8 @@ test('TEST 5 Locale selector remains accessible', () => {
 })
 
 test('TEST 6 Package groups start collapsed', () => {
-  assert.match(catalog, /useState<PackageSidesGroup \| null>\(null\)/)
+  assert.match(catalog, /useState<PackageSidesGroup \| null>/)
+  assert.match(catalog, /if \(!selectedPackageId\) return null/)
   assert.doesNotMatch(catalog, /setOpenGroup\(['\"]with_sides['\"]\)/)
   assert.doesNotMatch(catalog, /setOpenGroup\(['\"]without_sides['\"]\)/)
   assert.doesNotMatch(
@@ -332,6 +335,32 @@ test('family example names never invent packages', () => {
     getPublicPackageFamilyExampleNames([{ package_key: 'BBQPERS+' }], 'pt'),
     [],
   )
+})
+
+test('TEST 35 Language switch resumes same-company session', () => {
+  assert.doesNotMatch(
+    sessionSrc,
+    /session\.company_id === companyId && session\.locale === locale/,
+  )
+  assert.match(sessionSrc, /session\.company_id !== companyId/)
+  assert.match(sessionSrc, /\.update\(\{ locale, draft \}\)/)
+  assert.match(experience, /startQuote\(\{ auto: true \}\)/)
+  assert.match(experience, /publicQuoteActiveStorageKey/)
+})
+
+test('TEST 36 Progress helper does not treat empty drafts as resumable', () => {
+  assert.equal(publicQuoteSessionHasProgress(null, 0), false)
+  assert.equal(publicQuoteSessionHasProgress({ contact: { firstName: 'Ana' } }, 0), true)
+  assert.equal(
+    publicQuoteSessionHasProgress({ selection: { packageId: 'pkg-1' } }, 0),
+    true,
+  )
+  assert.equal(publicQuoteSessionHasProgress({}, 2), true)
+})
+
+test('TEST 37 Returning to Package reopens the selected family only', () => {
+  assert.match(catalog, /getPublicPackageSidesGroup\(selected\)/)
+  assert.match(catalog, /if \(!selectedPackageId\) return null/)
 })
 
 if (failed > 0) {

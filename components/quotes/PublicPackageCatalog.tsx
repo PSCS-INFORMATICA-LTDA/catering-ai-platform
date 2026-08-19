@@ -261,7 +261,11 @@ export default function PublicPackageCatalog({
 }) {
   const t = getQuoteStrings(language)
   const optionsRef = useRef<HTMLDivElement>(null)
-  const [openGroup, setOpenGroup] = useState<PackageSidesGroup | null>(null)
+  const [openGroup, setOpenGroup] = useState<PackageSidesGroup | null>(() => {
+    if (!selectedPackageId) return null
+    const selected = allPackages.find((pkg) => pkg.id === selectedPackageId)
+    return selected ? getPublicPackageSidesGroup(selected) : null
+  })
 
   useEffect(() => {
     if (!selectedPackageId) return
