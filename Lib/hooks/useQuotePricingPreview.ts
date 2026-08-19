@@ -147,23 +147,7 @@ export function useQuotePricingPreview(
     return () => {
       window.clearTimeout(timer)
     }
-  }, [
-    serialized,
-    input.enabled,
-    input.packageId,
-    input.additionals,
-    input.adultCount,
-    input.childrenUnder3Count,
-    input.children4To12Count,
-    input.eventDate,
-    input.mileageDistance,
-    input.grillRentalRequired,
-    input.grillRentalQty,
-    input.reservationPercentage,
-    input.language,
-    input.event,
-    input.endpoint,
-  ])
+  }, [serialized, input.enabled, input.packageId])
 
   useEffect(() => {
     return () => {

@@ -1524,6 +1524,47 @@ export default function QuoteWizardCore({
     [state.additionals],
   )
 
+  const publicPreviewEvent = useMemo(
+    () =>
+      isPublicMode
+        ? {
+            eventDate: state.eventDate,
+            startTime: state.startTime,
+            endTime: state.endTime,
+            address: {
+              route: state.address,
+              number: state.addressNumber,
+              city: state.city,
+              region: state.state,
+              postalCode: state.zipCode,
+              country: state.addressCountry,
+              formattedAddress: state.addressFormatted,
+              placeId: state.addressPlaceId,
+              latitude: state.addressLatitude,
+              longitude: state.addressLongitude,
+              source: state.addressSource,
+            },
+          }
+        : undefined,
+    [
+      isPublicMode,
+      state.eventDate,
+      state.startTime,
+      state.endTime,
+      state.address,
+      state.addressNumber,
+      state.city,
+      state.state,
+      state.zipCode,
+      state.addressCountry,
+      state.addressFormatted,
+      state.addressPlaceId,
+      state.addressLatitude,
+      state.addressLongitude,
+      state.addressSource,
+    ],
+  )
+
   const pricingPreview = useQuotePricingPreview({
     packageId: state.packageId,
     additionals: previewAdditionals,
@@ -1534,32 +1575,13 @@ export default function QuoteWizardCore({
     mileageDistance: state.distance,
     grillRentalRequired: state.grillRentalRequired,
     grillRentalQty: state.grillRentalQty,
-    reservationPercentage: state.reservationPercentage,
+    reservationPercentage: isPublicMode ? null : state.reservationPercentage,
     language: state.language,
     enabled: Boolean(state.packageId?.trim()),
     endpoint: isPublicMode
       ? '/api/public/quote-intake/preview'
       : '/api/quotes/preview',
-    event: isPublicMode
-      ? {
-          eventDate: state.eventDate,
-          startTime: state.startTime,
-          endTime: state.endTime,
-          address: {
-            route: state.address,
-            number: state.addressNumber,
-            city: state.city,
-            region: state.state,
-            postalCode: state.zipCode,
-            country: state.addressCountry,
-            formattedAddress: state.addressFormatted,
-            placeId: state.addressPlaceId,
-            latitude: state.addressLatitude,
-            longitude: state.addressLongitude,
-            source: state.addressSource,
-          },
-        }
-      : undefined,
+    event: publicPreviewEvent,
   })
 
   const pricingBreakdown: PricingBreakdown | null =

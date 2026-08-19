@@ -205,7 +205,9 @@ export function PricingPreviewStatus({
     const message =
       error.code === 'timeout'
         ? tw(language, 'pricingTimeout')
-        : error.message || tw(language, 'pricingCalcError')
+        : error.code === 'rate_limited'
+          ? tw(language, 'pricingRateLimited')
+          : error.message || tw(language, 'pricingCalcError')
     return (
       <div className="space-y-3">
         <p

@@ -193,6 +193,7 @@ type QuoteStrings = {
     publicPackageChooseHint: string
     pricingRetry: string
     pricingTimeout: string
+    pricingRateLimited: string
     pricingMissingPackage: string
     adults: string
     childrenUnder3: string
@@ -574,6 +575,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Toque no pacote para selecionar. Depois complete apenas as opções obrigatórias.',
       pricingRetry: 'Tentar novamente',
       pricingTimeout: 'A estimativa demorou demais. Tente novamente.',
+      pricingRateLimited:
+        'Muitas tentativas de cálculo. Aguarde um instante e tente novamente.',
       pricingMissingPackage:
         'Selecione um pacote para calcular a estimativa.',
       adults: 'Adultos',
@@ -971,6 +974,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Tap a package to select it. Then complete only the required options.',
       pricingRetry: 'Try again',
       pricingTimeout: 'The estimate took too long. Please try again.',
+      pricingRateLimited:
+        'Too many estimate attempts. Wait a moment and try again.',
       pricingMissingPackage: 'Select a package to calculate the estimate.',
       adults: 'Adults',
       childrenUnder3: 'Children up to 3 years',
@@ -1368,6 +1373,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Toque el paquete para seleccionarlo. Luego complete solo las opciones obligatorias.',
       pricingRetry: 'Intentar de nuevo',
       pricingTimeout: 'La estimación tardó demasiado. Inténtelo de nuevo.',
+      pricingRateLimited:
+        'Demasiados intentos de cálculo. Espere un momento e inténtelo de nuevo.',
       pricingMissingPackage: 'Seleccione un paquete para calcular la estimación.',
       adults: 'Adultos',
       childrenUnder3: 'Niños hasta 3 años',

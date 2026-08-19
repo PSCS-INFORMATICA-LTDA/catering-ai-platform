@@ -229,9 +229,14 @@ test('pricing confirmation never treats empty breakdown as infinite loading', ()
   assert.match(confirm, /onRetryPricing/)
   assert.match(confirm, /QuoteReviewLayout/)
   assert.doesNotMatch(confirm, /Calculando a estimativa/)
+  assert.match(confirm, /packageName \|\| '—'/)
+  assert.match(confirm, /confirmSectionPackage/)
   const hook = source('Lib/hooks/useQuotePricingPreview.ts')
   assert.match(hook, /PREVIEW_TIMEOUT_MS/)
   assert.match(hook, /code: timedOut \? 'timeout'/)
+  assert.match(hook, /}, \[serialized, input\.enabled, input\.packageId\]/)
+  const wizard = source('app/quotes/new/QuoteWizard.tsx')
+  assert.match(wizard, /publicPreviewEvent/)
 })
 
 test('public package step is image-first and does not dump highlights', () => {
@@ -257,6 +262,7 @@ test('PT/EN/ES cover new public quote strings', () => {
     'publicPhoneHint',
     'pricingRetry',
     'pricingTimeout',
+    'pricingRateLimited',
     'publicSubmitRequest',
   ]) {
     const matches = translations.match(new RegExp(`${key}:`, 'g')) || []
