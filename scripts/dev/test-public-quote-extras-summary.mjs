@@ -122,14 +122,15 @@ const NO_PRICE_ITEM = {
 /* ---------------------------- PACKAGE GROUPS ---------------------------- */
 
 test('TEST 1 with/without sides groups are rendered before the packages', () => {
-  assert.match(catalogSrc, /data-package-group="with_sides"/)
-  assert.match(catalogSrc, /data-package-group="without_sides"/)
+  assert.match(catalogSrc, /data-package-group=\{group\}/)
+  assert.match(catalogSrc, /data-package-group-toggle=\{group\}/)
   assert.match(catalogSrc, /withSidesGroupTitle/)
   assert.match(catalogSrc, /withoutSidesGroupTitle/)
-  assert.match(catalogSrc, /withSidesGroupHint/)
-  assert.match(catalogSrc, /withoutSidesGroupHint/)
+  assert.match(catalogSrc, /publicPackageExperienceTitle/)
+  assert.match(catalogSrc, /publicPackageExperienceBody/)
   assert.match(catalogSrc, /aria-expanded=\{expanded\}/)
   assert.doesNotMatch(catalogSrc, /Step 3A|3B/)
+  assert.doesNotMatch(catalogSrc, /withSidesGroupHint/)
 })
 
 test('TEST 2 group classification is data-driven, never by name or id list', () => {
@@ -405,9 +406,10 @@ test('TEST 25 summary rows cannot create horizontal overflow', () => {
 /* -------------------------------- I18N --------------------------------- */
 
 test('TEST 26 PT copy', () => {
-  assert.equal(tw('pt', 'withSidesGroupTitle'), 'Com guarnição')
-  assert.equal(tw('pt', 'withoutSidesGroupTitle'), 'Sem guarnição')
-  assert.match(tw('pt', 'withSidesGroupHint'), /Explore \{count\} opções de pacotes/)
+  assert.equal(tw('pt', 'withSidesGroupTitle'), 'Com guarnições')
+  assert.equal(tw('pt', 'withoutSidesGroupTitle'), 'Sem guarnições')
+  assert.equal(tw('pt', 'publicPackageExperienceTitle'), 'Escolha sua experiência')
+  assert.match(tw('pt', 'publicPackageExperienceBody'), /com ou sem guarnições/)
   assert.equal(
     tw('pt', 'additionalsReviewAllCategories'),
     'Percorra todas as categorias antes de continuar.',
@@ -420,7 +422,8 @@ test('TEST 26 PT copy', () => {
 test('TEST 27 EN copy', () => {
   assert.equal(tw('en', 'withSidesGroupTitle'), 'With sides')
   assert.equal(tw('en', 'withoutSidesGroupTitle'), 'Without sides')
-  assert.match(tw('en', 'withSidesGroupHint'), /Explore \{count\} available packages/)
+  assert.equal(tw('en', 'publicPackageExperienceTitle'), 'Choose your experience')
+  assert.match(tw('en', 'publicPackageExperienceBody'), /with or without sides/)
   assert.equal(
     tw('en', 'additionalsReviewAllCategories'),
     'Review all categories before continuing.',
@@ -434,7 +437,8 @@ test('TEST 27 EN copy', () => {
 test('TEST 28 ES copy', () => {
   assert.equal(tw('es', 'withSidesGroupTitle'), 'Con acompañamientos')
   assert.equal(tw('es', 'withoutSidesGroupTitle'), 'Sin acompañamientos')
-  assert.match(tw('es', 'withSidesGroupHint'), /Explora \{count\} opciones de paquetes/)
+  assert.equal(tw('es', 'publicPackageExperienceTitle'), 'Elige tu experiencia')
+  assert.match(tw('es', 'publicPackageExperienceBody'), /con o sin acompañamientos/)
   assert.equal(
     tw('es', 'additionalsReviewAllCategories'),
     'Revisa todas las categorías antes de continuar.',

@@ -14,6 +14,10 @@ import {
 } from '../../Lib/packageCatalogVisual.ts'
 import { formatMileageQuantity } from '../../Lib/units.ts'
 import { tw } from '../../Lib/quoteTranslations.ts'
+import {
+  formatEventAddressLines,
+  isSameEventDestination,
+} from '../../Lib/formatEventAddress.ts'
 import { publicQuoteSessionHasProgress } from '../../Lib/publicQuote/sessionProgress.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -100,28 +104,30 @@ test('TEST 6 Package groups start collapsed', () => {
   )
 })
 
-test('TEST 7 With-sides count is dynamic', () => {
-  assert.match(catalog, /t\.packagesAvailableCount\(packagesWithSides\.length\)/)
-  assert.match(translations, /pacotes disponíveis/)
+test('TEST 7 Compact with-sides selector has no inner count', () => {
+  assert.match(catalog, /data-package-group=\{group\}/)
+  assert.match(catalog, /inline-flex w-fit/)
+  assert.doesNotMatch(catalog, /t\.packagesAvailableCount\(packagesWithSides\.length\)/)
   assert.doesNotMatch(catalog, /5 pacotes disponíveis/)
 })
 
-test('TEST 8 Without-sides count is dynamic', () => {
-  assert.match(
+test('TEST 8 Compact without-sides selector has no inner count', () => {
+  assert.doesNotMatch(
     catalog,
     /t\.packagesAvailableCount\(packagesWithoutSides\.length\)/,
   )
   assert.doesNotMatch(catalog, /packagesWithoutSides\.length === 5/)
 })
 
-test('TEST 9 Premium copy localized', () => {
-  assert.match(tw('pt', 'withSidesGroupHint'), /Explore \{count\} opções/)
-  assert.match(tw('en', 'withSidesGroupHint'), /Explore \{count\} available packages/)
-  assert.match(tw('es', 'withSidesGroupHint'), /Explora \{count\} opciones/)
-  assert.match(tw('pt', 'withoutSidesGroupHint'), /Explore \{count\} opções de churrasco/)
-  assert.match(tw('en', 'withoutSidesGroupHint'), /Explore \{count\} barbecue options/)
-  assert.match(tw('es', 'withoutSidesGroupHint'), /Explora \{count\} opciones de asado/)
-  assert.match(catalog, /packageGroupHint\(/)
+test('TEST 9 Premium copy lives above the selectors', () => {
+  assert.equal(tw('pt', 'publicPackageExperienceTitle'), 'Escolha sua experiência')
+  assert.equal(tw('en', 'publicPackageExperienceTitle'), 'Choose your experience')
+  assert.equal(tw('es', 'publicPackageExperienceTitle'), 'Elige tu experiencia')
+  assert.match(tw('pt', 'publicPackageExperienceBody'), /com ou sem guarnições/)
+  assert.match(tw('en', 'publicPackageExperienceBody'), /with or without sides/)
+  assert.match(tw('es', 'publicPackageExperienceBody'), /con o sin acompañamientos/)
+  assert.match(catalog, /data-package-experience-intro/)
+  assert.doesNotMatch(catalog, /packageGroupHint\(/)
 })
 
 test('TEST 10 Package name canonical', () => {
@@ -301,9 +307,23 @@ test('TEST 31 Public landing tenant-first', () => {
   assert.ok(powered === -1 || powered > tenantLogo)
 })
 
-test('TEST 32 Powered by PSCS One - Catering App', () => {
-  assert.match(experience, /Powered by PSCS One · Catering App/)
+test('TEST 32 Powered by PSCS One - Catering AI', () => {
+  assert.match(experience, /Powered by PSCS One · Catering AI/)
+  assert.doesNotMatch(experience, /Catering App/)
   assert.match(experience, /data-powered-by/)
+  assert.match(experience, /data-footer-since-pioneer/)
+  assert.equal(
+    tw('pt', 'footerSincePioneer'),
+    'Desde 2017 · Pioneira em Orlando, Flórida',
+  )
+  assert.equal(
+    tw('en', 'footerSincePioneer'),
+    'Since 2017 · Pioneer in Orlando, Florida',
+  )
+  assert.equal(
+    tw('es', 'footerSincePioneer'),
+    'Desde 2017 · Pionera en Orlando, Florida',
+  )
 })
 
 test('TEST 33 No image files edited/generated', () => {
@@ -361,6 +381,78 @@ test('TEST 36 Progress helper does not treat empty drafts as resumable', () => {
 test('TEST 37 Returning to Package reopens the selected family only', () => {
   assert.match(catalog, /getPublicPackageSidesGroup\(selected\)/)
   assert.match(catalog, /if \(!selectedPackageId\) return null/)
+})
+
+test('TEST 38 Landing watermark is a centered circular clip', () => {
+  assert.match(experience, /data-landing-watermark/)
+  assert.match(experience, /overflow-hidden rounded-full/)
+  assert.match(experience, /left-1\/2 top-1\/2/)
+  assert.match(experience, /-translate-x-1\/2 -translate-y-1\/2/)
+  assert.doesNotMatch(experience, /-right-8 bottom-\[-12%\]/)
+})
+
+test('TEST 39 Landing CTA starts a new quote session', () => {
+  assert.match(experience, /startQuote\(\{ forceNew: true \}\)/)
+  assert.match(experience, /startQuote\(\{ auto: true \}\)/)
+  assert.match(sessionSrc, /options\.forceNew/)
+  const route = source('app/api/public/quote-intake/session/route.ts')
+  assert.match(route, /forceNew: body\?\.forceNew === true/)
+  const startAt = experience.indexOf('async function startQuote')
+  const startQuoteFn = experience.slice(
+    startAt,
+    experience.indexOf('useEffect(() => {', startAt),
+  )
+  assert.match(startQuoteFn, /options\.forceNew/)
+  assert.match(startQuoteFn, /!options\.auto/)
+})
+
+test('TEST 40 Review shows the event address once and compact mileage destination', () => {
+  assert.match(review, /data-review-event-address/)
+  assert.match(review, /data-mileage-destination/)
+  assert.match(review, /mileageDestinationSameAsEvent/)
+  assert.match(review, /formatEventAddressLines/)
+  assert.doesNotMatch(review, /join\(' · '\)/)
+  const confirmationEvent = review.slice(
+    review.indexOf('function ConfirmationProposalBody'),
+    review.indexOf('function DefaultProposalBody'),
+  )
+  assert.doesNotMatch(confirmationEvent, /quote-proposal-info-grid mt-4/)
+  assert.match(confirmationEvent, /<EventLocationBlock/)
+  assert.equal(
+    (confirmationEvent.match(/<EventLocationBlock/g) ?? []).length,
+    1,
+  )
+  assert.equal((review.match(/data-review-event-address/g) ?? []).length, 1)
+})
+
+test('TEST 41 Event address formatter is presentation-only', () => {
+  assert.deepEqual(
+    formatEventAddressLines({
+      line: 'Hillview Loop',
+      city: 'Haines City',
+      state: 'FL',
+      zip: '33844-9685',
+    }),
+    ['Hillview Loop', 'Haines City, FL 33844-9685'],
+  )
+  assert.equal(
+    isSameEventDestination(
+      'Hillview Loop Haines City FL 33844-9685',
+      'Hillview Loop\nHaines City, FL 33844-9685',
+    ),
+    true,
+  )
+})
+
+test('TEST 42 New quote hydrates empty package and additionals', () => {
+  assert.match(experience, /packageId: draft\.selection\?\.packageId \|\| null/)
+  assert.match(
+    experience,
+    /\.filter\(\(line\) => line\.itemId && line\.quantity > 0\)/,
+  )
+  const types = source('Lib/quoteWizardTypes.ts')
+  assert.match(types, /packageId: null/)
+  assert.match(types, /additionals: \{\}/)
 })
 
 if (failed > 0) {

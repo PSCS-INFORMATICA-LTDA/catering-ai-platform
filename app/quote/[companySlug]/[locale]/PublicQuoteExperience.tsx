@@ -27,7 +27,9 @@ import {
   publicQuoteActiveStorageKey,
   publicQuoteSessionHasProgress,
 } from '@/Lib/publicQuote/sessionProgress'
+import { PscsOneMark } from '@/components/brand/PscsOneMark'
 import PublicLocaleSwitcher from '@/components/quotes/PublicLocaleSwitcher'
+import { tw } from '@/Lib/quoteTranslations'
 
 export type PublicQuotePageBootstrap = {
   company: {
@@ -147,7 +149,7 @@ const UI_COPY = {
     restart: 'Criar outra solicitação',
     privacy: 'Privacidade',
     support: 'Precisa de ajuda?',
-    poweredBy: 'Powered by PSCS One · Catering App',
+    poweredBy: 'Powered by PSCS One · Catering AI',
   },
   en: {
     secure: 'Secure online quote',
@@ -166,7 +168,7 @@ const UI_COPY = {
     restart: 'Create another request',
     privacy: 'Privacy',
     support: 'Need help?',
-    poweredBy: 'Powered by PSCS One · Catering App',
+    poweredBy: 'Powered by PSCS One · Catering AI',
   },
   es: {
     secure: 'Cotización online segura',
@@ -185,7 +187,7 @@ const UI_COPY = {
     restart: 'Crear otra solicitud',
     privacy: 'Privacidad',
     support: '¿Necesitas ayuda?',
-    poweredBy: 'Powered by PSCS One · Catering App',
+    poweredBy: 'Powered by PSCS One · Catering AI',
   },
 } as const
 
@@ -319,11 +321,12 @@ export default function PublicQuoteExperience({
     ],
   )
 
-  async function startQuote(options: { auto?: boolean } = {}) {
+  async function startQuote(options: { auto?: boolean; forceNew?: boolean } = {}) {
     if (starting) return
     setStarting(true)
     setStartError(false)
     try {
+      const forceNew = Boolean(options.forceNew) && !options.auto
       const response = await fetch('/api/public/quote-intake/session', {
         method: 'POST',
         cache: 'no-store',
@@ -332,6 +335,7 @@ export default function PublicQuoteExperience({
           companySlug: bootstrap.company.slug,
           locale,
           website: '',
+          ...(forceNew ? { forceNew: true } : {}),
         }),
       })
       const result = (await response.json().catch(() => null)) as
@@ -556,15 +560,20 @@ export default function PublicQuoteExperience({
               }`}
             />
             {bootstrap.company.logoUrl && !bootstrap.settings.heroImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={bootstrap.company.logoUrl}
-                alt=""
+              <div
+                data-landing-watermark
                 aria-hidden
-                className="pointer-events-none absolute -right-8 bottom-[-12%] h-[70%] w-auto opacity-[0.08] object-contain"
-              />
+                className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[min(68vw,26rem)] w-[min(68vw,26rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full opacity-[0.10] sm:h-[min(52vw,30rem)] sm:w-[min(52vw,30rem)]"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={bootstrap.company.logoUrl}
+                  alt=""
+                  className="h-full w-full scale-[1.04] object-cover object-center"
+                />
+              </div>
             ) : null}
-            <div className="mx-auto grid min-h-[34rem] max-w-7xl items-center gap-10 px-4 py-16 text-white sm:px-8 lg:grid-cols-[minmax(0,3fr)_minmax(18rem,2fr)]">
+            <div className="relative z-10 mx-auto grid min-h-[34rem] max-w-7xl items-center gap-10 px-4 py-16 text-white sm:px-8 lg:grid-cols-[minmax(0,3fr)_minmax(18rem,2fr)]">
               <div>
                 <div className="flex items-center gap-3">
                   {bootstrap.company.logoUrl ? (
@@ -592,7 +601,8 @@ export default function PublicQuoteExperience({
                 </p>
                 <button
                   type="button"
-                  onClick={() => void startQuote()}
+                  data-landing-start-quote
+                  onClick={() => void startQuote({ forceNew: true })}
                   disabled={starting}
                   className="mt-8 inline-flex min-h-14 items-center justify-center rounded-2xl bg-[var(--brand-primary)] px-8 text-base font-black text-white shadow-lg transition hover:-translate-y-0.5 disabled:opacity-60"
                 >
@@ -623,14 +633,27 @@ export default function PublicQuoteExperience({
       )}
 
       <footer className="border-t border-cdl-border bg-cdl-surface">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-6 text-xs text-cdl-muted sm:flex-row sm:items-center sm:justify-between sm:px-8">
-          <p>
-            © {new Date().getFullYear()} {bootstrap.company.name}
-            <span className="ml-2 text-cdl-faint" data-powered-by>
-              · {copy.poweredBy}
-            </span>
-          </p>
-          <div className="flex flex-wrap gap-4">
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:flex-row sm:items-end sm:justify-between sm:px-8">
+          <div className="space-y-3">
+            <p
+              data-footer-since-pioneer
+              className="text-sm font-semibold tracking-tight text-cdl-title"
+            >
+              {tw(locale, 'footerSincePioneer')}
+            </p>
+            <p className="text-[11px] text-cdl-faint">
+              © {new Date().getFullYear()}{' '}
+              {bootstrap.company.name.replace(/\s+DEV$/i, '').trim()}
+            </p>
+            <p
+              data-powered-by
+              className="flex flex-wrap items-center gap-2 pt-2 text-[11px] text-cdl-muted"
+            >
+              <PscsOneMark className="px-1.5 py-0.5" />
+              <span>{copy.poweredBy}</span>
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-4 text-xs text-cdl-muted">
             {bootstrap.settings.consent.privacyUrl ? (
               <a href={bootstrap.settings.consent.privacyUrl}>{copy.privacy}</a>
             ) : null}

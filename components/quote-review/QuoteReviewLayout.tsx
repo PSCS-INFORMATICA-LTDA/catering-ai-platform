@@ -26,9 +26,12 @@ import {
 import { IconCalendar, IconClock, IconLocation } from './QuoteReviewIcons'
 import type { QuoteReviewAdditional, QuoteReviewData } from './quoteReviewTypes'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
-import { tCommon } from '@/Lib/i18n/common'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
 import { formatDistanceForDisplay, formatMileageQuantity } from '@/Lib/units'
+import {
+  formatEventAddressLines,
+  isSameEventDestination,
+} from '@/Lib/formatEventAddress'
 import PricingBreakdownView from './PricingBreakdownView'
 import type {
   PricingBreakdown,
@@ -67,6 +70,46 @@ function ProposalSection({
       {children}
     </section>
   )
+}
+
+function EventLocationBlock({
+  label,
+  lines,
+}: {
+  label: string
+  lines: string[]
+}) {
+  return (
+    <div className="quote-proposal-event-row" data-review-event-address>
+      <div className="quote-proposal-event-icon" aria-hidden>
+        <IconLocation />
+      </div>
+      <div className="quote-proposal-event-copy">
+        <span className="quote-proposal-label">{label}</span>
+        {lines.length > 0 ? (
+          lines.map((line) => (
+            <p key={line} className="quote-proposal-value">
+              {line}
+            </p>
+          ))
+        ) : (
+          <p className="quote-proposal-value">—</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function mileageDestinationCopy(
+  lang: 'pt' | 'en' | 'es',
+  eventAddressText: string,
+  destination: string,
+) {
+  if (!destination) return '—'
+  if (isSameEventDestination(destination, eventAddressText)) {
+    return tw(lang, 'mileageDestinationSameAsEvent')
+  }
+  return destination
 }
 
 function EventRow({
@@ -138,14 +181,16 @@ function findBreakdownLine(
 function ConfirmationProposalBody({
   data,
   breakdown,
-  eventLocation,
+  eventAddressLines,
+  eventAddressText,
   eventTimeLabel,
   groupedAdditionals,
   mileageEditor,
 }: {
   data: QuoteReviewData
   breakdown: PricingBreakdown
-  eventLocation: string
+  eventAddressLines: string[]
+  eventAddressText: string
   eventTimeLabel: string
   groupedAdditionals: Array<{
     category: string
@@ -209,51 +254,10 @@ function ConfirmationProposalBody({
             label={t.review.time}
             value={eventTimeLabel}
           />
-          <EventRow
-            icon={<IconLocation />}
+          <EventLocationBlock
             label={t.review.location}
-            value={eventLocation || '—'}
+            lines={eventAddressLines}
           />
-        </div>
-        <div className="quote-proposal-info-grid mt-4">
-          <div className="quote-proposal-info-cell">
-            <span className="quote-proposal-label">{w.addressPlaceholder}</span>
-            <p className="quote-proposal-value">
-              {displayValue(data.addressLine)}
-            </p>
-          </div>
-          <div className="quote-proposal-info-cell">
-            <span className="quote-proposal-label">
-              {tCommon(lang, 'streetNumber')}
-            </span>
-            <p className="quote-proposal-value">
-              {displayValue(data.addressNumber)}
-            </p>
-          </div>
-          <div className="quote-proposal-info-cell">
-            <span className="quote-proposal-label">
-              {tCommon(lang, 'city')}
-            </span>
-            <p className="quote-proposal-value">{displayValue(data.city)}</p>
-          </div>
-          <div className="quote-proposal-info-cell">
-            <span className="quote-proposal-label">
-              {tCommon(lang, 'state')}
-            </span>
-            <p className="quote-proposal-value">{displayValue(data.state)}</p>
-          </div>
-          <div className="quote-proposal-info-cell">
-            <span className="quote-proposal-label">
-              {tCommon(lang, 'postalCode')}
-            </span>
-            <p className="quote-proposal-value">{displayValue(data.zipCode)}</p>
-          </div>
-          <div className="quote-proposal-info-cell">
-            <span className="quote-proposal-label">
-              {tCommon(lang, 'country')}
-            </span>
-            <p className="quote-proposal-value">{displayValue(data.country)}</p>
-          </div>
         </div>
       </ProposalSection>
 
@@ -437,8 +441,15 @@ function ConfirmationProposalBody({
                 <span className="quote-proposal-label">
                   {tw(lang, 'mileageDestination')}
                 </span>
-                <p className="quote-proposal-value">
-                  {displayValue(eventLocation)}
+                <p
+                  className="quote-proposal-value"
+                  data-mileage-destination
+                >
+                  {mileageDestinationCopy(
+                    lang,
+                    eventAddressText,
+                    eventAddressText,
+                  )}
                 </p>
               </div>
             </div>
@@ -558,7 +569,8 @@ function ConfirmationProposalBody({
 
 function DefaultProposalBody({
   data,
-  eventLocation,
+  eventAddressLines,
+  eventAddressText,
   eventTimeLabel,
   groupedAdditionals,
   chargedMiles,
@@ -568,7 +580,8 @@ function DefaultProposalBody({
   rulesVariant,
 }: {
   data: QuoteReviewData
-  eventLocation: string
+  eventAddressLines: string[]
+  eventAddressText: string
   eventTimeLabel: string
   groupedAdditionals: Array<{
     category: string
@@ -634,10 +647,9 @@ function DefaultProposalBody({
             label={t.review.time}
             value={eventTimeLabel}
           />
-          <EventRow
-            icon={<IconLocation />}
+          <EventLocationBlock
             label={t.review.location}
-            value={eventLocation || '—'}
+            lines={eventAddressLines}
           />
         </div>
       </ProposalSection>
@@ -821,7 +833,9 @@ function DefaultProposalBody({
             <span className="quote-proposal-label">
               {tw(lang, 'mileageDestination')}
             </span>
-            <p className="quote-proposal-value">{displayValue(eventLocation)}</p>
+            <p className="quote-proposal-value" data-mileage-destination>
+              {mileageDestinationCopy(lang, eventAddressText, eventAddressText)}
+            </p>
           </div>
           <div className="quote-proposal-info-cell">
             <span className="quote-proposal-label">
@@ -995,10 +1009,14 @@ export default function QuoteReviewLayout({
   const lang = data.language ?? 'pt'
   const t = getQuoteStrings(lang)
   const w = t.wizard
-  const cityState = [data.city, data.state].filter(Boolean).join(', ')
-  const eventLocation = [data.addressLine, cityState, data.zipCode]
-    .filter(Boolean)
-    .join(' · ')
+  const eventAddressLines = formatEventAddressLines({
+    line: data.addressLine,
+    number: data.addressNumber,
+    city: data.city,
+    state: data.state,
+    zip: data.zipCode,
+  })
+  const eventAddressText = eventAddressLines.join('\n')
   const eventTimeLabel =
     data.startTime || data.endTime
       ? `${formatTime(data.startTime)} – ${formatTime(data.endTime)}`
@@ -1166,7 +1184,8 @@ export default function QuoteReviewLayout({
           <ConfirmationProposalBody
             data={data}
             breakdown={breakdown}
-            eventLocation={eventLocation}
+            eventAddressLines={eventAddressLines}
+            eventAddressText={eventAddressText}
             eventTimeLabel={eventTimeLabel}
             groupedAdditionals={groupedAdditionals}
             mileageEditor={mileageEditor}
@@ -1174,7 +1193,8 @@ export default function QuoteReviewLayout({
         ) : (
           <DefaultProposalBody
             data={data}
-            eventLocation={eventLocation}
+            eventAddressLines={eventAddressLines}
+            eventAddressText={eventAddressText}
             eventTimeLabel={eventTimeLabel}
             groupedAdditionals={groupedAdditionals}
             chargedMiles={chargedMiles}

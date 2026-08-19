@@ -192,6 +192,9 @@ type QuoteStrings = {
     contactPrivacyHint: string
     publicPackageOptionsTitle: string
     publicPackageChooseHint: string
+    publicPackageExperienceTitle: string
+    publicPackageExperienceBody: string
+    footerSincePioneer: string
     withSidesGroupTitle: string
     withoutSidesGroupTitle: string
     withSidesGroupHint: string
@@ -430,6 +433,7 @@ type QuoteStrings = {
     packagesLoadError: string
     mileageOrigin: string
     mileageDestination: string
+    mileageDestinationSameAsEvent: string
     mileageTotalDistance: string
     mileageIncluded: string
     mileageChargeable: string
@@ -522,7 +526,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       noAdditionals: 'Nenhum adicional selecionado.',
       date: 'Data',
       time: 'Horário',
-      location: 'Local',
+      location: 'Local do evento',
       quoteTotal: 'Total da cotação',
       summary: 'Resumo',
       createQuote: 'Criar cotação',
@@ -592,8 +596,12 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicPackageOptionsTitle: 'Opções deste pacote',
       publicPackageChooseHint:
         'Toque no pacote para selecionar. Depois complete apenas as opções obrigatórias.',
-      withSidesGroupTitle: 'Com guarnição',
-      withoutSidesGroupTitle: 'Sem guarnição',
+      publicPackageExperienceTitle: 'Escolha sua experiência',
+      publicPackageExperienceBody:
+        'Comece escolhendo como deseja montar o seu churrasco. Nossos pacotes estão disponíveis com ou sem guarnições. Depois de escolher o estilo, explore as opções disponíveis, selecione o pacote ideal para o seu evento e personalize somente as escolhas aplicáveis. O valor é atualizado automaticamente conforme a sua seleção.',
+      footerSincePioneer: 'Desde 2017 · Pioneira em Orlando, Flórida',
+      withSidesGroupTitle: 'Com guarnições',
+      withoutSidesGroupTitle: 'Sem guarnições',
       withSidesGroupHint:
         'Uma experiência completa, com acompanhamentos preparados para complementar o churrasco e deixar o serviço pronto para receber seus convidados. Explore {count} opções de pacotes disponíveis e escolha a combinação ideal para o seu evento.',
       withoutSidesGroupHint:
@@ -855,6 +863,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packagesLoadError: 'Erro ao carregar pacotes. Tente atualizar a página.',
       mileageOrigin: 'Origem',
       mileageDestination: 'Destino',
+      mileageDestinationSameAsEvent: 'Local do evento',
       mileageTotalDistance: 'Distância considerada',
       mileageIncluded: 'Milhas incluídas',
       mileageChargeable: 'Milhas cobradas',
@@ -945,7 +954,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       noAdditionals: 'No additional items selected.',
       date: 'Date',
       time: 'Time',
-      location: 'Location',
+      location: 'Event location',
       quoteTotal: 'Quote total',
       summary: 'Summary',
       createQuote: 'Create quote',
@@ -1014,6 +1023,10 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicPackageOptionsTitle: 'Options for this package',
       publicPackageChooseHint:
         'Tap a package to select it. Then complete only the required options.',
+      publicPackageExperienceTitle: 'Choose your experience',
+      publicPackageExperienceBody:
+        'Start by choosing how you would like your barbecue experience to be served. Our packages are available with or without sides. Then explore the available options, choose the package that best fits your event, and customize only the selections that apply. Pricing updates automatically based on your choices.',
+      footerSincePioneer: 'Since 2017 · Pioneer in Orlando, Florida',
       withSidesGroupTitle: 'With sides',
       withoutSidesGroupTitle: 'Without sides',
       withSidesGroupHint:
@@ -1274,6 +1287,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packagesLoadError: 'Failed to load packages. Try refreshing the page.',
       mileageOrigin: 'Origin',
       mileageDestination: 'Destination',
+      mileageDestinationSameAsEvent: 'Event location',
       mileageTotalDistance: 'Distance considered',
       mileageIncluded: 'Included miles',
       mileageChargeable: 'Chargeable miles',
@@ -1366,7 +1380,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       noAdditionals: 'Ningún adicional seleccionado.',
       date: 'Fecha',
       time: 'Horario',
-      location: 'Lugar',
+      location: 'Lugar del evento',
       quoteTotal: 'Total de la cotización',
       summary: 'Resumen',
       createQuote: 'Crear cotización',
@@ -1436,6 +1450,10 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicPackageOptionsTitle: 'Opciones de este paquete',
       publicPackageChooseHint:
         'Toque el paquete para seleccionarlo. Luego complete solo las opciones obligatorias.',
+      publicPackageExperienceTitle: 'Elige tu experiencia',
+      publicPackageExperienceBody:
+        'Comienza eligiendo cómo quieres disfrutar tu experiencia de barbecue. Nuestros paquetes están disponibles con o sin acompañamientos. Después, explora las opciones disponibles, elige el paquete ideal para tu evento y personaliza únicamente las selecciones aplicables. El precio se actualiza automáticamente según tus elecciones.',
+      footerSincePioneer: 'Desde 2017 · Pionera en Orlando, Florida',
       withSidesGroupTitle: 'Con acompañamientos',
       withoutSidesGroupTitle: 'Sin acompañamientos',
       withSidesGroupHint:
@@ -1698,6 +1716,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packagesLoadError: 'Error al cargar paquetes. Intente actualizar la página.',
       mileageOrigin: 'Origen',
       mileageDestination: 'Destino',
+      mileageDestinationSameAsEvent: 'Lugar del evento',
       mileageTotalDistance: 'Distancia considerada',
       mileageIncluded: 'Millas incluidas',
       mileageChargeable: 'Millas cobradas',

@@ -176,6 +176,7 @@ export async function beginPublicQuoteSession(
   request: NextRequest,
   companySlug: string,
   locale: string,
+  options: { forceNew?: boolean } = {},
 ): Promise<{
   session: PublicQuoteIntakeSession
   token: string | null
@@ -192,11 +193,13 @@ export async function beginPublicQuoteSession(
     60 * 60,
   )
 
-  const resumed = await resumeMatchingSession(
-    request,
-    tenant.company.id,
-    tenant.locale,
-  )
+  const resumed = options.forceNew
+    ? null
+    : await resumeMatchingSession(
+        request,
+        tenant.company.id,
+        tenant.locale,
+      )
   if (resumed) {
     return {
       session: resumed,

@@ -32,12 +32,14 @@ export async function POST(request: NextRequest) {
       companySlug?: unknown
       locale?: unknown
       website?: unknown
+      forceNew?: unknown
     }>(request)
     assertHoneypot(body?.website)
     const started = await beginPublicQuoteSession(
       request,
       typeof body?.companySlug === 'string' ? body.companySlug : '',
       typeof body?.locale === 'string' ? body.locale : '',
+      { forceNew: body?.forceNew === true },
     )
     const response = NextResponse.json(
       { session: publicSessionView(started.session) },
