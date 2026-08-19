@@ -2,6 +2,18 @@ function isCdlTenant(slug: string, name: string): boolean {
   return slug === 'cdl' || /cdl/i.test(name)
 }
 
+/** Circular flaming-grill emblem already in the repo. Not a newly generated asset. */
+export const CDL_FLAME_EMBLEM_SRC = '/cdl/logo.png'
+
+export function publicQuoteEmblemSrc(
+  slug: string,
+  name: string,
+  logoUrl: string | null,
+): string | null {
+  if (isCdlTenant(slug, name)) return CDL_FLAME_EMBLEM_SRC
+  return logoUrl
+}
+
 export function PublicQuoteBrandLockup({
   slug,
   name,
@@ -18,19 +30,19 @@ export function PublicQuoteBrandLockup({
     <div className="min-w-0" data-public-brand-lockup>
       {cdl ? (
         <>
-          <p className="truncate text-sm font-black leading-tight tracking-tight text-cdl-title">
+          <p className="text-sm font-black leading-tight tracking-tight text-cdl-title">
             CDL Services
           </p>
-          <p className="truncate text-[11px] font-semibold leading-tight text-cdl-muted">
+          <p className="text-[11px] font-semibold leading-tight text-cdl-muted">
             Barbecue At Home
           </p>
         </>
       ) : (
-        <p className="truncate text-sm font-black leading-tight tracking-tight text-cdl-title">
+        <p className="text-sm font-black leading-tight tracking-tight text-cdl-title">
           {fallbackName}
         </p>
       )}
-      <p className="mt-0.5 truncate text-[10px] font-medium tracking-wide text-cdl-faint">
+      <p className="mt-0.5 text-[10px] font-medium tracking-wide text-cdl-faint">
         {tagline}
       </p>
     </div>

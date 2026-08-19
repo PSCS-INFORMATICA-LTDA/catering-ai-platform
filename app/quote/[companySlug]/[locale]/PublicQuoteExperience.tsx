@@ -32,6 +32,7 @@ import PublicLocaleSwitcher from '@/components/quotes/PublicLocaleSwitcher'
 import PublicQuoteHeroMedia from '@/components/quotes/PublicQuoteHeroMedia'
 import {
   publicQuoteCopyrightLine,
+  publicQuoteEmblemSrc,
   PublicQuoteBrandLockup,
 } from '@/components/quotes/PublicQuoteBrandLockup'
 import {
@@ -409,6 +410,11 @@ export default function PublicQuoteExperience({
     '--brand-primary': bootstrap.company.primaryColor,
     '--brand-primary-2': bootstrap.company.accentColor,
   } as React.CSSProperties
+  const emblemSrc = publicQuoteEmblemSrc(
+    bootstrap.company.slug,
+    bootstrap.company.name,
+    bootstrap.company.logoUrl,
+  )
 
   return (
     <div style={style} className="min-h-screen bg-cdl-bg text-cdl-fg">
@@ -449,17 +455,23 @@ export default function PublicQuoteExperience({
       {success ? (
         <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-3xl items-center px-4 py-12 sm:px-8">
           <section className="w-full rounded-[2rem] border border-cdl-border bg-cdl-surface p-7 shadow-xl sm:p-10">
-            {bootstrap.company.logoUrl ? (
+            {emblemSrc ? (
               <div
                 data-success-flame-art
-                className="mx-auto flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-white shadow-lg sm:h-32 sm:w-32"
+                className="relative mx-auto flex h-28 w-28 items-center justify-center sm:h-32 sm:w-32"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={bootstrap.company.logoUrl}
-                  alt=""
-                  className="h-full w-full scale-[1.08] object-cover object-center"
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-[-18%] rounded-full bg-[radial-gradient(circle,rgba(249,115,22,0.38),transparent_68%)] blur-md"
                 />
+                <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-white shadow-lg">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={emblemSrc}
+                    alt=""
+                    className="h-full w-full scale-[1.08] object-cover object-center"
+                  />
+                </div>
               </div>
             ) : (
               <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-2xl text-emerald-700">
@@ -624,17 +636,27 @@ export default function PublicQuoteExperience({
         </main>
       )}
 
+      {started && !success ? (
+        <div
+          data-public-wizard-pscs
+          className="pointer-events-none fixed bottom-24 left-5 z-20 hidden lg:block"
+          aria-hidden
+        >
+          <PscsOneMark size="sm" className="opacity-80 shadow-sm" />
+        </div>
+      ) : null}
+
       {!started || success ? (
       <footer className="border-t border-cdl-border bg-cdl-surface">
         <div className="mx-auto flex max-w-7xl flex-col items-center gap-6 px-4 py-10 text-center sm:px-8">
-          {bootstrap.company.logoUrl ? (
+          {emblemSrc ? (
             <div
               data-footer-cdl-logo
-              className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-white shadow-md sm:h-28 sm:w-28"
+              className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-white shadow-md sm:h-36 sm:w-36"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={bootstrap.company.logoUrl}
+                src={emblemSrc}
                 alt={bootstrap.company.name}
                 className="h-full w-full scale-[1.08] object-cover object-center"
               />
@@ -659,7 +681,7 @@ export default function PublicQuoteExperience({
             data-powered-by
             className="flex flex-wrap items-center justify-center gap-1.5 text-[10px] tracking-wide text-cdl-faint"
           >
-            <PscsOneMark size="sm" className="!px-1 !py-0.5" />
+            <PscsOneMark size="sm" variant="icon" className="!p-0" />
             <span>{copy.poweredBy}</span>
           </p>
           <div className="flex flex-wrap justify-center gap-4 text-xs text-cdl-muted">

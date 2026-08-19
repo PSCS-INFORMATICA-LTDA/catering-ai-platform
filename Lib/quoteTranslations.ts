@@ -598,7 +598,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Toque no pacote para selecionar. Depois complete apenas as opções obrigatórias.',
       publicPackageExperienceTitle: 'Escolha sua experiência',
       publicPackageExperienceBody:
-        'Comece pelo estilo do seu churrasco: com ou sem guarnições. Explore os pacotes, escolha o que combina com o seu evento e personalize só o que fizer sentido. O valor atualiza na hora.',
+        'Escolha o estilo do seu churrasco: com ou sem guarnições. Explore os pacotes, encontre o que combina com o seu evento e personalize só o que fizer sentido. O valor atualiza na hora.',
       footerSincePioneer: 'Desde 2017 · Pioneira em Orlando, Flórida',
       withSidesGroupTitle: 'COM GUARNIÇÕES',
       withoutSidesGroupTitle: 'SEM GUARNIÇÕES',
@@ -1025,7 +1025,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Tap a package to select it. Then complete only the required options.',
       publicPackageExperienceTitle: 'Choose your experience',
       publicPackageExperienceBody:
-        'Start with the style of your barbecue: with or without sides. Explore the packages, choose what fits your event, and customize only what applies. Pricing updates as you go.',
+        'Choose the style of your barbecue: with or without sides. Explore the packages, find what fits your event, and customize only what applies. Pricing updates as you go.',
       footerSincePioneer: 'Since 2017 · Pioneer in Orlando, Florida',
       withSidesGroupTitle: 'WITH SIDES',
       withoutSidesGroupTitle: 'WITHOUT SIDES',
@@ -1452,7 +1452,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Toque el paquete para seleccionarlo. Luego complete solo las opciones obligatorias.',
       publicPackageExperienceTitle: 'Elige tu experiencia',
       publicPackageExperienceBody:
-        'Empieza por el estilo de tu asado: con o sin acompañamientos. Explora los paquetes, elige el que combina con tu evento y personaliza solo lo que aplique. El precio se actualiza al momento.',
+        'Elige el estilo de tu asado: con o sin acompañamientos. Explora los paquetes, encuentra lo que combina con tu evento y personaliza solo lo que aplique. El precio se actualiza al momento.',
       footerSincePioneer: 'Desde 2017 · Pionera en Orlando, Florida',
       withSidesGroupTitle: 'CON ACOMPAÑAMIENTOS',
       withoutSidesGroupTitle: 'SIN ACOMPAÑAMIENTOS',

@@ -293,7 +293,7 @@ test('TEST 28 PSCS One branding correct', () => {
   assert.match(sidebar, /data-sidebar-pscs-one/)
   assert.match(sidebar, /aria-label="PSCS One"/)
   assert.match(mark, /src="\/brand\/pscs-one\.png"/)
-  assert.match(mark, /alt="PSCS One"/)
+  assert.match(mark, /alt=\{icon \? '' : 'PSCS One'\}/)
 })
 
 test('TEST 29 Same black/red PSCS One logo in light mode', () => {
@@ -313,11 +313,13 @@ test('TEST 31 Public landing tenant-first', () => {
   assert.match(experience, /bootstrap\.company\.logoUrl/)
   assert.match(experience, /bootstrap\.company\.name/)
   assert.match(experience, /LANDING AGUARDANDO ASSETS FINAIS/)
+  const header = experience.slice(0, experience.indexOf('data-public-landing'))
   const landing = experience.slice(experience.indexOf('data-public-landing'))
-  const tenantLogo = landing.indexOf('bootstrap.company.logoUrl')
-  const powered = landing.indexOf('data-powered-by')
-  assert.ok(tenantLogo >= 0)
-  assert.ok(powered === -1 || powered > tenantLogo)
+  assert.match(header, /data-tenant-logo/)
+  assert.match(header, /PublicQuoteBrandLockup/)
+  assert.doesNotMatch(landing, /data-tenant-logo/)
+  const powered = experience.indexOf('data-powered-by')
+  assert.ok(powered > experience.indexOf('data-public-landing'))
 })
 
 test('TEST 32 Powered by PSCS One is discreet', () => {
@@ -477,6 +479,19 @@ test('TEST 42 New quote hydrates empty package and additionals', () => {
   const types = source('Lib/quoteWizardTypes.ts')
   assert.match(types, /packageId: null/)
   assert.match(types, /additionals: \{\}/)
+})
+
+test('TEST 43 CDL flame emblem and discreet PSCS One chrome', () => {
+  const lockup = source('components/quotes/PublicQuoteBrandLockup.tsx')
+  assert.match(lockup, /CDL_FLAME_EMBLEM_SRC/)
+  assert.match(lockup, /\/cdl\/logo\.png/)
+  assert.match(experience, /publicQuoteEmblemSrc/)
+  assert.match(experience, /data-success-flame-art/)
+  assert.match(experience, /data-public-wizard-pscs/)
+  assert.match(experience, /hidden lg:block/)
+  assert.match(experience, /variant="icon"/)
+  assert.doesNotMatch(lockup, /truncate text-sm font-black/)
+  assert.match(mark, /variant\?: 'full' \| 'icon'/)
 })
 
 if (failed > 0) {

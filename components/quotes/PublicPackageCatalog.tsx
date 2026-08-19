@@ -37,10 +37,22 @@ function PackageExperienceBody({
 }) {
   const marks =
     language === 'en'
-      ? ['with or without sides', 'Pricing updates as you go.']
+      ? [
+          'with or without sides',
+          'Explore the packages',
+          'Pricing updates as you go.',
+        ]
       : language === 'es'
-        ? ['con o sin acompañamientos', 'El precio se actualiza al momento.']
-        : ['com ou sem guarnições', 'O valor atualiza na hora.']
+        ? [
+            'con o sin acompañamientos',
+            'Explora los paquetes',
+            'El precio se actualiza al momento.',
+          ]
+        : [
+            'com ou sem guarnições',
+            'Explore os pacotes',
+            'O valor atualiza na hora.',
+          ]
   const nodes: ReactNode[] = []
   let remaining = text
   let key = 0
@@ -118,7 +130,7 @@ function PackageGroupToggle({
       }`}
     >
       <span
-        className={`${packageGroupDisplay.className} text-[0.78rem] font-bold uppercase tracking-[0.18em] text-cdl-title sm:text-[0.88rem]`}
+        className={`${packageGroupDisplay.className} text-[0.82rem] font-bold uppercase tracking-[0.2em] text-cdl-title sm:text-[0.95rem]`}
       >
         {title}
       </span>
