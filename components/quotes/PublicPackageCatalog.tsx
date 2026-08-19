@@ -9,6 +9,7 @@ import {
   getPackageCatalogPrice,
   getPackageCatalogVariant,
   getPackagePriceLineLabel,
+  getPublicPackageFamilyExampleNames,
   getPublicPackageSidesGroup,
   isPackageCatalogPriceOnRequest,
   resolvePackageSidesPricing,
@@ -47,19 +48,39 @@ function perPersonSuffix(language: QuoteLanguage): string {
   return 'pessoa'
 }
 
+function packageGroupHint(
+  language: QuoteLanguage,
+  group: PackageSidesGroup,
+  packages: readonly PublicPackageCard[],
+) {
+  const count = packages.length
+  const key =
+    group === 'with_sides' ? 'withSidesGroupHint' : 'withoutSidesGroupHint'
+  const base = tw(language, key, { count })
+  const names = getPublicPackageFamilyExampleNames(packages, language)
+  if (names.length < 2) return base
+  return `${base}${tw(language, 'packageGroupExamples', {
+    names: names.join(', '),
+  })}`
+}
+
 function PackageGroupToggle({
   title,
   hint,
-  count,
+  countLabel,
   expanded,
   group,
+  selected,
+  selectedLabel,
   onClick,
 }: {
   title: string
   hint: string
-  count: number
+  countLabel: string
   expanded: boolean
   group: PackageSidesGroup
+  selected: boolean
+  selectedLabel: string
   onClick: () => void
 }) {
   return (
@@ -68,29 +89,39 @@ function PackageGroupToggle({
       data-package-group-toggle={group}
       aria-expanded={expanded}
       onClick={onClick}
-      className="flex w-full min-w-0 items-start justify-between gap-3 rounded-2xl border border-cdl-border bg-cdl-surface px-4 py-4 text-left shadow-sm transition hover:bg-cdl-hover sm:px-5"
+      className="flex w-full min-w-0 items-start justify-between gap-3 rounded-2xl border border-cdl-border bg-cdl-surface px-4 py-4 text-left shadow-sm transition hover:bg-cdl-hover active:bg-cdl-hover sm:px-5"
     >
       <span className="min-w-0 flex-1">
-        <span className="block text-base font-black text-cdl-title sm:text-lg">
+        <span className="block text-[1.05rem] font-black tracking-tight text-cdl-title sm:text-xl">
           {title}
         </span>
-        <span className="mt-1 block text-sm leading-6 text-cdl-muted">{hint}</span>
-        {count > 0 ? (
-          <span
-            data-package-group-count
-            className="mt-2 inline-block text-xs font-semibold uppercase tracking-wide text-cdl-muted"
-          >
-            {count}
-          </span>
-        ) : null}
+        <span className="mt-2 block text-sm leading-relaxed text-cdl-muted">
+          {hint}
+        </span>
+        <span className="mt-3 flex flex-wrap items-center gap-2">
+          {countLabel ? (
+            <span
+              data-package-group-count
+              className="text-xs font-semibold tracking-wide text-cdl-muted"
+            >
+              {countLabel}
+            </span>
+          ) : null}
+          {selected ? (
+            <span
+              data-package-group-selected
+              className="rounded-full bg-[var(--brand-primary)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
+            >
+              {selectedLabel}
+            </span>
+          ) : null}
+        </span>
       </span>
       <span
-        className={`mt-1 shrink-0 text-sm text-[var(--brand-primary)] transition-transform ${
-          expanded ? 'rotate-180' : ''
-        }`}
+        className="mt-1 shrink-0 text-sm font-black text-[var(--brand-primary)]"
         aria-hidden
       >
-        ▼
+        {expanded ? '▲' : '▼'}
       </span>
     </button>
   )
@@ -231,23 +262,6 @@ export default function PublicPackageCatalog({
   const t = getQuoteStrings(language)
   const optionsRef = useRef<HTMLDivElement>(null)
   const [openGroup, setOpenGroup] = useState<PackageSidesGroup | null>(null)
-  const syncedSelectionRef = useRef<string | null>(null)
-
-  useEffect(() => {
-    if (!selectedPackageId) {
-      syncedSelectionRef.current = null
-      return
-    }
-    if (syncedSelectionRef.current === selectedPackageId) return
-    syncedSelectionRef.current = selectedPackageId
-    if (packagesWithSides.some((pkg) => pkg.id === selectedPackageId)) {
-      setOpenGroup('with_sides')
-      return
-    }
-    if (packagesWithoutSides.some((pkg) => pkg.id === selectedPackageId)) {
-      setOpenGroup('without_sides')
-    }
-  }, [selectedPackageId, packagesWithSides, packagesWithoutSides])
 
   useEffect(() => {
     if (!selectedPackageId) return
@@ -321,8 +335,10 @@ export default function PublicPackageCatalog({
           <PackageGroupToggle
             group="with_sides"
             title={tw(language, 'withSidesGroupTitle')}
-            hint={tw(language, 'withSidesGroupHint')}
-            count={packagesWithSides.length}
+            hint={packageGroupHint(language, 'with_sides', packagesWithSides)}
+            countLabel={t.packagesAvailableCount(packagesWithSides.length)}
+            selected={packagesWithSides.some((pkg) => pkg.id === selectedPackageId)}
+            selectedLabel={t.selected}
             expanded={openGroup === 'with_sides'}
             onClick={() =>
               setOpenGroup((current) =>
@@ -338,8 +354,16 @@ export default function PublicPackageCatalog({
           <PackageGroupToggle
             group="without_sides"
             title={tw(language, 'withoutSidesGroupTitle')}
-            hint={tw(language, 'withoutSidesGroupHint')}
-            count={packagesWithoutSides.length}
+            hint={packageGroupHint(
+              language,
+              'without_sides',
+              packagesWithoutSides,
+            )}
+            countLabel={t.packagesAvailableCount(packagesWithoutSides.length)}
+            selected={packagesWithoutSides.some(
+              (pkg) => pkg.id === selectedPackageId,
+            )}
+            selectedLabel={t.selected}
             expanded={openGroup === 'without_sides'}
             onClick={() =>
               setOpenGroup((current) =>

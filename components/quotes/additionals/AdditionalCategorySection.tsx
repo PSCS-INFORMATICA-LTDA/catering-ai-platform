@@ -18,6 +18,48 @@ import {
 import { getQuoteStrings } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
+function CategoryHeaderCopy({
+  categoryLabel,
+  itemCountLabel,
+  selectedCount,
+  selectedCountLabel,
+  expanded,
+}: {
+  categoryLabel: string
+  itemCountLabel: string
+  selectedCount: number
+  selectedCountLabel: string
+  expanded: boolean
+}) {
+  return (
+    <div className="flex min-w-0 items-start gap-3">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="text-base font-extrabold uppercase tracking-wide text-cdl-title sm:text-lg">
+            {categoryLabel}
+          </span>
+          <span className="text-sm font-medium text-cdl-muted">
+            {itemCountLabel}
+          </span>
+        </div>
+        {selectedCount > 0 ? (
+          <div className="mt-2">
+            <span className="rounded-full bg-[var(--brand-primary)] px-2.5 py-0.5 text-xs font-bold text-white">
+              {selectedCountLabel}
+            </span>
+          </div>
+        ) : null}
+      </div>
+      <span
+        className="mt-1 shrink-0 text-sm text-[var(--brand-primary)]"
+        aria-hidden
+      >
+        {expanded ? '▲' : '▼'}
+      </span>
+    </div>
+  )
+}
+
 export default function AdditionalCategorySection({
   categoryKey,
   categoryLabel,
@@ -45,9 +87,7 @@ export default function AdditionalCategorySection({
   quantities: Record<string, number>
   billableGuestCount: number
   language: QuoteLanguage
-  /** Bumped by the wizard to re-evaluate summaries already on screen. */
   exposeEpoch?: number
-  /** Sticky CTA height so a summary behind Voltar/Próximo is not counted. */
   ctaReservePx?: number
   onToggle: () => void
   onExpose: () => void
@@ -93,6 +133,55 @@ export default function AdditionalCategorySection({
 
   const contentId = `additional-category-content-${categoryKey}`
   const summaryId = `additional-category-summary-${categoryKey}`
+  const headerCopy = (
+    <CategoryHeaderCopy
+      categoryLabel={categoryLabel}
+      itemCountLabel={t.itemsCount(items.length)}
+      selectedCount={selectedCount}
+      selectedCountLabel={t.selectedCount(selectedCount)}
+      expanded={expanded}
+    />
+  )
+
+  const summaryList = (
+    <ul
+      id={summaryId}
+      data-additional-category-summary
+      className="border-t border-cdl-border-subtle px-4 py-3 sm:px-5"
+    >
+      {items.map((item) => {
+        const quantity = quantities[item.id] ?? 0
+        return (
+          <li
+            key={item.id}
+            data-additional-summary-item
+            className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1 text-sm leading-snug"
+          >
+            <span
+              className="shrink-0 text-[var(--brand-primary)]"
+              aria-hidden
+            >
+              •
+            </span>
+            <span className="min-w-0 flex-1 break-words text-cdl-text">
+              {getLocalizedAdditionalLabel(item, language)}
+              {quantity > 0 ? (
+                <span className="ml-2 font-bold text-[var(--brand-primary)]">
+                  ×{quantity}
+                </span>
+              ) : null}
+            </span>
+            <span className="min-w-0 shrink-0 break-words text-right text-cdl-muted">
+              <span className="font-semibold text-cdl-title">
+                {getAdditionalPriceLabel(item, language)}
+              </span>{' '}
+              {getAdditionalChargeUnitLabel(item, language)}
+            </span>
+          </li>
+        )
+      })}
+    </ul>
+  )
 
   return (
     <section
@@ -106,107 +195,58 @@ export default function AdditionalCategorySection({
       }`}
       style={{ scrollMarginBottom: ctaReservePx }}
     >
-      <button
-        type="button"
-        data-additional-category-header
-        onClick={onToggle}
-        aria-expanded={expanded}
-        aria-controls={expanded ? contentId : summaryId}
-        className="w-full p-4 text-left transition-colors hover:bg-cdl-hover sm:p-5"
-      >
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="text-base font-extrabold uppercase tracking-wide text-cdl-title sm:text-lg">
-                {categoryLabel}
-              </span>
-              <span className="text-sm font-medium text-cdl-muted">
-                {t.itemsCount(items.length)}
-              </span>
-            </div>
-
-            {selectedCount > 0 ? (
-              <div className="mt-2">
-                <span className="rounded-full bg-[var(--brand-primary)] px-2.5 py-0.5 text-xs font-bold text-white">
-                  {t.selectedCount(selectedCount)}
-                </span>
-              </div>
-            ) : null}
-          </div>
-          <span
-            className={`mt-1 shrink-0 text-sm text-[var(--brand-primary)] transition-transform duration-200 ${
-              expanded ? 'rotate-180' : ''
-            }`}
-            aria-hidden
-          >
-            ▼
-          </span>
-        </div>
-      </button>
-
       {expanded ? (
-        <div
-          id={contentId}
-          role="region"
-          aria-label={categoryLabel}
-          className="border-t border-cdl-border-subtle p-3 sm:p-4"
-        >
-          <div
-            data-additional-items-grid
-            className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"
+        <>
+          <button
+            type="button"
+            data-additional-category-header
+            onClick={onToggle}
+            aria-expanded={expanded}
+            aria-controls={contentId}
+            className="w-full cursor-pointer p-4 text-left transition-colors hover:bg-cdl-hover active:bg-cdl-hover sm:p-5"
           >
-            {items.map((item) => (
-              <AdditionalItemCard
-                key={item.id}
-                item={item}
-                quantity={quantities[item.id] ?? 0}
-                billableGuestCount={billableGuestCount}
-                language={language}
-                onChangeQty={(qty) => onChangeQty(item.id, qty)}
-              />
-            ))}
+            {headerCopy}
+          </button>
+          <div
+            id={contentId}
+            role="region"
+            aria-label={categoryLabel}
+            className="border-t border-cdl-border-subtle p-3 sm:p-4"
+          >
+            <div
+              data-additional-items-grid
+              className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"
+            >
+              {items.map((item) => (
+                <AdditionalItemCard
+                  key={item.id}
+                  item={item}
+                  quantity={quantities[item.id] ?? 0}
+                  billableGuestCount={billableGuestCount}
+                  language={language}
+                  onChangeQty={(qty) => onChangeQty(item.id, qty)}
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       ) : (
-        // Collapsed categories still list every item with its registered price
-        // and charge unit, so the customer can read before deciding to open.
-        <ul
-          id={summaryId}
-          data-additional-category-summary
-          className="border-t border-cdl-border-subtle px-4 py-3 sm:px-5"
+        <div
+          className="group relative hover:bg-cdl-hover active:bg-cdl-hover"
+          data-additional-category-header
         >
-          {items.map((item) => {
-            const quantity = quantities[item.id] ?? 0
-            return (
-              <li
-                key={item.id}
-                data-additional-summary-item
-                className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1 text-sm leading-snug"
-              >
-                <span
-                  className="shrink-0 text-[var(--brand-primary)]"
-                  aria-hidden
-                >
-                  •
-                </span>
-                <span className="min-w-0 flex-1 break-words text-cdl-text">
-                  {getLocalizedAdditionalLabel(item, language)}
-                  {quantity > 0 ? (
-                    <span className="ml-2 font-bold text-[var(--brand-primary)]">
-                      ×{quantity}
-                    </span>
-                  ) : null}
-                </span>
-                <span className="min-w-0 shrink-0 break-words text-right text-cdl-muted">
-                  <span className="font-semibold text-cdl-title">
-                    {getAdditionalPriceLabel(item, language)}
-                  </span>{' '}
-                  {getAdditionalChargeUnitLabel(item, language)}
-                </span>
-              </li>
-            )
-          })}
-        </ul>
+          <button
+            type="button"
+            data-additional-category-hitarea
+            onClick={onToggle}
+            aria-expanded={expanded}
+            aria-controls={summaryId}
+            aria-label={categoryLabel}
+            className="absolute inset-0 z-10 cursor-pointer rounded-2xl focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2"
+          />
+          <div className="relative z-0 p-4 sm:p-5">{headerCopy}</div>
+          {summaryList}
+        </div>
       )}
 
       <span

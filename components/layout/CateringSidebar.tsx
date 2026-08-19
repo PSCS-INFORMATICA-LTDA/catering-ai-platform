@@ -10,6 +10,7 @@ import {
   tChrome,
 } from '@/Lib/i18n/chrome'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
+import { PscsOneMark } from '@/components/brand/PscsOneMark'
 
 type Props = {
   collapsed: boolean
@@ -192,14 +193,9 @@ export function CateringSidebar({
           <footer className="mt-auto space-y-2 border-t border-white/10 px-3 py-2.5">
             <ThemeToggle className="catering-sidebar-theme-toggle w-full justify-center" />
             <div className="flex flex-col items-center gap-1.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/brand/pscs-one.png"
-                alt="PSCS One"
-                className="h-5 w-auto bg-transparent object-contain opacity-75 brightness-0 invert"
-              />
+              <PscsOneMark />
               <p className="text-center text-[0.65rem] text-white/40">
-                PSCS Informática
+                PSCS One
               </p>
             </div>
           </footer>

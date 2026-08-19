@@ -17,6 +17,7 @@ import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import { formatUiDate } from '@/Lib/i18n/locales'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
 import { tw } from '@/Lib/quoteTranslations'
+import { formatMileageQuantity } from '@/Lib/units'
 
 function formatMoney(value: number | null | undefined) {
   if (value == null) return '—'
@@ -43,8 +44,7 @@ function formatShortLocation(city: string | null, state: string | null) {
 }
 
 function formatMiles(value: number | null | undefined) {
-  if (value == null) return '0 mi'
-  return `${Number(value)} mi`
+  return `${formatMileageQuantity(value)} mi`
 }
 
 function Metric({

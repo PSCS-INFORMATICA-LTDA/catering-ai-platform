@@ -24,12 +24,11 @@ import {
   formatTime,
 } from '@/app/quotes/[id]/quoteDetailTypes'
 import { IconCalendar, IconClock, IconLocation } from './QuoteReviewIcons'
-import QuoteProposalOverviewCard from './QuoteProposalOverviewCard'
 import type { QuoteReviewAdditional, QuoteReviewData } from './quoteReviewTypes'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import { tCommon } from '@/Lib/i18n/common'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
-import { formatDistanceForDisplay } from '@/Lib/units'
+import { formatDistanceForDisplay, formatMileageQuantity } from '@/Lib/units'
 import PricingBreakdownView from './PricingBreakdownView'
 import type {
   PricingBreakdown,
@@ -52,13 +51,16 @@ function ProposalSection({
   title,
   children,
   className = '',
+  sectionKey,
 }: {
   title: string
   children: ReactNode
   className?: string
+  sectionKey?: string
 }) {
   return (
     <section
+      data-review-section={sectionKey}
       className={`quote-proposal-section quote-print-section ${className}`}
     >
       <h2 className="quote-proposal-section-title">{title}</h2>
@@ -164,27 +166,10 @@ function ConfirmationProposalBody({
 
   return (
     <>
-      <QuoteProposalOverviewCard
-        customerName={displayValue(data.customerName)}
-        eventDate={data.eventDate}
-        addressLine={data.addressLine}
-        city={data.city}
-        state={data.state}
-        zipCode={data.zipCode}
-        packageSummary={data.packageSummary}
-        packageTotal={data.packageTotal}
-        additionalTotal={data.additionalTotal}
-        mileageFee={data.mileageFee}
-        grillRentalTotal={data.grillRentalTotal}
-        reservationAmount={data.reservationAmount}
-        quoteTotal={data.quoteTotal}
-        additionalsCount={data.additionals.length}
-        grillRentalRequired={data.grillRentalRequired}
-        language={lang}
-        showFinance={false}
-      />
-
-      <ProposalSection title={tw(lang, 'confirmSectionClient')}>
+      <ProposalSection
+        sectionKey="client"
+        title={tw(lang, 'confirmSectionClient')}
+      >
         <div className="quote-proposal-info-grid">
           <div className="quote-proposal-info-cell">
             <span className="quote-proposal-label">
@@ -209,7 +194,7 @@ function ConfirmationProposalBody({
         </div>
       </ProposalSection>
 
-      <ProposalSection title={t.review.eventSection}>
+      <ProposalSection sectionKey="event" title={t.review.eventSection}>
         <p className="quote-proposal-event-name">
           {displayValue(data.eventName || data.customerName)}
         </p>
@@ -273,7 +258,20 @@ function ConfirmationProposalBody({
       </ProposalSection>
 
       <div className="quote-proposal-grid-2">
-        <ProposalSection title={t.review.packageSection}>
+        <ProposalSection sectionKey="guests" title={t.review.guestsSection}>
+          <GuestBreakdownPanel
+            guestCounts={data.guestCounts}
+            totals={{
+              billableGuestCount: breakdown.guest_counts.billable_guest_count,
+              physicalGuestCount: breakdown.guest_counts.physical_guest_count,
+              quoteTotal: breakdown.total,
+            }}
+            language={lang}
+            showFinancialTotal={false}
+          />
+        </ProposalSection>
+
+        <ProposalSection sectionKey="package" title={t.review.packageSection}>
           <QuoteReviewPackageCdlSection
             packageName={data.packageName}
             packageImageUrl={data.packageImageUrl}
@@ -286,19 +284,6 @@ function ConfirmationProposalBody({
             language={lang}
             showValueCards={false}
             showAdditionalItems={false}
-          />
-        </ProposalSection>
-
-        <ProposalSection title={t.review.guestsSection}>
-          <GuestBreakdownPanel
-            guestCounts={data.guestCounts}
-            totals={{
-              billableGuestCount: breakdown.guest_counts.billable_guest_count,
-              physicalGuestCount: breakdown.guest_counts.physical_guest_count,
-              quoteTotal: breakdown.total,
-            }}
-            language={lang}
-            showFinancialTotal={false}
           />
         </ProposalSection>
       </div>
@@ -478,15 +463,15 @@ function ConfirmationProposalBody({
                 </span>
                 <p className="quote-proposal-value">
                   {mileageMetadata?.free_limit != null
-                    ? `${String(mileageMetadata.free_limit)} mi`
-                    : `${breakdown.rules_applied.mileageFreeLimit} mi`}
+                    ? `${formatMileageQuantity(Number(mileageMetadata.free_limit))} mi`
+                    : `${formatMileageQuantity(breakdown.rules_applied.mileageFreeLimit)} mi`}
                 </p>
               </div>
               <div className="quote-proposal-info-cell">
                 <span className="quote-proposal-label">
                   {tw(lang, 'mileageChargeable')}
                 </span>
-                <p className="quote-proposal-value">{`${mileageLine.quantity} mi`}</p>
+                <p className="quote-proposal-value">{`${formatMileageQuantity(mileageLine.quantity)} mi`}</p>
               </div>
             </div>
             <div className="quote-proposal-mileage-grid">
@@ -515,9 +500,11 @@ function ConfirmationProposalBody({
               </span>
               <p className="quote-proposal-value">
                 {tw(lang, 'mileageRuleSummary', {
-                  included: String(
-                    mileageMetadata?.free_limit ??
-                      breakdown.rules_applied.mileageFreeLimit,
+                  included: formatMileageQuantity(
+                    Number(
+                      mileageMetadata?.free_limit ??
+                        breakdown.rules_applied.mileageFreeLimit,
+                    ),
                   ),
                   rate: formatCurrency(mileageLine.unit_price),
                 })}
@@ -565,6 +552,423 @@ function ConfirmationProposalBody({
           className="quote-proposal-pscs-mark bg-transparent"
         />
       </footer>
+    </>
+  )
+}
+
+function DefaultProposalBody({
+  data,
+  eventLocation,
+  eventTimeLabel,
+  groupedAdditionals,
+  chargedMiles,
+  pricingLines,
+  holidaySurcharge,
+  minimumAdjustment,
+  rulesVariant,
+}: {
+  data: QuoteReviewData
+  eventLocation: string
+  eventTimeLabel: string
+  groupedAdditionals: Array<{
+    category: string
+    items: QuoteReviewAdditional[]
+  }>
+  chargedMiles: number | null
+  pricingLines: Array<{
+    label: string
+    value: string
+    discount?: boolean
+    highlight?: boolean
+  }>
+  holidaySurcharge: number
+  minimumAdjustment: number
+  rulesVariant: 'summary' | 'pdf'
+}) {
+  const lang = data.language ?? 'pt'
+  const t = getQuoteStrings(lang)
+  const w = t.wizard
+
+  return (
+    <>
+      <ProposalSection
+        sectionKey="client"
+        title={tw(lang, 'confirmSectionClient')}
+      >
+        <div className="quote-proposal-info-grid">
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">
+              {tQuotesOrders(lang, 'docCustomer')}
+            </span>
+            <p className="quote-proposal-value">
+              {displayValue(data.customerName)}
+            </p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">{w.customerPhone}</span>
+            <p className="quote-proposal-value">
+              {displayValue(data.customerPhone)}
+            </p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">{w.customerEmail}</span>
+            <p className="quote-proposal-value">
+              {displayValue(data.customerEmail)}
+            </p>
+          </div>
+        </div>
+      </ProposalSection>
+
+      <ProposalSection sectionKey="event" title={t.review.eventSection}>
+        <p className="quote-proposal-event-name">
+          {displayValue(data.eventName || data.customerName)}
+        </p>
+        <div className="quote-proposal-event-list">
+          <EventRow
+            icon={<IconCalendar />}
+            label={t.review.date}
+            value={formatDate(data.eventDate, lang)}
+          />
+          <EventRow
+            icon={<IconClock />}
+            label={t.review.time}
+            value={eventTimeLabel}
+          />
+          <EventRow
+            icon={<IconLocation />}
+            label={t.review.location}
+            value={eventLocation || '—'}
+          />
+        </div>
+      </ProposalSection>
+
+      <div className="quote-proposal-grid-2">
+        <ProposalSection sectionKey="guests" title={t.review.guestsSection}>
+          <GuestBreakdownPanel
+            guestCounts={data.guestCounts}
+            totals={{
+              billableGuestCount: data.billableGuestCount,
+              physicalGuestCount: data.physicalGuestCount,
+              quoteTotal: data.quoteTotal,
+            }}
+            language={lang}
+            showFinancialTotal={false}
+          />
+        </ProposalSection>
+
+        <ProposalSection sectionKey="package" title={t.review.packageSection}>
+          <QuoteReviewPackageCdlSection
+            packageName={data.packageName}
+            packageImageUrl={data.packageImageUrl}
+            packageSummary={data.packageSummary}
+            packageSelections={data.packageSelections}
+            additionalItems={(data.additionals ?? [])
+              .filter((item) => Number(item.totalPrice ?? 0) > 0)
+              .map((item) => ({
+                label: item.label,
+                amount: Number(item.totalPrice ?? 0),
+              }))}
+            physicalGuestCount={data.physicalGuestCount}
+            billableGuestCount={data.billableGuestCount}
+            packageTotal={data.packageTotal}
+            packageUnitPrice={data.packageUnitPrice}
+            language={lang}
+            showValueCards={false}
+          />
+          <QuoteReviewPackageValueCards
+            packageSummary={data.packageSummary}
+            physicalGuestCount={data.physicalGuestCount}
+            billableGuestCount={data.billableGuestCount}
+            packageTotal={data.packageTotal}
+            packageUnitPrice={data.packageUnitPrice}
+            additionalTotal={data.additionalTotal}
+            mileageFee={data.mileageFee}
+            language={lang}
+          />
+        </ProposalSection>
+      </div>
+
+      <ProposalSection title={t.review.additionalsSection}>
+        {groupedAdditionals.length === 0 ? (
+          <p className="quote-proposal-muted">{t.review.noAdditionals}</p>
+        ) : (
+          <div className="quote-proposal-additionals">
+            {groupedAdditionals.map(({ category, items }) => (
+              <section key={category} className="quote-proposal-additional-group">
+                <h3 className="quote-proposal-category-title">{category}</h3>
+                <div className="quote-print-additional-grid quote-proposal-additional-grid">
+                  {items.map((item) => (
+                    <article
+                      key={item.id}
+                      className="quote-print-additional-card quote-proposal-additional-card"
+                    >
+                      <CatalogImageFrame
+                        src={item.imageUrl}
+                        alt={item.label}
+                        variant="catalogItem"
+                        itemType={item.itemType}
+                        categoryPt={item.categoryPt}
+                        rounded="none"
+                        className="quote-print-thumb quote-proposal-additional-image !min-h-0 !max-h-none !aspect-video"
+                      />
+                      <div className="quote-print-additional-body quote-proposal-additional-body">
+                        <h4 className="quote-proposal-additional-name">
+                          {item.label}
+                        </h4>
+                        <div className="quote-proposal-additional-metrics">
+                          <div>
+                            <span className="quote-proposal-label">
+                              {tQuotesOrders(lang, 'docQtyLabel')}
+                            </span>
+                            <p className="quote-proposal-additional-metric">
+                              {displayValue(item.quantity)}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="quote-proposal-label">
+                              {tQuotesOrders(lang, 'docUnitPriceLabel')}
+                            </span>
+                            <p className="quote-proposal-additional-metric">
+                              {formatCurrency(item.unitPrice)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="quote-print-additional-total quote-proposal-additional-total">
+                          <span className="quote-proposal-label">{w.total}</span>
+                          <p className="quote-proposal-additional-price">
+                            {formatCurrency(item.totalPrice)}
+                          </p>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </ProposalSection>
+
+      <div className="quote-proposal-grid-2">
+        <ProposalSection title={t.review.bbqSection}>
+          <div className="quote-proposal-info-grid">
+            <div className="quote-proposal-info-cell">
+              <span className="quote-proposal-label">{w.hasGrill}</span>
+              <p className="quote-proposal-value">
+                {formatBool(data.hasGrill, lang)}
+              </p>
+            </div>
+            <div className="quote-proposal-info-cell">
+              <span className="quote-proposal-label">
+                {tQuotesOrders(lang, 'docGrillPhoto')}
+              </span>
+              <p className="quote-proposal-value">
+                {data.grillPhotoStatusLabel ??
+                  (data.hasGrill === false ? w.notApplicable : w.pending)}
+              </p>
+            </div>
+            <div className="quote-proposal-info-cell">
+              <span className="quote-proposal-label">
+                {w.grillRentalRequired}
+              </span>
+              <p className="quote-proposal-value">
+                {formatBool(data.grillRentalRequired, lang)}
+              </p>
+            </div>
+            <div className="quote-proposal-info-cell">
+              <span className="quote-proposal-label">
+                {tQuotesOrders(lang, 'docGrillRentalQty')}
+              </span>
+              <p className="quote-proposal-value">
+                {data.grillRentalRequired
+                  ? displayValue(data.grillRentalQty)
+                  : '—'}
+              </p>
+            </div>
+            {data.grillNotes ? (
+              <div className="quote-proposal-info-cell quote-proposal-info-cell--wide">
+                <span className="quote-proposal-label">{w.notes}</span>
+                <p className="quote-proposal-value">{data.grillNotes}</p>
+              </div>
+            ) : null}
+          </div>
+        </ProposalSection>
+
+        <ProposalSection title={tQuotesOrders(lang, 'docGrillPhoto')}>
+          <QuoteGrillPhotoFrame
+            src={data.grillPhotoUrl}
+            alt={tQuotesOrders(lang, 'docGrillPhoto')}
+            emptyLabel={
+              data.grillPhotoStatusLabel ??
+              (data.hasGrill === false ? w.notApplicable : w.pending)
+            }
+          />
+        </ProposalSection>
+      </div>
+
+      <ProposalSection
+        title={t.review.mileageSection}
+        className="quote-proposal-section--compact"
+      >
+        <div className="quote-proposal-mileage-grid">
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">{tw(lang, 'mileageOrigin')}</span>
+            <p className="quote-proposal-value">
+              {displayValue(data.mileageBaseLocation)}
+            </p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">
+              {tw(lang, 'mileageDestination')}
+            </span>
+            <p className="quote-proposal-value">{displayValue(eventLocation)}</p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">
+              {tQuotesOrders(lang, 'docMileageDistance')}
+            </span>
+            <p className="quote-proposal-value">
+              {formatReviewDistance(
+                data.mileageDistance,
+                lang,
+                data.distanceDisplayUnit,
+              ) ?? '—'}
+            </p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">{w.includedMiles}</span>
+            <p className="quote-proposal-value">
+              {data.mileageFreeLimit != null
+                ? `${formatMileageQuantity(data.mileageFreeLimit)} mi`
+                : '—'}
+            </p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">{w.chargedMiles}</span>
+            <p className="quote-proposal-value">
+              {chargedMiles != null
+                ? `${formatMileageQuantity(chargedMiles)} mi`
+                : '—'}
+            </p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">
+              {tQuotesOrders(lang, 'docMileageRate')}
+            </span>
+            <p className="quote-proposal-value">
+              {data.mileageRate != null
+                ? `${formatCurrency(data.mileageRate)}/mi`
+                : '—'}
+            </p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">
+              {tQuotesOrders(lang, 'docMileageFeeLabel')}
+            </span>
+            <p className="quote-proposal-value">
+              {formatMoneyOrDash(data.mileageFee)}
+            </p>
+          </div>
+        </div>
+      </ProposalSection>
+
+      <QuoteCommercialAdjustmentNotice
+        baseSubtotal={
+          Number(data.packageTotal ?? 0) +
+          Number(data.additionalTotal ?? 0) +
+          Number(data.mileageFee ?? 0)
+        }
+        holidaySurchargeAmount={holidaySurcharge}
+        minimumOrderAdjustment={minimumAdjustment}
+        minimumOrderAmount={Number(data.minimumOrderAmount ?? 0)}
+        quoteTotal={data.quoteTotal}
+        language={lang}
+      />
+
+      <section className="quote-proposal-pricing quote-print-section quote-print-keep">
+        <h2 className="quote-proposal-section-title">
+          {tQuotesOrders(lang, 'docFinancialSection')}
+        </h2>
+        <div className="quote-proposal-pricing-card">
+          <div className="quote-proposal-pricing-lines">
+            {pricingLines.map((line) => (
+              <div
+                key={line.label}
+                className={`quote-proposal-pricing-row${
+                  line.highlight ? ' quote-proposal-pricing-row--highlight' : ''
+                }${line.discount ? ' quote-proposal-pricing-row--discount' : ''}`}
+              >
+                <span>{line.label}</span>
+                <span>{line.value}</span>
+              </div>
+            ))}
+          </div>
+          <div className="quote-print-total-box quote-proposal-total-box">
+            <span className="quote-proposal-total-label">{w.quoteTotal}</span>
+            <span className="quote-print-total-value quote-proposal-total-value">
+              {formatMoneyOrDash(data.quoteTotal)}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <ProposalSection title={t.review.reservationSection}>
+        <div className="quote-proposal-info-grid">
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">{w.reservationPctLabel}</span>
+            <p className="quote-proposal-value">
+              {data.reservationPercentage != null
+                ? `${data.reservationPercentage}%`
+                : '—'}
+            </p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">
+              {w.reservationAmountLabel}
+            </span>
+            <p className="quote-proposal-value">
+              {formatMoneyOrDash(data.reservationAmount)}
+            </p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">
+              {tQuotesOrders(lang, 'docBalanceDueLine')}
+            </span>
+            <p className="quote-proposal-value">
+              {formatMoneyOrDash(data.balanceDue)}
+            </p>
+          </div>
+        </div>
+      </ProposalSection>
+
+      <QuoteReservationPaymentCard
+        language={lang}
+        extraNotes={
+          <>
+            {minimumAdjustment > 0 ? (
+              <p className="mt-3 font-medium text-cdl-action">
+                {w.minOrderAppliedNote}
+              </p>
+            ) : null}
+            {holidaySurcharge > 0 ? (
+              <p className="mt-3 font-medium text-cdl-action">
+                {w.holidaySurchargeNote}
+              </p>
+            ) : null}
+          </>
+        }
+      />
+
+      <CdlImportantRulesPanel
+        variant={rulesVariant === 'pdf' ? 'pdf' : 'summary'}
+        showReservationText
+        language={lang}
+      />
+
+      <CdlCancellationPolicySection
+        variant={rulesVariant === 'pdf' ? 'pdf' : 'summary'}
+        language={lang}
+      />
     </>
   )
 }
@@ -624,8 +1028,8 @@ export default function QuoteReviewLayout({
       label:
         (chargedMiles ?? 0) > 0
           ? tQuotesOrders(lang, 'docMileageChargedSummaryLine', {
-              charged: chargedMiles ?? 0,
-              free: Number(data.mileageFreeLimit ?? 20),
+              charged: formatMileageQuantity(chargedMiles ?? 0),
+              free: formatMileageQuantity(Number(data.mileageFreeLimit ?? 20)),
             })
           : tQuotesOrders(lang, 'mileageLabel'),
       value: formatMoneyOrDash(data.mileageFee),
@@ -768,383 +1172,17 @@ export default function QuoteReviewLayout({
             mileageEditor={mileageEditor}
           />
         ) : (
-          <>
-          <QuoteProposalOverviewCard
-          customerName={displayValue(data.customerName)}
-          eventDate={data.eventDate}
-          addressLine={data.addressLine}
-          city={data.city}
-          state={data.state}
-          zipCode={data.zipCode}
-          packageSummary={data.packageSummary}
-          packageTotal={data.packageTotal}
-          additionalTotal={data.additionalTotal}
-          mileageFee={data.mileageFee}
-          chargedMiles={chargedMiles}
-          mileageFreeLimit={data.mileageFreeLimit}
-          grillRentalTotal={grillRentalTotal}
-          holidaySurchargeAmount={holidaySurcharge}
-          minimumOrderAdjustment={minimumAdjustment}
-          discountAmount={discount}
-          reservationAmount={data.reservationAmount}
-          quoteTotal={data.quoteTotal}
-          additionalsCount={data.additionals.length}
-          grillRentalRequired={data.grillRentalRequired}
-          language={lang}
-          afterClient={
-            <QuoteCommercialAdjustmentNotice
-              baseSubtotal={
-                Number(data.packageTotal ?? 0) +
-                Number(data.additionalTotal ?? 0) +
-                Number(data.mileageFee ?? 0)
-              }
-              holidaySurchargeAmount={holidaySurcharge}
-              minimumOrderAdjustment={minimumAdjustment}
-              minimumOrderAmount={Number(data.minimumOrderAmount ?? 0)}
-              quoteTotal={data.quoteTotal}
-              language={lang}
-            />
-          }
-        />
-
-        <div className="quote-proposal-grid-2">
-          <ProposalSection title={t.review.packageSection}>
-            <QuoteReviewPackageCdlSection
-              packageName={data.packageName}
-              packageImageUrl={data.packageImageUrl}
-              packageSummary={data.packageSummary}
-              packageSelections={data.packageSelections}
-              additionalItems={(data.additionals ?? [])
-                .filter((item) => Number(item.totalPrice ?? 0) > 0)
-                .map((item) => ({
-                  label: item.label,
-                  amount: Number(item.totalPrice ?? 0),
-                }))}
-              physicalGuestCount={data.physicalGuestCount}
-              billableGuestCount={data.billableGuestCount}
-              packageTotal={data.packageTotal}
-              packageUnitPrice={data.packageUnitPrice}
-              language={lang}
-              showValueCards={false}
-            />
-          </ProposalSection>
-
-          <ProposalSection title={t.review.guestsSection}>
-            <GuestBreakdownPanel
-              guestCounts={data.guestCounts}
-              totals={{
-                billableGuestCount: data.billableGuestCount,
-                physicalGuestCount: data.physicalGuestCount,
-                quoteTotal: data.quoteTotal,
-              }}
-              language={lang}
-            />
-            <QuoteReviewPackageValueCards
-              packageSummary={data.packageSummary}
-              physicalGuestCount={data.physicalGuestCount}
-              billableGuestCount={data.billableGuestCount}
-              packageTotal={data.packageTotal}
-              packageUnitPrice={data.packageUnitPrice}
-              additionalTotal={data.additionalTotal}
-              mileageFee={data.mileageFee}
-              language={lang}
-            />
-          </ProposalSection>
-        </div>
-
-        <div className="quote-proposal-grid-2">
-          <ProposalSection title={t.review.eventSection}>
-            <p className="quote-proposal-event-name">
-              {displayValue(data.eventName || data.customerName)}
-            </p>
-            <div className="quote-proposal-event-list">
-              <EventRow
-                icon={<IconCalendar />}
-                label={t.review.date}
-                value={formatDate(data.eventDate, lang)}
-              />
-              <EventRow
-                icon={<IconClock />}
-                label={t.review.time}
-                value={eventTimeLabel}
-              />
-              <EventRow
-                icon={<IconLocation />}
-                label={t.review.location}
-                value={eventLocation || '—'}
-              />
-            </div>
-          </ProposalSection>
-
-          <ProposalSection title={t.review.reservationSection}>
-            <div className="quote-proposal-info-grid">
-              <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">{w.reservationPctLabel}</span>
-                <p className="quote-proposal-value">
-                  {data.reservationPercentage != null
-                    ? `${data.reservationPercentage}%`
-                    : '—'}
-                </p>
-              </div>
-              <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">{w.reservationAmountLabel}</span>
-                <p className="quote-proposal-value">
-                  {formatMoneyOrDash(data.reservationAmount)}
-                </p>
-              </div>
-              <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">
-                  {tQuotesOrders(lang, 'docBalanceDueLine')}
-                </span>
-                <p className="quote-proposal-value">
-                  {formatMoneyOrDash(data.balanceDue)}
-                </p>
-              </div>
-            </div>
-          </ProposalSection>
-
-          <ProposalSection title={t.review.bbqSection}>
-            <div className="quote-proposal-info-grid">
-              <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">{w.hasGrill}</span>
-                <p className="quote-proposal-value">
-                  {formatBool(data.hasGrill, lang)}
-                </p>
-              </div>
-              <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">
-                  {tQuotesOrders(lang, 'docGrillPhoto')}
-                </span>
-                <p className="quote-proposal-value">
-                  {data.grillPhotoStatusLabel ??
-                    (data.hasGrill === false
-                      ? w.notApplicable
-                      : w.pending)}
-                </p>
-              </div>
-              <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">
-                  {w.grillRentalRequired}
-                </span>
-                <p className="quote-proposal-value">
-                  {formatBool(data.grillRentalRequired, lang)}
-                </p>
-              </div>
-              <div className="quote-proposal-info-cell">
-                <span className="quote-proposal-label">
-                  {tQuotesOrders(lang, 'docGrillRentalQty')}
-                </span>
-                <p className="quote-proposal-value">
-                  {data.grillRentalRequired
-                    ? displayValue(data.grillRentalQty)
-                    : '—'}
-                </p>
-              </div>
-              {data.grillNotes ? (
-                <div className="quote-proposal-info-cell quote-proposal-info-cell--wide">
-                  <span className="quote-proposal-label">{w.notes}</span>
-                  <p className="quote-proposal-value">{data.grillNotes}</p>
-                </div>
-              ) : null}
-            </div>
-          </ProposalSection>
-
-          <ProposalSection title={tQuotesOrders(lang, 'docGrillPhoto')}>
-            <QuoteGrillPhotoFrame
-              src={data.grillPhotoUrl}
-              alt={tQuotesOrders(lang, 'docGrillPhoto')}
-              emptyLabel={
-                data.grillPhotoStatusLabel ??
-                (data.hasGrill === false ? w.notApplicable : w.pending)
-              }
-            />
-          </ProposalSection>
-        </div>
-
-        <ProposalSection title={t.review.mileageSection} className="quote-proposal-section--compact">
-          <div className="quote-proposal-mileage-grid">
-            <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">{tw(lang, 'mileageOrigin')}</span>
-              <p className="quote-proposal-value">
-                {displayValue(data.mileageBaseLocation)}
-              </p>
-            </div>
-            <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">{tw(lang, 'mileageDestination')}</span>
-              <p className="quote-proposal-value">{displayValue(eventLocation)}</p>
-            </div>
-            <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">
-                {tQuotesOrders(lang, 'docMileageDistance')}
-              </span>
-              <p className="quote-proposal-value">
-                {formatReviewDistance(
-                  data.mileageDistance,
-                  lang,
-                  data.distanceDisplayUnit,
-                ) ?? '—'}
-              </p>
-            </div>
-            <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">{w.includedMiles}</span>
-              <p className="quote-proposal-value">
-                {data.mileageFreeLimit != null
-                  ? `${data.mileageFreeLimit} mi`
-                  : '—'}
-              </p>
-            </div>
-            <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">{w.chargedMiles}</span>
-              <p className="quote-proposal-value">
-                {chargedMiles != null ? `${chargedMiles} mi` : '—'}
-              </p>
-            </div>
-            <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">
-                {tQuotesOrders(lang, 'docMileageRate')}
-              </span>
-              <p className="quote-proposal-value">
-                {data.mileageRate != null
-                  ? `${formatCurrency(data.mileageRate)}/mi`
-                  : '—'}
-              </p>
-            </div>
-            <div className="quote-proposal-info-cell">
-              <span className="quote-proposal-label">
-                {tQuotesOrders(lang, 'docMileageFeeLabel')}
-              </span>
-              <p className="quote-proposal-value">
-                {formatMoneyOrDash(data.mileageFee)}
-              </p>
-            </div>
-          </div>
-        </ProposalSection>
-
-        <ProposalSection title={t.review.additionalsSection}>
-          {groupedAdditionals.length === 0 ? (
-            <p className="quote-proposal-muted">{t.review.noAdditionals}</p>
-          ) : (
-            <div className="quote-proposal-additionals">
-              {groupedAdditionals.map(({ category, items }) => (
-                <section key={category} className="quote-proposal-additional-group">
-                  <h3 className="quote-proposal-category-title">{category}</h3>
-                  <div className="quote-print-additional-grid quote-proposal-additional-grid">
-                    {items.map((item) => (
-                      <article
-                        key={item.id}
-                        className="quote-print-additional-card quote-proposal-additional-card"
-                      >
-                        <CatalogImageFrame
-                          src={item.imageUrl}
-                          alt={item.label}
-                          variant="catalogItem"
-                          itemType={item.itemType}
-                          categoryPt={item.categoryPt}
-                          rounded="none"
-                          className="quote-print-thumb quote-proposal-additional-image !min-h-0 !max-h-none !aspect-video"
-                        />
-                        <div className="quote-print-additional-body quote-proposal-additional-body">
-                          <h4 className="quote-proposal-additional-name">{item.label}</h4>
-                          <div className="quote-proposal-additional-metrics">
-                            <div>
-                              <span className="quote-proposal-label">
-                                {tQuotesOrders(lang, 'docQtyLabel')}
-                              </span>
-                              <p className="quote-proposal-additional-metric">
-                                {displayValue(item.quantity)}
-                              </p>
-                            </div>
-                            <div>
-                              <span className="quote-proposal-label">
-                                {tQuotesOrders(lang, 'docUnitPriceLabel')}
-                              </span>
-                              <p className="quote-proposal-additional-metric">
-                                {formatCurrency(item.unitPrice)}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="quote-print-additional-total quote-proposal-additional-total">
-                            <span className="quote-proposal-label">
-                              {w.total}
-                            </span>
-                            <p className="quote-proposal-additional-price">
-                              {formatCurrency(item.totalPrice)}
-                            </p>
-                          </div>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
-          )}
-        </ProposalSection>
-
-        <section className="quote-proposal-pricing quote-print-section quote-print-keep">
-          <h2 className="quote-proposal-section-title">
-            {tQuotesOrders(lang, 'docFinancialSection')}
-          </h2>
-          <div className="quote-proposal-pricing-card">
-            <div className="quote-proposal-pricing-lines">
-              {pricingLines.map((line) => (
-                <div
-                  key={line.label}
-                  className={`quote-proposal-pricing-row${
-                    'highlight' in line && line.highlight
-                      ? ' quote-proposal-pricing-row--highlight'
-                      : ''
-                  }${
-                    'discount' in line && line.discount
-                      ? ' quote-proposal-pricing-row--discount'
-                      : ''
-                  }`}
-                >
-                  <span>{line.label}</span>
-                  <span>{line.value}</span>
-                </div>
-              ))}
-            </div>
-            <div className="quote-print-total-box quote-proposal-total-box">
-              <span className="quote-proposal-total-label">
-                {w.quoteTotal}
-              </span>
-              <span className="quote-print-total-value quote-proposal-total-value">
-                {formatMoneyOrDash(data.quoteTotal)}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        <QuoteReservationPaymentCard
-          language={lang}
-          extraNotes={
-            <>
-              {minimumAdjustment > 0 ? (
-                <p className="mt-3 font-medium text-cdl-action">
-                  {w.minOrderAppliedNote}
-                </p>
-              ) : null}
-              {holidaySurcharge > 0 ? (
-                <p className="mt-3 font-medium text-cdl-action">
-                  {w.holidaySurchargeNote}
-                </p>
-              ) : null}
-            </>
-          }
-        />
-
-        <CdlImportantRulesPanel
-          variant={rulesVariant === 'pdf' ? 'pdf' : 'summary'}
-          showReservationText
-          language={lang}
-        />
-
-        <CdlCancellationPolicySection
-          variant={rulesVariant === 'pdf' ? 'pdf' : 'summary'}
-          language={lang}
-        />
-          </>
+          <DefaultProposalBody
+            data={data}
+            eventLocation={eventLocation}
+            eventTimeLabel={eventTimeLabel}
+            groupedAdditionals={groupedAdditionals}
+            chargedMiles={chargedMiles}
+            pricingLines={pricingLines}
+            holidaySurcharge={holidaySurcharge}
+            minimumAdjustment={minimumAdjustment}
+            rulesVariant={rulesVariant}
+          />
         )}
 
         {afterBody}

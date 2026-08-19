@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { formatMoneyOrDash } from '@/Lib/readQuoteSnapshot'
+import { formatMileageQuantity } from '@/Lib/units'
 import { formatDate } from '@/app/quotes/[id]/quoteDetailTypes'
 import type { QuoteReviewPackageSummary } from './quoteReviewPackageSummary'
 import { tw } from '@/Lib/quoteTranslations'
@@ -73,8 +74,8 @@ export function buildQuoteFinancialLines(input: {
       label:
         charged > 0
           ? tQuotesOrders(language, 'docMileageChargedSummaryLine', {
-              charged,
-              free,
+              charged: formatMileageQuantity(charged),
+              free: formatMileageQuantity(free),
             })
           : tQuotesOrders(language, 'mileageLabel'),
       value: formatMoneyOrDash(input.mileageFee),

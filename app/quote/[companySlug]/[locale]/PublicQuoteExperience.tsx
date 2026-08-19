@@ -23,6 +23,7 @@ import {
 import type { CommercialRulesSnapshot } from '@/Lib/supabaseCommercialRules'
 import { sanitizeStoredPublicPhone } from '@/Lib/publicQuote/phone'
 import { isPublicGrillDraftAnswered } from '@/Lib/publicQuote/grillDraft'
+import PublicLocaleSwitcher from '@/components/quotes/PublicLocaleSwitcher'
 
 export type PublicQuotePageBootstrap = {
   company: {
@@ -142,6 +143,7 @@ const UI_COPY = {
     restart: 'Criar outra solicitação',
     privacy: 'Privacidade',
     support: 'Precisa de ajuda?',
+    poweredBy: 'Powered by PSCS One · Catering App',
   },
   en: {
     secure: 'Secure online quote',
@@ -160,6 +162,7 @@ const UI_COPY = {
     restart: 'Create another request',
     privacy: 'Privacy',
     support: 'Need help?',
+    poweredBy: 'Powered by PSCS One · Catering App',
   },
   es: {
     secure: 'Cotización online segura',
@@ -178,6 +181,7 @@ const UI_COPY = {
     restart: 'Crear otra solicitud',
     privacy: 'Privacidad',
     support: '¿Necesitas ayuda?',
+    poweredBy: 'Powered by PSCS One · Catering App',
   },
 } as const
 
@@ -353,20 +357,25 @@ export default function PublicQuoteExperience({
   return (
     <div style={style} className="min-h-screen bg-cdl-bg text-cdl-fg">
       <header className="sticky top-0 z-40 border-b border-cdl-border/80 bg-cdl-bg/95 backdrop-blur">
-        <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-8">
+        <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:gap-4 sm:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            {bootstrap.company.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={bootstrap.company.logoUrl}
-                alt=""
-                className="h-10 w-10 rounded-xl object-contain"
-              />
-            ) : (
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--brand-primary)] text-sm font-black text-white">
-                {bootstrap.company.name.slice(0, 2).toUpperCase()}
-              </span>
-            )}
+            <div
+              data-tenant-logo
+              className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white"
+            >
+              {bootstrap.company.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={bootstrap.company.logoUrl}
+                  alt={bootstrap.company.name}
+                  className="h-full w-full object-contain object-center"
+                />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center rounded-xl bg-[var(--brand-primary)] text-sm font-black text-white">
+                  {bootstrap.company.name.slice(0, 2).toUpperCase()}
+                </span>
+              )}
+            </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-black text-cdl-title">
                 {bootstrap.company.name}
@@ -374,22 +383,11 @@ export default function PublicQuoteExperience({
               <p className="truncate text-[11px] text-cdl-muted">{copy.secure}</p>
             </div>
           </div>
-          <nav className="flex items-center gap-1" aria-label="Language">
-            {bootstrap.settings.allowedLocales.map((language) => (
-              <Link
-                key={language}
-                href={`/quote/${bootstrap.company.slug}/${language}`}
-                aria-current={language === locale ? 'page' : undefined}
-                className={`rounded-lg px-2.5 py-2 text-xs font-black uppercase ${
-                  language === locale
-                    ? 'bg-[var(--brand-primary)] text-white'
-                    : 'text-cdl-muted hover:bg-cdl-hover'
-                }`}
-              >
-                {language}
-              </Link>
-            ))}
-          </nav>
+          <PublicLocaleSwitcher
+            companySlug={bootstrap.company.slug}
+            locale={locale}
+            allowedLocales={bootstrap.settings.allowedLocales}
+          />
         </div>
       </header>
 
@@ -490,12 +488,17 @@ export default function PublicQuoteExperience({
         />
       ) : (
         <main>
+          {/* LANDING AGUARDANDO ASSETS FINAIS when no tenant hero image is configured. */}
           <section
             className="relative isolate overflow-hidden border-b border-cdl-border"
+            data-public-landing
+            data-landing-pending-assets={
+              bootstrap.settings.heroImageUrl ? undefined : 'true'
+            }
             style={
               bootstrap.settings.heroImageUrl
                 ? {
-                    backgroundImage: `linear-gradient(100deg, rgba(9,16,28,.94), rgba(9,16,28,.62)), url("${bootstrap.settings.heroImageUrl}")`,
+                    backgroundImage: `linear-gradient(100deg, rgba(9,16,28,.88), rgba(9,16,28,.55)), url("${bootstrap.settings.heroImageUrl}")`,
                     backgroundPosition: 'center',
                     backgroundSize: 'cover',
                   }
@@ -509,9 +512,33 @@ export default function PublicQuoteExperience({
                   : 'bg-[radial-gradient(circle_at_80%_20%,color-mix(in_srgb,var(--brand-primary-2)_28%,transparent),transparent_36%),linear-gradient(135deg,#0b1220,#18233a)]'
               }`}
             />
+            {bootstrap.company.logoUrl && !bootstrap.settings.heroImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={bootstrap.company.logoUrl}
+                alt=""
+                aria-hidden
+                className="pointer-events-none absolute -right-8 bottom-[-12%] h-[70%] w-auto opacity-[0.08] object-contain"
+              />
+            ) : null}
             <div className="mx-auto grid min-h-[34rem] max-w-7xl items-center gap-10 px-4 py-16 text-white sm:px-8 lg:grid-cols-[minmax(0,3fr)_minmax(18rem,2fr)]">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--brand-primary-2)]">
+                <div className="flex items-center gap-3">
+                  {bootstrap.company.logoUrl ? (
+                    <span className="inline-flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white p-1.5 shadow-lg">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={bootstrap.company.logoUrl}
+                        alt={bootstrap.company.name}
+                        className="h-full w-full object-contain object-center"
+                      />
+                    </span>
+                  ) : null}
+                  <p className="min-w-0 text-sm font-black tracking-tight text-white sm:text-base">
+                    {bootstrap.company.name}
+                  </p>
+                </div>
+                <p className="mt-6 text-xs font-black uppercase tracking-[0.24em] text-[var(--brand-primary-2)]">
                   {bootstrap.settings.landing.eyebrow}
                 </p>
                 <h1 className="mt-5 max-w-4xl text-4xl font-black leading-[1.04] tracking-[-0.04em] sm:text-6xl">
@@ -556,7 +583,9 @@ export default function PublicQuoteExperience({
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-6 text-xs text-cdl-muted sm:flex-row sm:items-center sm:justify-between sm:px-8">
           <p>
             © {new Date().getFullYear()} {bootstrap.company.name}
-            <span className="ml-2 text-cdl-faint">· Powered by Catering AI</span>
+            <span className="ml-2 text-cdl-faint" data-powered-by>
+              · {copy.poweredBy}
+            </span>
           </p>
           <div className="flex flex-wrap gap-4">
             {bootstrap.settings.consent.privacyUrl ? (

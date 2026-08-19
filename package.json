@@ -61,7 +61,7 @@
     "test:dev:quote-pricing-ssot": "node scripts/dev/test-quote-pricing-ssot.mjs",
     "test:dev:quote-wizard-v2": "node --experimental-strip-types scripts/dev/test-quote-wizard-v2.mjs",
     "test:public-self-service-quote": "node scripts/dev/test-public-self-service-quote.mjs",
-    "test:dev:public-quote-v2": "node --experimental-strip-types scripts/dev/test-public-quote-v2-refinement.mjs",
+    "test:dev:public-quote-polish": "node --experimental-strip-types scripts/dev/test-public-quote-polish.mjs",
     "test:dev:public-quote-v2-nav": "node --experimental-strip-types scripts/dev/test-public-quote-v2-navigation.mjs",
     "test:dev:extras-summary": "node --experimental-strip-types scripts/dev/test-public-quote-extras-summary.mjs",
     "test:dev:public-quote-runtime": "node scripts/dev/test-public-quote-runtime.mjs",

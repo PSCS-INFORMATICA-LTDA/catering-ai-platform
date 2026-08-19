@@ -161,7 +161,7 @@ export default async function CustomerQuotePage() {
           </Link>
         </div>
         <footer className="mt-12 flex flex-col items-center gap-2 border-t border-cdl-border pt-6">
-          <PscsOneMark className="h-6 dark:brightness-0 dark:invert dark:opacity-70" />
+          <PscsOneMark />
         </footer>
       </div>
     </main>

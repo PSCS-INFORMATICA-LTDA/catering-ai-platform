@@ -14,6 +14,8 @@ import {
   parsePublicQuoteLocale,
 } from './security'
 import type { PublicQuoteBootstrap } from './types'
+import { resolveCompanyLogoUrl } from '@/Lib/help/companyBranding'
+import type { Company } from '@/Lib/tenant/types'
 
 export type PublicQuoteCompanyRow = {
   id: string
@@ -445,7 +447,19 @@ export async function getPublicQuoteBootstrap(
       id: company.id,
       slug: company.slug,
       name: displayName,
-      logoUrl: safePublicUrl(company.brand_logo_url || company.logo_url),
+      logoUrl:
+        safePublicUrl(company.brand_logo_url || company.logo_url) ||
+        resolveCompanyLogoUrl(
+          {
+            id: company.id,
+            slug: company.slug,
+            company_name: company.company_name,
+            trade_name: company.trade_name,
+            logo_url: company.logo_url,
+            brand_logo_url: company.brand_logo_url,
+          } as Company,
+          company.id,
+        ),
       primaryColor: safeColor(
         settings.primary_color || company.primary_color,
         '#991b1b',

@@ -110,6 +110,7 @@ type QuoteStrings = {
   photoPending: string
   itemsCount: (count: number) => string
   selectedCount: (count: number) => string
+  packagesAvailableCount: (count: number) => string
   noAdditionalsAvailable: string
   additionalsStepHint: string
   addUnit: string
@@ -195,6 +196,7 @@ type QuoteStrings = {
     withoutSidesGroupTitle: string
     withSidesGroupHint: string
     withoutSidesGroupHint: string
+    packageGroupExamples: string
     additionalsReviewAllCategories: string
     pricingRetry: string
     pricingTimeout: string
@@ -500,6 +502,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       `${count} ${count === 1 ? 'item' : 'itens'}`,
     selectedCount: (count) =>
       `${count} selecionado${count !== 1 ? 's' : ''}`,
+    packagesAvailableCount: (count) =>
+      `${count} ${count === 1 ? 'pacote disponível' : 'pacotes disponíveis'}`,
     noAdditionalsAvailable: 'Nenhum adicional disponível.',
     additionalsStepHint: 'Escolha os itens extras para complementar a cotação.',
     addUnit: 'Adicionar unidade',
@@ -591,9 +595,11 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       withSidesGroupTitle: 'Com guarnição',
       withoutSidesGroupTitle: 'Sem guarnição',
       withSidesGroupHint:
-        'Pacotes que incluem os acompanhamentos previstos para o serviço. Escolha o pacote desejado e personalize as opções disponíveis quando aplicável.',
+        'Uma experiência completa, com acompanhamentos preparados para complementar o churrasco e deixar o serviço pronto para receber seus convidados. Explore {count} opções de pacotes disponíveis e escolha a combinação ideal para o seu evento.',
       withoutSidesGroupHint:
-        'Pacotes sem acompanhamentos incluídos. Escolha o pacote desejado e personalize as opções disponíveis quando aplicável.',
+        'Para quem prefere cuidar dos acompanhamentos ou montar uma experiência mais personalizada. Explore {count} opções de churrasco e escolha o pacote que melhor combina com o seu evento.',
+      packageGroupExamples:
+        ' Entre opções como {names} e outras experiências disponíveis.',
       additionalsReviewAllCategories:
         'Percorra todas as categorias antes de continuar.',
       pricingRetry: 'Tentar novamente',
@@ -919,6 +925,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     photoPending: 'Photo pending',
     itemsCount: (count) => `${count} ${count === 1 ? 'item' : 'items'}`,
     selectedCount: (count) => `${count} selected`,
+    packagesAvailableCount: (count) =>
+      `${count} ${count === 1 ? 'package available' : 'packages available'}`,
     noAdditionalsAvailable: 'No additional items available.',
     additionalsStepHint: 'Choose extra items to complement the quote.',
     addUnit: 'Add unit',
@@ -1009,9 +1017,11 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       withSidesGroupTitle: 'With sides',
       withoutSidesGroupTitle: 'Without sides',
       withSidesGroupHint:
-        'Packages that include the side dishes provided with the service. Choose your preferred package and customize the available options when applicable.',
+        'A complete experience, with sides prepared to complement the barbecue and ready your service for guests. Explore {count} available packages and choose the ideal combination for your event.',
       withoutSidesGroupHint:
-        'Packages without included side dishes. Choose your preferred package and customize the available options when applicable.',
+        'For those who prefer to handle the sides or build a more personal experience. Explore {count} barbecue options and choose the package that best fits your event.',
+      packageGroupExamples:
+        ' Among options such as {names} and other available experiences.',
       additionalsReviewAllCategories:
         'Review all categories before continuing.',
       pricingRetry: 'Try again',
@@ -1335,6 +1345,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     itemsCount: (count) =>
       `${count} ${count === 1 ? 'artículo' : 'artículos'}`,
     selectedCount: (count) => `${count} seleccionado${count !== 1 ? 's' : ''}`,
+    packagesAvailableCount: (count) =>
+      `${count} ${count === 1 ? 'paquete disponible' : 'paquetes disponibles'}`,
     noAdditionalsAvailable: 'No hay artículos adicionales disponibles.',
     additionalsStepHint:
       'Elija artículos extra para complementar la cotización.',
@@ -1427,9 +1439,11 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       withSidesGroupTitle: 'Con acompañamientos',
       withoutSidesGroupTitle: 'Sin acompañamientos',
       withSidesGroupHint:
-        'Paquetes que incluyen los acompañamientos previstos para el servicio. Elige el paquete deseado y personaliza las opciones disponibles cuando corresponda.',
+        'Una experiencia completa, con acompañamientos preparados para complementar el asado y dejar el servicio listo para recibir a tus invitados. Explora {count} opciones de paquetes disponibles y elige la combinación ideal para tu evento.',
       withoutSidesGroupHint:
-        'Paquetes sin acompañamientos incluidos. Elige el paquete deseado y personaliza las opciones disponibles cuando corresponda.',
+        'Para quien prefiere encargarse de los acompañamientos o armar una experiencia más personalizada. Explora {count} opciones de asado y elige el paquete que mejor combina con tu evento.',
+      packageGroupExamples:
+        ' Entre opciones como {names} y otras experiencias disponibles.',
       additionalsReviewAllCategories:
         'Revisa todas las categorías antes de continuar.',
       pricingRetry: 'Intentar de nuevo',

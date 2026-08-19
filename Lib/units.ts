@@ -43,6 +43,20 @@ export function parseDistanceDisplayUnit(
   return 'both'
 }
 
+/**
+ * Presentation-only mileage quantity. Does not change the commercial value
+ * used by the pricing engine — it only collapses binary floating-point
+ * noise such as `11.600000000000001` into `11.6`.
+ */
+export function formatMileageQuantity(
+  value: number | null | undefined,
+): string {
+  if (value == null || !Number.isFinite(Number(value))) return '0'
+  const rounded = Math.round(Number(value) * 10) / 10
+  if (Object.is(rounded, -0) || rounded === 0) return '0'
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
+}
+
 export function formatMilesWithKilometers(
   miles: number | null | undefined,
   template: string,
@@ -50,8 +64,8 @@ export function formatMilesWithKilometers(
   if (miles == null || !Number.isFinite(Number(miles))) return null
   const value = Number(miles)
   return template
-    .replace('{mi}', String(value))
-    .replace('{km}', String(milesToKilometers(value)))
+    .replace('{mi}', formatMileageQuantity(value))
+    .replace('{km}', formatMileageQuantity(milesToKilometers(value)))
 }
 
 export function formatDistanceForDisplay(
@@ -65,13 +79,13 @@ export function formatDistanceForDisplay(
 ): string | null {
   if (unit === 'miles') {
     if (miles == null || !Number.isFinite(Number(miles))) return null
-    return templates.miles.replace('{mi}', String(Number(miles)))
+    return templates.miles.replace('{mi}', formatMileageQuantity(Number(miles)))
   }
   if (unit === 'kilometers') {
     if (miles == null || !Number.isFinite(Number(miles))) return null
     return templates.kilometers.replace(
       '{km}',
-      String(milesToKilometers(Number(miles))),
+      formatMileageQuantity(milesToKilometers(Number(miles))),
     )
   }
   return formatMilesWithKilometers(miles, templates.both)

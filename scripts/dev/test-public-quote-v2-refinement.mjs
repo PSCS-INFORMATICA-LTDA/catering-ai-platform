@@ -29,6 +29,7 @@ import {
 } from '../../Lib/additionalChargeUnit.ts'
 import { getCatalogItemSalePrice } from '../../Lib/itemCatalog.ts'
 import {
+  formatMileageQuantity,
   formatMilesWithKilometers,
   kilometersToMiles,
   milesToKilometers,
@@ -398,6 +399,11 @@ test('miles convert to kilometers for display only', () => {
     formatMilesWithKilometers(1.6, '{mi} mi ({km} km)'),
     '1.6 mi (2.6 km)',
   )
+  assert.equal(formatMileageQuantity(11.600000000000001), '11.6')
+  assert.equal(formatMileageQuantity(31.6), '31.6')
+  assert.equal(formatMileageQuantity(20), '20')
+  assert.equal(formatMileageQuantity(0), '0')
+  assert.equal(`${formatMileageQuantity(11.600000000000001)} mi`, '11.6 mi')
   assert.equal(formatMilesWithKilometers(null, '{mi} mi ({km} km)'), null)
   const layout = source('components/quote-review/QuoteReviewLayout.tsx')
   assert.match(layout, /formatDistanceForDisplay/)

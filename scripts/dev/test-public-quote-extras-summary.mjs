@@ -407,7 +407,7 @@ test('TEST 25 summary rows cannot create horizontal overflow', () => {
 test('TEST 26 PT copy', () => {
   assert.equal(tw('pt', 'withSidesGroupTitle'), 'Com guarnição')
   assert.equal(tw('pt', 'withoutSidesGroupTitle'), 'Sem guarnição')
-  assert.match(tw('pt', 'withSidesGroupHint'), /acompanhamentos previstos/)
+  assert.match(tw('pt', 'withSidesGroupHint'), /Explore \{count\} opções de pacotes/)
   assert.equal(
     tw('pt', 'additionalsReviewAllCategories'),
     'Percorra todas as categorias antes de continuar.',
@@ -420,7 +420,7 @@ test('TEST 26 PT copy', () => {
 test('TEST 27 EN copy', () => {
   assert.equal(tw('en', 'withSidesGroupTitle'), 'With sides')
   assert.equal(tw('en', 'withoutSidesGroupTitle'), 'Without sides')
-  assert.match(tw('en', 'withSidesGroupHint'), /side dishes provided/)
+  assert.match(tw('en', 'withSidesGroupHint'), /Explore \{count\} available packages/)
   assert.equal(
     tw('en', 'additionalsReviewAllCategories'),
     'Review all categories before continuing.',
@@ -434,13 +434,30 @@ test('TEST 27 EN copy', () => {
 test('TEST 28 ES copy', () => {
   assert.equal(tw('es', 'withSidesGroupTitle'), 'Con acompañamientos')
   assert.equal(tw('es', 'withoutSidesGroupTitle'), 'Sin acompañamientos')
-  assert.match(tw('es', 'withSidesGroupHint'), /acompañamientos previstos/)
+  assert.match(tw('es', 'withSidesGroupHint'), /Explora \{count\} opciones de paquetes/)
   assert.equal(
     tw('es', 'additionalsReviewAllCategories'),
     'Revisa todas las categorías antes de continuar.',
   )
   assert.equal(additionalLabel(PER_PERSON_ITEM, 'es'), 'Asado de Tira')
   assert.match(translationsSrc, /Con acompañamientos/)
+})
+
+test('TEST 29 collapsed category uses a full-card hit area', () => {
+  assert.match(sectionSrc, /data-additional-category-hitarea/)
+  assert.match(sectionSrc, /absolute inset-0/)
+  assert.match(sectionSrc, /cursor-pointer/)
+  assert.match(sectionSrc, /aria-expanded=\{expanded\}/)
+})
+
+test('TEST 30 expanded item controls do not collapse the category', () => {
+  const expandedBlock = sectionSrc.slice(
+    sectionSrc.indexOf('{expanded ? ('),
+    sectionSrc.indexOf('data-additional-category-hitarea'),
+  )
+  assert.match(expandedBlock, /<AdditionalItemCard/)
+  assert.doesNotMatch(expandedBlock, /onChangeQty[\s\S]*onToggle/)
+  assert.match(expandedBlock, /data-additional-category-header/)
 })
 
 if (failed > 0) {

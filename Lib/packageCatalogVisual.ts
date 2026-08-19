@@ -48,6 +48,35 @@ export function getPublicPackageSidesGroup(
     : 'without_sides'
 }
 
+const FAMILY_EXAMPLE_ORDER = ['PRI', 'CHO', 'SEL', 'TRAD'] as const
+
+const FAMILY_EXAMPLE_NAMES: Record<
+  (typeof FAMILY_EXAMPLE_ORDER)[number],
+  Record<QuoteLanguage, string>
+> = {
+  PRI: { pt: 'Prime', en: 'Prime', es: 'Prime' },
+  CHO: { pt: 'Choice', en: 'Choice', es: 'Choice' },
+  SEL: { pt: 'Select', en: 'Select', es: 'Select' },
+  TRAD: { pt: 'Tradicional', en: 'Traditional', es: 'Tradicional' },
+}
+
+/** Commercial short names actually present in an active family — never invented. */
+export function getPublicPackageFamilyExampleNames(
+  packages: ReadonlyArray<Pick<PackageCatalogFields, 'package_key'>>,
+  language: QuoteLanguage = 'pt',
+): string[] {
+  const present = new Set<string>()
+  for (const pkg of packages) {
+    const key = (pkg.package_key ?? '').trim().toUpperCase().replace(/\+$/, '')
+    for (const code of FAMILY_EXAMPLE_ORDER) {
+      if (key.endsWith(code)) present.add(code)
+    }
+  }
+  return FAMILY_EXAMPLE_ORDER.filter((code) => present.has(code)).map(
+    (code) => FAMILY_EXAMPLE_NAMES[code][language],
+  )
+}
+
 export function getPackageCatalogName(
   pkg: PackageCatalogFields,
   language: QuoteLanguage = 'pt',

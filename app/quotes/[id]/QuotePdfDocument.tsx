@@ -29,6 +29,7 @@ import {
   readQuoteSnapshot,
 } from '@/Lib/readQuoteSnapshot'
 import { calcGrillRentalFee } from '@/Lib/calculateQuoteTotals'
+import { formatMileageQuantity } from '@/Lib/units'
 import {
   getGrillPhotoDetailLabel,
 } from '@/Lib/grillPhotoStatus'
@@ -968,7 +969,7 @@ export function QuotePdfDocument({
               label={t('docMileageDistance')}
               value={
                 snapshot.mileageDistance != null
-                  ? `${snapshot.mileageDistance} mi`
+                  ? `${formatMileageQuantity(snapshot.mileageDistance)} mi`
                   : '—'
               }
             />
@@ -976,14 +977,16 @@ export function QuotePdfDocument({
               label={t('docMileageIncluded')}
               value={
                 snapshot.mileageFreeLimit != null
-                  ? `${snapshot.mileageFreeLimit} mi`
+                  ? `${formatMileageQuantity(snapshot.mileageFreeLimit)} mi`
                   : '—'
               }
             />
             <InfoCell
               label={t('docMileageCharged')}
               value={
-                chargedMiles != null ? `${chargedMiles} mi` : '—'
+                chargedMiles != null
+                  ? `${formatMileageQuantity(chargedMiles)} mi`
+                  : '—'
               }
             />
             <InfoCell

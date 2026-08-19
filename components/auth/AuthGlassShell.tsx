@@ -25,7 +25,7 @@ export function AuthGlassShell({ children, toolbar }: AuthGlassShellProps) {
         {children}
       </div>
       <div className="relative z-[1] mt-6">
-        <PscsOneMark className="mx-auto h-6 dark:brightness-0 dark:invert dark:opacity-70" />
+        <PscsOneMark className="mx-auto" />
       </div>
     </main>
   )
