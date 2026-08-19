@@ -10,11 +10,13 @@ import {
   formatPackageHeroPrice,
   getPackageCatalogPrice,
   getPackageCatalogVariant,
+  getPackageHeroMenuLines,
   getPackagePriceCaption,
   getPackageSidesDescription,
   packageSidesMathHolds,
   resolvePackageSidesPricing,
 } from '../../Lib/packageCatalogVisual.ts'
+import { isPublicCatalogFixturePackage } from '../../Lib/publicQuote/catalogVisibility.ts'
 import { isPublicGrillDraftAnswered } from '../../Lib/publicQuote/grillDraft.ts'
 import {
   formatDistanceForDisplay,
@@ -249,12 +251,30 @@ test('TEST 12 EN package overlay copy', () => {
   assert.equal(getPackagePriceCaption('en'), 'DOLLARS PER PERSON')
   assert.match(getPackageSidesDescription('en'), /black beans/i)
   assert.doesNotMatch(getPackageSidesDescription('en'), /tropeiro/i)
+  const menu = getPackageHeroMenuLines(
+    { package_key: 'BBQCHO+' },
+    'en',
+  )
+  assert.ok(menu.some((line) => /salmon or shrimp/i.test(line)))
+  assert.ok(menu.some((line) => /angus picanha/i.test(line)))
+  assert.ok(menu.every((line) => !/salmão|camarão|linguiça/i.test(line)))
+  const trad = getPackageHeroMenuLines({ package_key: 'BBQTRAD+' }, 'en')
+  assert.ok(trad.some((line) => /traditional sausage/i.test(line)))
+  const prime = getPackageHeroMenuLines({ package_key: 'BBQPRI+' }, 'en')
+  assert.ok(prime.some((line) => /rack of lamb/i.test(line)))
 })
 
 test('TEST 13 ES package overlay copy', () => {
   assert.equal(getPackagePriceCaption('es'), 'DÓLARES POR PERSONA')
   assert.match(getPackageSidesDescription('es'), /Frijoles negros/i)
   assert.doesNotMatch(getPackageSidesDescription('es'), /tropeiro/i)
+  const menu = getPackageHeroMenuLines(
+    { package_key: 'BBQCHO+' },
+    'es',
+  )
+  assert.ok(menu.some((line) => /salmón o camarón/i.test(line)))
+  assert.ok(menu.some((line) => /picaña angus/i.test(line)))
+  assert.ok(menu.every((line) => !/salmão|camarão|linguiça/i.test(line)))
 })
 
 test('TEST 14 Feijão preto is the garnish overlay, not tropeiro', () => {
@@ -263,6 +283,7 @@ test('TEST 14 Feijão preto is the garnish overlay, not tropeiro', () => {
   assert.match(hero, /getPackageSidesDescription/)
   assert.match(hero, /data-package-hero-price/)
   assert.match(hero, /data-package-hero-garnish/)
+  assert.match(hero, /data-package-hero-menu/)
   assert.match(hero, /@container/)
   assert.match(hero, /bg-\[#14100c\]/)
   assert.doesNotMatch(hero, /bg-black\/75/)
@@ -270,6 +291,15 @@ test('TEST 14 Feijão preto is the garnish overlay, not tropeiro', () => {
   assert.match(catalog, /data-package-display-total/)
   assert.doesNotMatch(hero, /tropeiro/i)
   assert.doesNotMatch(catalog, /tropeiro/i)
+  assert.deepEqual(getPackageHeroMenuLines({ package_key: 'BBQCHO+' }, 'pt'), [])
+  const visual = source('Lib/packageCatalogVisual.ts')
+  assert.doesNotMatch(visual, /from '\.\/cdlCommercialRules'/)
+  assert.doesNotMatch(visual, /from '\.\/cdlPackageItemI18n'/)
+  const commercial = source('Lib/cdlCommercialRules.ts')
+  assert.match(visual, /Salmão ou camarão/)
+  assert.match(commercial, /Salmão ou camarão/)
+  assert.match(visual, /Carré de cordeiro/)
+  assert.match(commercial, /Carré de cordeiro/)
 })
 
 /* TEST 15 mileage miles only via company-scoped unit */
@@ -338,6 +368,19 @@ test('inline package options remain under the selected card', () => {
   const catalog = source('components/quotes/PublicPackageCatalog.tsx')
   assert.match(catalog, /data-public-package-options/)
   assert.match(catalog, /lg:col-span-2/)
+})
+
+test('public catalog hides internal TEST fixtures', () => {
+  assert.equal(
+    isPublicCatalogFixturePackage({ package_key: 'TEST-DEV-PACKAGE-BOM' }),
+    true,
+  )
+  assert.equal(
+    isPublicCatalogFixturePackage({ package_key: 'BBQCHO+' }),
+    false,
+  )
+  const bootstrap = source('Lib/publicQuote/bootstrap.ts')
+  assert.match(bootstrap, /isPublicCatalogFixturePackage/)
 })
 
 if (failed > 0) {

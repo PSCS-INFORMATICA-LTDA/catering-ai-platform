@@ -263,6 +263,135 @@ export function getPackagePriceCaption(language: QuoteLanguage): string {
   return 'DÓLARES POR PESSOA'
 }
 
+export function getPackageHeroAccompanimentHeading(
+  language: QuoteLanguage,
+): string {
+  if (language === 'en') return 'Accompaniments'
+  if (language === 'es') return 'Acompañamientos'
+  return 'Acompanhamentos'
+}
+
+/**
+ * Flyer item lists keyed by the unsuffixed commercial package key.
+ * Keep in sync with `CDL_PACKAGES` in `Lib/cdlCommercialRules.ts`.
+ * Local copy avoids Node ESM pulling that module (and `@/` aliases) into
+ * `test:dev:public-quote-v2-nav`.
+ */
+const PACKAGE_HERO_ITEMS_PT: Record<string, readonly string[]> = {
+  BBQTRAD: [
+    'Picanha Angus',
+    'Linguiça tradicional',
+    'Frango sobrecoxa desossada',
+    'Pão de alho',
+    'Queijo coalho',
+    'Milho',
+  ],
+  BBQSEL: [
+    'Picanha Angus',
+    'Costela de porco ou boi',
+    'Linguiça tradicional',
+    'Frango sobrecoxa desossada',
+    'Pão de alho',
+    'Queijo',
+    'Milho',
+  ],
+  BBQCHO: [
+    'Picanha Angus',
+    'Salmão ou camarão',
+    'Costela de porco ou boi',
+    'Linguiça',
+    'Frango sobrecoxa desossada',
+    'Pão de alho',
+    'Queijo',
+    'Milho',
+  ],
+  BBQPRI: [
+    'Picanha Angus',
+    'Salmão ou camarão',
+    'Costela de porco ou boi',
+    'Carré de cordeiro',
+    'Linguiça',
+    'Frango sobrecoxa desossada',
+    'Pão de alho',
+    'Queijo',
+    'Milho',
+  ],
+}
+
+const PACKAGE_HERO_COMMON_PT = [
+  'Chimichurri',
+  'Farofa',
+  'Mel',
+  'Goiabada',
+  'Pimenta de bico',
+  'Geleia de pimenta',
+] as const
+
+const PACKAGE_HERO_ITEM_I18N: Record<string, { en: string; es: string }> = {
+  'Picanha Angus': { en: 'Angus picanha', es: 'Picaña Angus' },
+  'Linguiça tradicional': {
+    en: 'Traditional sausage',
+    es: 'Salchicha tradicional',
+  },
+  Linguiça: { en: 'Sausage', es: 'Salchicha' },
+  'Frango sobrecoxa desossada': {
+    en: 'Boneless chicken thigh',
+    es: 'Muslo de pollo deshuesado',
+  },
+  'Pão de alho': { en: 'Garlic bread', es: 'Pan de ajo' },
+  'Queijo coalho': {
+    en: 'Grilled coalho cheese',
+    es: 'Queso coalho a la parrilla',
+  },
+  Queijo: { en: 'Cheese', es: 'Queso' },
+  Milho: { en: 'Corn', es: 'Maíz' },
+  'Costela de porco ou boi': {
+    en: 'Pork or beef ribs',
+    es: 'Costilla de cerdo o res',
+  },
+  'Salmão ou camarão': { en: 'Salmon or shrimp', es: 'Salmón o camarón' },
+  'Carré de cordeiro': { en: 'Rack of lamb', es: 'Costillar de cordero' },
+  Chimichurri: { en: 'Chimichurri', es: 'Chimichurri' },
+  Farofa: { en: 'Farofa', es: 'Farofa' },
+  Mel: { en: 'Honey', es: 'Miel' },
+  Goiabada: { en: 'Guava paste', es: 'Dulce de guayaba' },
+  'Pimenta de bico': { en: "Bird's eye pepper", es: 'Ají de bico' },
+  'Geleia de pimenta': { en: 'Pepper jelly', es: 'Jalea de pimiento' },
+}
+
+function translateHeroItem(
+  label: string,
+  language: QuoteLanguage,
+): string {
+  if (language === 'pt') return label
+  const translation = PACKAGE_HERO_ITEM_I18N[label]
+  if (!translation) return label
+  return language === 'es' ? translation.es : translation.en
+}
+
+/**
+ * Localized flyer menu. PT keeps the baked art. EN/ES overlay the same
+ * commercial items so the JPG is not the language source.
+ */
+export function getPackageHeroMenuLines(
+  pkg: PackageCatalogFields,
+  language: QuoteLanguage,
+): string[] {
+  if (language === 'pt') return []
+  if (getPackageCatalogVariant(pkg) === 'custom') return []
+  const key = getBasePackageKey(pkg.package_key ?? '').toUpperCase()
+  const items = PACKAGE_HERO_ITEMS_PT[key]
+  if (!items?.length) return []
+  return items.map((item) => translateHeroItem(item, language))
+}
+
+export function getPackageHeroAccompanimentLines(
+  language: QuoteLanguage,
+): string[] {
+  if (language === 'pt') return []
+  return PACKAGE_HERO_COMMON_PT.map((item) => translateHeroItem(item, language))
+}
+
 export function formatPackageHeroPrice(value: number): string {
   if (!Number.isFinite(value) || value <= 0) return ''
   const rounded = Math.round(value * 100) / 100

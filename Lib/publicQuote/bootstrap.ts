@@ -8,6 +8,7 @@ import { fetchSupabaseCommercialRules } from '@/Lib/supabaseCommercialRules'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import { resolveServiceDurationMinutes } from './eventDuration'
 import { resolvePublicLocationBias } from './locationBias'
+import { isPublicCatalogFixturePackage } from './catalogVisibility'
 import {
   normalizePublicCompanySlug,
   parsePublicQuoteLocale,
@@ -401,7 +402,9 @@ export async function getPublicQuoteBootstrap(
     includeGlobal: false,
   })
   if (packagesResult.error) return null
-  const packages = packagesResult.data ?? []
+  const packages = (packagesResult.data ?? []).filter(
+    (pkg) => !isPublicCatalogFixturePackage(pkg),
+  )
   if (packages.length === 0) return null
 
   const [

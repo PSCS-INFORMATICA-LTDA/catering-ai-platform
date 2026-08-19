@@ -3,6 +3,9 @@
 import {
   formatPackageHeroPrice,
   getPackageCatalogVariant,
+  getPackageHeroAccompanimentHeading,
+  getPackageHeroAccompanimentLines,
+  getPackageHeroMenuLines,
   getPackagePriceCaption,
   getPackageSidesDescription,
   type PackageCatalogFields,
@@ -27,6 +30,10 @@ export default function PackageCatalogHeroArt({
   const caption = getPackagePriceCaption(language)
   const garnishLine =
     variant === 'with_sides' ? getPackageSidesDescription(language) : null
+  const menuLines = image ? getPackageHeroMenuLines(pkg, language) : []
+  const accompanimentLines =
+    menuLines.length > 0 ? getPackageHeroAccompanimentLines(language) : []
+  const accompanimentHeading = getPackageHeroAccompanimentHeading(language)
 
   return (
     <span className="@container relative block w-full min-w-0">
@@ -46,6 +53,37 @@ export default function PackageCatalogHeroArt({
           {name}
         </span>
       )}
+      {menuLines.length > 0 ? (
+        <span
+          data-package-hero-menu
+          data-package-hero-menu-lang={language}
+          className="pointer-events-none absolute left-0 top-[22%] z-10 flex w-[52%] min-w-0 flex-col bg-[#14100c] py-[2.2%] pl-[5%] pr-[7%] shadow-[14px_0_28px_16px_#14100c]"
+        >
+          {menuLines.map((line) => (
+            <span
+              key={line}
+              className="text-[clamp(0.42rem,2.05cqw,0.7rem)] font-bold uppercase leading-snug tracking-wide text-white"
+            >
+              {line}
+            </span>
+          ))}
+          {accompanimentLines.length > 0 ? (
+            <span className="mt-[0.55em] flex min-w-0 flex-col">
+              <span className="text-[clamp(0.4rem,1.85cqw,0.62rem)] font-black uppercase tracking-wider text-amber-300">
+                {accompanimentHeading}
+              </span>
+              {accompanimentLines.map((line) => (
+                <span
+                  key={line}
+                  className="text-[clamp(0.38rem,1.8cqw,0.6rem)] font-semibold uppercase leading-snug tracking-wide text-white/90"
+                >
+                  {line}
+                </span>
+              ))}
+            </span>
+          ) : null}
+        </span>
+      ) : null}
       {heroPrice ? (
         <span
           data-package-hero-price
