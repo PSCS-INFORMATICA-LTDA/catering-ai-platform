@@ -38,9 +38,11 @@ check('T02 closed category renders localized item count', () => {
   assert.match(categorySrc, /t\.itemsCount\(items\.length\)/)
 })
 
-check('T03 closed category previews localized item names', () => {
-  assert.match(categorySrc, /getLocalizedAdditionalLabel\(item, language\)/)
-  assert.match(categorySrc, /data-additional-category-preview/)
+check('T03 expanded category reveals localized item names and prices', () => {
+  assert.match(categorySrc, /<AdditionalItemCard/)
+  assert.match(itemSrc, /getLocalizedAdditionalLabel\(item, language\)/)
+  assert.match(itemSrc, /getAdditionalUnitPrice/)
+  assert.doesNotMatch(categorySrc, /data-additional-category-preview/)
 })
 
 check('T04 categories start collapsed and expand below their header', () => {
@@ -48,6 +50,8 @@ check('T04 categories start collapsed and expand below their header', () => {
   assert.doesNotMatch(wizardSrc, /new Set\(\[additionalCategoryKeys\[0\]/)
   assert.match(categorySrc, /aria-expanded=\{expanded\}/)
   assert.match(categorySrc, /\{expanded \? \(/)
+  assert.match(categorySrc, /IntersectionObserver/)
+  assert.match(categorySrc, /data-additional-category-sentinel/)
 })
 
 check('T05 expanded category renders lazy item images', () => {
@@ -108,8 +112,9 @@ check('T13 Portuguese and Spanish labels remain driven by i18n', () => {
   assert.match(categorySrc, /language=\{language\}/)
 })
 
-check('T14 long category previews are clamped cleanly', () => {
-  assert.match(categorySrc, /min-w-0 truncate/)
+check('T14 expanded item cards keep min-width constraints', () => {
+  assert.match(itemSrc, /minmax\(0,1fr\)/)
+  assert.match(categorySrc, /overflow-hidden rounded-2xl/)
 })
 
 check('T15 items without an image keep a stable fallback', () => {

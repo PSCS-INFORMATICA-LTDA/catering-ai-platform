@@ -191,6 +191,9 @@ type QuoteStrings = {
     contactPrivacyHint: string
     publicPackageOptionsTitle: string
     publicPackageChooseHint: string
+    withSidesGroupHint: string
+    withoutSidesGroupHint: string
+    additionalsKeepScrolling: string
     pricingRetry: string
     pricingTimeout: string
     pricingRateLimited: string
@@ -583,6 +586,12 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicPackageOptionsTitle: 'Opções deste pacote',
       publicPackageChooseHint:
         'Toque no pacote para selecionar. Depois complete apenas as opções obrigatórias.',
+      withSidesGroupHint:
+        'Pacotes que incluem os acompanhamentos previstos na composição do serviço. Escolha o pacote e, quando aplicável, selecione as opções disponíveis.',
+      withoutSidesGroupHint:
+        'Pacotes sem os acompanhamentos incluídos. Escolha o pacote desejado e personalize as opções disponíveis quando aplicável.',
+      additionalsKeepScrolling:
+        'Continue rolando para revisar todos os adicionais.',
       pricingRetry: 'Tentar novamente',
       pricingTimeout: 'A estimativa demorou demais. Tente novamente.',
       pricingRateLimited:
@@ -993,6 +1002,12 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicPackageOptionsTitle: 'Options for this package',
       publicPackageChooseHint:
         'Tap a package to select it. Then complete only the required options.',
+      withSidesGroupHint:
+        'Packages that include the side dishes defined for the service. Choose your package and, when applicable, select the available options.',
+      withoutSidesGroupHint:
+        'Packages without included side dishes. Choose your preferred package and customize the available options when applicable.',
+      additionalsKeepScrolling:
+        'Keep scrolling to review all additional items.',
       pricingRetry: 'Try again',
       pricingTimeout: 'The estimate took too long. Please try again.',
       pricingRateLimited:
@@ -1403,6 +1418,12 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicPackageOptionsTitle: 'Opciones de este paquete',
       publicPackageChooseHint:
         'Toque el paquete para seleccionarlo. Luego complete solo las opciones obligatorias.',
+      withSidesGroupHint:
+        'Paquetes que incluyen los acompañamientos definidos para el servicio. Elige el paquete y, cuando corresponda, selecciona las opciones disponibles.',
+      withoutSidesGroupHint:
+        'Paquetes sin acompañamientos incluidos. Elige el paquete deseado y personaliza las opciones disponibles cuando corresponda.',
+      additionalsKeepScrolling:
+        'Sigue desplazándote para revisar todos los adicionales.',
       pricingRetry: 'Intentar de nuevo',
       pricingTimeout: 'La estimación tardó demasiado. Inténtelo de nuevo.',
       pricingRateLimited:

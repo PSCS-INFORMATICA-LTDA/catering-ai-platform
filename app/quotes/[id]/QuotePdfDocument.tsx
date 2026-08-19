@@ -20,6 +20,7 @@ import {
   IMPORTANT_RULES,
   RESERVATION_PAYMENT_TEXT,
   RESERVATION_PERCENTAGE,
+  SIDES_PRICE_PER_PERSON,
 } from '@/Lib/cdlCommercialRules'
 import {
   formatCountOrDash,
@@ -33,6 +34,13 @@ import {
 } from '@/Lib/grillPhotoStatus'
 import { getCustomerDisplayNameFromQuote } from '@/Lib/getCustomerDisplayName'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import {
+  getPackagePerPersonUnitLabel,
+  getPackagePriceLineLabel,
+} from '@/Lib/packageCatalogVisual'
+import { isPricingBreakdown } from '@/Lib/pricing/pricingBreakdownTypes'
+import { resolveQuotePdfPackagePerPersonBreakdown } from '@/Lib/quotePdfPackagePresentation'
+import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import {
   type QuoteDetail,
   displayValue,
@@ -314,6 +322,56 @@ const styles = StyleSheet.create({
     lineHeight: 1.4,
     marginBottom: 8,
   },
+  packageArt: {
+    width: '100%',
+    maxHeight: 260,
+    objectFit: 'contain',
+    marginTop: 6,
+    marginBottom: 8,
+  },
+  packagePriceBox: {
+    marginBottom: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 6,
+    backgroundColor: colors.light,
+  },
+  packagePriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 3,
+  },
+  packagePriceLabel: {
+    fontSize: 8,
+    color: colors.muted,
+  },
+  packagePriceValue: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: colors.dark,
+  },
+  packagePriceTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 4,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  packagePriceTotalLabel: {
+    fontSize: 9,
+    fontFamily: 'Helvetica-Bold',
+    color: colors.dark,
+  },
+  packagePriceTotalValue: {
+    fontSize: 9,
+    fontFamily: 'Helvetica-Bold',
+    color: colors.accent,
+  },
   grid2: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -580,14 +638,18 @@ export function QuotePdfDocument({
   quote,
   logo,
   pscs,
+  packageImageSrc = null,
 }: {
   quote: QuoteDetail
   logo?: PdfLogoSource
   pscs?: PdfLogoSource
+  packageImageSrc?: string | null
 }) {
   const logoSrc = logo?.filePath ?? logo?.src ?? null
   const pscsSrc = pscs?.filePath ?? pscs?.src ?? null
   const lang = quote.language ?? 'pt'
+  const quoteLang: QuoteLanguage =
+    lang === 'en' || lang === 'es' ? lang : 'pt'
   const packageName = getPackageName(quote) ?? '—'
   const packageDescription = getPackageDescription(quote)
   const groupedAdditionals = groupAdditionalsByCategory(
@@ -596,6 +658,20 @@ export function QuotePdfDocument({
   )
   const snapshot = readQuoteSnapshot(quote)
   const guestCounts = snapshot.guestCounts
+  const sidesPricePerPerson = (() => {
+    const breakdown = quote.pricing_breakdown
+    if (isPricingBreakdown(breakdown)) {
+      const n = Number(breakdown.rules_applied?.sidesPricePerPerson)
+      if (Number.isFinite(n) && n > 0) return n
+    }
+    return SIDES_PRICE_PER_PERSON
+  })()
+  const packagePerPerson = resolveQuotePdfPackagePerPersonBreakdown({
+    packageKey: quote.package_key,
+    packageUnitPrice: snapshot.packageUnitPrice,
+    sidesPricePerPerson,
+  })
+  const perPersonUnit = getPackagePerPersonUnitLabel(quoteLang)
   const chargedMiles = getChargedMilesFromSnapshot(
     snapshot.mileageDistance,
     snapshot.mileageFreeLimit,
@@ -757,6 +833,39 @@ export function QuotePdfDocument({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('docPackageSection')}</Text>
           <Text style={styles.packageName}>{packageName}</Text>
+          {packageImageSrc ? (
+            <Image src={packageImageSrc} style={styles.packageArt} />
+          ) : null}
+          {packagePerPerson ? (
+            <View style={styles.packagePriceBox}>
+              <View style={styles.packagePriceRow}>
+                <Text style={styles.packagePriceLabel}>
+                  {getPackagePriceLineLabel('package', quoteLang)}
+                </Text>
+                <Text style={styles.packagePriceValue}>
+                  {formatCurrency(packagePerPerson.packagePerPerson)} / {perPersonUnit}
+                </Text>
+              </View>
+              {packagePerPerson.showSides ? (
+                <View style={styles.packagePriceRow}>
+                  <Text style={styles.packagePriceLabel}>
+                    {getPackagePriceLineLabel('sides', quoteLang)}
+                  </Text>
+                  <Text style={styles.packagePriceValue}>
+                    {formatCurrency(packagePerPerson.sidesPerPerson)} / {perPersonUnit}
+                  </Text>
+                </View>
+              ) : null}
+              <View style={styles.packagePriceTotalRow}>
+                <Text style={styles.packagePriceTotalLabel}>
+                  {getPackagePriceLineLabel('total', quoteLang)}
+                </Text>
+                <Text style={styles.packagePriceTotalValue}>
+                  {formatCurrency(packagePerPerson.totalPerPerson)} / {perPersonUnit}
+                </Text>
+              </View>
+            </View>
+          ) : null}
           {packageDescription ? (
             <Text style={styles.packageDesc}>{packageDescription}</Text>
           ) : null}

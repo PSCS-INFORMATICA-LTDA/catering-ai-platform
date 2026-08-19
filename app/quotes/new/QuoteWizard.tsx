@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AdminCompactMenu from '../../../components/quotes/AdminCompactMenu'
 import { useTenant } from '../../../components/tenant/TenantProvider'
 import CatalogImageFrame from '../../../components/CatalogImageFrame'
@@ -25,7 +25,6 @@ import {
 import { getAdditionalItemCategoryKey } from '@/Lib/additionalItemFieldAccess'
 import {
   buildAdditionalCategoryDisplayLabels,
-  countUnvisitedAdditionalCategories,
   getUnvisitedAdditionalCategoryKeys,
   getVisibleAdditionalCategoryKeys,
   pruneVisitedAdditionalCategories,
@@ -54,7 +53,10 @@ import {
 } from '../../../Lib/packageFieldAccess'
 import QuoteWizardConfirmationStep from '../../../components/quote-review/QuoteWizardConfirmationStep'
 import PublicQuoteConfirmationStep from '../../../components/quote-review/PublicQuoteConfirmationStep'
-import { resolvePackageCatalogImageUrl } from '../../../Lib/packageCatalogVisual'
+import {
+  getPublicPackageSidesGroup,
+  resolvePackageCatalogImageUrl,
+} from '../../../Lib/packageCatalogVisual'
 import { calcAdditionalLineTotal } from '../../../Lib/calculateQuoteTotals'
 import type { CommercialRulesSnapshot } from '../../../Lib/supabaseCommercialRules'
 import type { PricingBreakdown } from '@/Lib/pricing/pricingBreakdownTypes'
@@ -1081,6 +1083,7 @@ export default function QuoteWizardCore({
     )
   const visitedAdditionalCategoriesRef = useRef(visitedAdditionalCategories)
   const additionalCategoryKeysRef = useRef<string[]>([])
+  const extrasExposeArmedRef = useRef(true)
   visitedAdditionalCategoriesRef.current = visitedAdditionalCategories
   const grillPhotoInputRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
@@ -1401,7 +1404,9 @@ export default function QuoteWizardCore({
   const packagesWithoutSides = useMemo(
     () =>
       sortPackagesByCommercialTier(
-        packages.filter((p) => !p.package_key?.trim().endsWith('+')),
+        packages.filter(
+          (p) => getPublicPackageSidesGroup(p) === 'without_sides',
+        ),
       ),
     [packages],
   )
@@ -1409,7 +1414,7 @@ export default function QuoteWizardCore({
   const packagesWithSides = useMemo(
     () =>
       sortPackagesByCommercialTier(
-        packages.filter((p) => p.package_key?.trim().endsWith('+')),
+        packages.filter((p) => getPublicPackageSidesGroup(p) === 'with_sides'),
       ),
     [packages],
   )
@@ -1535,7 +1540,39 @@ export default function QuoteWizardCore({
       }
       return next
     })
-    markAdditionalCategoryVisited(category)
+  }
+
+  const handleAdditionalCategoryReadingZone = useCallback(
+    (categoryKey: string) => {
+      if (!categoryKey) return
+      setOpenAdditionalCategories((prev) => {
+        if (prev.has(categoryKey)) return prev
+        const keys = additionalCategoryKeysRef.current
+        const index = keys.indexOf(categoryKey)
+        if (index < 0) return prev
+        const previousOpen = keys.slice(0, index).every((key) => prev.has(key))
+        if (!previousOpen) return prev
+        const next = new Set(prev)
+        next.add(categoryKey)
+        return next
+      })
+    },
+    [],
+  )
+
+  function handleAdditionalCategoryExpose(categoryKey: string) {
+    if (!extrasExposeArmedRef.current) return
+    markAdditionalCategoryVisited(categoryKey)
+  }
+
+  function armExtrasExposeAfterUserScroll() {
+    extrasExposeArmedRef.current = false
+    const arm = () => {
+      extrasExposeArmedRef.current = true
+    }
+    window.addEventListener('wheel', arm, { once: true, passive: true })
+    window.addEventListener('touchmove', arm, { once: true, passive: true })
+    window.addEventListener('keydown', arm, { once: true })
   }
 
   const previewAdditionals = useMemo(
@@ -1683,15 +1720,6 @@ export default function QuoteWizardCore({
   )
   additionalCategoryKeysRef.current = additionalCategoryKeys
 
-  const unvisitedAdditionalCategoryCount = useMemo(
-    () =>
-      countUnvisitedAdditionalCategories(
-        additionalCategoryKeys,
-        visitedAdditionalCategories,
-      ),
-    [additionalCategoryKeys, visitedAdditionalCategories],
-  )
-
   const additionalCategoryDisplayLabels = useMemo(
     () =>
       buildAdditionalCategoryDisplayLabels(
@@ -1726,19 +1754,14 @@ export default function QuoteWizardCore({
   function handleAdditionalsNextBlockedClick() {
     const firstPending = pendingAdditionalCategories[0]
     if (!firstPending) return
-    const reviewMessage = tw(uiLocale, 'categoriesReviewRequired', {
-      remaining: unvisitedAdditionalCategoryCount,
-      total: additionalCategoryKeys.length,
-    })
     setAdditionalsReviewPrompt(true)
-    setNavigationIssues([reviewMessage])
     setEmphasizedAdditionalCategory(firstPending.categoryKey)
+    armExtrasExposeAfterUserScroll()
     setOpenAdditionalCategories((prev) => {
       const next = new Set(prev)
       next.add(firstPending.categoryKey)
       return next
     })
-    markAdditionalCategoryVisited(firstPending.categoryKey)
     window.setTimeout(() => {
       scrollToAdditionalCategory(firstPending.categoryKey)
     }, 50)
@@ -1750,21 +1773,6 @@ export default function QuoteWizardCore({
       setAdditionalsReviewPrompt(false)
     }
   }, [step])
-
-  useEffect(() => {
-    if (step !== 3 || openAdditionalCategories.size === 0) return
-    setVisitedAdditionalCategories((prev) => {
-      let changed = false
-      const next = new Set(prev)
-      for (const key of openAdditionalCategories) {
-        if (!next.has(key)) {
-          next.add(key)
-          changed = true
-        }
-      }
-      return changed ? next : prev
-    })
-  }, [step, openAdditionalCategories])
 
   useEffect(() => {
     if (step !== 3) return
@@ -3045,6 +3053,10 @@ export default function QuoteWizardCore({
                     billableGuestCount={billableGuestCount}
                     language={uiLocale}
                     onToggle={() => toggleAdditionalCategory(categoryKey)}
+                    onEnterReadingZone={() =>
+                      handleAdditionalCategoryReadingZone(categoryKey)
+                    }
+                    onExpose={() => handleAdditionalCategoryExpose(categoryKey)}
                     onChangeQty={setAdditionalQty}
                   />
                 ),
@@ -3366,10 +3378,7 @@ export default function QuoteWizardCore({
             additionalsStepNextDisabled={additionalsStepNextDisabled}
             additionalsReviewMessage={
               additionalsReviewPrompt && additionalsStepNextDisabled
-                ? tw(uiLocale, 'categoriesReviewRequired', {
-                    remaining: unvisitedAdditionalCategoryCount,
-                    total: additionalCategoryKeys.length,
-                  })
+                ? tw(uiLocale, 'additionalsKeepScrolling')
                 : null
             }
             grillStepPendingIssuesCount={grillStepPendingIssues.length}

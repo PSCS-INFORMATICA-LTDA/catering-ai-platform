@@ -1,25 +1,16 @@
 'use client'
 
-import { useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import AdditionalItemCard from '@/components/quotes/additionals/AdditionalItemCard'
 import {
-  getAdditionalChargeUnitLabel,
-  getAdditionalUnitPrice,
-  getLocalizedAdditionalLabel,
-  hasAdditionalPrice,
-  type QuoteAdditionalItem,
-} from '@/Lib/quoteAdditionalDisplay'
-import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
+  ADDITIONAL_CATEGORY_EXPOSE_ZONE,
+  ADDITIONAL_CATEGORY_READING_ZONE,
+  shouldAutoOpenAdditionalCategory,
+  shouldExposeAdditionalCategory,
+} from '@/Lib/additionalCategoryExposure'
+import type { QuoteAdditionalItem } from '@/Lib/quoteAdditionalDisplay'
+import { getQuoteStrings } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
-
-function formatMenuPrice(value: number, language: QuoteLanguage): string {
-  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-US' : 'pt-BR'
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(value)
-}
 
 export default function AdditionalCategorySection({
   categoryKey,
@@ -33,6 +24,8 @@ export default function AdditionalCategorySection({
   billableGuestCount,
   language,
   onToggle,
+  onEnterReadingZone,
+  onExpose,
   onChangeQty,
 }: {
   categoryKey: string
@@ -46,28 +39,68 @@ export default function AdditionalCategorySection({
   billableGuestCount: number
   language: QuoteLanguage
   onToggle: () => void
+  onEnterReadingZone: () => void
+  onExpose: () => void
   onChangeQty: (itemId: string, qty: number) => void
 }) {
   const t = getQuoteStrings(language)
-  const sectionRef = useRef<HTMLElement>(null)
-  const menuRows = useMemo(
-    () =>
-      items.map((item) => ({
-        id: item.id,
-        label: getLocalizedAdditionalLabel(item, language),
-        chargeUnit: getAdditionalChargeUnitLabel(item, language),
-        price: hasAdditionalPrice(item)
-          ? formatMenuPrice(getAdditionalUnitPrice(item), language)
-          : null,
-        selected: (quantities[item.id] ?? 0) > 0,
-      })),
-    [items, language, quantities],
-  )
+  const headerRef = useRef<HTMLButtonElement>(null)
+  const sentinelRef = useRef<HTMLSpanElement>(null)
+  const onEnterReadingZoneRef = useRef(onEnterReadingZone)
+  const onExposeRef = useRef(onExpose)
+  onEnterReadingZoneRef.current = onEnterReadingZone
+  onExposeRef.current = onExpose
+
+  useEffect(() => {
+    const header = headerRef.current
+    if (!header || typeof IntersectionObserver === 'undefined') return
+
+    const openObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (shouldAutoOpenAdditionalCategory(entry)) {
+            onEnterReadingZoneRef.current()
+          }
+        }
+      },
+      {
+        root: null,
+        rootMargin: ADDITIONAL_CATEGORY_READING_ZONE.rootMargin,
+        threshold: ADDITIONAL_CATEGORY_READING_ZONE.threshold,
+      },
+    )
+    openObserver.observe(header)
+    return () => openObserver.disconnect()
+  }, [categoryKey])
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!expanded || !sentinel || typeof IntersectionObserver === 'undefined') {
+      return
+    }
+
+    const exposeObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (shouldExposeAdditionalCategory(entry)) {
+            onExposeRef.current()
+          }
+        }
+      },
+      {
+        root: null,
+        rootMargin: ADDITIONAL_CATEGORY_EXPOSE_ZONE.rootMargin,
+        threshold: ADDITIONAL_CATEGORY_EXPOSE_ZONE.threshold,
+      },
+    )
+    exposeObserver.observe(sentinel)
+    return () => exposeObserver.disconnect()
+  }, [categoryKey, expanded, items.length])
+
   const contentId = `additional-category-content-${categoryKey}`
 
   return (
     <section
-      ref={sectionRef}
       id={`additional-category-${categoryKey}`}
       data-category-key={categoryKey}
       data-category-reviewed={visited ? 'true' : 'false'}
@@ -78,7 +111,9 @@ export default function AdditionalCategorySection({
       }`}
     >
       <button
+        ref={headerRef}
         type="button"
+        data-additional-category-header
         onClick={onToggle}
         aria-expanded={expanded}
         aria-controls={contentId}
@@ -94,41 +129,6 @@ export default function AdditionalCategorySection({
                 {t.itemsCount(items.length)}
               </span>
             </div>
-
-            {!expanded && menuRows.length > 0 ? (
-              <ul
-                data-additional-category-preview
-                className="mt-3 space-y-1.5"
-              >
-                {menuRows.map((row) => (
-                  <li
-                    key={row.id}
-                    className="flex min-w-0 items-baseline gap-2 text-sm leading-5"
-                  >
-                    <span
-                      className={`min-w-0 truncate ${
-                        row.selected
-                          ? 'font-bold text-[var(--brand-primary)]'
-                          : 'text-cdl-text-secondary'
-                      }`}
-                    >
-                      {row.selected ? '✓ ' : ''}
-                      {row.label}
-                    </span>
-                    <span
-                      className="h-px min-w-4 flex-1 self-center border-b border-dotted border-cdl-border"
-                      aria-hidden
-                    />
-                    <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-cdl-title">
-                      {row.price ?? tw(language, 'priceUnavailable')}
-                    </span>
-                    <span className="min-w-0 shrink-0 text-xs text-cdl-muted">
-                      {row.chargeUnit}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
 
             {selectedCount > 0 ? (
               <div className="mt-2">
@@ -171,6 +171,12 @@ export default function AdditionalCategorySection({
               />
             ))}
           </div>
+          <span
+            ref={sentinelRef}
+            data-additional-category-sentinel
+            aria-hidden
+            className="block h-px w-full"
+          />
         </div>
       ) : null}
     </section>

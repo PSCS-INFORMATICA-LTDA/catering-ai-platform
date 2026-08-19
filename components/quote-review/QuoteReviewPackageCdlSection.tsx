@@ -123,22 +123,18 @@ export function QuoteReviewPackageValueCards({
         }
         variant="price"
       />
-      <PackageValueCard
-        label={tw(loc, 'garnishValue')}
-        value={
-          packageSummary?.hasGarnish
-            ? formatMoneyOrDash(garnishTotal)
-            : '$0.00'
-        }
-        subValue={
-          packageSummary?.hasGarnish
-            ? garnishUnit > 0 && chargedPeople != null && chargedPeople > 0
+      {packageSummary?.hasGarnish ? (
+        <PackageValueCard
+          label={tw(loc, 'garnishValue')}
+          value={formatMoneyOrDash(garnishTotal)}
+          subValue={
+            garnishUnit > 0 && chargedPeople != null && chargedPeople > 0
               ? `${formatCurrency(garnishUnit)} × ${chargedPeople}`
               : undefined
-            : tw(loc, 'no')
-        }
-        variant="price"
-      />
+          }
+          variant="price"
+        />
+      ) : null}
       <PackageValueCard
         label={tw(loc, 'additionalValue')}
         value={formatMoneyOrDash(additionalAmount)}

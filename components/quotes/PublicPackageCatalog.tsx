@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useEffect, useRef } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import {
   findBasePackage,
   formatPackageCatalogPriceLabel,
@@ -9,6 +9,7 @@ import {
   getPackageCatalogPrice,
   getPackageCatalogVariant,
   getPackagePriceLineLabel,
+  getPublicPackageSidesGroup,
   isPackageCatalogPriceOnRequest,
   resolvePackageSidesPricing,
   type PackageCatalogFields,
@@ -23,6 +24,8 @@ type PublicPackageCard = PackageCatalogFields & {
   id: string
   package_key?: string | null
 }
+
+type PackageSidesGroup = 'with_sides' | 'without_sides'
 
 function formatMoney(
   value: number,
@@ -42,6 +45,55 @@ function perPersonSuffix(language: QuoteLanguage): string {
   if (language === 'en') return 'person'
   if (language === 'es') return 'persona'
   return 'pessoa'
+}
+
+function PackageGroupToggle({
+  title,
+  hint,
+  count,
+  expanded,
+  group,
+  onClick,
+}: {
+  title: string
+  hint: string
+  count: number
+  expanded: boolean
+  group: PackageSidesGroup
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      data-package-group-toggle={group}
+      aria-expanded={expanded}
+      onClick={onClick}
+      className="flex w-full min-w-0 items-start justify-between gap-3 rounded-2xl border border-cdl-border bg-cdl-surface px-4 py-4 text-left shadow-sm transition hover:bg-cdl-hover sm:px-5"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block text-base font-black text-cdl-title sm:text-lg">
+          {title}
+        </span>
+        <span className="mt-1 block text-sm leading-6 text-cdl-muted">{hint}</span>
+        {count > 0 ? (
+          <span
+            data-package-group-count
+            className="mt-2 inline-block text-xs font-semibold uppercase tracking-wide text-cdl-muted"
+          >
+            {count}
+          </span>
+        ) : null}
+      </span>
+      <span
+        className={`mt-1 shrink-0 text-sm text-[var(--brand-primary)] transition-transform ${
+          expanded ? 'rotate-180' : ''
+        }`}
+        aria-hidden
+      >
+        ▼
+      </span>
+    </button>
+  )
 }
 
 function PackageCatalogCard({
@@ -84,6 +136,7 @@ function PackageCatalogCard({
       type="button"
       aria-pressed={active}
       data-package-key={pkg.package_key ?? ''}
+      data-package-sides-group={getPublicPackageSidesGroup(pkg)}
       onClick={onClick}
       className={`flex w-full min-w-0 flex-col overflow-hidden rounded-2xl border bg-cdl-surface text-left transition ${
         active
@@ -92,26 +145,11 @@ function PackageCatalogCard({
       }`}
     >
       <span className="relative block w-full min-w-0">
-        <PackageCatalogHeroArt
-          name={name}
-          image={image}
-          language={language}
-          pkg={pkg}
-          displayTotal={priceOnRequest ? 0 : displayTotal}
-        />
+        <PackageCatalogHeroArt name={name} image={image} />
         {active ? (
           <span className="absolute left-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white text-base font-black text-emerald-700 shadow">
             ✓
             <span className="sr-only">{selectedLabel}</span>
-          </span>
-        ) : null}
-        {variant === 'with_sides' ? (
-          <span
-            className={`absolute left-3 z-10 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900 ${
-              active ? 'top-14' : 'top-3'
-            }`}
-          >
-            {tw(language, 'withSides')}
           </span>
         ) : null}
       </span>
@@ -191,26 +229,37 @@ export default function PublicPackageCatalog({
   onSelect: (id: string) => void
 }) {
   const t = getQuoteStrings(language)
-  const catalog = [...packagesWithSides, ...packagesWithoutSides]
   const optionsRef = useRef<HTMLDivElement>(null)
+  const [openGroup, setOpenGroup] = useState<PackageSidesGroup | null>(null)
+  const syncedSelectionRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!selectedPackageId) {
+      syncedSelectionRef.current = null
+      return
+    }
+    if (syncedSelectionRef.current === selectedPackageId) return
+    syncedSelectionRef.current = selectedPackageId
+    if (packagesWithSides.some((pkg) => pkg.id === selectedPackageId)) {
+      setOpenGroup('with_sides')
+      return
+    }
+    if (packagesWithoutSides.some((pkg) => pkg.id === selectedPackageId)) {
+      setOpenGroup('without_sides')
+    }
+  }, [selectedPackageId, packagesWithSides, packagesWithoutSides])
 
   useEffect(() => {
     if (!selectedPackageId) return
     const node = optionsRef.current
     if (!node) return
-    // Short nudge so the options appear without hiding the package card.
     node.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [selectedPackageId])
+  }, [selectedPackageId, openGroup])
 
-  if (catalog.length === 0) {
-    return <p className="text-sm text-cdl-muted">{tw(language, 'noPackages')}</p>
-  }
-
-  return (
-    <div className="min-w-0 space-y-5">
-      <p className="text-sm text-cdl-muted">{t.wizard.publicPackageChooseHint}</p>
-      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
-        {catalog.map((pkg) => {
+  function renderGroup(packages: PublicPackageCard[]) {
+    return (
+      <div className="mt-4 grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+        {packages.map((pkg) => {
           const active = selectedPackageId === pkg.id
           const selectableGroups = active
             ? optionGroupsForPackage(pkg.id).filter(
@@ -257,6 +306,52 @@ export default function PublicPackageCatalog({
           )
         })}
       </div>
+    )
+  }
+
+  if (packagesWithSides.length === 0 && packagesWithoutSides.length === 0) {
+    return <p className="text-sm text-cdl-muted">{tw(language, 'noPackages')}</p>
+  }
+
+  return (
+    <div className="min-w-0 space-y-5">
+      <p className="text-sm text-cdl-muted">{t.wizard.publicPackageChooseHint}</p>
+      {packagesWithSides.length > 0 ? (
+        <section data-package-group="with_sides" className="min-w-0">
+          <PackageGroupToggle
+            group="with_sides"
+            title={tw(language, 'withSides')}
+            hint={tw(language, 'withSidesGroupHint')}
+            count={packagesWithSides.length}
+            expanded={openGroup === 'with_sides'}
+            onClick={() =>
+              setOpenGroup((current) =>
+                current === 'with_sides' ? null : 'with_sides',
+              )
+            }
+          />
+          {openGroup === 'with_sides' ? renderGroup(packagesWithSides) : null}
+        </section>
+      ) : null}
+      {packagesWithoutSides.length > 0 ? (
+        <section data-package-group="without_sides" className="min-w-0">
+          <PackageGroupToggle
+            group="without_sides"
+            title={tw(language, 'withoutSides')}
+            hint={tw(language, 'withoutSidesGroupHint')}
+            count={packagesWithoutSides.length}
+            expanded={openGroup === 'without_sides'}
+            onClick={() =>
+              setOpenGroup((current) =>
+                current === 'without_sides' ? null : 'without_sides',
+              )
+            }
+          />
+          {openGroup === 'without_sides'
+            ? renderGroup(packagesWithoutSides)
+            : null}
+        </section>
+      ) : null}
     </div>
   )
 }

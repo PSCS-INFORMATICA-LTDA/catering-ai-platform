@@ -842,13 +842,18 @@ async function main() {
     let visited = markVisited(new Set(), 'GUARNICOES')
     assert.ok(visited.has('GUARNICOES'))
     assert.match(wizardSrc, /toggleAdditionalCategory/)
-    assert.match(wizardSrc, /markAdditionalCategoryVisited\(category\)/)
-    assert.match(wizardSrc, /openAdditionalCategories/)
-    assert.doesNotMatch(
+    assert.match(wizardSrc, /handleAdditionalCategoryExpose/)
+    assert.match(wizardSrc, /handleAdditionalCategoryReadingZone/)
+    assert.match(
       read('components/quotes/additionals/AdditionalCategorySection.tsx'),
       /IntersectionObserver/,
     )
-    pass('A02 opening category marks visited')
+    assert.match(
+      read('components/quotes/additionals/AdditionalCategorySection.tsx'),
+      /data-additional-category-sentinel/,
+    )
+    assert.doesNotMatch(wizardSrc, /markAdditionalCategoryVisited\(category\)/)
+    pass('A02 opening category does not mark visited; scroll exposure does')
   } catch (e) {
     fail('A02 open marks visited', e)
   }
@@ -925,7 +930,7 @@ async function main() {
 
   try {
     assert.match(wizardSrc, /toggleAdditionalCategory/)
-    assert.match(wizardSrc, /markAdditionalCategoryVisited\(category\)/)
+    assert.doesNotMatch(wizardSrc, /markAdditionalCategoryVisited\(category\)/)
     pass('A12 closing accordion keeps visited')
   } catch (e) {
     fail('A12 accordion close', e)
@@ -975,11 +980,11 @@ async function main() {
   }
 
   try {
-    assert.match(wizardSrc, /toggleAdditionalCategory/)
-    assert.match(wizardSrc, /markAdditionalCategoryVisited\(category\)/)
+    assert.match(wizardSrc, /handleAdditionalCategoryExpose/)
+    assert.doesNotMatch(wizardSrc, /markAdditionalCategoryVisited\(category\)/)
     let visited = markVisited(new Set(['GUARNICOES']), 'BOVINO')
     assert.equal(countUnvisited(['GUARNICOES', 'BOVINO'], visited), 0)
-    pass('A18 opening category reduces remaining')
+    pass('A18 exposing category reduces remaining')
   } catch (e) {
     fail('A18 open reduces remaining', e)
   }

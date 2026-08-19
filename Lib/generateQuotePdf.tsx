@@ -5,13 +5,20 @@ import {
   resolveCdlLogoForPdf,
   resolvePublicImageForPdf,
 } from '@/Lib/cdlLogoForPdf'
+import { resolveRemoteImageForPdf } from '@/Lib/packageImageForPdf'
 import { getQuotePdfContentDisposition } from '@/Lib/quotePdfFilename'
 
 export async function generateQuotePdfBuffer(quote: QuoteDetail) {
   const logo = resolveCdlLogoForPdf()
   const pscs = resolvePublicImageForPdf('brand/pscs-one.png')
+  const packageImageSrc = await resolveRemoteImageForPdf(quote.package_image_url)
   return renderToBuffer(
-    <QuotePdfDocument quote={quote} logo={logo} pscs={pscs} />,
+    <QuotePdfDocument
+      quote={quote}
+      logo={logo}
+      pscs={pscs}
+      packageImageSrc={packageImageSrc}
+    />,
   )
 }
 

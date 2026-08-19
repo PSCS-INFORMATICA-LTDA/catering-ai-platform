@@ -10,12 +10,18 @@ import {
   formatPackageHeroPrice,
   getPackageCatalogPrice,
   getPackageCatalogVariant,
-  getPackageHeroMenuLines,
-  getPackagePriceCaption,
+  getPackagePerPersonUnitLabel,
+  getPackagePriceLineLabel,
   getPackageSidesDescription,
+  getPublicPackageSidesGroup,
   packageSidesMathHolds,
   resolvePackageSidesPricing,
 } from '../../Lib/packageCatalogVisual.ts'
+import {
+  shouldAutoOpenAdditionalCategory,
+  shouldExposeAdditionalCategory,
+} from '../../Lib/additionalCategoryExposure.ts'
+import { resolveQuotePdfPackagePerPersonBreakdown } from '../../Lib/quotePdfPackagePresentation.ts'
 import { isPublicCatalogFixturePackage } from '../../Lib/publicQuote/catalogVisibility.ts'
 import { isPublicGrillDraftAnswered } from '../../Lib/publicQuote/grillDraft.ts'
 import {
@@ -240,66 +246,62 @@ test('TEST 10 packages without garnish do not invent a sides line', () => {
   assert.equal(getPackageCatalogPrice(pkg), 65)
 })
 
-/* TEST 11-13 localized overlay copy */
-test('TEST 11 PT package overlay copy', () => {
-  assert.equal(getPackagePriceCaption('pt'), 'DÓLARES POR PESSOA')
-  assert.match(getPackageSidesDescription('pt'), /Feijão preto/i)
-  assert.doesNotMatch(getPackageSidesDescription('pt'), /tropeiro/i)
+/* TEST 11-14 grouping, no price in art, Feijão copy helper */
+test('TEST 11 package groups use structured package_key suffix', () => {
+  assert.equal(getPublicPackageSidesGroup({ package_key: 'BBQCHO+' }), 'with_sides')
+  assert.equal(getPublicPackageSidesGroup({ package_key: 'BBQCHO' }), 'without_sides')
+  assert.equal(getPublicPackageSidesGroup({ package_key: 'BBQPERS+' }), 'with_sides')
+  assert.equal(getPublicPackageSidesGroup({ package_key: 'BBQPERS' }), 'without_sides')
+  const catalog = source('components/quotes/PublicPackageCatalog.tsx')
+  assert.match(catalog, /data-package-group="with_sides"/)
+  assert.match(catalog, /data-package-group="without_sides"/)
+  assert.match(catalog, /data-package-group-toggle/)
+  assert.match(catalog, /withSidesGroupHint/)
+  assert.match(catalog, /withoutSidesGroupHint/)
+  assert.doesNotMatch(catalog, /package\.name\.includes/)
+  const wizard = source('app/quotes/new/QuoteWizard.tsx')
+  assert.match(wizard, /getPublicPackageSidesGroup/)
+  assert.equal(getPackagePriceLineLabel('package', 'pt'), 'Pacote')
+  assert.equal(getPackagePriceLineLabel('sides', 'en'), 'Sides')
+  assert.equal(getPackagePriceLineLabel('total', 'es'), 'Total')
 })
 
-test('TEST 12 EN package overlay copy', () => {
-  assert.equal(getPackagePriceCaption('en'), 'DOLLARS PER PERSON')
-  assert.match(getPackageSidesDescription('en'), /black beans/i)
-  assert.doesNotMatch(getPackageSidesDescription('en'), /tropeiro/i)
-  const menu = getPackageHeroMenuLines(
-    { package_key: 'BBQCHO+' },
-    'en',
-  )
-  assert.ok(menu.some((line) => /salmon or shrimp/i.test(line)))
-  assert.ok(menu.some((line) => /angus picanha/i.test(line)))
-  assert.ok(menu.every((line) => !/salmão|camarão|linguiça/i.test(line)))
-  const trad = getPackageHeroMenuLines({ package_key: 'BBQTRAD+' }, 'en')
-  assert.ok(trad.some((line) => /traditional sausage/i.test(line)))
-  const prime = getPackageHeroMenuLines({ package_key: 'BBQPRI+' }, 'en')
-  assert.ok(prime.some((line) => /rack of lamb/i.test(line)))
+test('TEST 12 EN/ES catalog copy stays in i18n, not baked into the hero', () => {
+  const translations = source('Lib/quoteTranslations.ts')
+  assert.match(translations, /Keep scrolling to review all additional items/)
+  assert.match(translations, /Sigue desplazándote para revisar todos los adicionales/)
+  assert.match(translations, /Packages that include the side dishes/)
+  assert.match(translations, /Paquetes que incluyen los acompañamientos/)
+  const hero = source('components/quotes/PackageCatalogHeroArt.tsx')
+  assert.doesNotMatch(hero, /data-package-hero-price/)
+  assert.doesNotMatch(hero, /data-package-hero-garnish/)
+  assert.doesNotMatch(hero, /data-package-hero-menu/)
+  assert.doesNotMatch(hero, /getPackageHeroMenuLines/)
+  assert.equal(getPackagePerPersonUnitLabel('en'), 'person')
+  assert.equal(getPackagePerPersonUnitLabel('es'), 'persona')
 })
 
-test('TEST 13 ES package overlay copy', () => {
-  assert.equal(getPackagePriceCaption('es'), 'DÓLARES POR PERSONA')
-  assert.match(getPackageSidesDescription('es'), /Frijoles negros/i)
-  assert.doesNotMatch(getPackageSidesDescription('es'), /tropeiro/i)
-  const menu = getPackageHeroMenuLines(
-    { package_key: 'BBQCHO+' },
-    'es',
-  )
-  assert.ok(menu.some((line) => /salmón o camarón/i.test(line)))
-  assert.ok(menu.some((line) => /picaña angus/i.test(line)))
-  assert.ok(menu.every((line) => !/salmão|camarão|linguiça/i.test(line)))
+test('TEST 13 package options stay inline and grouping is one-open-at-a-time', () => {
+  const catalog = source('components/quotes/PublicPackageCatalog.tsx')
+  assert.match(catalog, /data-public-package-options/)
+  assert.match(catalog, /lg:col-span-2/)
+  assert.match(catalog, /current === 'with_sides' \? null : 'with_sides'/)
+  assert.match(catalog, /data-package-price-breakdown/)
+  assert.match(catalog, /showGarnishLine/)
 })
 
-test('TEST 14 Feijão preto is the garnish overlay, not tropeiro', () => {
+test('TEST 14 Feijão preto remains the garnish copy helper, not tropeiro', () => {
   const hero = source('components/quotes/PackageCatalogHeroArt.tsx')
   const catalog = source('components/quotes/PublicPackageCatalog.tsx')
-  assert.match(hero, /getPackageSidesDescription/)
-  assert.match(hero, /data-package-hero-price/)
-  assert.match(hero, /data-package-hero-garnish/)
-  assert.match(hero, /data-package-hero-menu/)
-  assert.match(hero, /@container/)
-  assert.match(hero, /bg-\[#14100c\]/)
-  assert.doesNotMatch(hero, /bg-black\/75/)
-  assert.match(catalog, /data-package-price-breakdown/)
-  assert.match(catalog, /data-package-display-total/)
   assert.doesNotMatch(hero, /tropeiro/i)
   assert.doesNotMatch(catalog, /tropeiro/i)
-  assert.deepEqual(getPackageHeroMenuLines({ package_key: 'BBQCHO+' }, 'pt'), [])
+  assert.match(getPackageSidesDescription('pt'), /Feijão preto/i)
+  assert.doesNotMatch(getPackageSidesDescription('pt'), /tropeiro/i)
+  assert.match(getPackageSidesDescription('en'), /black beans/i)
+  assert.match(getPackageSidesDescription('es'), /Frijoles negros/i)
   const visual = source('Lib/packageCatalogVisual.ts')
   assert.doesNotMatch(visual, /from '\.\/cdlCommercialRules'/)
   assert.doesNotMatch(visual, /from '\.\/cdlPackageItemI18n'/)
-  const commercial = source('Lib/cdlCommercialRules.ts')
-  assert.match(visual, /Salmão ou camarão/)
-  assert.match(commercial, /Salmão ou camarão/)
-  assert.match(visual, /Carré de cordeiro/)
-  assert.match(commercial, /Carré de cordeiro/)
 })
 
 /* TEST 15 mileage miles only via company-scoped unit */
@@ -344,24 +346,79 @@ test('TEST 16 mobile overflow contracts exist', () => {
   assert.doesNotMatch(stepper, /overflow-x-auto/)
 })
 
-test('TEST 17 extras review UI no longer shows REVISADA', () => {
+test('TEST 17 extras review uses scroll exposure instead of mandatory clicks', () => {
   const extras = source(
     'components/quotes/additionals/AdditionalCategorySection.tsx',
   )
   assert.doesNotMatch(extras, /categoryReviewStatusReviewed/)
-  assert.doesNotMatch(extras, /IntersectionObserver/)
+  assert.match(extras, /IntersectionObserver/)
+  assert.match(extras, /data-additional-category-sentinel/)
   assert.match(extras, /data-category-reviewed/)
+  assert.doesNotMatch(extras, /data-additional-category-preview/)
   const wizard = source('app/quotes/new/QuoteWizard.tsx')
   assert.doesNotMatch(
     wizard,
     /setVisitedAdditionalCategories\(new Set\(additionalCategoryKeys\)\)/,
   )
   assert.match(wizard, /handleAdditionalsNextBlockedClick/)
-  assert.match(wizard, /scrollToAdditionalCategory/)
-  assert.match(wizard, /additionalsStepNextDisabled/)
+  assert.match(wizard, /handleAdditionalCategoryExpose/)
+  assert.match(wizard, /extrasExposeArmedRef/)
+  assert.match(wizard, /additionalsKeepScrolling/)
+  assert.doesNotMatch(wizard, /markAdditionalCategoryVisited\(category\)/)
   const stepNav = source('components/quotes/QuoteWizardStepNav.tsx')
   assert.match(stepNav, /data-additionals-review-hint/)
   assert.match(stepNav, /additionalsReviewMessage/)
+  assert.equal(
+    shouldAutoOpenAdditionalCategory({ isIntersecting: true, intersectionRatio: 0.5 }),
+    true,
+  )
+  assert.equal(
+    shouldAutoOpenAdditionalCategory({ isIntersecting: true, intersectionRatio: 0.1 }),
+    false,
+  )
+  assert.equal(
+    shouldExposeAdditionalCategory({ isIntersecting: true, intersectionRatio: 0.6 }),
+    true,
+  )
+  assert.equal(
+    shouldExposeAdditionalCategory({ isIntersecting: false, intersectionRatio: 1 }),
+    false,
+  )
+})
+
+test('TEST 20-22 PDF uses dynamic pricing below the art, never rasterized in the image', () => {
+  const pdf = source('app/quotes/[id]/QuotePdfDocument.tsx')
+  const generate = source('Lib/generateQuotePdf.tsx')
+  assert.match(generate, /resolveRemoteImageForPdf/)
+  assert.match(pdf, /packagePriceBox/)
+  assert.match(pdf, /packageArt/)
+  assert.match(pdf, /resolveQuotePdfPackagePerPersonBreakdown/)
+  assert.match(pdf, /showSides/)
+  assert.doesNotMatch(pdf, /data-package-hero-price/)
+  const withSides = resolveQuotePdfPackagePerPersonBreakdown({
+    packageKey: 'BBQCHO+',
+    packageUnitPrice: 78,
+    sidesPricePerPerson: 13,
+  })
+  assert.deepEqual(withSides, {
+    showSides: true,
+    packagePerPerson: 65,
+    sidesPerPerson: 13,
+    totalPerPerson: 78,
+  })
+  const withoutSides = resolveQuotePdfPackagePerPersonBreakdown({
+    packageKey: 'BBQCHO',
+    packageUnitPrice: 65,
+    sidesPricePerPerson: 13,
+  })
+  assert.equal(withoutSides?.showSides, false)
+  assert.equal(withoutSides?.totalPerPerson, 65)
+  const custom = resolveQuotePdfPackagePerPersonBreakdown({
+    packageKey: 'BBQPERS+',
+    packageUnitPrice: 0,
+    sidesPricePerPerson: 13,
+  })
+  assert.equal(custom, null)
 })
 
 test('inline package options remain under the selected card', () => {

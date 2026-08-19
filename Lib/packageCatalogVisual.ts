@@ -39,6 +39,15 @@ export function getPackageCatalogVariant(
   return 'without_sides'
 }
 
+/** Structured Com/Sem guarnição group from the package_key suffix, not the label. */
+export function getPublicPackageSidesGroup(
+  pkg: PackageCatalogFields,
+): 'with_sides' | 'without_sides' {
+  return (pkg.package_key ?? '').trim().endsWith('+')
+    ? 'with_sides'
+    : 'without_sides'
+}
+
 export function getPackageCatalogName(
   pkg: PackageCatalogFields,
   language: QuoteLanguage = 'pt',
@@ -196,10 +205,14 @@ export function isPackageCatalogPriceOnRequest(
   return !Number.isFinite(price) || price <= 0
 }
 
-function perPersonSuffix(language: QuoteLanguage): string {
+export function getPackagePerPersonUnitLabel(language: QuoteLanguage): string {
   if (language === 'en') return 'person'
   if (language === 'es') return 'persona'
   return 'pessoa'
+}
+
+function perPersonSuffix(language: QuoteLanguage): string {
+  return getPackagePerPersonUnitLabel(language)
 }
 
 export function getPackageCatalogPriceOnRequestLabel(
