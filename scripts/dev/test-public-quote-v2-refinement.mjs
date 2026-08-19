@@ -12,6 +12,7 @@ import {
   formatPublicPhoneInput,
   getPublicPhoneDefault,
   isUsablePublicPhone,
+  sanitizeStoredPublicPhone,
   toPublicPhoneE164,
 } from '../../Lib/publicQuote/phone.ts'
 import {
@@ -119,6 +120,35 @@ test('phone preserves other country codes', () => {
   assert.match(formatPublicPhoneInput('+447700900123'), /^\+44/)
   assert.equal(toPublicPhoneE164('+34600123456'), '+34600123456')
   assert.equal(formatPublicPhoneInput('0055 11 976182170'), '+55 11 97618-2170')
+})
+
+test('a plus typed after other digits restarts the country code', () => {
+  // Field already holding a legacy "+1 " and the customer types +55.
+  assert.equal(
+    formatPublicPhoneInput('+1 +55 11 97618-2170'),
+    '+55 11 97618-2170',
+  )
+  assert.equal(formatPublicPhoneInput('(407) 555-1234+55'), '+55')
+  assert.equal(toPublicPhoneE164('+1 +55 11 97618-2170'), '+5511976182170')
+})
+
+test('legacy stored bare country codes restore as empty', () => {
+  assert.equal(sanitizeStoredPublicPhone('+1 '), '')
+  assert.equal(sanitizeStoredPublicPhone('+1'), '')
+  assert.equal(sanitizeStoredPublicPhone('+'), '')
+  assert.equal(sanitizeStoredPublicPhone(''), '')
+  assert.equal(sanitizeStoredPublicPhone(null), '')
+  assert.equal(sanitizeStoredPublicPhone('+14075551234'), '+14075551234')
+  assert.equal(
+    sanitizeStoredPublicPhone('+55 11 97618-2170'),
+    '+55 11 97618-2170',
+  )
+  const experience = source(
+    'app/quote/[companySlug]/[locale]/PublicQuoteExperience.tsx',
+  )
+  assert.match(experience, /sanitizeStoredPublicPhone\(draft\.contact\?\.phone\)/)
+  const wizard = source('app/quotes/new/QuoteWizard.tsx')
+  assert.match(wizard, /sanitizeStoredPublicPhone\(base\.customerDraftPhone\)/)
 })
 
 test('phone rejects incomplete numbers', () => {
@@ -405,7 +435,9 @@ test('consolidated review carries contact and full address', () => {
   assert.match(layout, /data\.customerEmail/)
   assert.match(layout, /data\.addressNumber/)
   assert.match(layout, /data\.country/)
-  assert.match(layout, /mileageFormula/)
+  assert.match(layout, /mileageRateLabel/)
+  assert.match(layout, /mileageRuleSummary/)
+  assert.doesNotMatch(layout, /mileageLine\.formula/)
   const mapper = source('components/quote-review/mapWizardToQuoteReview.ts')
   assert.match(mapper, /customerPhone: state\.customerDraftPhone/)
   assert.match(mapper, /customerEmail: state\.customerDraftEmail/)

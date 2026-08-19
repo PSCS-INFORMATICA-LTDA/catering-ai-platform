@@ -85,6 +85,7 @@ import {
 } from '@/Lib/publicQuote/packageLookup'
 import {
   isUsablePublicPhone,
+  sanitizeStoredPublicPhone,
   toPublicPhoneE164,
 } from '@/Lib/publicQuote/phone'
 import type { PublicLocationBias } from '@/Lib/publicQuote/locationBias'
@@ -1057,7 +1058,7 @@ export default function QuoteWizardCore({
       branchId: publicContext?.branchId ?? base.branchId,
       publicConsentVersion:
         publicContext?.consentVersion ?? base.publicConsentVersion,
-      customerDraftPhone: base.customerDraftPhone.trim(),
+      customerDraftPhone: sanitizeStoredPublicPhone(base.customerDraftPhone),
     }
   })
   const [customerSearch, setCustomerSearch] = useState('')

@@ -21,6 +21,7 @@ import {
   type WizardState,
 } from '@/Lib/quoteWizardTypes'
 import type { CommercialRulesSnapshot } from '@/Lib/supabaseCommercialRules'
+import { sanitizeStoredPublicPhone } from '@/Lib/publicQuote/phone'
 
 export type PublicQuotePageBootstrap = {
   company: {
@@ -211,7 +212,7 @@ function hydrateDraft(
     customerFirstName: firstName,
     customerLastName: lastName,
     customerDraftName: [firstName, lastName].filter(Boolean).join(' '),
-    customerDraftPhone: draft.contact?.phone || '',
+    customerDraftPhone: sanitizeStoredPublicPhone(draft.contact?.phone),
     customerDraftEmail: draft.contact?.email || '',
     eventName:
       draft.event?.eventName || [firstName, lastName].filter(Boolean).join(' '),

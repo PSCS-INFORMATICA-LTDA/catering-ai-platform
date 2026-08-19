@@ -12,11 +12,17 @@ export function getPublicPhoneDefault(): string {
   return ''
 }
 
-/** Keeps digits and separators, and allows a single leading `+`. */
+/**
+ * Keeps digits and separators, and allows a single leading `+`. A `+` typed
+ * after other characters means the customer is restarting with another country
+ * code, so everything before it is dropped instead of being merged.
+ */
 function sanitizePhoneInput(raw: string): string {
   const cleaned = raw.replace(/[^\d+\s()-]/g, '')
-  const leadingPlus = cleaned.trimStart().startsWith('+')
-  const withoutPlus = cleaned.replace(/\+/g, '')
+  const lastPlus = cleaned.lastIndexOf('+')
+  const fromLastPlus = lastPlus > 0 ? cleaned.slice(lastPlus) : cleaned
+  const leadingPlus = fromLastPlus.trimStart().startsWith('+')
+  const withoutPlus = fromLastPlus.replace(/\+/g, '')
   return leadingPlus ? `+${withoutPlus}` : withoutPlus
 }
 
@@ -99,4 +105,17 @@ export function isUsablePublicPhone(raw: string): boolean {
 export function displayPublicPhone(raw: string | null | undefined): string {
   if (!raw?.trim()) return ''
   return formatPublicPhoneInput(raw)
+}
+
+/**
+ * Drafts saved before the field started empty can hold a bare country code
+ * such as `+1 `. Restoring that would put the customer back in the state where
+ * the prefix cannot be erased naturally, so it is treated as empty.
+ */
+export function sanitizeStoredPublicPhone(
+  value: string | null | undefined,
+): string {
+  const trimmed = value?.trim()
+  if (!trimmed) return ''
+  return toE164Digits(trimmed).length < 4 ? '' : trimmed
 }
