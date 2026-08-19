@@ -110,6 +110,10 @@ export default function PublicPackageCatalog({
   onSelectionChange,
   pendingSelectionGroupIds,
   onSelect,
+  onNext,
+  nextDisabled = false,
+  onNextBlockedClick,
+  stepMessage,
 }: {
   packagesWithoutSides: PublicPackageCard[]
   packagesWithSides: PublicPackageCard[]
@@ -121,6 +125,10 @@ export default function PublicPackageCatalog({
   onSelectionChange: (groupId: string, itemId: string) => void
   pendingSelectionGroupIds: string[]
   onSelect: (id: string) => void
+  onNext?: () => void
+  nextDisabled?: boolean
+  onNextBlockedClick?: () => void
+  stepMessage?: string | null
 }) {
   const t = getQuoteStrings(language)
   const catalog = [...packagesWithSides, ...packagesWithoutSides]
@@ -169,6 +177,35 @@ export default function PublicPackageCatalog({
             />
           </div>
         </section>
+      ) : null}
+
+      {onNext ? (
+        <div className="space-y-2">
+          {stepMessage ? (
+            <p className="text-sm font-medium text-[var(--brand-primary)]">
+              {stepMessage}
+            </p>
+          ) : null}
+          <div className="relative">
+            {nextDisabled && onNextBlockedClick ? (
+              <button
+                type="button"
+                aria-label={tw(language, 'nextCompleteOptions')}
+                className="absolute inset-0 z-10 cursor-not-allowed rounded-xl"
+                onClick={onNextBlockedClick}
+              />
+            ) : null}
+            <button
+              type="button"
+              data-testid="public-package-next"
+              onClick={onNext}
+              disabled={nextDisabled}
+              className="cdl-btn-primary w-full bg-[var(--brand-primary-2)] text-white disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+            >
+              {t.next}
+            </button>
+          </div>
+        </div>
       ) : null}
     </div>
   )

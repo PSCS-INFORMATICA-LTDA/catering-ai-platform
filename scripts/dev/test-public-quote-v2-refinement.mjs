@@ -238,6 +238,8 @@ test('public package step is image-first and does not dump highlights', () => {
   const catalog = source('components/quotes/PublicPackageCatalog.tsx')
   assert.match(catalog, /getPackageCatalogImage/)
   assert.match(catalog, /PackageIncludedOptions/)
+  assert.match(catalog, /data-testid="public-package-next"/)
+  assert.match(catalog, /onNext/)
   assert.doesNotMatch(
     catalog,
     /Destaques|packageHighlights|SelectedPackageDetails/,
@@ -245,6 +247,7 @@ test('public package step is image-first and does not dump highlights', () => {
   const wizard = source('app/quotes/new/QuoteWizard.tsx')
   assert.match(wizard, /PublicPackageCatalog/)
   assert.match(wizard, /isPublicMode/)
+  assert.match(wizard, /onNext=\{goNext\}/)
 })
 
 test('PT/EN/ES cover new public quote strings', () => {

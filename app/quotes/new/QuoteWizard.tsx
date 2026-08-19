@@ -2907,6 +2907,16 @@ export default function QuoteWizardCore({
                 onSelectionChange={handlePackageSelectionChange}
                 pendingSelectionGroupIds={pendingSelectionGroupIds}
                 onSelect={handlePackageSelect}
+                onNext={goNext}
+                nextDisabled={packageStepNextDisabled}
+                stepMessage={packageStepMessage}
+                onNextBlockedClick={() => {
+                  if (!state.packageId) {
+                    setPackageStepMessage(w.selectPackageToContinue)
+                    return
+                  }
+                  setPackageSelectionAttempted(true)
+                }}
               />
             ) : (
               <QuotePackageStepExplorer
@@ -3309,6 +3319,7 @@ export default function QuoteWizardCore({
             additionalsStepNextDisabled={additionalsStepNextDisabled}
             grillStepPendingIssuesCount={grillStepPendingIssues.length}
             keepPackageNextVisible={isPublicMode}
+            sticky={isPublicMode}
             onBack={goBack}
             onNext={goNext}
             onPackageNextBlockedClick={() => {

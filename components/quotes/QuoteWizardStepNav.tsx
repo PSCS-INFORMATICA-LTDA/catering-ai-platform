@@ -14,6 +14,7 @@ export default function QuoteWizardStepNav({
   additionalsStepNextDisabled,
   grillStepPendingIssuesCount,
   keepPackageNextVisible = false,
+  sticky = false,
   onBack,
   onNext,
   onPackageNextBlockedClick,
@@ -28,6 +29,7 @@ export default function QuoteWizardStepNav({
   additionalsStepNextDisabled: boolean
   grillStepPendingIssuesCount: number
   keepPackageNextVisible?: boolean
+  sticky?: boolean
   onBack: () => void
   onNext: () => void
   onPackageNextBlockedClick: () => void
@@ -47,7 +49,13 @@ export default function QuoteWizardStepNav({
     (step === 4 && grillStepPendingIssuesCount > 0)
 
   return (
-    <div className="mt-8 space-y-3">
+    <div
+      className={
+        sticky
+          ? 'sticky bottom-0 z-30 mt-8 space-y-3 border-t border-cdl-border bg-[color-mix(in_srgb,var(--brand-bg)_92%,white)] py-3 backdrop-blur-sm'
+          : 'mt-8 space-y-3'
+      }
+    >
       {step === 2 && !packageId && packageStepMessage ? (
         <p className="text-center text-sm font-medium text-[var(--brand-primary)] sm:text-right">
           {packageStepMessage}
@@ -82,9 +90,10 @@ export default function QuoteWizardStepNav({
             ) : null}
             <button
               type="button"
+              data-testid="wizard-global-next"
               onClick={onNext}
               disabled={nextDisabled}
-              className="cdl-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+              className="cdl-btn-primary w-full bg-[var(--brand-primary-2)] text-white disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
             >
               {quoteStrings.next}
             </button>
