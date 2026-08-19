@@ -64,7 +64,11 @@ const sessionSrc = source('Lib/publicQuote/session.ts')
 test('TEST 1 Public header uses tenant logo', () => {
   assert.match(experience, /data-tenant-logo/)
   assert.match(experience, /bootstrap\.company\.logoUrl/)
-  assert.match(experience, /object-contain/)
+  assert.match(experience, /object-cover/)
+  assert.match(experience, /PublicQuoteBrandLockup/)
+  const lockup = source('components/quotes/PublicQuoteBrandLockup.tsx')
+  assert.match(lockup, /CDL Services/)
+  assert.match(lockup, /Barbecue At Home/)
   assert.match(bootstrap, /resolveCompanyLogoUrl/)
   assert.doesNotMatch(experience, /if \(company === ['\"]CDL['\"]\)/)
   assert.doesNotMatch(bootstrap, /if \(company === ['\"]CDL['\"]\)/)
@@ -128,6 +132,13 @@ test('TEST 9 Premium copy lives above the selectors', () => {
   assert.match(tw('es', 'publicPackageExperienceBody'), /con o sin acompañamientos/)
   assert.match(catalog, /data-package-experience-intro/)
   assert.doesNotMatch(catalog, /packageGroupHint\(/)
+  assert.equal(tw('pt', 'withSidesGroupTitle'), 'COM GUARNIÇÕES')
+  assert.equal(tw('pt', 'withoutSidesGroupTitle'), 'SEM GUARNIÇÕES')
+  assert.equal(tw('en', 'withSidesGroupTitle'), 'WITH SIDES')
+  assert.equal(tw('en', 'withoutSidesGroupTitle'), 'WITHOUT SIDES')
+  assert.equal(tw('es', 'withSidesGroupTitle'), 'CON ACOMPAÑAMIENTOS')
+  assert.equal(tw('es', 'withoutSidesGroupTitle'), 'SIN ACOMPAÑAMIENTOS')
+  assert.match(catalog, /Playfair_Display/)
 })
 
 test('TEST 10 Package name canonical', () => {
@@ -279,6 +290,8 @@ test('TEST 28 PSCS One branding correct', () => {
   assert.match(sidebar, /PSCS One/)
   assert.doesNotMatch(sidebar, /PSCS Informática/)
   assert.match(sidebar, /PscsOneMark/)
+  assert.match(sidebar, /data-sidebar-pscs-one/)
+  assert.match(sidebar, /aria-label="PSCS One"/)
   assert.match(mark, /src="\/brand\/pscs-one\.png"/)
   assert.match(mark, /alt="PSCS One"/)
 })
@@ -307,11 +320,14 @@ test('TEST 31 Public landing tenant-first', () => {
   assert.ok(powered === -1 || powered > tenantLogo)
 })
 
-test('TEST 32 Powered by PSCS One - Catering AI', () => {
-  assert.match(experience, /Powered by PSCS One · Catering AI/)
+test('TEST 32 Powered by PSCS One is discreet', () => {
+  assert.match(experience, /Powered by PSCS One/)
+  assert.doesNotMatch(experience, /Powered by PSCS One · Catering AI/)
   assert.doesNotMatch(experience, /Catering App/)
   assert.match(experience, /data-powered-by/)
+  assert.match(experience, /data-footer-cdl-logo/)
   assert.match(experience, /data-footer-since-pioneer/)
+  assert.match(experience, /size="sm"/)
   assert.equal(
     tw('pt', 'footerSincePioneer'),
     'Desde 2017 · Pioneira em Orlando, Flórida',
@@ -383,13 +399,20 @@ test('TEST 37 Returning to Package reopens the selected family only', () => {
   assert.match(catalog, /if \(!selectedPackageId\) return null/)
 })
 
-test('TEST 38 Landing watermark is a centered circular clip', () => {
-  assert.match(experience, /data-landing-watermark/)
-  assert.match(experience, /overflow-hidden rounded-full/)
-  assert.match(experience, /left-1\/2 top-1\/2/)
-  assert.match(experience, /-translate-x-1\/2 -translate-y-1\/2/)
-  assert.match(experience, /clipPath: 'circle\(46%\)'/)
-  assert.doesNotMatch(experience, /-right-8 bottom-\[-12%\]/)
+test('TEST 38 Landing watermark is removed in favor of hero media', () => {
+  assert.doesNotMatch(experience, /data-landing-watermark/)
+  assert.doesNotMatch(experience, /clipPath: 'circle\(46%\)'/)
+  assert.match(experience, /PublicQuoteHeroMedia/)
+  const hero = source('components/quotes/PublicQuoteHeroMedia.tsx')
+  assert.match(hero, /data-public-hero-media/)
+  assert.match(hero, /autoPlay/)
+  assert.match(hero, /playsInline/)
+  assert.match(hero, /muted/)
+  assert.match(hero, /loop=\{videos\.length === 1\}/)
+  assert.doesNotMatch(
+    experience,
+    /h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white/,
+  )
 })
 
 test('TEST 39 Landing CTA starts a new quote session', () => {

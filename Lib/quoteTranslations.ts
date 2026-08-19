@@ -598,10 +598,10 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Toque no pacote para selecionar. Depois complete apenas as opções obrigatórias.',
       publicPackageExperienceTitle: 'Escolha sua experiência',
       publicPackageExperienceBody:
-        'Comece escolhendo como deseja montar o seu churrasco. Nossos pacotes estão disponíveis com ou sem guarnições. Depois de escolher o estilo, explore as opções disponíveis, selecione o pacote ideal para o seu evento e personalize somente as escolhas aplicáveis. O valor é atualizado automaticamente conforme a sua seleção.',
+        'Comece pelo estilo do seu churrasco: com ou sem guarnições. Explore os pacotes, escolha o que combina com o seu evento e personalize só o que fizer sentido. O valor atualiza na hora.',
       footerSincePioneer: 'Desde 2017 · Pioneira em Orlando, Flórida',
-      withSidesGroupTitle: 'Com guarnições',
-      withoutSidesGroupTitle: 'Sem guarnições',
+      withSidesGroupTitle: 'COM GUARNIÇÕES',
+      withoutSidesGroupTitle: 'SEM GUARNIÇÕES',
       withSidesGroupHint:
         'Uma experiência completa, com acompanhamentos preparados para complementar o churrasco e deixar o serviço pronto para receber seus convidados. Explore {count} opções de pacotes disponíveis e escolha a combinação ideal para o seu evento.',
       withoutSidesGroupHint:
@@ -1025,10 +1025,10 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Tap a package to select it. Then complete only the required options.',
       publicPackageExperienceTitle: 'Choose your experience',
       publicPackageExperienceBody:
-        'Start by choosing how you would like your barbecue experience to be served. Our packages are available with or without sides. Then explore the available options, choose the package that best fits your event, and customize only the selections that apply. Pricing updates automatically based on your choices.',
+        'Start with the style of your barbecue: with or without sides. Explore the packages, choose what fits your event, and customize only what applies. Pricing updates as you go.',
       footerSincePioneer: 'Since 2017 · Pioneer in Orlando, Florida',
-      withSidesGroupTitle: 'With sides',
-      withoutSidesGroupTitle: 'Without sides',
+      withSidesGroupTitle: 'WITH SIDES',
+      withoutSidesGroupTitle: 'WITHOUT SIDES',
       withSidesGroupHint:
         'A complete experience, with sides prepared to complement the barbecue and ready your service for guests. Explore {count} available packages and choose the ideal combination for your event.',
       withoutSidesGroupHint:
@@ -1452,10 +1452,10 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Toque el paquete para seleccionarlo. Luego complete solo las opciones obligatorias.',
       publicPackageExperienceTitle: 'Elige tu experiencia',
       publicPackageExperienceBody:
-        'Comienza eligiendo cómo quieres disfrutar tu experiencia de barbecue. Nuestros paquetes están disponibles con o sin acompañamientos. Después, explora las opciones disponibles, elige el paquete ideal para tu evento y personaliza únicamente las selecciones aplicables. El precio se actualiza automáticamente según tus elecciones.',
+        'Empieza por el estilo de tu asado: con o sin acompañamientos. Explora los paquetes, elige el que combina con tu evento y personaliza solo lo que aplique. El precio se actualiza al momento.',
       footerSincePioneer: 'Desde 2017 · Pionera en Orlando, Florida',
-      withSidesGroupTitle: 'Con acompañamientos',
-      withoutSidesGroupTitle: 'Sin acompañamientos',
+      withSidesGroupTitle: 'CON ACOMPAÑAMIENTOS',
+      withoutSidesGroupTitle: 'SIN ACOMPAÑAMIENTOS',
       withSidesGroupHint:
         'Una experiencia completa, con acompañamientos preparados para complementar el asado y dejar el servicio listo para recibir a tus invitados. Explora {count} opciones de paquetes disponibles y elige la combinación ideal para tu evento.',
       withoutSidesGroupHint:

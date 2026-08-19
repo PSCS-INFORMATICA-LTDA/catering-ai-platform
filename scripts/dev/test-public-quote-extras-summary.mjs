@@ -406,8 +406,8 @@ test('TEST 25 summary rows cannot create horizontal overflow', () => {
 /* -------------------------------- I18N --------------------------------- */
 
 test('TEST 26 PT copy', () => {
-  assert.equal(tw('pt', 'withSidesGroupTitle'), 'Com guarnições')
-  assert.equal(tw('pt', 'withoutSidesGroupTitle'), 'Sem guarnições')
+  assert.equal(tw('pt', 'withSidesGroupTitle'), 'COM GUARNIÇÕES')
+  assert.equal(tw('pt', 'withoutSidesGroupTitle'), 'SEM GUARNIÇÕES')
   assert.equal(tw('pt', 'publicPackageExperienceTitle'), 'Escolha sua experiência')
   assert.match(tw('pt', 'publicPackageExperienceBody'), /com ou sem guarnições/)
   assert.equal(
@@ -420,8 +420,8 @@ test('TEST 26 PT copy', () => {
 })
 
 test('TEST 27 EN copy', () => {
-  assert.equal(tw('en', 'withSidesGroupTitle'), 'With sides')
-  assert.equal(tw('en', 'withoutSidesGroupTitle'), 'Without sides')
+  assert.equal(tw('en', 'withSidesGroupTitle'), 'WITH SIDES')
+  assert.equal(tw('en', 'withoutSidesGroupTitle'), 'WITHOUT SIDES')
   assert.equal(tw('en', 'publicPackageExperienceTitle'), 'Choose your experience')
   assert.match(tw('en', 'publicPackageExperienceBody'), /with or without sides/)
   assert.equal(
@@ -435,8 +435,8 @@ test('TEST 27 EN copy', () => {
 })
 
 test('TEST 28 ES copy', () => {
-  assert.equal(tw('es', 'withSidesGroupTitle'), 'Con acompañamientos')
-  assert.equal(tw('es', 'withoutSidesGroupTitle'), 'Sin acompañamientos')
+  assert.equal(tw('es', 'withSidesGroupTitle'), 'CON ACOMPAÑAMIENTOS')
+  assert.equal(tw('es', 'withoutSidesGroupTitle'), 'SIN ACOMPAÑAMIENTOS')
   assert.equal(tw('es', 'publicPackageExperienceTitle'), 'Elige tu experiencia')
   assert.match(tw('es', 'publicPackageExperienceBody'), /con o sin acompañamientos/)
   assert.equal(
@@ -444,7 +444,7 @@ test('TEST 28 ES copy', () => {
     'Revisa todas las categorías antes de continuar.',
   )
   assert.equal(additionalLabel(PER_PERSON_ITEM, 'es'), 'Asado de Tira')
-  assert.match(translationsSrc, /Con acompañamientos/)
+  assert.match(translationsSrc, /CON ACOMPAÑAMIENTOS/)
 })
 
 test('TEST 29 collapsed category uses a full-card hit area', () => {

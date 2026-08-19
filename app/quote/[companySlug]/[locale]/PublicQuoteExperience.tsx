@@ -29,6 +29,16 @@ import {
 } from '@/Lib/publicQuote/sessionProgress'
 import { PscsOneMark } from '@/components/brand/PscsOneMark'
 import PublicLocaleSwitcher from '@/components/quotes/PublicLocaleSwitcher'
+import PublicQuoteHeroMedia from '@/components/quotes/PublicQuoteHeroMedia'
+import {
+  publicQuoteCopyrightLine,
+  PublicQuoteBrandLockup,
+} from '@/components/quotes/PublicQuoteBrandLockup'
+import { getPackageCatalogImage } from '@/Lib/packageCatalogVisual'
+import {
+  collectPublicHeroImages,
+  PUBLIC_QUOTE_HERO_VIDEO_SRCS,
+} from '@/Lib/publicQuote/heroMedia'
 import { tw } from '@/Lib/quoteTranslations'
 
 export type PublicQuotePageBootstrap = {
@@ -149,7 +159,7 @@ const UI_COPY = {
     restart: 'Criar outra solicitação',
     privacy: 'Privacidade',
     support: 'Precisa de ajuda?',
-    poweredBy: 'Powered by PSCS One · Catering AI',
+    poweredBy: 'Powered by PSCS One',
   },
   en: {
     secure: 'Secure online quote',
@@ -168,7 +178,7 @@ const UI_COPY = {
     restart: 'Create another request',
     privacy: 'Privacy',
     support: 'Need help?',
-    poweredBy: 'Powered by PSCS One · Catering AI',
+    poweredBy: 'Powered by PSCS One',
   },
   es: {
     secure: 'Cotización online segura',
@@ -187,7 +197,7 @@ const UI_COPY = {
     restart: 'Crear otra solicitud',
     privacy: 'Privacidad',
     support: '¿Necesitas ayuda?',
-    poweredBy: 'Powered by PSCS One · Catering AI',
+    poweredBy: 'Powered by PSCS One',
   },
 } as const
 
@@ -301,6 +311,16 @@ export default function PublicQuoteExperience({
     bootstrap.branches.find((branch) => branch.isDefault) ??
     bootstrap.branches[0] ??
     null
+  const heroImages = useMemo(
+    () =>
+      collectPublicHeroImages({
+        heroImageUrl: bootstrap.settings.heroImageUrl,
+        packageImageUrls: bootstrap.packages.map((pkg) =>
+          getPackageCatalogImage(pkg, bootstrap.packages),
+        ),
+      }),
+    [bootstrap.packages, bootstrap.settings.heroImageUrl],
+  )
   const initialState = useMemo(
     () =>
       hydrateDraft(
@@ -401,27 +421,26 @@ export default function PublicQuoteExperience({
           <div className="flex min-w-0 items-center gap-3">
             <div
               data-tenant-logo
-              className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white"
+              className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white"
             >
               {bootstrap.company.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={bootstrap.company.logoUrl}
                   alt={bootstrap.company.name}
-                  className="h-full w-full object-contain object-center"
+                  className="h-full w-full object-cover object-center"
                 />
               ) : (
-                <span className="flex h-full w-full items-center justify-center rounded-xl bg-[var(--brand-primary)] text-sm font-black text-white">
+                <span className="flex h-full w-full items-center justify-center rounded-full bg-[var(--brand-primary)] text-sm font-black text-white">
                   {bootstrap.company.name.slice(0, 2).toUpperCase()}
                 </span>
               )}
             </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-black text-cdl-title">
-                {bootstrap.company.name}
-              </p>
-              <p className="truncate text-[11px] text-cdl-muted">{copy.secure}</p>
-            </div>
+            <PublicQuoteBrandLockup
+              slug={bootstrap.company.slug}
+              name={bootstrap.company.name}
+              tagline={copy.secure}
+            />
           </div>
           <PublicLocaleSwitcher
             companySlug={bootstrap.company.slug}
@@ -434,16 +453,30 @@ export default function PublicQuoteExperience({
       {success ? (
         <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-3xl items-center px-4 py-12 sm:px-8">
           <section className="w-full rounded-[2rem] border border-cdl-border bg-cdl-surface p-7 shadow-xl sm:p-10">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-2xl text-emerald-700">
-              ✓
-            </span>
-            <p className="mt-6 text-xs font-black uppercase tracking-[0.2em] text-[var(--brand-primary)]">
+            {bootstrap.company.logoUrl ? (
+              <div
+                data-success-flame-art
+                className="mx-auto flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-white shadow-lg sm:h-32 sm:w-32"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={bootstrap.company.logoUrl}
+                  alt=""
+                  className="h-full w-full scale-[1.08] object-cover object-center"
+                />
+              </div>
+            ) : (
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-2xl text-emerald-700">
+                ✓
+              </span>
+            )}
+            <p className="mt-6 text-center text-xs font-black uppercase tracking-[0.2em] text-[var(--brand-primary)]">
               {copy.successEyebrow}
             </p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-cdl-title sm:text-4xl">
+            <h1 className="mt-2 text-center text-3xl font-black tracking-tight text-cdl-title sm:text-4xl">
               {copy.successTitle}
             </h1>
-            <p className="mt-3 text-cdl-muted">{copy.successBody}</p>
+            <p className="mt-3 text-center text-cdl-muted">{copy.successBody}</p>
             <dl className="mt-8 grid gap-3 rounded-2xl bg-cdl-inset p-5 sm:grid-cols-2">
               <div>
                 <dt className="text-xs font-bold uppercase text-cdl-muted">{copy.quote}</dt>
@@ -540,58 +573,20 @@ export default function PublicQuoteExperience({
             className="relative isolate overflow-hidden border-b border-cdl-border"
             data-public-landing
             data-landing-pending-assets={
-              bootstrap.settings.heroImageUrl ? undefined : 'true'
-            }
-            style={
-              bootstrap.settings.heroImageUrl
-                ? {
-                    backgroundImage: `linear-gradient(100deg, rgba(9,16,28,.88), rgba(9,16,28,.55)), url("${bootstrap.settings.heroImageUrl}")`,
-                    backgroundPosition: 'center',
-                    backgroundSize: 'cover',
-                  }
-                : undefined
+              PUBLIC_QUOTE_HERO_VIDEO_SRCS.length > 0 ||
+              heroImages.length > 0
+                ? undefined
+                : 'true'
             }
           >
-            <div
-              className={`absolute inset-0 -z-10 ${
-                bootstrap.settings.heroImageUrl
-                  ? ''
-                  : 'bg-[radial-gradient(circle_at_80%_20%,color-mix(in_srgb,var(--brand-primary-2)_28%,transparent),transparent_36%),linear-gradient(135deg,#0b1220,#18233a)]'
-              }`}
+            <PublicQuoteHeroMedia
+              videos={PUBLIC_QUOTE_HERO_VIDEO_SRCS}
+              images={heroImages}
+              posterUrl={bootstrap.settings.heroImageUrl}
             />
-            {bootstrap.company.logoUrl && !bootstrap.settings.heroImageUrl ? (
-              <div
-                data-landing-watermark
-                aria-hidden
-                className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[min(68vw,26rem)] w-[min(68vw,26rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full opacity-[0.12] sm:h-[min(52vw,30rem)] sm:w-[min(52vw,30rem)]"
-                style={{ clipPath: 'circle(46%)' }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={bootstrap.company.logoUrl}
-                  alt=""
-                  className="h-full w-full scale-[1.22] object-cover object-center"
-                />
-              </div>
-            ) : null}
             <div className="relative z-10 mx-auto grid min-h-[34rem] max-w-7xl items-center gap-10 px-4 py-16 text-white sm:px-8 lg:grid-cols-[minmax(0,3fr)_minmax(18rem,2fr)]">
               <div>
-                <div className="flex items-center gap-3">
-                  {bootstrap.company.logoUrl ? (
-                    <span className="inline-flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white p-1.5 shadow-lg">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={bootstrap.company.logoUrl}
-                        alt={bootstrap.company.name}
-                        className="h-full w-full object-contain object-center"
-                      />
-                    </span>
-                  ) : null}
-                  <p className="min-w-0 text-sm font-black tracking-tight text-white sm:text-base">
-                    {bootstrap.company.name}
-                  </p>
-                </div>
-                <p className="mt-6 text-xs font-black uppercase tracking-[0.24em] text-[var(--brand-primary-2)]">
+                <p className="mt-0 text-xs font-black uppercase tracking-[0.24em] text-[var(--brand-primary-2)]">
                   {bootstrap.settings.landing.eyebrow}
                 </p>
                 <h1 className="mt-5 max-w-4xl text-4xl font-black leading-[1.04] tracking-[-0.04em] sm:text-6xl">
@@ -633,28 +628,45 @@ export default function PublicQuoteExperience({
         </main>
       )}
 
+      {!started || success ? (
       <footer className="border-t border-cdl-border bg-cdl-surface">
-        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:flex-row sm:items-end sm:justify-between sm:px-8">
-          <div className="space-y-3">
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-6 px-4 py-10 text-center sm:px-8">
+          {bootstrap.company.logoUrl ? (
+            <div
+              data-footer-cdl-logo
+              className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-white shadow-md sm:h-28 sm:w-28"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={bootstrap.company.logoUrl}
+                alt={bootstrap.company.name}
+                className="h-full w-full scale-[1.08] object-cover object-center"
+              />
+            </div>
+          ) : null}
+          <div className="space-y-2">
             <p
               data-footer-since-pioneer
-              className="text-sm font-semibold tracking-tight text-cdl-title"
+              className="text-sm font-semibold tracking-tight text-cdl-title sm:text-base"
             >
               {tw(locale, 'footerSincePioneer')}
             </p>
             <p className="text-[11px] text-cdl-faint">
-              © {new Date().getFullYear()}{' '}
-              {bootstrap.company.name.replace(/\s+DEV$/i, '').trim()}
-            </p>
-            <p
-              data-powered-by
-              className="flex flex-wrap items-center gap-2 pt-2 text-[11px] text-cdl-muted"
-            >
-              <PscsOneMark className="px-1.5 py-0.5" />
-              <span>{copy.poweredBy}</span>
+              {publicQuoteCopyrightLine(
+                bootstrap.company.slug,
+                bootstrap.company.name,
+                new Date().getFullYear(),
+              )}
             </p>
           </div>
-          <div className="flex flex-wrap gap-4 text-xs text-cdl-muted">
+          <p
+            data-powered-by
+            className="flex flex-wrap items-center justify-center gap-1.5 text-[10px] tracking-wide text-cdl-faint"
+          >
+            <PscsOneMark size="sm" className="!px-1 !py-0.5" />
+            <span>{copy.poweredBy}</span>
+          </p>
+          <div className="flex flex-wrap justify-center gap-4 text-xs text-cdl-muted">
             {bootstrap.settings.consent.privacyUrl ? (
               <a href={bootstrap.settings.consent.privacyUrl}>{copy.privacy}</a>
             ) : null}
@@ -666,6 +678,7 @@ export default function PublicQuoteExperience({
           </div>
         </div>
       </footer>
+      ) : null}
     </div>
   )
 }

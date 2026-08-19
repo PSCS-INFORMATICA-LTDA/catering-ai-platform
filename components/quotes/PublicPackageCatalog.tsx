@@ -1,6 +1,7 @@
 'use client'
 
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Playfair_Display } from 'next/font/google'
 import {
   findBasePackage,
   formatPackageCatalogPriceLabel,
@@ -20,12 +21,54 @@ import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import PackageIncludedOptions from '@/components/quotes/PackageIncludedOptions'
 import PackageCatalogHeroArt from '@/components/quotes/PackageCatalogHeroArt'
 
+type PackageSidesGroup = 'with_sides' | 'without_sides'
+
 type PublicPackageCard = PackageCatalogFields & {
   id: string
   package_key?: string | null
 }
 
-type PackageSidesGroup = 'with_sides' | 'without_sides'
+function PackageExperienceBody({
+  language,
+  text,
+}: {
+  language: QuoteLanguage
+  text: string
+}) {
+  const marks =
+    language === 'en'
+      ? ['with or without sides', 'Pricing updates as you go.']
+      : language === 'es'
+        ? ['con o sin acompañamientos', 'El precio se actualiza al momento.']
+        : ['com ou sem guarnições', 'O valor atualiza na hora.']
+  const nodes: ReactNode[] = []
+  let remaining = text
+  let key = 0
+  for (const mark of marks) {
+    const index = remaining.toLowerCase().indexOf(mark.toLowerCase())
+    if (index < 0) continue
+    if (index > 0) {
+      nodes.push(<span key={key++}>{remaining.slice(0, index)}</span>)
+    }
+    nodes.push(
+      <strong key={key++} className="font-black text-cdl-title">
+        {remaining.slice(index, index + mark.length)}
+      </strong>,
+    )
+    remaining = remaining.slice(index + mark.length)
+  }
+  if (remaining) nodes.push(<span key={key++}>{remaining}</span>)
+  return (
+    <p className="mt-3 text-sm leading-relaxed text-cdl-muted">{nodes}</p>
+  )
+}
+
+const packageGroupDisplay = Playfair_Display({
+  subsets: ['latin'],
+  weight: ['700'],
+  display: 'swap',
+})
+
 
 function formatMoney(
   value: number,
@@ -74,7 +117,9 @@ function PackageGroupToggle({
           : 'border-cdl-border bg-cdl-surface text-cdl-title hover:bg-cdl-hover'
       }`}
     >
-      <span className="text-sm font-black tracking-tight sm:text-[0.95rem]">
+      <span
+        className={`${packageGroupDisplay.className} text-[0.78rem] font-bold uppercase tracking-[0.18em] text-cdl-title sm:text-[0.88rem]`}
+      >
         {title}
       </span>
       {selected ? (
@@ -307,9 +352,10 @@ export default function PublicPackageCatalog({
         <h2 className="text-xl font-black tracking-tight text-cdl-title sm:text-2xl">
           {tw(language, 'publicPackageExperienceTitle')}
         </h2>
-        <p className="mt-3 text-sm leading-relaxed text-cdl-muted">
-          {tw(language, 'publicPackageExperienceBody')}
-        </p>
+        <PackageExperienceBody
+          language={language}
+          text={tw(language, 'publicPackageExperienceBody')}
+        />
       </section>
       <div
         data-package-group-controls

@@ -192,11 +192,12 @@ export function CateringSidebar({
 
           <footer className="mt-auto space-y-2 border-t border-white/10 px-3 py-2.5">
             <ThemeToggle className="catering-sidebar-theme-toggle w-full justify-center" />
-            <div className="flex flex-col items-center gap-1.5">
-              <PscsOneMark />
-              <p className="text-center text-[0.65rem] text-white/40">
-                PSCS One
-              </p>
+            <div
+              className="flex justify-center py-1"
+              aria-label="PSCS One"
+              data-sidebar-pscs-one
+            >
+              <PscsOneMark size="sm" />
             </div>
           </footer>
         </div>

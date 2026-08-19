@@ -413,11 +413,11 @@
 
 .quote-proposal-pscs-mark {
   margin-top: 0.5rem;
-  height: 1.75rem;
+  height: 0.9rem;
   width: auto;
   object-fit: contain;
   background: transparent;
-  opacity: 0.9;
+  opacity: 0.72;
 }
 
 .quote-proposal-package-split {
