@@ -43,14 +43,45 @@ function destinationAddress(draft: PublicQuoteDraft) {
   )
 }
 
+function mapsBrowserReferer(referer?: string | null) {
+  const value = referer?.trim()
+  if (value) return value.endsWith('/') ? value : `${value}/`
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()
+  if (appUrl) return appUrl.endsWith('/') ? appUrl : `${appUrl}/`
+  const vercel = process.env.VERCEL_URL?.trim()
+  if (vercel) return `https://${vercel.replace(/^https?:\/\//, '')}/`
+  return ''
+}
+
+function destinationForRoutes(draft: PublicQuoteDraft) {
+  const address = draft.event.address
+  if (address.placeId?.trim()) return { placeId: address.placeId.trim() }
+  if (
+    typeof address.latitude === 'number' &&
+    typeof address.longitude === 'number' &&
+    Number.isFinite(address.latitude) &&
+    Number.isFinite(address.longitude)
+  ) {
+    return {
+      location: {
+        latLng: {
+          latitude: address.latitude,
+          longitude: address.longitude,
+        },
+      },
+    }
+  }
+  return { address: destinationAddress(draft) }
+}
+
 async function computeWithRoutesApi(
   apiKey: string,
   origin: string,
   draft: PublicQuoteDraft,
+  referer?: string | null,
 ): Promise<number | null> {
-  const destination = draft.event.address.placeId
-    ? { placeId: draft.event.address.placeId }
-    : { address: destinationAddress(draft) }
+  const destination = destinationForRoutes(draft)
+  const browserReferer = mapsBrowserReferer(referer)
   const response = await fetch(
     'https://routes.googleapis.com/directions/v2:computeRoutes',
     {
@@ -61,6 +92,7 @@ async function computeWithRoutesApi(
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
         'X-Goog-FieldMask': 'routes.distanceMeters',
+        ...(browserReferer ? { Referer: browserReferer } : {}),
       },
       body: JSON.stringify({
         origin: { address: origin },
@@ -119,7 +151,7 @@ async function computeWithLegacyDistanceMatrix(
 export async function resolvePublicQuoteMileageDistance(
   draft: PublicQuoteDraft,
   originValue: string,
-  options: { required?: boolean } = {},
+  options: { required?: boolean; referer?: string | null } = {},
 ): Promise<PublicQuoteMileageResult> {
   const origin = originValue.trim()
   const destination = destinationAddress(draft)
@@ -149,7 +181,12 @@ export async function resolvePublicQuoteMileageDistance(
   }
 
   try {
-    const current = await computeWithRoutesApi(apiKey, origin, draft)
+    const current = await computeWithRoutesApi(
+      apiKey,
+      origin,
+      draft,
+      options.referer,
+    )
     if (current != null) return { distance: current, status: 'resolved' }
     const legacy = await computeWithLegacyDistanceMatrix(apiKey, origin, draft)
     if (legacy != null) return { distance: legacy, status: 'resolved' }

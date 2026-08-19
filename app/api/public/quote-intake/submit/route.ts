@@ -93,6 +93,7 @@ export async function POST(request: NextRequest) {
     const mileage = await resolvePublicQuoteMileageDistance(
       draft,
       rules.mileageBaseLocation,
+      { referer: request.headers.get('origin') || request.nextUrl.origin },
     )
     const pricing = await computeQuotePricing({
       companyId: session.company_id,

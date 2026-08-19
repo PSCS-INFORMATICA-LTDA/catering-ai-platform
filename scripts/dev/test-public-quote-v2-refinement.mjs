@@ -218,6 +218,8 @@ test('mileage missing config is explicit in preview route', () => {
   assert.match(distance, /missing_origin/)
   assert.match(distance, /missing_maps_key/)
   assert.match(distance, /lookup_failed/)
+  assert.match(distance, /Referer/)
+  assert.match(distance, /mapsBrowserReferer|destinationForRoutes/)
 })
 
 test('pricing confirmation never treats empty breakdown as infinite loading', () => {
