@@ -377,9 +377,12 @@ export default function PublicQuoteExperience({
       return
     }
     autoResumeAttemptedRef.current = true
-    void startQuote({ auto: true })
+    const timer = window.setTimeout(() => {
+      void startQuote({ auto: true })
+    }, 0)
+    return () => window.clearTimeout(timer)
     // Public locale routes remount this tree; resume only from the storage flag.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeStorageKey, locale])
 
   const style = {
