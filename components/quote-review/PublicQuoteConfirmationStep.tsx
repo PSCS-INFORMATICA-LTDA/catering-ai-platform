@@ -160,74 +160,6 @@ export default function PublicQuoteConfirmationStep({
         ))}
       </nav>
 
-      <section className="grid gap-3 rounded-2xl border border-cdl-border bg-cdl-surface p-5 sm:grid-cols-2">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-cdl-muted">
-            {w.confirmSectionClient}
-          </p>
-          <p className="mt-1 font-semibold text-cdl-title">{customerName || '—'}</p>
-          <p className="text-sm text-cdl-text-secondary">
-            {state.customerDraftPhone || '—'}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-cdl-muted">
-            {w.confirmSectionEvent}
-          </p>
-          <p className="mt-1 font-semibold text-cdl-title">
-            {state.eventName || '—'}
-          </p>
-          <p className="text-sm text-cdl-text-secondary">
-            {state.eventDate} · {state.startTime}–{state.endTime}
-          </p>
-          <p className="text-sm text-cdl-text-secondary">
-            {state.addressFormatted ||
-              [state.address, state.city, state.state, state.zipCode]
-                .filter(Boolean)
-                .join(', ') ||
-              '—'}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-cdl-muted">
-            {w.confirmSectionGuests}
-          </p>
-          <p className="mt-1 text-sm text-cdl-text-secondary">
-            {w.adults}: {state.adultCount} · {w.children4to12}:{' '}
-            {state.children4To12Count} · {w.childrenUnder3}:{' '}
-            {state.childrenUnder3Count}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-cdl-muted">
-            {w.confirmSectionPackage}
-          </p>
-          <div className="mt-1 flex items-center gap-3">
-            {packageImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={packageImageUrl}
-                alt=""
-                className="h-14 w-20 rounded-lg object-cover"
-              />
-            ) : null}
-            <p className="font-semibold text-cdl-title">{packageName || '—'}</p>
-          </div>
-        </div>
-        <div className="sm:col-span-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-cdl-muted">
-            {w.confirmSectionAdditionals}
-          </p>
-          <p className="mt-1 text-sm text-cdl-text-secondary">
-            {additionals.length > 0
-              ? additionals
-                  .map((item) => `${item.label} × ${item.quantity}`)
-                  .join(' · ')
-              : '—'}
-          </p>
-        </div>
-      </section>
-
       {reviewData && breakdown ? (
         <div className="overflow-hidden rounded-2xl border border-cdl-border bg-cdl-bg shadow-cdl">
           <QuoteReviewLayout
@@ -238,7 +170,25 @@ export default function PublicQuoteConfirmationStep({
           />
         </div>
       ) : (
-        <section className="rounded-2xl border border-cdl-border bg-cdl-surface p-6 shadow-cdl">
+        <section className="space-y-4 rounded-2xl border border-cdl-border bg-cdl-surface p-6 shadow-cdl">
+          <div className="flex items-center gap-3">
+            {packageImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={packageImageUrl}
+                alt=""
+                className="h-14 w-20 shrink-0 rounded-lg object-cover"
+              />
+            ) : null}
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase tracking-wide text-cdl-muted">
+                {w.confirmSectionPackage}
+              </p>
+              <p className="font-semibold text-cdl-title">
+                {packageName || '—'}
+              </p>
+            </div>
+          </div>
           <PricingPreviewStatus
             loading={pricingLoading && Boolean(state.packageId)}
             error={

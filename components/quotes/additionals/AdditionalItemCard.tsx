@@ -2,16 +2,18 @@
 
 import {
   calcAdditionalLineTotalForItem,
+  getAdditionalChargeUnitLabel,
   getAdditionalImage,
   getAdditionalPackLabel,
   getAdditionalTotalWeight,
   getAdditionalUnitPrice,
   getLocalizedAdditionalLabel,
+  hasAdditionalPrice,
   isPerPersonAdditional,
   normalizeAdditionalQuantity,
   type QuoteAdditionalItem,
 } from '@/Lib/quoteAdditionalDisplay'
-import { getQuoteStrings } from '@/Lib/quoteTranslations'
+import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 function formatCurrency(value: number) {
@@ -43,6 +45,10 @@ export default function AdditionalItemCard({
   const image = getAdditionalImage(item)
   const label = getLocalizedAdditionalLabel(item, language)
   const unitPrice = getAdditionalUnitPrice(item)
+  const priceLabel = hasAdditionalPrice(item)
+    ? formatCurrency(unitPrice)
+    : tw(language, 'priceUnavailable')
+  const chargeUnitLabel = getAdditionalChargeUnitLabel(item, language)
   const perPerson = isPerPersonAdditional(item)
   const normalizedQty = normalizeAdditionalQuantity(item, quantity)
   const lineTotal = calcAdditionalLineTotalForItem(
@@ -56,7 +62,7 @@ export default function AdditionalItemCard({
   const showPending =
     !image && item.image_status?.trim().toLowerCase() === 'missing'
 
-  const cardClass = `grid h-full grid-cols-[5.75rem_minmax(0,1fr)] gap-3 rounded-2xl border bg-white p-2 shadow-sm transition sm:flex sm:flex-col sm:gap-0 ${
+  const cardClass = `grid h-full grid-cols-[7.5rem_minmax(0,1fr)] gap-3 rounded-2xl border bg-white p-2.5 shadow-sm transition sm:flex sm:flex-col sm:gap-0 sm:p-2 ${
     isSelected ? SELECTED_CARD : 'border-neutral-200'
   }`
 
@@ -98,7 +104,8 @@ export default function AdditionalItemCard({
             {label}
           </p>
           <p className="mt-1 text-xs text-neutral-500">
-            {formatCurrency(unitPrice)} / {t.perPerson}
+            <span className="font-semibold text-neutral-800">{priceLabel}</span>{' '}
+            {chargeUnitLabel}
           </p>
           {isSelected && billableGuestCount > 0 ? (
             <p className="mt-0.5 text-[11px] font-semibold text-[var(--brand-primary)]">
@@ -129,8 +136,8 @@ export default function AdditionalItemCard({
           {label}
         </p>
         <p className="mt-1 text-xs text-neutral-500">
-          {formatCurrency(unitPrice)}
-          {packLabel ? ` / ${packLabel}` : ''}
+          <span className="font-semibold text-neutral-800">{priceLabel}</span>{' '}
+          {packLabel ?? chargeUnitLabel}
         </p>
         <div className="mt-auto flex items-center justify-between gap-1 pt-2">
           <button

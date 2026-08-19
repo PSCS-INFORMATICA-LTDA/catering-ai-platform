@@ -84,7 +84,6 @@ import {
   resolvePackageIdForPersistence,
 } from '@/Lib/publicQuote/packageLookup'
 import {
-  getPublicPhoneDefault,
   isUsablePublicPhone,
   toPublicPhoneE164,
 } from '@/Lib/publicQuote/phone'
@@ -1058,8 +1057,7 @@ export default function QuoteWizardCore({
       branchId: publicContext?.branchId ?? base.branchId,
       publicConsentVersion:
         publicContext?.consentVersion ?? base.publicConsentVersion,
-      customerDraftPhone:
-        base.customerDraftPhone.trim() || getPublicPhoneDefault(),
+      customerDraftPhone: base.customerDraftPhone.trim(),
     }
   })
   const [customerSearch, setCustomerSearch] = useState('')
@@ -1141,7 +1139,18 @@ export default function QuoteWizardCore({
 
   useEffect(() => {
     distanceManualRef.current = false
-  }, [state.address, state.addressNumber, state.city, state.state, state.zipCode])
+    // A new destination invalidates the previous route: never show the mileage
+    // of an address the customer already replaced.
+    if (!isPublicMode) return
+    setState((prev) => (prev.distance === 0 ? prev : { ...prev, distance: 0 }))
+  }, [
+    isPublicMode,
+    state.address,
+    state.addressNumber,
+    state.city,
+    state.state,
+    state.zipCode,
+  ])
 
   useAutoEventDistance({
     origin: state.baseLocation,
@@ -1771,6 +1780,7 @@ export default function QuoteWizardCore({
       additionalCategoryKeys,
       visitedAdditionalCategories,
       pricingPreviewReady: Boolean(pricingBreakdown) && !pricingPreview.loading,
+      isPublicMode,
     }),
     [
       state,
@@ -1788,6 +1798,7 @@ export default function QuoteWizardCore({
       visitedAdditionalCategories,
       pricingPreview.loading,
       pricingBreakdown,
+      isPublicMode,
     ],
   )
 
@@ -2931,16 +2942,6 @@ export default function QuoteWizardCore({
                 onSelectionChange={handlePackageSelectionChange}
                 pendingSelectionGroupIds={pendingSelectionGroupIds}
                 onSelect={handlePackageSelect}
-                onNext={goNext}
-                nextDisabled={packageStepNextDisabled}
-                stepMessage={packageStepMessage}
-                onNextBlockedClick={() => {
-                  if (!state.packageId) {
-                    setPackageStepMessage(w.selectPackageToContinue)
-                    return
-                  }
-                  setPackageSelectionAttempted(true)
-                }}
               />
             ) : (
               <QuotePackageStepExplorer

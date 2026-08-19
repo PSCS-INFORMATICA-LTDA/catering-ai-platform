@@ -754,14 +754,12 @@ async function main() {
     assert.match(reviewLayoutSrc, /mileageLine\.quantity/)
     pass('M05 charged miles come from breakdown')
 
-    assert.doesNotMatch(
-      reviewLayoutSrc,
-      /tw\(lang, 'mileageRateLabel'\)/,
-    )
-    pass('M06 mileage rate is folded into the compact value line')
+    assert.match(reviewLayoutSrc, /tw\(lang, 'mileageRateLabel'\)/)
+    pass('M06 mileage rate is disclosed in the review')
 
     assert.doesNotMatch(reviewLayoutSrc, /mileageLine\.formula/)
-    pass('M07 customer mileage hides technical formulas')
+    assert.match(reviewLayoutSrc, /mileageRuleSummary/)
+    pass('M07 customer mileage explains the rule without technical formulas')
 
     assert.match(reviewLayoutSrc, /formatCurrency\(mileageLine\.amount\)/)
     pass('M08 mileage amount comes from breakdown')

@@ -104,7 +104,9 @@ export async function enrichGooglePlaceFromGeocoder(
     if (!geocoded) return parsed
     return {
       address: parsed.address || geocoded.address,
-      addressNumber: parsed.addressNumber || geocoded.addressNumber,
+      // The reverse geocoder resolves the nearest civic number, which is not the
+      // number the customer selected. Only the Place's own street_number counts.
+      addressNumber: parsed.addressNumber,
       city: parsed.city || geocoded.city,
       state: parsed.state || geocoded.state,
       zipCode: geocoded.zipCode || parsed.zipCode,

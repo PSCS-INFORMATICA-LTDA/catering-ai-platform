@@ -10,6 +10,7 @@ import {
 import type { GrillPhotoStatus } from '@/Lib/grillPhotoStatus'
 import { isUsablePostalCode } from '@/Lib/cep'
 import { isUsablePhone } from '@/Lib/normalizePhone'
+import { isUsablePublicPhone } from '@/Lib/publicQuote/phone'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import {
   areAllAdditionalCategoriesVisited,
@@ -108,6 +109,14 @@ export type StepStatusContext = {
   }>
   visitedAdditionalCategories?: ReadonlySet<string> | string[]
   pricingPreviewReady?: boolean
+  /** Public intake accepts a bare 10-digit US number; backoffice still requires a country code. */
+  isPublicMode?: boolean
+}
+
+function hasUsableContactPhone(ctx: StepStatusContext): boolean {
+  return ctx.isPublicMode
+    ? isUsablePublicPhone(ctx.state.customerDraftPhone)
+    : isUsablePhone(ctx.state.customerDraftPhone)
 }
 
 export type PendingStepIssue = {
@@ -127,7 +136,7 @@ function hasLinkedCustomer(ctx: StepStatusContext): boolean {
   if (ctx.isEditMode) return Boolean(ctx.state.customerId)
   if (ctx.selectedCustomer || ctx.state.customerId) return true
   return (
-    isUsablePhone(ctx.state.customerDraftPhone) &&
+    hasUsableContactPhone(ctx) &&
     isFilled(ctx.state.customerFirstName) &&
     isFilled(ctx.state.customerLastName)
   )
@@ -221,7 +230,7 @@ export function getStepIssues(
         if (!isFilled(state.customerLastName)) {
           issues.push(contactIssue(language, 'lastName'))
         }
-        if (!isUsablePhone(state.customerDraftPhone)) {
+        if (!hasUsableContactPhone(ctx)) {
           issues.push(contactIssue(language, 'phone'))
         }
         if (

@@ -3,11 +3,23 @@
 import { useEffect, useMemo, useRef } from 'react'
 import AdditionalItemCard from '@/components/quotes/additionals/AdditionalItemCard'
 import {
+  getAdditionalChargeUnitLabel,
+  getAdditionalUnitPrice,
   getLocalizedAdditionalLabel,
+  hasAdditionalPrice,
   type QuoteAdditionalItem,
 } from '@/Lib/quoteAdditionalDisplay'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+
+function formatMenuPrice(value: number, language: QuoteLanguage): string {
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-US' : 'pt-BR'
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+  }).format(value)
+}
 
 export default function AdditionalCategorySection({
   categoryKey,
@@ -41,13 +53,18 @@ export default function AdditionalCategorySection({
   const reviewStatus = visited
     ? tw(language, 'categoryReviewStatusReviewed')
     : tw(language, 'categoryReviewStatusPending')
-  const itemNamesPreview = useMemo(
+  const menuRows = useMemo(
     () =>
-      items
-        .map((item) => getLocalizedAdditionalLabel(item, language))
-        .filter((label) => label !== '—')
-        .join(' • '),
-    [items, language],
+      items.map((item) => ({
+        id: item.id,
+        label: getLocalizedAdditionalLabel(item, language),
+        chargeUnit: getAdditionalChargeUnitLabel(item, language),
+        price: hasAdditionalPrice(item)
+          ? formatMenuPrice(getAdditionalUnitPrice(item), language)
+          : null,
+        selected: (quantities[item.id] ?? 0) > 0,
+      })),
+    [items, language, quantities],
   )
   const contentId = `additional-category-content-${categoryKey}`
 
@@ -104,13 +121,39 @@ export default function AdditionalCategorySection({
               </span>
             </div>
 
-            {!expanded && itemNamesPreview ? (
-              <p
+            {!expanded && menuRows.length > 0 ? (
+              <ul
                 data-additional-category-preview
-                className="mt-2 line-clamp-3 break-words text-sm leading-5 text-cdl-text-secondary"
+                className="mt-3 space-y-1.5"
               >
-                {itemNamesPreview}
-              </p>
+                {menuRows.map((row) => (
+                  <li
+                    key={row.id}
+                    className="flex items-baseline gap-2 text-sm leading-5"
+                  >
+                    <span
+                      className={`min-w-0 truncate ${
+                        row.selected
+                          ? 'font-bold text-[var(--brand-primary)]'
+                          : 'text-cdl-text-secondary'
+                      }`}
+                    >
+                      {row.selected ? '✓ ' : ''}
+                      {row.label}
+                    </span>
+                    <span
+                      className="h-px min-w-4 flex-1 self-center border-b border-dotted border-cdl-border"
+                      aria-hidden
+                    />
+                    <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-cdl-title">
+                      {row.price ?? tw(language, 'priceUnavailable')}
+                    </span>
+                    <span className="shrink-0 whitespace-nowrap text-xs text-cdl-muted">
+                      {row.chargeUnit}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             ) : null}
 
             <div className="mt-2 flex flex-wrap items-center gap-2">

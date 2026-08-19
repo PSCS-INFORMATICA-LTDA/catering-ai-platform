@@ -66,6 +66,7 @@ const { t, list } = makeI18nModule('common', 'ui', {
   city: { pt: 'Cidade', en: 'City', es: 'Ciudad' },
   state: { pt: 'Estado', en: 'State', es: 'Estado' },
   postalCode: { pt: 'CEP / ZIP', en: 'ZIP / postal code', es: 'Código postal' },
+  country: { pt: 'País', en: 'Country', es: 'País' },
   source: { pt: 'Origem', en: 'Source', es: 'Origen' },
   code: { pt: 'Código', en: 'Code', es: 'Código' },
   price: { pt: 'Preço', en: 'Price', es: 'Precio' },

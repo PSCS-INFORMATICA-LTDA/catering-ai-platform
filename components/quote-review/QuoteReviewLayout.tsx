@@ -27,7 +27,9 @@ import { IconCalendar, IconClock, IconLocation } from './QuoteReviewIcons'
 import QuoteProposalOverviewCard from './QuoteProposalOverviewCard'
 import type { QuoteReviewAdditional, QuoteReviewData } from './quoteReviewTypes'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
+import { tCommon } from '@/Lib/i18n/common'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import { formatMilesWithKilometers } from '@/Lib/units'
 import PricingBreakdownView from './PricingBreakdownView'
 import type {
   PricingBreakdown,
@@ -170,6 +172,31 @@ function ConfirmationProposalBody({
         showFinance={false}
       />
 
+      <ProposalSection title={tw(lang, 'confirmSectionClient')}>
+        <div className="quote-proposal-info-grid">
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">
+              {tQuotesOrders(lang, 'docCustomer')}
+            </span>
+            <p className="quote-proposal-value">
+              {displayValue(data.customerName)}
+            </p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">{w.customerPhone}</span>
+            <p className="quote-proposal-value">
+              {displayValue(data.customerPhone)}
+            </p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">{w.customerEmail}</span>
+            <p className="quote-proposal-value">
+              {displayValue(data.customerEmail)}
+            </p>
+          </div>
+        </div>
+      </ProposalSection>
+
       <ProposalSection title={t.review.eventSection}>
         <p className="quote-proposal-event-name">
           {displayValue(data.eventName || data.customerName)}
@@ -190,6 +217,46 @@ function ConfirmationProposalBody({
             label={t.review.location}
             value={eventLocation || '—'}
           />
+        </div>
+        <div className="quote-proposal-info-grid mt-4">
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">{w.addressPlaceholder}</span>
+            <p className="quote-proposal-value">
+              {displayValue(data.addressLine)}
+            </p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">
+              {tCommon(lang, 'streetNumber')}
+            </span>
+            <p className="quote-proposal-value">
+              {displayValue(data.addressNumber)}
+            </p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">
+              {tCommon(lang, 'city')}
+            </span>
+            <p className="quote-proposal-value">{displayValue(data.city)}</p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">
+              {tCommon(lang, 'state')}
+            </span>
+            <p className="quote-proposal-value">{displayValue(data.state)}</p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">
+              {tCommon(lang, 'postalCode')}
+            </span>
+            <p className="quote-proposal-value">{displayValue(data.zipCode)}</p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">
+              {tCommon(lang, 'country')}
+            </span>
+            <p className="quote-proposal-value">{displayValue(data.country)}</p>
+          </div>
         </div>
       </ProposalSection>
 
@@ -384,9 +451,12 @@ function ConfirmationProposalBody({
                   {tw(lang, 'mileageTotalDistance')}
                 </span>
                 <p className="quote-proposal-value">
-                  {mileageMetadata?.distance != null
-                    ? `${String(mileageMetadata.distance)} mi`
-                    : '—'}
+                  {formatMilesWithKilometers(
+                    mileageMetadata?.distance != null
+                      ? Number(mileageMetadata.distance)
+                      : null,
+                    tw(lang, 'mileageDistanceMiKm'),
+                  ) ?? '—'}
                 </p>
               </div>
               <div className="quote-proposal-info-cell">
@@ -406,12 +476,38 @@ function ConfirmationProposalBody({
                 <p className="quote-proposal-value">{`${mileageLine.quantity} mi`}</p>
               </div>
             </div>
+            <div className="quote-proposal-mileage-grid">
+              <div className="quote-proposal-info-cell">
+                <span className="quote-proposal-label">
+                  {tw(lang, 'mileageRateLabel')}
+                </span>
+                <p className="quote-proposal-value">
+                  {mileageLine.unit_price != null
+                    ? `${formatCurrency(mileageLine.unit_price)}/mi`
+                    : '—'}
+                </p>
+              </div>
+              <div className="quote-proposal-info-cell">
+                <span className="quote-proposal-label">
+                  {tw(lang, 'mileageFeeFinal')}
+                </span>
+                <p className="quote-proposal-value">
+                  {formatCurrency(mileageLine.amount)}
+                </p>
+              </div>
+            </div>
             <div className="quote-proposal-info-cell quote-proposal-info-cell--wide">
               <span className="quote-proposal-label">
-                {tw(lang, 'mileageFeeFinal')}
+                {tw(lang, 'mileageRuleLabel')}
               </span>
               <p className="quote-proposal-value">
-                {formatCurrency(mileageLine.amount)}
+                {tw(lang, 'mileageRuleSummary', {
+                  included: String(
+                    mileageMetadata?.free_limit ??
+                      breakdown.rules_applied.mileageFreeLimit,
+                  ),
+                  rate: formatCurrency(mileageLine.unit_price),
+                })}
               </p>
             </div>
           </div>
@@ -865,9 +961,10 @@ export default function QuoteReviewLayout({
                 {tQuotesOrders(lang, 'docMileageDistance')}
               </span>
               <p className="quote-proposal-value">
-                {data.mileageDistance != null
-                  ? `${data.mileageDistance} mi`
-                  : '—'}
+                {formatMilesWithKilometers(
+                  data.mileageDistance,
+                  tw(lang, 'mileageDistanceMiKm'),
+                ) ?? '—'}
               </p>
             </div>
             <div className="quote-proposal-info-cell">

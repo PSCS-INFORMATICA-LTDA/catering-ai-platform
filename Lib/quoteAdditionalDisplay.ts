@@ -55,6 +55,16 @@ export function isPerPersonAdditional(item: QuoteAdditionalItem): boolean {
   )
 }
 
+export {
+  getAdditionalChargeUnit,
+  getAdditionalChargeUnitLabel,
+  type AdditionalChargeUnit,
+} from '@/Lib/additionalChargeUnit'
+
+export function hasAdditionalPrice(item: QuoteAdditionalItem): boolean {
+  return getAdditionalUnitPrice(item) > 0
+}
+
 export function getAdditionalUnitPrice(item: QuoteAdditionalItem): number {
   return getAdditionalItemPrice(item)
 }

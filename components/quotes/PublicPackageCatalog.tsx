@@ -1,5 +1,6 @@
 'use client'
 
+import { Fragment, useEffect, useRef } from 'react'
 import {
   formatPackageCatalogPriceLabel,
   getPackageCatalogImage,
@@ -54,27 +55,31 @@ function PackageCatalogCard({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`flex h-full w-full flex-col overflow-hidden rounded-2xl border text-left transition ${
+      className={`flex w-full flex-col overflow-hidden rounded-2xl border bg-cdl-surface text-left transition ${
         active
           ? 'border-[var(--brand-primary-2)] ring-2 ring-[color-mix(in_srgb,var(--brand-primary-2)_40%,transparent)]'
           : 'border-cdl-border hover:border-neutral-300'
       }`}
     >
-      <span className="relative block aspect-[4/3] w-full overflow-hidden bg-cdl-inset sm:aspect-[16/10]">
+      <span className="relative block w-full">
         {image ? (
+          // The art carries printed commercial copy, so it must keep its
+          // natural ratio and never be cropped.
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={image}
             alt={name}
-            className="h-full w-full object-cover"
+            className="block h-auto w-full"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
-          <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-stone-200 to-stone-100 px-4 text-center text-sm font-bold text-stone-600">
+          <span className="flex min-h-40 w-full items-center justify-center bg-gradient-to-br from-stone-200 to-stone-100 px-4 py-10 text-center text-base font-bold text-stone-600">
             {name}
           </span>
         )}
         {active ? (
-          <span className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-black text-emerald-700 shadow">
+          <span className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-base font-black text-emerald-700 shadow">
             ✓
             <span className="sr-only">{selectedLabel}</span>
           </span>
@@ -85,12 +90,12 @@ function PackageCatalogCard({
           </span>
         ) : null}
       </span>
-      <span className="flex flex-1 flex-col gap-1 px-4 py-3">
-        <span className="text-base font-black leading-tight text-cdl-title">
+      <span className="flex flex-col gap-1 px-4 py-3">
+        <span className="text-base font-black leading-tight text-cdl-title sm:text-lg">
           {name}
         </span>
         {getPackageCatalogPrice(pkg) > 0 ? (
-          <span className="text-sm font-semibold text-[var(--brand-primary)]">
+          <span className="text-sm font-semibold text-[var(--brand-primary)] sm:text-base">
             {price}
           </span>
         ) : null}
@@ -110,10 +115,6 @@ export default function PublicPackageCatalog({
   onSelectionChange,
   pendingSelectionGroupIds,
   onSelect,
-  onNext,
-  nextDisabled = false,
-  onNextBlockedClick,
-  stepMessage,
 }: {
   packagesWithoutSides: PublicPackageCard[]
   packagesWithSides: PublicPackageCard[]
@@ -125,19 +126,18 @@ export default function PublicPackageCatalog({
   onSelectionChange: (groupId: string, itemId: string) => void
   pendingSelectionGroupIds: string[]
   onSelect: (id: string) => void
-  onNext?: () => void
-  nextDisabled?: boolean
-  onNextBlockedClick?: () => void
-  stepMessage?: string | null
 }) {
   const t = getQuoteStrings(language)
   const catalog = [...packagesWithSides, ...packagesWithoutSides]
-  const selected =
-    catalog.find((pkg) => pkg.id === selectedPackageId) ??
-    allPackages.find((pkg) => pkg.id === selectedPackageId) ??
-    null
-  const optionGroups = selected ? optionGroupsForPackage(selected.id) : []
-  const selectableGroups = optionGroups.filter((group) => group.items.length > 0)
+  const optionsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!selectedPackageId) return
+    const node = optionsRef.current
+    if (!node) return
+    // Short nudge so the options appear without hiding the package card.
+    node.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [selectedPackageId])
 
   if (catalog.length === 0) {
     return <p className="text-sm text-cdl-muted">{tw(language, 'noPackages')}</p>
@@ -146,67 +146,53 @@ export default function PublicPackageCatalog({
   return (
     <div className="space-y-5">
       <p className="text-sm text-cdl-muted">{t.wizard.publicPackageChooseHint}</p>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {catalog.map((pkg) => (
-          <PackageCatalogCard
-            key={pkg.id}
-            pkg={pkg}
-            allPackages={allPackages}
-            active={selectedPackageId === pkg.id}
-            language={language}
-            onClick={() => onSelect(pkg.id)}
-          />
-        ))}
-      </div>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        {catalog.map((pkg) => {
+          const active = selectedPackageId === pkg.id
+          const selectableGroups = active
+            ? optionGroupsForPackage(pkg.id).filter(
+                (group) => group.items.length > 0,
+              )
+            : []
 
-      {selected && selectableGroups.length > 0 ? (
-        <section className="rounded-2xl border border-cdl-border bg-cdl-surface p-4 sm:p-5">
-          <h3 className="text-sm font-black uppercase tracking-wide text-cdl-title">
-            {t.wizard.publicPackageOptionsTitle}
-          </h3>
-          <p className="mt-1 text-sm font-semibold text-cdl-title">
-            {getPackageCatalogName(selected, language)}
-          </p>
-          <div className="mt-4">
-            <PackageIncludedOptions
-              optionGroups={selectableGroups}
-              selections={selections}
-              onChange={onSelectionChange}
-              language={language}
-              pendingGroupIds={pendingSelectionGroupIds}
-            />
-          </div>
-        </section>
-      ) : null}
-
-      {onNext ? (
-        <div className="space-y-2">
-          {stepMessage ? (
-            <p className="text-sm font-medium text-[var(--brand-primary)]">
-              {stepMessage}
-            </p>
-          ) : null}
-          <div className="relative">
-            {nextDisabled && onNextBlockedClick ? (
-              <button
-                type="button"
-                aria-label={tw(language, 'nextCompleteOptions')}
-                className="absolute inset-0 z-10 cursor-not-allowed rounded-xl"
-                onClick={onNextBlockedClick}
+          return (
+            <Fragment key={pkg.id}>
+              <PackageCatalogCard
+                pkg={pkg}
+                allPackages={allPackages}
+                active={active}
+                language={language}
+                onClick={() => onSelect(pkg.id)}
               />
-            ) : null}
-            <button
-              type="button"
-              data-testid="public-package-next"
-              onClick={onNext}
-              disabled={nextDisabled}
-              className="cdl-btn-primary w-full bg-[var(--brand-primary-2)] text-white disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
-            >
-              {t.next}
-            </button>
-          </div>
-        </div>
-      ) : null}
+              {active && selectableGroups.length > 0 ? (
+                <div
+                  ref={optionsRef}
+                  data-public-package-options
+                  className="lg:col-span-2"
+                >
+                  <section className="rounded-2xl border-2 border-[color-mix(in_srgb,var(--brand-primary-2)_35%,transparent)] bg-cdl-surface p-4 sm:p-5">
+                    <h3 className="text-sm font-black uppercase tracking-wide text-cdl-title">
+                      {t.wizard.publicPackageOptionsTitle}
+                    </h3>
+                    <p className="mt-1 text-sm font-semibold text-cdl-title">
+                      {getPackageCatalogName(pkg, language)}
+                    </p>
+                    <div className="mt-4">
+                      <PackageIncludedOptions
+                        optionGroups={selectableGroups}
+                        selections={selections}
+                        onChange={onSelectionChange}
+                        language={language}
+                        pendingGroupIds={pendingSelectionGroupIds}
+                      />
+                    </div>
+                  </section>
+                </div>
+              ) : null}
+            </Fragment>
+          )
+        })}
+      </div>
     </div>
   )
 }

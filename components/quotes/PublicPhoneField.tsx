@@ -19,7 +19,8 @@ export default function PublicPhoneField({
 }) {
   const t = getQuoteStrings(language).wizard
   const display = displayPublicPhone(value)
-  const usable = isUsablePublicPhone(display)
+  const filled = display.trim().length > 0
+  const usable = filled && isUsablePublicPhone(display)
 
   return (
     <label className="flex flex-col gap-2">
@@ -32,10 +33,7 @@ export default function PublicPhoneField({
           value={display}
           placeholder={t.publicPhonePlaceholder}
           onChange={(event) => onChange(formatPublicPhoneInput(event.target.value))}
-          onFocus={() => {
-            if (!value.trim()) onChange(formatPublicPhoneInput('+1'))
-          }}
-          aria-invalid={Boolean(value.trim()) && !usable}
+          aria-invalid={filled && !usable}
           className={`w-full rounded-xl border px-4 py-3.5 pr-10 text-base text-cdl-fg shadow-cdl outline-none transition-colors placeholder:text-cdl-faint focus:border-cdl-accent-border ${
             usable ? 'cdl-field-filled' : 'cdl-field-empty'
           }`}

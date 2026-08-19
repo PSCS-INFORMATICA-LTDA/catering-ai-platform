@@ -195,6 +195,14 @@ type QuoteStrings = {
     pricingTimeout: string
     pricingRateLimited: string
     pricingMissingPackage: string
+    chargeUnitPerPerson: string
+    chargeUnitPerUnit: string
+    chargeUnitPerPortion: string
+    chargeUnitFixed: string
+    priceUnavailable: string
+    mileageDistanceMiKm: string
+    mileageRuleLabel: string
+    mileageRuleSummary: string
     adults: string
     childrenUnder3: string
     children4to12: string
@@ -564,8 +572,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       endTimeHintPublic:
         'Calculado automaticamente a partir do horário de início. Não é possível editar.',
       publicPhoneHint:
-        'Padrão Estados Unidos (+1). Se o número for de outro país, comece com o DDI, por exemplo +55.',
-      publicPhonePlaceholder: '+1 (407) 555-1234',
+        'Comece pelo código do país. Estados Unidos é +1; para outro país use o DDI, por exemplo +55.',
+      publicPhonePlaceholder: 'Ex.: +1 407 555 0123',
       firstName: 'Primeiro nome',
       lastName: 'Sobrenome',
       contactPrivacyHint:
@@ -579,6 +587,15 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Muitas tentativas de cálculo. Aguarde um instante e tente novamente.',
       pricingMissingPackage:
         'Selecione um pacote para calcular a estimativa.',
+      chargeUnitPerPerson: 'por pessoa',
+      chargeUnitPerUnit: 'por unidade',
+      chargeUnitPerPortion: 'por porção',
+      chargeUnitFixed: 'valor fixo',
+      priceUnavailable: 'Preço a confirmar',
+      mileageDistanceMiKm: '{mi} mi ({km} km)',
+      mileageRuleLabel: 'Regra aplicada',
+      mileageRuleSummary:
+        'Até {included} mi inclusas. Acima disso, {rate} por milha.',
       adults: 'Adultos',
       childrenUnder3: 'Crianças até 3 anos',
       children4to12: 'Crianças 4 a 12 anos',
@@ -963,8 +980,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       endTimeHintPublic:
         'Calculated automatically from the start time. This field cannot be edited.',
       publicPhoneHint:
-        'United States default (+1). For another country, start with the country code, for example +55.',
-      publicPhonePlaceholder: '+1 (407) 555-1234',
+        'Start with the country code. United States is +1; for another country use its code, for example +55.',
+      publicPhonePlaceholder: 'e.g. +1 407 555 0123',
       firstName: 'First name',
       lastName: 'Last name',
       contactPrivacyHint:
@@ -977,6 +994,15 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       pricingRateLimited:
         'Too many estimate attempts. Wait a moment and try again.',
       pricingMissingPackage: 'Select a package to calculate the estimate.',
+      chargeUnitPerPerson: 'per person',
+      chargeUnitPerUnit: 'per unit',
+      chargeUnitPerPortion: 'per portion',
+      chargeUnitFixed: 'fixed price',
+      priceUnavailable: 'Price to confirm',
+      mileageDistanceMiKm: '{mi} mi ({km} km)',
+      mileageRuleLabel: 'Applied rule',
+      mileageRuleSummary:
+        'Up to {included} mi included. Above that, {rate} per mile.',
       adults: 'Adults',
       childrenUnder3: 'Children up to 3 years',
       children4to12: 'Children 4 to 12 years',
@@ -1362,8 +1388,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       endTimeHintPublic:
         'Calculado automáticamente a partir del horario de inicio. No se puede editar.',
       publicPhoneHint:
-        'Predeterminado Estados Unidos (+1). Si el número es de otro país, empiece con el código, por ejemplo +55.',
-      publicPhonePlaceholder: '+1 (407) 555-1234',
+        'Empiece por el código del país. Estados Unidos es +1; para otro país use su código, por ejemplo +55.',
+      publicPhonePlaceholder: 'Ej.: +1 407 555 0123',
       firstName: 'Nombre',
       lastName: 'Apellido',
       contactPrivacyHint:
@@ -1376,6 +1402,15 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       pricingRateLimited:
         'Demasiados intentos de cálculo. Espere un momento e inténtelo de nuevo.',
       pricingMissingPackage: 'Seleccione un paquete para calcular la estimación.',
+      chargeUnitPerPerson: 'por persona',
+      chargeUnitPerUnit: 'por unidad',
+      chargeUnitPerPortion: 'por porción',
+      chargeUnitFixed: 'precio fijo',
+      priceUnavailable: 'Precio por confirmar',
+      mileageDistanceMiKm: '{mi} mi ({km} km)',
+      mileageRuleLabel: 'Regla aplicada',
+      mileageRuleSummary:
+        'Hasta {included} mi incluidas. Por encima, {rate} por milla.',
       adults: 'Adultos',
       childrenUnder3: 'Niños hasta 3 años',
       children4to12: 'Niños de 4 a 12 años',

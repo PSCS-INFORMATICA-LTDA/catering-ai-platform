@@ -21,14 +21,18 @@ export type QuoteReviewData = {
   quoteStatus?: string | null
   preview?: boolean
   customerName: string
+  customerPhone?: string | null
+  customerEmail?: string | null
   eventName: string
   eventDate: string | null
   startTime: string | null
   endTime: string | null
   addressLine: string | null
+  addressNumber?: string | null
   city: string | null
   state: string | null
   zipCode: string | null
+  country?: string | null
   packageName: string | null
   packageImageUrl?: string | null
   packageUnitPrice: number | null

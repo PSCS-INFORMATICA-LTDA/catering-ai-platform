@@ -52,7 +52,7 @@ export default function QuoteWizardStepNav({
     <div
       className={
         sticky
-          ? 'sticky bottom-0 z-30 mt-8 space-y-3 border-t border-cdl-border bg-[color-mix(in_srgb,var(--brand-bg)_92%,white)] py-3 backdrop-blur-sm'
+          ? 'sticky bottom-0 z-30 mt-8 space-y-3 border-t border-cdl-border bg-[color-mix(in_srgb,var(--brand-bg)_92%,white)] pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm'
           : 'mt-8 space-y-3'
       }
     >
