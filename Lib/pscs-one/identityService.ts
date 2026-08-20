@@ -1,3 +1,4 @@
+import { identityFromTokenPayload } from './callbackFlow.ts'
 import { pscsOneCallbackUri, pscsOneClientId, pscsOneTokenUrl } from './config'
 import type { PscsOneIdentityV1 } from './types'
 
@@ -35,15 +36,10 @@ export class PscsOneIdentityService {
       identity?: PscsOneIdentityV1
     }
 
-    if (!response.ok || payload.ok !== true || !payload.identity) {
+    if (!response.ok) {
       throw new Error(payload.reason || 'token_exchange_denied')
     }
 
-    if (payload.identity.version !== '1') {
-      throw new Error('unsupported_contract')
-    }
-
-    PscsOneEntitlementService.assertCateringProduct(payload.identity)
-    return payload.identity
+    return identityFromTokenPayload(payload)
   }
 }

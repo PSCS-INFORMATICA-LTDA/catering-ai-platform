@@ -24,7 +24,11 @@ export function publicPscsOneSsoReason(error: unknown): string {
   if (/service role|sso_admin_unconfigured|admin_unconfigured/i.test(text)) {
     return 'sso_admin_unconfigured'
   }
-  if (/pscs_one_user_id|schema cache|could not find the .* column/i.test(text)) {
+  if (
+    /pscs_one_user_id|schema cache|could not find the .* column|column .* does not exist/i.test(
+      text,
+    )
+  ) {
     return 'identity_schema_mismatch'
   }
   if (/null value in column/i.test(text)) {
@@ -48,11 +52,17 @@ export function publicPscsOneSsoReason(error: unknown): string {
   if (/redirect url|redirect_to/i.test(text)) {
     return 'session_redirect_denied'
   }
+  if (/token_payload_invalid|unsupported_contract/i.test(text)) {
+    return text.includes('unsupported') ? 'unsupported_contract' : 'token_payload_invalid'
+  }
   if (/fetch failed|failed to fetch|network/i.test(text)) {
     return 'session_fetch_failed'
   }
   if (error instanceof TypeError) {
     return 'session_type_failed'
+  }
+  if (/session_cookie_failed|cannot set cookie/i.test(text)) {
+    return 'session_cookie_failed'
   }
   if (/create_user_failed|user not allowed/i.test(text)) {
     return 'create_user_failed'

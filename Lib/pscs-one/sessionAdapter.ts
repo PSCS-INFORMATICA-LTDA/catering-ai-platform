@@ -30,6 +30,7 @@ export class PscsOneSessionAdapter {
     email: string
     tokenHash: string
   }> {
+
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
       throw new Error('sso_admin_unconfigured')
     }
@@ -127,7 +128,7 @@ export class PscsOneSessionAdapter {
     request: NextRequest,
     response: NextResponse,
     tokenHash: string,
-  ): Promise<void> {
+  ): Promise<{ accessTokenPresent: boolean; refreshTokenPresent: boolean }> {
     const supabase = createRouteHandlerClient(request, response)
     const verified = await supabase.auth.verifyOtp({
       type: 'email',
@@ -135,6 +136,10 @@ export class PscsOneSessionAdapter {
     })
     if (verified.error) {
       throw new Error(verified.error.message)
+    }
+    return {
+      accessTokenPresent: Boolean(verified.data.session?.access_token),
+      refreshTokenPresent: Boolean(verified.data.session?.refresh_token),
     }
   }
 }

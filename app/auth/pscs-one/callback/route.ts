@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PscsOneCompanyService } from '@/Lib/pscs-one/companyService'
 import {
+  executePscsOneCallback,
+  logPscsOneSsoCallback,
+} from '@/Lib/pscs-one/callbackFlow'
+import {
   isPscsOneSsoEnabled,
-  PSCS_ONE_MAPPED_COMPANY_COOKIE,
   pscsOneCallbackUri,
 } from '@/Lib/pscs-one/config'
-import { describeSsoError, publicPscsOneSsoReason } from '@/Lib/pscs-one/errors'
 import { PscsOneIdentityService } from '@/Lib/pscs-one/identityService'
 import { PscsOneSessionAdapter } from '@/Lib/pscs-one/sessionAdapter'
 
@@ -20,36 +22,58 @@ function loginDenied(request: NextRequest, reason: string) {
 }
 
 export async function GET(request: NextRequest) {
+  const correlation_id = crypto.randomUUID()
   if (!isPscsOneSsoEnabled()) {
+    logPscsOneSsoCallback({
+      correlation_id,
+      stage: 'callback_params',
+      result: 'failure',
+      reason: 'sso_disabled',
+    })
     return loginDenied(request, 'sso_disabled')
   }
 
-  const code = request.nextUrl.searchParams.get('code')?.trim()
-  if (!code) {
-    return loginDenied(request, 'missing_code')
+  const dest = new URL('/quotes', request.nextUrl.origin)
+  const response = NextResponse.redirect(dest)
+
+  const result = await executePscsOneCallback(
+    {
+      code: request.nextUrl.searchParams.get('code'),
+      origin: request.nextUrl.origin,
+    },
+    {
+      exchangeAuthorizationCode: (code) => PscsOneIdentityService.exchangeAuthorizationCode(code),
+      ensureLocalUser: (identity) => PscsOneSessionAdapter.ensureLocalUser(identity),
+      ensureMembership: (authUserId, companyId) =>
+        PscsOneCompanyService.ensureMembership(authUserId, companyId),
+      verifySession: async (tokenHash) =>
+        PscsOneSessionAdapter.attachSessionCookie(request, response, tokenHash),
+      writeCookies: (cookies) => {
+        for (const cookie of cookies) {
+          response.cookies.set(cookie.name, cookie.value, {
+            httpOnly: cookie.httpOnly,
+            sameSite: cookie.sameSite,
+            secure: cookie.secure,
+            path: cookie.path,
+            maxAge: cookie.maxAge,
+          })
+        }
+      },
+    },
+  )
+
+  logPscsOneSsoCallback({
+    correlation_id,
+    stage: result.stage,
+    result: result.ok ? 'success' : 'failure',
+    reason: result.ok ? undefined : result.reason,
+  })
+
+  if (!result.ok) {
+    return loginDenied(request, result.reason)
   }
 
-  try {
-    const identity = await PscsOneIdentityService.exchangeAuthorizationCode(code)
-    const local = await PscsOneSessionAdapter.ensureLocalUser(identity)
-    await PscsOneCompanyService.ensureMembership(local.authUserId, identity.external_company_id)
-
-    const dest = new URL('/quotes', request.nextUrl.origin)
-    const response = NextResponse.redirect(dest)
-    await PscsOneSessionAdapter.attachSessionCookie(request, response, local.tokenHash)
-    response.cookies.set(PSCS_ONE_MAPPED_COMPANY_COOKIE, identity.external_company_id, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: true,
-      path: '/',
-      maxAge: 60 * 60 * 8,
-    })
-    return response
-  } catch (error) {
-    const safe = publicPscsOneSsoReason(error)
-    console.error('pscs_one.callback_denied', { reason: safe, ...describeSsoError(error) })
-    return loginDenied(request, safe)
-  }
+  return response
 }
 
 export async function POST() {
