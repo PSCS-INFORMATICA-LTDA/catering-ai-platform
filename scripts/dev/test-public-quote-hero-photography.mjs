@@ -127,7 +127,11 @@ test('TEST 7 ES works', () => {
 test('TEST 8 Mobile object-cover + focal point', () => {
   assert.match(css, /object-fit: cover/)
   assert.match(css, /--hero-pos-mobile/)
-  assert.match(mediaConfig, /mobilePosition: '50% 42%'/)
+  assert.match(css, /--hero-pos-desktop/)
+  cdlPhotos.forEach((item) => {
+    assert.match(item.mobilePosition, /^\d+% \d+%$/)
+    assert.match(item.desktopPosition, /^\d+% \d+%$/)
+  })
   assert.match(hero, /sizes="100vw"/)
   assert.match(experience, /h-\[42vh\]/)
 })
@@ -224,6 +228,32 @@ test('Header branding is not duplicated as a photo watermark', () => {
   assert.match(experience, /data-tenant-logo/)
   assert.doesNotMatch(hero, /data-landing-watermark/)
   assert.doesNotMatch(experience, /data-hero-watermark/)
+})
+
+test('Occasional HTML captions stay off the food', () => {
+  const captioned = cdlPhotos.filter((item) => item.caption)
+  assert.equal(captioned.length, 3)
+  assert.equal(
+    captioned.map((item) => item.id).join(','),
+    [
+      'cdl-grill-flames-steaks',
+      'cdl-sunset-waterfront-grill',
+      'cdl-event-pool-station',
+    ].join(','),
+  )
+  captioned.forEach((item) => {
+    assert.ok(item.caption?.pt && item.caption.en && item.caption.es)
+    assert.match(item.captionAlign ?? '', /top-left|top-right|bottom-left/)
+  })
+  assert.match(hero, /data-hero-caption/)
+  assert.match(hero, /item\.caption\[locale\]/)
+  assert.match(css, /public-hero-caption/)
+})
+
+test('Presentation filter stays subtle and non-destructive', () => {
+  assert.match(css, /saturate\(1\.04\)/)
+  assert.match(css, /contrast\(1\.03\)/)
+  assert.match(css, /transform-origin: var\(--hero-pos-mobile\)/)
 })
 
 if (failed > 0) {

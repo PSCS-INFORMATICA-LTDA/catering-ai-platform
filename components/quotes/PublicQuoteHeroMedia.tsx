@@ -12,6 +12,7 @@ type PublicQuoteHeroMediaProps = {
   videos?: readonly string[]
   media: PublicHeroMediaItem[]
   posterUrl?: string | null
+  locale?: 'pt' | 'en' | 'es'
 }
 
 function usePrefersReducedMotion() {
@@ -45,6 +46,7 @@ export default function PublicQuoteHeroMedia({
   videos = [],
   media,
   posterUrl,
+  locale = 'pt',
 }: PublicQuoteHeroMediaProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const touchStartX = useRef<number | null>(null)
@@ -226,6 +228,16 @@ export default function PublicQuoteHeroMedia({
                   })
                 }}
               />
+              {item.caption ? (
+                <p
+                  data-hero-caption={item.id}
+                  className={`public-hero-caption public-hero-caption--${item.captionAlign ?? 'top-left'}`}
+                >
+                  <span className="public-hero-caption-rule" aria-hidden />
+                  <span>{item.caption[locale]}</span>
+                </p>
+              ) : null}
+              <div className="public-hero-overlay" />
             </div>
           )
         })
@@ -235,7 +247,6 @@ export default function PublicQuoteHeroMedia({
           className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,color-mix(in_srgb,var(--brand-primary-2)_28%,transparent),transparent_36%),linear-gradient(135deg,#0b1220,#18233a)]"
         />
       )}
-      <div className="public-hero-overlay" />
       {playable.length > 1 && !activeVideo ? (
         <div
           data-hero-indicators

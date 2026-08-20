@@ -51,8 +51,8 @@ Configuração persistente do DEV/HML:
 
 - Domínio canônico: `https://catering-ai-agenda-dev.vercel.app`
 - `gitBranch` do domínio: `feat/public-self-service-quote-dev`
-- `autoAssignCustomDomains` **deve permanecer `false`**. Com `true`, um `vercel deploy --prod` (CLI, target production) reatribui o domínio DEV para o deployment de Production e a cotação pública volta a redirecionar para `/login`.
-- Publicar DEV: push na branch `feat/public-self-service-quote-dev`, depois **obrigatoriamente** `npm run bind:dev:canonical-alias`. O `gitBranch` não recupera sozinho o alias quando um deployment CLI `--prod` (sem SHA Git) já o está segurando.
+- `autoAssignCustomDomains` **deve permanecer `false`**. Isso só reduz roubo de **custom domains**. `catering-ai-agenda-dev.vercel.app` é alias `.vercel.app` do projeto: `vercel deploy --prod` (CLI, target production, sem SHA) **ainda reatribui esse host** e a cotação pública volta a `/quote` → `/login`.
+- Publicar DEV: push na branch `feat/public-self-service-quote-dev`, depois **obrigatoriamente** `npm run bind:dev:canonical-alias`. O `gitBranch` não recupera sozinho o alias quando um deployment CLI `--prod` já o está segurando. Nunca use `--prod` para “publicar o DEV”.
 - Guard de regressão do domínio canônico: `npm run verify:dev:public-quote` (PT/EN/ES = 200, `/quotes` privado, SHA Git da branch DEV, `autoAssignCustomDomains=false`).
 
 Fluxo autorizado no Cloud:

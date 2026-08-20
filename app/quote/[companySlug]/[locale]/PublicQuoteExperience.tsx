@@ -28,6 +28,7 @@ import {
   publicQuoteSessionHasProgress,
 } from '@/Lib/publicQuote/sessionProgress'
 import { CateringAiMark } from '@/components/brand/CateringAiMark'
+import { PscsOneMark } from '@/components/brand/PscsOneMark'
 import PublicLocaleSwitcher from '@/components/quotes/PublicLocaleSwitcher'
 import PublicQuoteHeroMedia from '@/components/quotes/PublicQuoteHeroMedia'
 import {
@@ -160,7 +161,7 @@ const UI_COPY = {
     restart: 'Criar outra solicitação',
     privacy: 'Privacidade',
     support: 'Precisa de ajuda?',
-    poweredBy: 'Powered by Catering AI',
+    poweredBy: 'Powered by PSCS One',
   },
   en: {
     secure: 'Secure online quote',
@@ -180,7 +181,7 @@ const UI_COPY = {
     restart: 'Create another request',
     privacy: 'Privacy',
     support: 'Need help?',
-    poweredBy: 'Powered by Catering AI',
+    poweredBy: 'Powered by PSCS One',
   },
   es: {
     secure: 'Cotización online segura',
@@ -200,7 +201,7 @@ const UI_COPY = {
     restart: 'Crear otra solicitud',
     privacy: 'Privacidad',
     support: '¿Necesitas ayuda?',
-    poweredBy: 'Powered by Catering AI',
+    poweredBy: 'Powered by PSCS One',
   },
 } as const
 
@@ -602,6 +603,7 @@ export default function PublicQuoteExperience({
                 videos={PUBLIC_QUOTE_HERO_VIDEO_SRCS}
                 media={heroImages}
                 posterUrl={bootstrap.settings.heroImageUrl}
+                locale={locale}
               />
             </div>
             <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-8 bg-[#101828] px-4 py-8 text-white sm:px-8 lg:min-h-[34rem] lg:grid-cols-[minmax(0,3fr)_minmax(18rem,2fr)] lg:gap-10 lg:bg-transparent lg:py-16">
@@ -692,9 +694,9 @@ export default function PublicQuoteExperience({
           <p
             data-powered-by
             aria-label={copy.poweredBy}
-            className="flex flex-wrap items-center justify-center gap-1.5 text-[10px] leading-[22px] tracking-wide text-cdl-faint"
+            className="flex flex-wrap items-center justify-center gap-2 text-[11px] leading-none tracking-[0.14em] text-cdl-faint"
           >
-            <CateringAiMark size="footer" variant="icon" className="!p-0" />
+            <PscsOneMark size="footer" variant="icon" className="shadow-sm !p-0" />
             <span>{copy.poweredBy}</span>
           </p>
           <div className="flex flex-wrap justify-center gap-4 text-xs text-cdl-muted">
