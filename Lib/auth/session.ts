@@ -1,6 +1,8 @@
 import { createClient } from '@/Lib/supabase/server'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { fallbackPermissionsForRole } from '@/Lib/auth/permissions'
+import { PSCS_ONE_MAPPED_COMPANY_COOKIE } from '@/Lib/pscs-one/config'
+import { cookies } from 'next/headers'
 import type {
   AuthAppUser,
   AuthMembership,
@@ -108,9 +110,20 @@ export async function getAuthSession(): Promise<AuthSessionContext | null> {
     }
   }
 
+  const cookieStore = await cookies()
+  const mappedCompanyId = cookieStore.get(PSCS_ONE_MAPPED_COMPANY_COOKIE)?.value?.trim()
+  const preferredFromSso = mappedCompanyId
+    ? memberships.find(
+        (m) =>
+          m.company_id === mappedCompanyId &&
+          (m.status === 'active' || m.active),
+      )
+    : undefined
+
   const activeMembership =
-    memberships.find((m) => m.status === 'active') ??
-    memberships.find((m) => m.active) ??
+    preferredFromSso ||
+    memberships.find((m) => m.status === 'active') ||
+    memberships.find((m) => m.active) ||
     null
 
   let permissions = fallbackPermissionsForRole(activeMembership?.role ?? null)
