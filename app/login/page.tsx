@@ -13,6 +13,7 @@ function LoginForm() {
   const router = useRouter()
   const params = useSearchParams()
   const next = safeInternalNext(params.get('next'), '/quotes')
+  const ssoDenied = params.get('pscs_one') === 'denied'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -96,6 +97,11 @@ function LoginForm() {
             </button>
           </div>
         </label>
+        {ssoDenied ? (
+          <p className="text-sm text-red-500" role="alert">
+            PSCS One SSO recusado. Use o login legado abaixo ou volte ao PSCS One.
+          </p>
+        ) : null}
         {error ? (
           <p className="text-sm text-red-500" role="alert">
             {error}
