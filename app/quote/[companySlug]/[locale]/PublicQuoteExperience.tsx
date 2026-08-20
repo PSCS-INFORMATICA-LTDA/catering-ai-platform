@@ -27,7 +27,7 @@ import {
   publicQuoteActiveStorageKey,
   publicQuoteSessionHasProgress,
 } from '@/Lib/publicQuote/sessionProgress'
-import { CateringAiMark } from '@/components/brand/CateringAiMark'
+import { PscsOneMark } from '@/components/brand/PscsOneMark'
 import PublicLocaleSwitcher from '@/components/quotes/PublicLocaleSwitcher'
 import PublicQuoteHeroMedia from '@/components/quotes/PublicQuoteHeroMedia'
 import {
@@ -160,7 +160,7 @@ const UI_COPY = {
     restart: 'Criar outra solicitação',
     privacy: 'Privacidade',
     support: 'Precisa de ajuda?',
-    poweredBy: 'Powered by Catering AI',
+    poweredBy: 'Powered by PSCS One',
   },
   en: {
     secure: 'Secure online quote',
@@ -180,7 +180,7 @@ const UI_COPY = {
     restart: 'Create another request',
     privacy: 'Privacy',
     support: 'Need help?',
-    poweredBy: 'Powered by Catering AI',
+    poweredBy: 'Powered by PSCS One',
   },
   es: {
     secure: 'Cotización online segura',
@@ -200,7 +200,7 @@ const UI_COPY = {
     restart: 'Crear otra solicitud',
     privacy: 'Privacidad',
     support: '¿Necesitas ayuda?',
-    poweredBy: 'Powered by Catering AI',
+    poweredBy: 'Powered by PSCS One',
   },
 } as const
 
@@ -650,11 +650,11 @@ export default function PublicQuoteExperience({
 
       {started && !success ? (
         <div
-          data-public-wizard-product
+          data-public-wizard-pscs
           className="pointer-events-none fixed bottom-24 left-5 z-20 hidden lg:block"
           aria-hidden
         >
-          <CateringAiMark size="sm" className="opacity-80 shadow-sm" />
+          <PscsOneMark size="sm" className="opacity-80 shadow-sm" />
         </div>
       ) : null}
 
@@ -694,7 +694,7 @@ export default function PublicQuoteExperience({
             aria-label={copy.poweredBy}
             className="flex flex-wrap items-center justify-center gap-1.5 text-[10px] leading-[22px] tracking-wide text-cdl-faint"
           >
-            <CateringAiMark size="footer" variant="icon" className="!p-0" />
+            <PscsOneMark size="footer" variant="icon" className="!p-0" />
             <span>{copy.poweredBy}</span>
           </p>
           <div className="flex flex-wrap justify-center gap-4 text-xs text-cdl-muted">
