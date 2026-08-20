@@ -4,9 +4,10 @@
  *
  * Root cause this script permanently counters:
  * a CLI `vercel deploy --prod` creates a target=production deployment with
- * no Git SHA. If autoAssignCustomDomains is true (or gitBranch is cleared),
- * that production deployment steals catering-ai-agenda-dev.vercel.app and
- * the old app redirects /quote to /login.
+ * no Git SHA. autoAssignCustomDomains=false only limits *custom* domains.
+ * catering-ai-agenda-dev.vercel.app is a project `.vercel.app` alias, so
+ * `--prod` still steals it even when gitBranch is pinned. The stolen
+ * production app then redirects /quote to /login.
  *
  * This script always:
  * 1. forces autoAssignCustomDomains=false

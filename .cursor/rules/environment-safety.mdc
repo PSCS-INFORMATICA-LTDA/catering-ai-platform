@@ -9,7 +9,7 @@ alwaysApply: true
 - Local and Preview use Supabase **DEV** (`yasprgtlqclwsjcshtls`).
 - Production uses Supabase **PROD** (`eapwtirhevxrqinytans`) via Vercel Production only.
 - **Never** execute Production writes without Philippe's explicit approval.
-- **Never** use `--prod` unless Philippe explicitly authorizes.
+- **Never** run `vercel --prod` / `npx vercel deploy --prod` from Cloud, Codex, or any DEV workflow. In this Vercel project `--prod` is target=production + source=cli (no Git SHA) and **still assigns** `catering-ai-agenda-dev.vercel.app` even when `autoAssignCustomDomains=false` and `gitBranch` is pinned — that host is a `.vercel.app` project alias, not a custom domain. The public quote then becomes `/quote` → `/login`. Recover with `npm run bind:dev:canonical-alias` (never by running `--prod` again).
 - **Never** run `db reset`, `truncate`, or destructive SQL on PROD.
 - **Never** copy DEV data into PROD automatically.
 - **Never** put `SUPABASE_SERVICE_ROLE_KEY` in `NEXT_PUBLIC_*` or client code.
