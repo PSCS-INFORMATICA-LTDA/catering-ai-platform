@@ -5,11 +5,12 @@ import {
   PSCS_ONE_MAPPED_COMPANY_COOKIE,
   pscsOneCallbackUri,
 } from '@/Lib/pscs-one/config'
-import { publicPscsOneSsoReason } from '@/Lib/pscs-one/errors'
+import { describeSsoError, publicPscsOneSsoReason } from '@/Lib/pscs-one/errors'
 import { PscsOneIdentityService } from '@/Lib/pscs-one/identityService'
 import { PscsOneSessionAdapter } from '@/Lib/pscs-one/sessionAdapter'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 function loginDenied(request: NextRequest, reason: string) {
   const url = new URL('/login', request.nextUrl.origin)
@@ -30,11 +31,12 @@ export async function GET(request: NextRequest) {
 
   try {
     const identity = await PscsOneIdentityService.exchangeAuthorizationCode(code)
-    const authUserId = await PscsOneSessionAdapter.establishSession(identity)
-    await PscsOneCompanyService.ensureMembership(authUserId, identity.external_company_id)
+    const local = await PscsOneSessionAdapter.ensureLocalUser(identity)
+    await PscsOneCompanyService.ensureMembership(local.authUserId, identity.external_company_id)
 
     const dest = new URL('/quotes', request.nextUrl.origin)
     const response = NextResponse.redirect(dest)
+    await PscsOneSessionAdapter.attachSessionCookie(request, response, local.tokenHash)
     response.cookies.set(PSCS_ONE_MAPPED_COMPANY_COOKIE, identity.external_company_id, {
       httpOnly: true,
       sameSite: 'lax',
@@ -45,7 +47,7 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error) {
     const safe = publicPscsOneSsoReason(error)
-    console.error('pscs_one.callback_denied', { reason: safe })
+    console.error('pscs_one.callback_denied', { reason: safe, ...describeSsoError(error) })
     return loginDenied(request, safe)
   }
 }
