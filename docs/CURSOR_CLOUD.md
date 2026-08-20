@@ -45,6 +45,15 @@ Não linkar PROD. Não rodar `db reset`.
 
 ## Vercel
 
+Este Cloud Agent opera no **mesmo projeto Vercel** `catering-ai-platform` (`prj_sSQ2wfVen9FeKpsEPFw7Vj8SBE9v`). Esse projeto **não** é `cateringai.app`.
+
+Configuração persistente do DEV/HML:
+
+- Domínio canônico: `https://catering-ai-agenda-dev.vercel.app`
+- `gitBranch` do domínio: `feat/public-self-service-quote-dev`
+- `autoAssignCustomDomains` **deve permanecer `false`**. Com `true`, um `vercel deploy --prod` (CLI, target production) reatribui o domínio DEV para o deployment de Production e a cotação pública volta a redirecionar para `/login`.
+- Publicar DEV: push na branch `feat/public-self-service-quote-dev`, depois `npm run bind:dev:canonical-alias` se o alias não acompanhar o Git sozinho.
+
 Fluxo autorizado no Cloud:
 
 ```bash
@@ -55,9 +64,10 @@ git push
 npx vercel deploy
 ```
 
-Nunca `npx vercel deploy --prod` neste ambiente.
+Nunca `npx vercel deploy --prod` neste ambiente. `--prod` neste projeto publica o target Production de `catering-ai-platform.vercel.app` e, historicamente, roubava o alias DEV.
 
-Alias DEV atual: `https://catering-ai-agenda-dev.vercel.app` (Preview, não Production).
+Alias DEV atual: `https://catering-ai-agenda-dev.vercel.app` (Preview da branch Git, não Production).
+Rebind: `npm run bind:dev:canonical-alias` (recusa `cateringai.app` e `catering-ai-platform.vercel.app`).
 
 ## Node
 

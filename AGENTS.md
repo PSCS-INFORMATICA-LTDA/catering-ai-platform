@@ -11,6 +11,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 **Ambiente padrão:** DEV
 **Supabase DEV:** `yasprgtlqclwsjcshtls`
 **Branch funcional atual:** `feat/quote-wizard-v2-dev`
+**Branch DEV/HML da cotação pública + domínio canônico:** `feat/public-self-service-quote-dev` → `https://catering-ai-agenda-dev.vercel.app`
 
 Fonte compartilhada: GitHub + Supabase DEV + Vercel Preview/DEV. O GitHub é a fonte de verdade; cópias locais nunca prevalecem sobre mudanças remotas sem uma sincronização explícita.
 
@@ -18,6 +19,8 @@ Fonte compartilhada: GitHub + Supabase DEV + Vercel Preview/DEV. O GitHub é a f
 
 - Nunca usar PROD por padrão.
 - Nunca executar `vercel --prod`.
+- Nunca executar `npx vercel deploy --prod`. Neste projeto Vercel, `--prod` atribui o target Production e já tomou `catering-ai-agenda-dev.vercel.app` mais de uma vez, quebrando a cotação pública (`/quote` → `/login`).
+- O domínio DEV canônico deve permanecer com `gitBranch=feat/public-self-service-quote-dev` e `autoAssignCustomDomains=false`. Rebind: `npm run bind:dev:canonical-alias`.
 - Nunca executar migration em PROD.
 - Nunca usar `db reset` / `truncate`.
 - Supabase padrão = DEV (`yasprgtlqclwsjcshtls`).
