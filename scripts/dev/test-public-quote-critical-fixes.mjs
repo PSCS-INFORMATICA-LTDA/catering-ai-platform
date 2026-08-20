@@ -156,7 +156,9 @@ test('TEST 16 Submit error produces visible feedback', () => {
 test('TEST 17 Double submit protected', () => {
   assert.match(confirm, /!saving/)
   assert.match(wizard, /publicIdempotencyKeyRef/)
+  assert.match(wizard, /publicSubmitLockRef/)
   assert.match(wizard, /setSaving\(true\)/)
+  assert.match(wizard, /finally \{[\s\S]*setSaving\(false\)/)
   assert.match(submitRoute, /p_idempotency_key_hash/)
 })
 

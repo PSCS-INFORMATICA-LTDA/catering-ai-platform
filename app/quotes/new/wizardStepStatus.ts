@@ -8,6 +8,7 @@ import type { GrillPhotoStatus } from '@/Lib/grillPhotoStatus'
 import { isUsablePostalCode } from '@/Lib/cep'
 import { isUsablePhone } from '@/Lib/normalizePhone'
 import { isUsablePublicPhone } from '@/Lib/publicQuote/phone'
+import { isPublicEventDateBookable } from '@/Lib/publicQuote/eventDate'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
@@ -230,6 +231,13 @@ export function getStepIssues(
     case 1:
       if (!isFilled(state.eventName)) issues.push(tw(language, 'issueEventName'))
       if (!isFilled(state.eventDate)) issues.push(tw(language, 'issueEventDate'))
+      else if (
+        ctx.isPublicMode &&
+        !ctx.isEditMode &&
+        !isPublicEventDateBookable(state.eventDate)
+      ) {
+        issues.push(getQuoteStrings(language).wizard.publicEventDatePast)
+      }
       if (!isFilled(state.startTime)) issues.push(tw(language, 'issueStartTime'))
       if (!isFilled(state.endTime)) issues.push(tw(language, 'issueEndTime'))
       if (!isFilled(state.address)) issues.push(tw(language, 'issueAddress'))

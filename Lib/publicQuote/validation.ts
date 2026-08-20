@@ -1,5 +1,6 @@
 import { isUsablePhone } from '@/Lib/normalizePhone'
 import { isValidEventTimeWindow } from './eventDuration'
+import { isPublicEventDateBookable } from './eventDate'
 import { toPublicPhoneE164 } from './phone'
 import { parsePublicQuoteLocale, PublicQuoteHttpError } from './security'
 import type { PublicQuoteDraft } from './types'
@@ -195,12 +196,10 @@ export function validateCompletePublicQuoteDraft(
   }
 
   const eventDate = /^\d{4}-\d{2}-\d{2}$/.test(draft.event.eventDate)
-    ? new Date(`${draft.event.eventDate}T00:00:00`)
-    : null
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  if (!eventDate || Number.isNaN(eventDate.getTime()) || eventDate < today) {
-    throw new PublicQuoteHttpError(400, 'invalid_payload')
+    ? draft.event.eventDate
+    : ''
+  if (!isPublicEventDateBookable(eventDate)) {
+    throw new PublicQuoteHttpError(422, 'invalid_event_date')
   }
   const start = timeToMinutes(draft.event.startTime)
   const end = timeToMinutes(draft.event.endTime)

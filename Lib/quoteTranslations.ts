@@ -455,6 +455,7 @@ type QuoteStrings = {
     publicSubmittingRequest: string
     consentRequired: string
     publicSubmitError: string
+    publicEventDatePast: string
   }
 }
 
@@ -887,6 +888,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       consentRequired: 'Aceite o consentimento para enviar.',
       publicSubmitError:
         'Não foi possível enviar agora. Revise os dados e tente novamente.',
+      publicEventDatePast:
+        'Escolha uma data de evento a partir de hoje para enviar a solicitação.',
     },
   },
   en: {
@@ -1311,6 +1314,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       consentRequired: 'Accept the consent to submit.',
       publicSubmitError:
         'We could not submit right now. Review the details and try again.',
+      publicEventDatePast:
+        'Choose an event date from today onward to send this request.',
     },
   },
   es: {
@@ -1740,6 +1745,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       consentRequired: 'Acepta el consentimiento para enviar.',
       publicSubmitError:
         'No pudimos enviar ahora. Revisa los datos e inténtalo de nuevo.',
+      publicEventDatePast:
+        'Elige una fecha de evento a partir de hoy para enviar la solicitud.',
     },
   },
 }

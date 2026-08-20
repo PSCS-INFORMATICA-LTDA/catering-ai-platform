@@ -81,6 +81,10 @@ import {
   resolveServiceDurationMinutes,
 } from '@/Lib/publicQuote/eventDuration'
 import {
+  calendarDateInTimeZone,
+  isPublicEventDateBookable,
+} from '@/Lib/publicQuote/eventDate'
+import {
   findPackageByIdOrKey,
   resolvePackageIdForPersistence,
 } from '@/Lib/publicQuote/packageLookup'
@@ -413,6 +417,7 @@ function DatePickerField({
   className = '',
   completion,
   language = 'pt',
+  minDate,
 }: {
   label: string
   value: string
@@ -420,6 +425,7 @@ function DatePickerField({
   className?: string
   completion?: FieldCompletion
   language?: QuoteLanguage | string | null
+  minDate?: string
 }) {
   const [open, setOpen] = useState(false)
   const [viewDate, setViewDate] = useState(() => parseDateValue(value) ?? new Date())
@@ -550,13 +556,21 @@ function DatePickerField({
                 new Date().getMonth() === calendarDays.month &&
                 new Date().getDate() === day
 
+              const cellDate = toDateValue(
+                new Date(calendarDays.year, calendarDays.month, day),
+              )
+              const isDisabled = Boolean(minDate && cellDate < minDate)
+
               return (
                 <button
                   key={`${calendarDays.year}-${calendarDays.month}-${day}`}
                   type="button"
+                  disabled={isDisabled}
                   onClick={() => selectDay(day)}
                   className={`flex h-10 items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
-                    isSelected
+                    isDisabled
+                      ? 'cursor-not-allowed text-cdl-faint opacity-40'
+                      : isSelected
                       ? 'bg-cdl-accent text-cdl-on-accent'
                       : isToday
                         ? 'border border-cdl-accent-border bg-cdl-accent-soft text-cdl-accent'
@@ -1118,6 +1132,7 @@ export default function QuoteWizardCore({
     useState<string | null>(null)
   const [additionalsReviewPrompt, setAdditionalsReviewPrompt] = useState(false)
   const publicIdempotencyKeyRef = useRef<string | null>(null)
+  const publicSubmitLockRef = useRef(false)
 
   useEffect(() => {
     if (!tenantBranchId || state.branchId) return
@@ -2365,7 +2380,14 @@ export default function QuoteWizardCore({
   const quoteReady = isQuoteReadyToSave(stepStatusCtx)
 
   async function handleSaveQuote(openReview = false) {
-    if (saving) return
+    if (saving || publicSubmitLockRef.current) return
+
+    if (isPublicMode && !isPublicEventDateBookable(state.eventDate)) {
+      setSaveErrorInfo(
+        buildSaveQuoteError('validation', new Error(w.publicEventDatePast)),
+      )
+      return
+    }
 
     if (mandatoryPendingSteps.length > 0) {
       const errorInfo = buildSaveQuoteError(
@@ -2420,6 +2442,7 @@ export default function QuoteWizardCore({
         return
       }
 
+      publicSubmitLockRef.current = true
       setSaving(true)
       setSaveErrorInfo(null)
       try {
@@ -2448,7 +2471,7 @@ export default function QuoteWizardCore({
         })
         const result = (await response.json().catch(() => null)) as
           | PublicQuoteSubmissionResult
-          | { error?: string }
+          | { error?: string; code?: string }
           | null
         if (
           !response.ok ||
@@ -2456,16 +2479,23 @@ export default function QuoteWizardCore({
           !('quote' in result) ||
           !result.quote?.id
         ) {
+          const code =
+            result && 'code' in result && typeof result.code === 'string'
+              ? result.code
+              : ''
           throw new Error(
-            result && 'error' in result && result.error
-              ? result.error
-              : 'public_submit_failed',
+            code === 'invalid_event_date'
+              ? w.publicEventDatePast
+              : result && 'error' in result && result.error
+                ? result.error
+                : 'public_submit_failed',
           )
         }
         onPublicSuccess?.(result)
       } catch (error) {
         setSaveErrorInfo(buildSaveQuoteError('quote', error))
       } finally {
+        publicSubmitLockRef.current = false
         setSaving(false)
       }
       return
@@ -2886,6 +2916,9 @@ export default function QuoteWizardCore({
                   onChange={(v) => updateState({ eventDate: v })}
                   completion={getFieldCompletion(state.eventDate)}
                   language={uiLocale}
+                  minDate={
+                    isPublicMode ? calendarDateInTimeZone() : undefined
+                  }
                 />
                 <TimePickerField
                   label={w.startTime}
@@ -3315,6 +3348,13 @@ export default function QuoteWizardCore({
               }
               saving={saving}
               submitError={Boolean(saveErrorInfo)}
+              submitErrorMessage={
+                saveErrorInfo?.message &&
+                saveErrorInfo.message !== 'public_submit_failed' &&
+                saveErrorInfo.message !== 'Request could not be processed.'
+                  ? saveErrorInfo.message
+                  : null
+              }
               onConsentChange={(accepted) =>
                 updateState({
                   publicConsentAccepted: accepted,

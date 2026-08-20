@@ -41,6 +41,7 @@ export default function PublicQuoteConfirmationStep({
   mileageReviewRequired = false,
   saving,
   submitError,
+  submitErrorMessage,
   onConsentChange,
   onGoToStep,
   onBack,
@@ -69,6 +70,7 @@ export default function PublicQuoteConfirmationStep({
   mileageReviewRequired?: boolean
   saving: boolean
   submitError: boolean
+  submitErrorMessage?: string | null
   onConsentChange: (accepted: boolean) => void
   onGoToStep: (step: number) => void
   onBack: () => void
@@ -239,7 +241,7 @@ export default function PublicQuoteConfirmationStep({
           role="alert"
           className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
         >
-          {w.publicSubmitError}
+          {submitErrorMessage || w.publicSubmitError}
         </p>
       ) : null}
 

@@ -1575,3 +1575,129 @@ body {
   padding-right: 0;
 }
 
+.public-hero-slide {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition-property: opacity;
+  transition-timing-function: ease;
+}
+
+.public-hero-slide.is-active {
+  opacity: 1;
+}
+
+.public-hero-photo {
+  object-fit: cover;
+  object-position: var(--hero-pos-mobile);
+  transform: scale(1);
+}
+
+@media (min-width: 1024px) {
+  .public-hero-photo {
+    object-position: var(--hero-pos-desktop);
+  }
+}
+
+.public-hero-slide.is-active .public-hero-photo {
+  animation: public-hero-kenburns 7.2s ease-out forwards;
+}
+
+@keyframes public-hero-kenburns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.04);
+  }
+}
+
+.public-hero-overlay {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(8, 12, 20, 0.38) 0%,
+      rgba(8, 12, 20, 0.16) 34%,
+      rgba(8, 12, 20, 0.32) 64%,
+      rgba(8, 12, 20, 0.62) 100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(8, 12, 20, 0.36) 0%,
+      rgba(8, 12, 20, 0.08) 52%,
+      rgba(8, 12, 20, 0.24) 100%
+    );
+}
+
+.cdl-success-emblem-halo {
+  background: radial-gradient(
+    circle,
+    rgba(249, 115, 22, 0.55),
+    rgba(226, 27, 27, 0.18) 42%,
+    transparent 72%
+  );
+  filter: blur(10px);
+  animation: cdl-success-glow 3.8s ease-in-out infinite;
+}
+
+.cdl-success-emblem-mark {
+  animation:
+    cdl-success-reveal 1.15s ease-out both,
+    cdl-success-turn 7.5s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+@keyframes cdl-success-reveal {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes cdl-success-turn {
+  0%,
+  100% {
+    transform: rotateY(0deg) scale(1);
+  }
+  50% {
+    transform: rotateY(16deg) scale(1.04);
+  }
+}
+
+@keyframes cdl-success-glow {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-hero-slide {
+    transition-duration: 0.35s !important;
+  }
+
+  .public-hero-slide.is-active .public-hero-photo {
+    animation: none;
+    transform: none;
+  }
+
+  .cdl-success-emblem-halo,
+  .cdl-success-emblem-mark {
+    animation: none;
+  }
+}
+
+

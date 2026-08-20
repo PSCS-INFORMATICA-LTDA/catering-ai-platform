@@ -144,6 +144,10 @@ export async function POST(request: NextRequest) {
       p_consent_version: privacyPolicyVersion,
     })
     if (error || !data || typeof data !== 'object') {
+      console.error('[public-quote] finalize_public_quote failed', {
+        code: error?.code ?? null,
+        message: error?.message ?? null,
+      })
       throw new PublicQuoteHttpError(500, 'server_error')
     }
     const result = data as {
@@ -167,8 +171,10 @@ export async function POST(request: NextRequest) {
           ? 'expired'
           : code === 'conflict'
             ? 'conflict'
-            : code === 'not_found'
-              ? 'not_found'
+          : code === 'not_found'
+            ? 'not_found'
+            : code === 'invalid_event_date'
+              ? 'invalid_event_date'
               : code.startsWith('invalid_')
                 ? 'invalid_payload'
                 : 'server_error',

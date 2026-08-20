@@ -149,8 +149,9 @@ const UI_COPY = {
     feature2: 'Preço estimado calculado com as regras atuais',
     feature3: 'Nossa equipe revisa tudo antes de confirmar',
     successEyebrow: 'Solicitação recebida',
-    successTitle: 'Seu evento já está com a nossa equipe',
-    successBody: 'Vamos revisar os detalhes e entrar em contato. Guarde este resumo.',
+    successTitle: 'Obrigado por escolher CDL Services BBQ At Home',
+    successBody:
+      'Nossa equipe revisará os detalhes e entrará em contato. Guarde este resumo.',
     quote: 'Solicitação',
     date: 'Data',
     name: 'Evento',
@@ -168,8 +169,9 @@ const UI_COPY = {
     feature2: 'Estimate calculated with current pricing rules',
     feature3: 'Our team reviews everything before confirmation',
     successEyebrow: 'Request received',
-    successTitle: 'Your event is now with our team',
-    successBody: 'We will review the details and get in touch. Keep this summary.',
+    successTitle: 'Thank you for choosing CDL Services BBQ At Home',
+    successBody:
+      'Our team will review the details and get in touch. Keep this summary.',
     quote: 'Request',
     date: 'Date',
     name: 'Event',
@@ -187,8 +189,9 @@ const UI_COPY = {
     feature2: 'Estimación calculada con las reglas actuales',
     feature3: 'Nuestro equipo revisa todo antes de confirmar',
     successEyebrow: 'Solicitud recibida',
-    successTitle: 'Tu evento ya está con nuestro equipo',
-    successBody: 'Revisaremos los detalles y nos pondremos en contacto. Guarda este resumen.',
+    successTitle: 'Gracias por elegir CDL Services BBQ At Home',
+    successBody:
+      'Nuestro equipo revisará los detalles y se pondrá en contacto. Guarda este resumen.',
     quote: 'Solicitud',
     date: 'Fecha',
     name: 'Evento',
@@ -314,9 +317,10 @@ export default function PublicQuoteExperience({
   const heroImages = useMemo(
     () =>
       collectPublicHeroImages({
+        companySlug: bootstrap.company.slug,
         heroImageUrl: bootstrap.settings.heroImageUrl,
       }),
-    [bootstrap.settings.heroImageUrl],
+    [bootstrap.company.slug, bootstrap.settings.heroImageUrl],
   )
   const initialState = useMemo(
     () =>
@@ -454,17 +458,20 @@ export default function PublicQuoteExperience({
 
       {success ? (
         <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-3xl items-center px-4 py-12 sm:px-8">
-          <section className="w-full rounded-[2rem] border border-cdl-border bg-cdl-surface p-7 shadow-xl sm:p-10">
+          <section
+            data-success-screen
+            className="w-full rounded-[2rem] border border-cdl-border bg-cdl-surface p-7 shadow-xl sm:p-10"
+          >
             {emblemSrc ? (
               <div
                 data-success-flame-art
-                className="relative mx-auto flex h-28 w-28 items-center justify-center sm:h-32 sm:w-32"
+                className="cdl-success-emblem relative mx-auto flex h-28 w-28 items-center justify-center sm:h-32 sm:w-32"
               >
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute inset-[-18%] rounded-full bg-[radial-gradient(circle,rgba(249,115,22,0.38),transparent_68%)] blur-md"
+                  className="cdl-success-emblem-halo pointer-events-none absolute inset-[-22%] rounded-full"
                 />
-                <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-white shadow-lg">
+                <div className="cdl-success-emblem-mark relative flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-white shadow-lg">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={emblemSrc}
@@ -589,7 +596,7 @@ export default function PublicQuoteExperience({
           >
             <PublicQuoteHeroMedia
               videos={PUBLIC_QUOTE_HERO_VIDEO_SRCS}
-              images={heroImages}
+              media={heroImages}
               posterUrl={bootstrap.settings.heroImageUrl}
             />
             <div className="relative z-10 mx-auto grid min-h-[34rem] max-w-7xl items-center gap-10 px-4 py-16 text-white sm:px-8 lg:grid-cols-[minmax(0,3fr)_minmax(18rem,2fr)]">
