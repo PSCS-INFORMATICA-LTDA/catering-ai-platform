@@ -4,6 +4,14 @@
  * receive their own official set. Do not inline these URLs in JSX.
  */
 
+export type PublicHeroCaptionAlign = 'top-left' | 'top-right' | 'bottom-left'
+
+export type PublicHeroCaptionCopy = {
+  readonly pt: string
+  readonly en: string
+  readonly es: string
+}
+
 export type PublicHeroMediaItem = {
   id: string
   src: string
@@ -14,6 +22,8 @@ export type PublicHeroMediaItem = {
   desktopPosition: string
   width: number
   height: number
+  captionAlign?: PublicHeroCaptionAlign
+  caption?: PublicHeroCaptionCopy
 }
 
 export const PUBLIC_HERO_HOLD_MS = 6500
@@ -27,8 +37,8 @@ const CDL_PUBLIC_HERO_PHOTOS: readonly PublicHeroMediaItem[] = [
       'assets/branding/cdl/hero/originals/cdl-canape-sausage-crostini-original.jpeg',
     sourceFilename: 'WhatsApp Image 2026-08-19 at 21.43.21 (2).jpeg',
     alt: 'CDL sausage crostini canapés on a branded wooden board',
-    mobilePosition: '50% 42%',
-    desktopPosition: '50% 38%',
+    mobilePosition: '50% 46%',
+    desktopPosition: '50% 42%',
     width: 1080,
     height: 1920,
   },
@@ -39,8 +49,8 @@ const CDL_PUBLIC_HERO_PHOTOS: readonly PublicHeroMediaItem[] = [
       'assets/branding/cdl/hero/originals/cdl-sliced-beef-rosemary-original.jpeg',
     sourceFilename: 'WhatsApp Image 2026-08-19 at 21.43.21 (1).jpeg',
     alt: 'Sliced grilled beef with rosemary served on a wooden platter',
-    mobilePosition: '50% 40%',
-    desktopPosition: '50% 36%',
+    mobilePosition: '50% 48%',
+    desktopPosition: '50% 44%',
     width: 1108,
     height: 1920,
   },
@@ -51,10 +61,16 @@ const CDL_PUBLIC_HERO_PHOTOS: readonly PublicHeroMediaItem[] = [
       'assets/branding/cdl/hero/originals/cdl-grill-flames-steaks-original.jpeg',
     sourceFilename: 'WhatsApp Image 2026-08-19 at 21.43.21.jpeg',
     alt: 'Steaks and sausages searing over live flames',
-    mobilePosition: '50% 48%',
-    desktopPosition: '50% 42%',
+    mobilePosition: '48% 52%',
+    desktopPosition: '46% 48%',
     width: 1097,
     height: 1920,
+    captionAlign: 'top-right',
+    caption: {
+      pt: 'Da brasa à mesa',
+      en: 'From the grill to the table',
+      es: 'De la parrilla a la mesa',
+    },
   },
   {
     id: 'cdl-platter-picanha-farofa-pool',
@@ -63,8 +79,8 @@ const CDL_PUBLIC_HERO_PHOTOS: readonly PublicHeroMediaItem[] = [
       'assets/branding/cdl/hero/originals/cdl-platter-picanha-farofa-pool-original.jpeg',
     sourceFilename: 'WhatsApp Image 2026-08-19 at 21.43.24 (2).jpeg',
     alt: 'Picanha slices around farofa served poolside',
-    mobilePosition: '50% 40%',
-    desktopPosition: '48% 36%',
+    mobilePosition: '50% 58%',
+    desktopPosition: '50% 52%',
     width: 1440,
     height: 1920,
   },
@@ -74,9 +90,9 @@ const CDL_PUBLIC_HERO_PHOTOS: readonly PublicHeroMediaItem[] = [
     originalSrc:
       'assets/branding/cdl/hero/originals/cdl-bacon-scallops-original.jpeg',
     sourceFilename: 'WhatsApp Image 2026-08-19 at 21.43.24 (3).jpeg',
-    alt: 'Bacon-wrapped scallops on a wooden catering plate',
-    mobilePosition: '50% 42%',
-    desktopPosition: '50% 38%',
+    alt: 'Bacon-wrapped bites on a wooden catering plate',
+    mobilePosition: '50% 56%',
+    desktopPosition: '50% 48%',
     width: 1440,
     height: 1920,
   },
@@ -87,10 +103,16 @@ const CDL_PUBLIC_HERO_PHOTOS: readonly PublicHeroMediaItem[] = [
       'assets/branding/cdl/hero/originals/cdl-sunset-waterfront-grill-original.jpeg',
     sourceFilename: 'WhatsApp Image 2026-08-19 at 21.43.24.jpeg',
     alt: 'Picanha grilling over flames at a waterfront sunset',
-    mobilePosition: '50% 62%',
-    desktopPosition: '50% 58%',
+    mobilePosition: '50% 66%',
+    desktopPosition: '50% 60%',
     width: 1440,
     height: 1920,
+    captionAlign: 'top-left',
+    caption: {
+      pt: 'Desde 2017 em Orlando, Flórida',
+      en: 'Serving Orlando since 2017',
+      es: 'Desde 2017 en Orlando, Florida',
+    },
   },
   {
     id: 'cdl-mixed-platter-bull-grill',
@@ -99,8 +121,8 @@ const CDL_PUBLIC_HERO_PHOTOS: readonly PublicHeroMediaItem[] = [
       'assets/branding/cdl/hero/originals/cdl-mixed-platter-bull-grill-original.jpeg',
     sourceFilename: 'WhatsApp Image 2026-08-19 at 21.43.23 (1).jpeg',
     alt: 'Mixed grilled meats, corn and garlic bread on a serving board',
-    mobilePosition: '50% 42%',
-    desktopPosition: '50% 38%',
+    mobilePosition: '50% 44%',
+    desktopPosition: '50% 40%',
     width: 1080,
     height: 1920,
   },
@@ -111,10 +133,16 @@ const CDL_PUBLIC_HERO_PHOTOS: readonly PublicHeroMediaItem[] = [
       'assets/branding/cdl/hero/originals/cdl-event-pool-station-original.jpeg',
     sourceFilename: 'cdl-event-pool-station.jpeg',
     alt: 'CDL Brazilian BBQ station under a branded tent beside a luxury pool',
-    mobilePosition: '50% 42%',
-    desktopPosition: '48% 38%',
+    mobilePosition: '42% 38%',
+    desktopPosition: '44% 36%',
     width: 1920,
     height: 1080,
+    captionAlign: 'top-right',
+    caption: {
+      pt: 'Churrasco brasileiro feito para o seu evento',
+      en: 'Brazilian barbecue made for your event',
+      es: 'Barbacoa brasileña hecha para tu evento',
+    },
   },
   {
     id: 'cdl-board-steak-zucchini',
@@ -123,8 +151,8 @@ const CDL_PUBLIC_HERO_PHOTOS: readonly PublicHeroMediaItem[] = [
       'assets/branding/cdl/hero/originals/cdl-board-steak-zucchini-original.jpeg',
     sourceFilename: 'WhatsApp Image 2026-08-19 at 21.43.22 (1).jpeg',
     alt: 'CDL branded board with steak, chicken and grilled vegetables',
-    mobilePosition: '50% 48%',
-    desktopPosition: '50% 42%',
+    mobilePosition: '50% 46%',
+    desktopPosition: '50% 44%',
     width: 1440,
     height: 1920,
   },
@@ -135,8 +163,8 @@ const CDL_PUBLIC_HERO_PHOTOS: readonly PublicHeroMediaItem[] = [
       'assets/branding/cdl/hero/originals/cdl-grill-lamb-hearts-original.jpeg',
     sourceFilename: 'WhatsApp Image 2026-08-19 at 21.43.20 (1).jpeg',
     alt: 'Lamb chops, chicken hearts and spiral sausage on a commercial grill',
-    mobilePosition: '50% 52%',
-    desktopPosition: '50% 46%',
+    mobilePosition: '50% 54%',
+    desktopPosition: '50% 48%',
     width: 1095,
     height: 1920,
   },
@@ -147,8 +175,8 @@ const CDL_PUBLIC_HERO_PHOTOS: readonly PublicHeroMediaItem[] = [
       'assets/branding/cdl/hero/originals/cdl-poolside-brazilian-spread-original.jpeg',
     sourceFilename: 'WhatsApp Image 2026-08-19 at 21.43.23.jpeg',
     alt: 'Brazilian BBQ platters and sauces beside a swimming pool',
-    mobilePosition: '50% 42%',
-    desktopPosition: '48% 38%',
+    mobilePosition: '50% 58%',
+    desktopPosition: '48% 52%',
     width: 1080,
     height: 1920,
   },
@@ -159,8 +187,8 @@ const CDL_PUBLIC_HERO_PHOTOS: readonly PublicHeroMediaItem[] = [
       'assets/branding/cdl/hero/originals/cdl-grill-corn-flames-original.jpeg',
     sourceFilename: 'WhatsApp Image 2026-08-19 at 21.43.20.jpeg',
     alt: 'Corn, steaks and sausages cooking over grill flames',
-    mobilePosition: '50% 48%',
-    desktopPosition: '50% 42%',
+    mobilePosition: '46% 54%',
+    desktopPosition: '45% 48%',
     width: 1318,
     height: 1920,
   },
@@ -171,8 +199,8 @@ const CDL_PUBLIC_HERO_PHOTOS: readonly PublicHeroMediaItem[] = [
       'assets/branding/cdl/hero/originals/cdl-fleet-neighborhood-original.jpeg',
     sourceFilename: 'cdl-fleet-neighborhood.jpeg',
     alt: 'CDL Services branded catering van at a residential event',
-    mobilePosition: '50% 55%',
-    desktopPosition: '46% 52%',
+    mobilePosition: '48% 42%',
+    desktopPosition: '42% 46%',
     width: 1920,
     height: 1080,
   },
@@ -183,8 +211,8 @@ const CDL_PUBLIC_HERO_PHOTOS: readonly PublicHeroMediaItem[] = [
       'assets/branding/cdl/hero/originals/cdl-raw-tomahawk-wolf-original.jpeg',
     sourceFilename: 'WhatsApp Image 2026-08-19 at 21.43.21 (3).jpeg',
     alt: 'Raw tomahawk steak held in front of an outdoor grill',
-    mobilePosition: '50% 40%',
-    desktopPosition: '50% 36%',
+    mobilePosition: '50% 48%',
+    desktopPosition: '50% 42%',
     width: 1440,
     height: 1920,
   },
@@ -195,8 +223,8 @@ const CDL_PUBLIC_HERO_PHOTOS: readonly PublicHeroMediaItem[] = [
       'assets/branding/cdl/hero/originals/cdl-vacuum-premium-meats-original.jpeg',
     sourceFilename: 'WhatsApp Image 2026-08-19 at 21.43.22.jpeg',
     alt: 'Premium vacuum-sealed meats prepared poolside for churrasco',
-    mobilePosition: '50% 55%',
-    desktopPosition: '50% 48%',
+    mobilePosition: '50% 68%',
+    desktopPosition: '50% 58%',
     width: 1440,
     height: 1920,
   },
