@@ -4,7 +4,9 @@ import {
   type PackageItem,
   type PackageSideItem,
 } from '@/Lib/packageConfiguration'
+import { resolveCatalogItemDisplayLabel } from '@/Lib/cdlPackageItemI18n'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import { tw } from '@/Lib/quoteTranslations'
 
 export type PackageOptionGroupItem = {
   id: string
@@ -62,23 +64,17 @@ export function getOptionItemLabel(
   item: PackageOptionGroupItem,
   language: QuoteLanguage = 'pt',
 ): string {
-  if (language === 'en') {
-    return (
-      item.label_en?.trim() ||
-      item.label_pt?.trim() ||
-      item.option_item_key?.trim() ||
-      '—'
-    )
-  }
-  if (language === 'es') {
-    return (
-      item.label_es?.trim() ||
-      item.label_pt?.trim() ||
-      item.option_item_key?.trim() ||
-      '—'
-    )
-  }
-  return item.label_pt?.trim() || item.option_item_key?.trim() || '—'
+  return (
+    resolveCatalogItemDisplayLabel(
+      {
+        pt: item.label_pt,
+        en: item.label_en,
+        es: item.label_es,
+        fallback: item.option_item_key,
+      },
+      language,
+    ) || '—'
+  )
 }
 
 export function getOptionGroupTitle(
@@ -284,10 +280,11 @@ export function getPendingPackageSelectionGroupIds(
 export function validatePackageSelections(
   groups: ReadonlyArray<PackageOptionGroup>,
   selections: Record<string, string>,
+  language: QuoteLanguage = 'pt',
 ): string[] {
   const pending = getPendingPackageSelectionGroupIds(groups, selections)
   if (pending.length > 0) {
-    return ['Escolha uma opção para continuar.']
+    return [tw(language, 'chooseOption')]
   }
   return []
 }
@@ -301,7 +298,7 @@ function buildGroupPlaceholderPattern(
     .filter(Boolean)
   if (labels.length === 0) return null
   if (labels.length === 1) return labels[0]
-  return labels.join(' ou ')
+  return labels.join(` ${tw(language, 'listOr')} `)
 }
 
 export function resolvePackageItemsWithSelections(
@@ -338,7 +335,7 @@ export function resolvePackageItemsWithSelections(
     const keyPattern = group.items
       .map((item) => item.option_item_key?.trim())
       .filter(Boolean)
-      .join(' ou ')
+      .join(` ${tw(language, 'listOr')} `)
     if (keyPattern && result.includes(keyPattern)) {
       result = result.replace(
         keyPattern,

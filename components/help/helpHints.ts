@@ -1,4 +1,5 @@
 import type { HelpRouteContext } from '@/components/help/helpContext'
+import { helpActionLabel } from '@/Lib/i18n/help'
 
 export type HelpAction =
   | 'explain'
@@ -8,14 +9,22 @@ export type HelpAction =
   | 'support'
   | 'whatsapp'
 
-export const HELP_ACTION_LABELS: Record<HelpAction, string> = {
-  explain: 'Explicar esta tela',
-  pending: 'Verificar pendências',
-  next: 'Próxima ação sugerida',
-  tips: 'Dicas rápidas',
-  support: 'Falar com suporte',
-  whatsapp: 'Enviar por WhatsApp',
+export function getHelpActionLabels(
+  locale?: string | null,
+): Record<HelpAction, string> {
+  return {
+    explain: helpActionLabel(locale, 'explain'),
+    pending: helpActionLabel(locale, 'pending'),
+    next: helpActionLabel(locale, 'next'),
+    tips: helpActionLabel(locale, 'tips'),
+    support: helpActionLabel(locale, 'support'),
+    whatsapp: helpActionLabel(locale, 'whatsapp'),
+  }
 }
+
+/** PT fallback for callers that do not pass locale. */
+export const HELP_ACTION_LABELS: Record<HelpAction, string> =
+  getHelpActionLabels('pt')
 
 const PROACTIVE_BY_ROUTE: Array<{
   test: (path: string) => boolean

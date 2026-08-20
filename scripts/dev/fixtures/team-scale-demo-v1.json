@@ -1,0 +1,60 @@
+{
+  "fixture": "team-scale-demo-v1",
+  "companyId": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+  "teamId": "a1000000-0000-4000-8000-000000000003",
+  "teamName": "Equipe Caio",
+  "eventCode": "EVT-SCALE-DEMO-001",
+  "eventDate": "2027-10-10",
+  "startTime": "10:00:00",
+  "endTime": "14:00:00",
+  "requirements": {
+    "grill_master": 1,
+    "assistant": 2,
+    "team_leader": 1,
+    "preparation": 0
+  },
+  "designationOrder": [
+    "grill_master",
+    "assistant",
+    "assistant",
+    "team_leader"
+  ],
+  "people": [
+    {
+      "id": "b2800000-0000-4000-8000-000000000092",
+      "full_name": "TEST DEV — Philippe Santana",
+      "ab_name": "Philippe",
+      "phone": "+14075552001",
+      "role_key": "grill_master",
+      "step": 1,
+      "note": "Churrasqueiro — primeiro a designar"
+    },
+    {
+      "id": "b2800000-0000-4000-8000-000000000093",
+      "full_name": "TEST DEV — João Silva",
+      "ab_name": "João",
+      "phone": "+14075552002",
+      "role_key": "assistant",
+      "step": 2,
+      "note": "Ajudante 1"
+    },
+    {
+      "id": "b2800000-0000-4000-8000-000000000094",
+      "full_name": "TEST DEV — Elena Rocha",
+      "ab_name": "Elena",
+      "phone": "+14075552003",
+      "role_key": "assistant",
+      "step": 3,
+      "note": "Ajudante 2"
+    },
+    {
+      "id": "b2800000-0000-4000-8000-000000000091",
+      "full_name": "TEST DEV — Caio Mendes",
+      "ab_name": "Caio",
+      "phone": "+14075552000",
+      "role_key": "team_leader",
+      "step": 4,
+      "note": "Líder — fecha a equipe"
+    }
+  ]
+}

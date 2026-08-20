@@ -25,14 +25,22 @@ export function grillPhotoStatusToRequired(status: GrillPhotoStatus): boolean {
   return status === 'pending'
 }
 
-export function getGrillPhotoStatusLabel(status: GrillPhotoStatus): string {
+export function getGrillPhotoStatusLabel(
+  status: GrillPhotoStatus,
+  locale: string | null | undefined = 'pt',
+): string {
+  const loc = locale === 'en' || locale === 'es' ? locale : 'pt'
   switch (status) {
     case 'received':
-      return 'Sim'
+      return loc === 'en' ? 'Yes' : loc === 'es' ? 'Sí' : 'Sim'
     case 'pending':
-      return 'Pendente'
+      return loc === 'en' ? 'Pending' : loc === 'es' ? 'Pendiente' : 'Pendente'
     case 'not_applicable':
-      return 'Não se aplica'
+      return loc === 'en'
+        ? 'Not applicable'
+        : loc === 'es'
+          ? 'No aplica'
+          : 'Não se aplica'
     default:
       return '—'
   }
@@ -41,28 +49,38 @@ export function getGrillPhotoStatusLabel(status: GrillPhotoStatus): string {
 /** Rótulo para detalhe/PDF da cotação */
 export function getGrillPhotoDetailLabel(
   input: GrillPhotoStatusInput,
+  locale: string | null | undefined = 'pt',
 ): string {
   const status = deriveGrillPhotoStatus(input)
+  const loc = locale === 'en' || locale === 'es' ? locale : 'pt'
   switch (status) {
     case 'received':
-      return 'Confirmada'
+      return loc === 'en' ? 'Confirmed' : loc === 'es' ? 'Confirmada' : 'Confirmada'
     case 'pending':
-      return 'Pendente'
+      return loc === 'en' ? 'Pending' : loc === 'es' ? 'Pendiente' : 'Pendente'
     case 'not_applicable':
-      return 'Não se aplica'
+      return loc === 'en'
+        ? 'Not applicable'
+        : loc === 'es'
+          ? 'No aplica'
+          : 'Não se aplica'
     default:
       return '—'
   }
 }
 
-export function getGrillPhotoBadgeLabel(status: GrillPhotoStatus): string {
+export function getGrillPhotoBadgeLabel(
+  status: GrillPhotoStatus,
+  locale: string | null | undefined = 'pt',
+): string {
+  const loc = locale === 'en' || locale === 'es' ? locale : 'pt'
   switch (status) {
     case 'received':
-      return 'Recebida'
+      return loc === 'en' ? 'Received' : loc === 'es' ? 'Recibida' : 'Recebida'
     case 'pending':
-      return 'Pendente'
+      return loc === 'en' ? 'Pending' : loc === 'es' ? 'Pendiente' : 'Pendente'
     case 'not_applicable':
-      return 'Não aplica'
+      return loc === 'en' ? 'N/A' : loc === 'es' ? 'No aplica' : 'Não aplica'
     default:
       return '—'
   }

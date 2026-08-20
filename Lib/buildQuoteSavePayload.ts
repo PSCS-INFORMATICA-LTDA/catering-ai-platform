@@ -1,3 +1,5 @@
+import { composeAddressLine } from './addressLine'
+import { formatPostalCode, inferCountryFromPostalCode } from './cep'
 import { getCdlCompanyId } from './cdlCompany'
 import { buildQuoteDraftSnapshotPayload } from './calculateQuoteDraftFromSupabasePricing'
 import { calcAdditionalLineTotal } from './calculateQuoteTotals'
@@ -8,6 +10,7 @@ import {
   calcPhysicalGuestCount,
 } from './quoteGuestFields'
 import type { QuoteSnapshotRecord } from './readQuoteSnapshot'
+import type { PricingBreakdown } from './pricing/pricingBreakdownTypes'
 import {
   assertNoForbiddenEventColumns,
   pickEventsInsertPayload,
@@ -36,6 +39,7 @@ export type QuotePackageSelectionSaveLine = {
 
 export type QuoteSaveInput = {
   language?: 'pt' | 'en' | 'es' | null
+  source?: 'assisted_self_service' | 'wizard' | 'manual'
   customerId: string | null
   /** Rascunho do wizard — cliente criado somente no save final. */
   customerDraft?: QuoteCustomerDraft | null
@@ -50,6 +54,7 @@ export type QuoteSaveInput = {
   childrenUnder3Count: number
   children4To12Count: number
   address: string
+  addressNumber?: string
   city: string
   state: string
   zipCode: string
@@ -67,6 +72,7 @@ export type QuoteSaveInput = {
   additionals: QuoteAdditionalSaveLine[]
   recalculateSnapshot?: boolean
   existingSnapshot?: QuoteSnapshotRecord
+  pricingBreakdown?: PricingBreakdown | null
 }
 
 function addDaysIso(date: Date, days: number) {
@@ -108,7 +114,10 @@ function calcAdditionalBreakdown(
 }
 
 /** Dados do evento — apenas colunas reais de `public.events`. */
-export function buildEventSavePayload(input: QuoteSaveInput) {
+export function buildEventSavePayload(
+  input: QuoteSaveInput,
+  options?: { mode?: 'create' | 'update' },
+) {
   const guestCounts = {
     adultCount: input.adultCount,
     childrenUnder3Count: input.childrenUnder3Count,
@@ -119,16 +128,21 @@ export function buildEventSavePayload(input: QuoteSaveInput) {
   const childrenCount =
     input.childrenUnder3Count + input.children4To12Count
 
+  const companyId = getCdlCompanyId().trim()
+  if (!companyId) {
+    throw new Error('company_id é obrigatório para gravar events.')
+  }
+
   const row: EventsInsertPayload = {
     event_name: input.eventName.trim(),
     event_date: input.eventDate || null,
     start_time: input.startTime || null,
     end_time: input.endTime || null,
-    address_line: input.address.trim(),
+    address_line: composeAddressLine(input.address, input.addressNumber),
     city: input.city.trim(),
     state: input.state.trim(),
-    postal_code: input.zipCode.trim() || null,
-    country: 'US',
+    postal_code: formatPostalCode(input.zipCode) || null,
+    country: inferCountryFromPostalCode(input.zipCode) ?? 'BR',
     adults_count: input.adultCount,
     children_count: childrenCount,
     billable_guests: billableGuestCount,
@@ -140,6 +154,11 @@ export function buildEventSavePayload(input: QuoteSaveInput) {
     grill_notes: input.grillNotes.trim() || null,
     distance_from_base: input.distance,
     active: true,
+    ...(input.customerId?.trim()
+      ? { customer_id: input.customerId.trim() }
+      : {}),
+    // INSERT exige company_id (RLS). UPDATE não move o tenant.
+    ...(options?.mode === 'update' ? {} : { company_id: companyId }),
   }
 
   const payload = pickEventsInsertPayload(row)
@@ -169,7 +188,11 @@ function buildQuoteGrillAndMileagePayload(
 
 export function buildQuoteSavePayload(
   input: QuoteSaveInput,
-  options?: { mode?: 'create' | 'update'; eventId?: string | null },
+  options?: {
+    mode?: 'create' | 'update'
+    eventId?: string | null
+    pricingBreakdown?: PricingBreakdown | null
+  },
 ) {
   const guestCounts = {
     adultCount: input.adultCount,
@@ -203,6 +226,11 @@ export function buildQuoteSavePayload(
 
   if (!shouldRecalculate && input.existingSnapshot) {
     const existing = input.existingSnapshot
+    const existingBreakdown =
+      options?.pricingBreakdown ??
+      (existing as { pricing_breakdown?: PricingBreakdown | null })
+        .pricing_breakdown ??
+      null
     return {
       ...basePayload,
       ...(options?.mode === 'update' && input.language
@@ -216,6 +244,9 @@ export function buildQuoteSavePayload(
         existing.package_price_per_person ?? existing.package_unit_price,
       package_total: existing.package_total,
       additional_total: existing.additional_total,
+      grill_rental_total:
+        (existing as { grill_rental_total?: number | null }).grill_rental_total ??
+        0,
       mileage_free_limit: existing.mileage_free_limit,
       mileage_rate: existing.mileage_rate,
       mileage_fee: existing.mileage_fee,
@@ -223,6 +254,17 @@ export function buildQuoteSavePayload(
       reservation_percentage: existing.reservation_percentage,
       balance_due: existing.balance_due,
       quote_total: existing.quote_total,
+      minimum_order_amount:
+        (existing as { minimum_order_amount?: number | null })
+          .minimum_order_amount ?? 0,
+      minimum_order_applied: Boolean(
+        (existing as { minimum_order_applied?: boolean | null })
+          .minimum_order_applied,
+      ),
+      holiday_surcharge_amount:
+        (existing as { holiday_surcharge_amount?: number | null })
+          .holiday_surcharge_amount ?? 0,
+      ...(existingBreakdown ? { pricing_breakdown: existingBreakdown } : {}),
     }
   }
 
@@ -235,10 +277,13 @@ export function buildQuoteSavePayload(
       perPerson: line.perPerson,
     })),
     mileageDistance: input.distance,
+    grillRentalRequired: input.grillRentalRequired,
+    grillRentalQty: input.grillRentalQty,
     pricing: input.pricing,
     reservationPercentage: input.reservationPercentage,
     reservationAmountOverride: input.reservationAmount,
     useCustomReservation: false,
+    eventDate: input.eventDate,
   })
 
   const quoteLanguage = (['pt', 'en', 'es'].includes(String(input.language ?? 'pt'))
@@ -251,7 +296,7 @@ export function buildQuoteSavePayload(
           active: true,
           company_id: getCdlCompanyId(),
           ...(input.branchId?.trim() ? { branch_id: input.branchId.trim() } : {}),
-          source: 'wizard',
+          source: input.source ?? 'assisted_self_service',
           quote_status: 'draft',
           quote_date: quoteDate,
           expiration_date: addDaysIso(now, 30),
@@ -265,6 +310,9 @@ export function buildQuoteSavePayload(
       ? { language: quoteLanguage }
       : {}
 
+  const pricingBreakdown =
+    options?.pricingBreakdown ?? input.pricingBreakdown ?? null
+
   return {
     ...basePayload,
     ...createMeta,
@@ -272,6 +320,7 @@ export function buildQuoteSavePayload(
     package_price_per_person: draftSnapshot.packageUnitPrice,
     package_total: draftSnapshot.packageTotal,
     additional_total: draftSnapshot.additionalTotal,
+    grill_rental_total: draftSnapshot.grillRentalTotal,
     mileage_free_limit: draftSnapshot.mileageFreeLimit,
     mileage_rate: draftSnapshot.mileageRate,
     mileage_fee: draftSnapshot.mileageFee,
@@ -279,6 +328,10 @@ export function buildQuoteSavePayload(
     reservation_percentage: draftSnapshot.reservationPercentage,
     balance_due: draftSnapshot.balanceDue,
     quote_total: draftSnapshot.quoteTotal,
+    minimum_order_amount: draftSnapshot.minimumOrderAmount,
+    minimum_order_applied: draftSnapshot.minimumOrderApplied,
+    holiday_surcharge_amount: draftSnapshot.holidaySurchargeAmount,
+    ...(pricingBreakdown ? { pricing_breakdown: pricingBreakdown } : {}),
   }
 }
 

@@ -12,6 +12,9 @@ import { PremiumCard } from '@/components/premium/PremiumPrimitives'
 import type { CommercialRuleRow } from '@/Lib/commercialRulesTableSchema'
 import { formatCommercialRuleDisplayValue } from '@/Lib/commercialRulesTableSchema'
 import { getCommercialRuleDescription } from '@/Lib/getCommercialRuleDescription'
+import { tCommon } from '@/Lib/i18n/common'
+import { toBcp47Locale } from '@/Lib/i18n/locales'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 type RuleDraft = {
   rule_key: string
@@ -25,7 +28,7 @@ type RuleDraft = {
 }
 
 function isLongTextType(type: string) {
-  return type === 'long_text' || type === 'text'
+  return type === 'long_text' || type === 'text' || type === 'json'
 }
 
 export default function RuleCard({
@@ -53,6 +56,7 @@ export default function RuleCard({
   onDraftChange: (patch: Partial<RuleDraft>) => void
   onDraftValueChange: (value: string) => void
 }) {
+  const locale = useAuthLocaleFromMe()
   const [expanded, setExpanded] = useState(false)
   const label = getCommercialRuleDescription(row.rule_key, row.rule_value)
   const display = formatCommercialRuleDisplayValue(row.rule_value)
@@ -117,6 +121,7 @@ export default function RuleCard({
                 <option value="text">text</option>
                 <option value="number">number</option>
                 <option value="long_text">long_text</option>
+                <option value="json">json</option>
                 <option value="boolean">boolean</option>
               </select>
               <input
@@ -127,14 +132,14 @@ export default function RuleCard({
                   })
                 }
                 className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm"
-                placeholder="Rótulo PT"
+                placeholder={tCommon(locale, 'labelPt')}
               />
               <div className="flex flex-wrap gap-2">
                 <BackofficeBtnPrimary onClick={onSave} disabled={saving}>
-                  {saving ? 'Salvando…' : 'Salvar'}
+                  {saving ? tCommon(locale, 'saving') : tCommon(locale, 'save')}
                 </BackofficeBtnPrimary>
                 <BackofficeBtnSecondary onClick={onCancelEdit}>
-                  Cancelar
+                  {tCommon(locale, 'cancel')}
                 </BackofficeBtnSecondary>
               </div>
             </div>
@@ -142,28 +147,30 @@ export default function RuleCard({
             <>
               <div className="space-y-3 text-sm text-neutral-700">
                 <p>
-                  <span className="font-bold">Valor:</span> {display}
+                  <span className="font-bold">{tCommon(locale, 'value')}:</span>{' '}
+                  {display}
                 </p>
                 <p>
-                  <span className="font-bold">Tipo:</span> {ruleType}
+                  <span className="font-bold">{tCommon(locale, 'type')}:</span>{' '}
+                  {ruleType}
                 </p>
                 {row.updated_at ? (
                   <p>
-                    <span className="font-bold">Atualizado:</span>{' '}
-                    {new Date(row.updated_at).toLocaleString('pt-BR')}
+                    <span className="font-bold">{tCommon(locale, 'updatedAt')}:</span>{' '}
+                    {new Date(row.updated_at).toLocaleString(toBcp47Locale(locale))}
                   </p>
                 ) : null}
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 <BackofficeBtnSecondary onClick={onStartEdit}>
-                  Editar
+                  {tCommon(locale, 'edit')}
                 </BackofficeBtnSecondary>
                 <BackofficeBtnOutline accent onClick={onDuplicate}>
-                  Duplicar
+                  {tCommon(locale, 'duplicate')}
                 </BackofficeBtnOutline>
                 {row.active !== false ? (
                   <BackofficeBtnDanger onClick={onDeactivate}>
-                    Inativar
+                    {tCommon(locale, 'deactivate')}
                   </BackofficeBtnDanger>
                 ) : null}
               </div>

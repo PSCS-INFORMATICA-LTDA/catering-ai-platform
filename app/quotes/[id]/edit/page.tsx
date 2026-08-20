@@ -1,6 +1,9 @@
 import { fetchQuoteForEdit } from '@/Lib/fetchQuoteForEdit'
 import { mapQuoteDetailToWizardState } from '@/Lib/mapQuoteToWizard'
 import QuoteWizard from '../../new/QuoteWizard'
+import { getAuthSession } from '@/Lib/auth/session'
+import { resolveAuthLocale } from '@/Lib/i18n/authUsers'
+import { tw } from '@/Lib/quoteTranslations'
 
 export default async function EditQuotePage({
   params,
@@ -15,6 +18,8 @@ export default async function EditQuotePage({
     '@/Lib/wizardStepNavigation'
   )
   const initialStep = resolveWizardStep(step, EDIT_WIZARD_DEFAULT_STEP)
+  const session = await getAuthSession()
+  const locale = resolveAuthLocale(session?.appUser?.preferred_language)
   const {
     quote,
     linkedCustomer,
@@ -27,16 +32,16 @@ export default async function EditQuotePage({
     commercialRules,
     fetchErrors,
     error,
-  } = await fetchQuoteForEdit(id)
+  } = await fetchQuoteForEdit(id, locale)
 
   if (error || !quote) {
     return (
       <main className="min-h-screen bg-cdl-bg p-6 text-cdl-fg sm:p-10">
         <h1 className="text-2xl font-bold text-cdl-title">
-          Erro ao carregar cotação
+          {tw(locale, 'loadQuoteError')}
         </h1>
         <pre className="mt-4 rounded-2xl border border-cdl-border bg-cdl-surface p-4 text-sm text-red-400">
-          {error?.message ?? 'Cotação não encontrada.'}
+          {error?.message ?? tw(locale, 'quoteNotFound')}
         </pre>
       </main>
     )
@@ -65,6 +70,7 @@ export default async function EditQuotePage({
       packageSideItems={packageSideItems}
       commercialRules={commercialRules}
       fetchErrors={fetchErrors}
+      initialUiLocale={locale}
     />
   )
 }

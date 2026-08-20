@@ -1,5 +1,6 @@
 import type { PackagesInsertPayload } from '@/Lib/packagesTableSchema'
 import { pickPackagesInsertPayload } from '@/Lib/packagesTableSchema'
+import { pickLocalizedText } from '@/Lib/i18n/locales'
 
 export type PackageFieldSource = {
   package_key?: string | null
@@ -22,12 +23,20 @@ export function getPackageKey(pkg: PackageFieldSource | null | undefined): strin
   return (pkg?.package_key ?? '').trim()
 }
 
-export function getPackageLabel(pkg: PackageFieldSource | null | undefined): string {
+export function getPackageLabel(
+  pkg: PackageFieldSource | null | undefined,
+  locale?: string | null,
+): string {
   return (
-    pkg?.label_pt?.trim() ||
+    pickLocalizedText(
+      {
+        pt: pkg?.label_pt,
+        en: pkg?.label_en,
+        es: pkg?.label_es,
+      },
+      locale,
+    ).trim() ||
     pkg?.package_name?.trim() ||
-    pkg?.label_en?.trim() ||
-    pkg?.label_es?.trim() ||
     getPackageKey(pkg) ||
     'Pacote'
   )
@@ -35,12 +44,18 @@ export function getPackageLabel(pkg: PackageFieldSource | null | undefined): str
 
 export function getPackageDescription(
   pkg: PackageFieldSource | null | undefined,
+  locale?: string | null,
 ): string {
   return (
-    pkg?.description_pt?.trim() ||
+    pickLocalizedText(
+      {
+        pt: pkg?.description_pt,
+        en: pkg?.description_en,
+        es: pkg?.description_es,
+      },
+      locale,
+    ).trim() ||
     pkg?.description?.trim() ||
-    pkg?.description_en?.trim() ||
-    pkg?.description_es?.trim() ||
     ''
   )
 }

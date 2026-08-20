@@ -1,6 +1,6 @@
 import { getCdlCompanyId } from './cdlCompany'
 import { buildPackagesListSelect } from './packagesTableSchema'
-import { supabase } from './supabase'
+import { getSupabaseServerClient } from './supabaseServer'
 
 export type PackageListItem = {
   id: string
@@ -23,6 +23,7 @@ export type PackageListItem = {
   package_highlights_pt?: string | null
   package_highlights_en?: string | null
   package_highlights_es?: string | null
+  card_theme_key?: string | null
   active?: boolean | null
   updated_at?: string | null
 }
@@ -30,11 +31,14 @@ export type PackageListItem = {
 type FetchPackagesOptions = {
   activeOnly?: boolean
   includeInactive?: boolean
+  companyId?: string | null
+  includeGlobal?: boolean
 }
 
 export async function fetchPackages(options: FetchPackagesOptions = {}) {
-  const companyId = getCdlCompanyId()
+  const companyId = options.companyId?.trim() || getCdlCompanyId()
 
+  const supabase = getSupabaseServerClient()
   let query = supabase
     .from('packages')
     .select(buildPackagesListSelect())
@@ -42,7 +46,10 @@ export async function fetchPackages(options: FetchPackagesOptions = {}) {
     .order('label_pt', { ascending: true })
 
   if (companyId?.trim()) {
-    query = query.or(`company_id.eq.${companyId},company_id.is.null`)
+    query =
+      options.includeGlobal === false
+        ? query.eq('company_id', companyId)
+        : query.or(`company_id.eq.${companyId},company_id.is.null`)
   }
 
   if (options.activeOnly) {

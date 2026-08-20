@@ -1,5 +1,5 @@
 import { getCdlCompanyId } from './cdlCompany'
-import { supabase } from './supabase'
+import { getSupabaseServerClient } from './supabaseServer'
 
 export const OPEN_QUOTE_STATUSES = [
   'draft',
@@ -28,6 +28,7 @@ export async function countOpenQuotesForCustomer(
     return { count: 0, error: { message: 'company_id não configurado.' } }
   }
 
+  const supabase = getSupabaseServerClient()
   const { count, error } = await supabase
     .from('quotes')
     .select('id', { count: 'exact', head: true })
@@ -56,6 +57,7 @@ export async function countOpenQuotesForCustomers(
     return { counts, error: { message: 'company_id não configurado.' } }
   }
 
+  const supabase = getSupabaseServerClient()
   const { data, error } = await supabase
     .from('quotes')
     .select('customer_id')

@@ -6,10 +6,15 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
+import { tCommon } from '@/Lib/i18n/common'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import type { Branch, Company, CompanyRole, TenantContext } from '@/Lib/tenant/types'
+import { usePathname } from 'next/navigation'
+import { isPublicRoutePathname } from '@/Lib/publicRoutes'
 
 const BRANCH_STORAGE_KEY = 'catering-ai.active-branch-id'
 
@@ -22,7 +27,11 @@ type TenantContextValue = TenantContext & {
 const TenantCtx = createContext<TenantContextValue | null>(null)
 
 export function TenantProvider({ children }: { children: ReactNode }) {
-  const [loading, setLoading] = useState(true)
+  const pathname = usePathname() ?? '/'
+  const publicRoute = isPublicRoutePathname(pathname)
+  const locale = useAuthLocaleFromMe(undefined, { disabled: publicRoute })
+  const localeRef = useRef(locale)
+  const [loading, setLoading] = useState(() => !publicRoute)
   const [companyId, setCompanyId] = useState('')
   const [company, setCompany] = useState<Company | null>(null)
   const [branches, setBranches] = useState<Branch[]>([])
@@ -31,6 +40,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({})
 
   const refresh = useCallback(async () => {
+    if (publicRoute) return
     setLoading(true)
     try {
       const response = await fetch('/api/tenant/context', { cache: 'no-store' })
@@ -39,7 +49,9 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         error?: string
       }
       if (!response.ok || !result.data) {
-        throw new Error(result.error ?? 'Falha ao carregar tenant.')
+        throw new Error(
+          result.error ?? tCommon(localeRef.current, 'tenantLoadError'),
+        )
       }
 
       const data = result.data
@@ -62,11 +74,19 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [publicRoute])
 
   useEffect(() => {
-    void refresh()
-  }, [refresh])
+    localeRef.current = locale
+  }, [locale])
+
+  useEffect(() => {
+    if (publicRoute) return
+    const timer = window.setTimeout(() => {
+      void refresh()
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [publicRoute, refresh])
 
   const setBranchId = useCallback((next: string | null) => {
     setBranchIdState(next)

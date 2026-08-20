@@ -20,6 +20,7 @@ import {
   IMPORTANT_RULES,
   RESERVATION_PAYMENT_TEXT,
   RESERVATION_PERCENTAGE,
+  SIDES_PRICE_PER_PERSON,
 } from '@/Lib/cdlCommercialRules'
 import {
   formatCountOrDash,
@@ -27,10 +28,20 @@ import {
   getChargedMilesFromSnapshot,
   readQuoteSnapshot,
 } from '@/Lib/readQuoteSnapshot'
+import { calcGrillRentalFee } from '@/Lib/calculateQuoteTotals'
+import { formatMileageQuantity } from '@/Lib/units'
 import {
   getGrillPhotoDetailLabel,
 } from '@/Lib/grillPhotoStatus'
 import { getCustomerDisplayNameFromQuote } from '@/Lib/getCustomerDisplayName'
+import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import {
+  getPackagePerPersonUnitLabel,
+  getPackagePriceLineLabel,
+} from '@/Lib/packageCatalogVisual'
+import { isPricingBreakdown } from '@/Lib/pricing/pricingBreakdownTypes'
+import { resolveQuotePdfPackagePerPersonBreakdown } from '@/Lib/quotePdfPackagePresentation'
+import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import {
   type QuoteDetail,
   displayValue,
@@ -54,6 +65,7 @@ const colors = {
   light: '#FAF7F2',
   white: '#FFFFFF',
   accent: '#D62828',
+  green: '#15803D',
 }
 
 const styles = StyleSheet.create({
@@ -239,6 +251,13 @@ const styles = StyleSheet.create({
     fontSize: 7.5,
     color: colors.muted,
   },
+  pageFooterPscs: {
+    marginTop: 6,
+    alignSelf: 'center',
+    height: 14,
+    width: 72,
+    objectFit: 'contain',
+  },
   overview: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -303,6 +322,56 @@ const styles = StyleSheet.create({
     color: colors.muted,
     lineHeight: 1.4,
     marginBottom: 8,
+  },
+  packageArt: {
+    width: '100%',
+    maxHeight: 260,
+    objectFit: 'contain',
+    marginTop: 6,
+    marginBottom: 8,
+  },
+  packagePriceBox: {
+    marginBottom: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 6,
+    backgroundColor: colors.light,
+  },
+  packagePriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 3,
+  },
+  packagePriceLabel: {
+    fontSize: 8,
+    color: colors.muted,
+  },
+  packagePriceValue: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: colors.dark,
+  },
+  packagePriceTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 4,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  packagePriceTotalLabel: {
+    fontSize: 9,
+    fontFamily: 'Helvetica-Bold',
+    color: colors.dark,
+  },
+  packagePriceTotalValue: {
+    fontSize: 9,
+    fontFamily: 'Helvetica-Bold',
+    color: colors.accent,
   },
   grid2: {
     flexDirection: 'row',
@@ -377,13 +446,23 @@ const styles = StyleSheet.create({
   pricingRowHighlight: {
     fontFamily: 'Helvetica-Bold',
   },
-  pricingRowAccent: {
-    color: colors.accent,
+  pricingRowLabel: {
+    color: colors.dark,
+  },
+  pricingRowValue: {
+    color: colors.dark,
+    fontFamily: 'Helvetica-Bold',
+  },
+  pricingRowDiscountValue: {
+    color: colors.green,
+    fontFamily: 'Helvetica-Bold',
   },
   totalBox: {
     marginTop: 10,
-    backgroundColor: colors.dark,
+    backgroundColor: colors.white,
     borderRadius: 6,
+    borderWidth: 2,
+    borderColor: colors.accent,
     padding: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -391,14 +470,15 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 8,
-    color: '#BBBBBB',
+    color: colors.dark,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
+    fontFamily: 'Helvetica-Bold',
   },
   totalValue: {
     fontSize: 16,
     fontFamily: 'Helvetica-Bold',
-    color: colors.gold,
+    color: colors.accent,
   },
   reservationNote: {
     marginTop: 8,
@@ -444,7 +524,7 @@ function InfoCell({
   wide?: boolean
 }) {
   return (
-    <View style={wide ? styles.gridItemWide : styles.gridItem}>
+    <View wrap={false} style={wide ? styles.gridItemWide : styles.gridItem}>
       <Text style={styles.cellLabel}>{label}</Text>
       <Text style={styles.cellValue}>{value}</Text>
     </View>
@@ -459,7 +539,7 @@ function RulesBlock({
   items: readonly string[]
 }) {
   return (
-    <View style={styles.rulesBlock}>
+    <View minPresenceAhead={36} style={styles.rulesBlock}>
       <Text style={styles.rulesSubtitle}>{title}</Text>
       {items.map((item) => (
         <Text key={item} style={styles.rulesItem}>
@@ -505,12 +585,13 @@ function PdfLogoMark({
   )
 }
 
-function PdfPageFooter() {
+function PdfPageFooter({ pscsSrc }: { pscsSrc: string | null }) {
   return (
     <View style={styles.pageFooter} fixed>
       <Text style={styles.pageFooterBrand}>BBQ AT HOME</Text>
       <Text style={styles.pageFooterLine}>Orlando, Florida</Text>
       <Text style={styles.pageFooterLine}>www.cdlbbq.com</Text>
+      {pscsSrc ? <Image src={pscsSrc} style={styles.pageFooterPscs} /> : null}
     </View>
   )
 }
@@ -534,15 +615,42 @@ function PdfCompactHeader({
   )
 }
 
+function PdfDocumentPage({
+  quoteNumber,
+  logoSrc,
+  pscsSrc,
+  children,
+}: {
+  quoteNumber: string
+  logoSrc: string | null
+  pscsSrc: string | null
+  children: React.ReactNode
+}) {
+  return (
+    <Page size="A4" style={styles.contentPage} wrap>
+      <PdfCompactHeader quoteNumber={quoteNumber} logoSrc={logoSrc} />
+      <PdfPageFooter pscsSrc={pscsSrc} />
+      {children}
+    </Page>
+  )
+}
+
 export function QuotePdfDocument({
   quote,
   logo,
+  pscs,
+  packageImageSrc = null,
 }: {
   quote: QuoteDetail
   logo?: PdfLogoSource
+  pscs?: PdfLogoSource
+  packageImageSrc?: string | null
 }) {
   const logoSrc = logo?.filePath ?? logo?.src ?? null
+  const pscsSrc = pscs?.filePath ?? pscs?.src ?? null
   const lang = quote.language ?? 'pt'
+  const quoteLang: QuoteLanguage =
+    lang === 'en' || lang === 'es' ? lang : 'pt'
   const packageName = getPackageName(quote) ?? '—'
   const packageDescription = getPackageDescription(quote)
   const groupedAdditionals = groupAdditionalsByCategory(
@@ -551,6 +659,20 @@ export function QuotePdfDocument({
   )
   const snapshot = readQuoteSnapshot(quote)
   const guestCounts = snapshot.guestCounts
+  const sidesPricePerPerson = (() => {
+    const breakdown = quote.pricing_breakdown
+    if (isPricingBreakdown(breakdown)) {
+      const n = Number(breakdown.rules_applied?.sidesPricePerPerson)
+      if (Number.isFinite(n) && n > 0) return n
+    }
+    return SIDES_PRICE_PER_PERSON
+  })()
+  const packagePerPerson = resolveQuotePdfPackagePerPersonBreakdown({
+    packageKey: quote.package_key,
+    packageUnitPrice: snapshot.packageUnitPrice,
+    sidesPricePerPerson,
+  })
+  const perPersonUnit = getPackagePerPersonUnitLabel(quoteLang)
   const chargedMiles = getChargedMilesFromSnapshot(
     snapshot.mileageDistance,
     snapshot.mileageFreeLimit,
@@ -564,21 +686,86 @@ export function QuotePdfDocument({
     .filter(Boolean)
     .join(' · ')
   const mileageBase = displayValue(snapshot.mileageBaseLocation)
+  const t = (key: Parameters<typeof tQuotesOrders>[1]) => tQuotesOrders(lang, key)
+
+  const holidaySurcharge = Number(quote.holiday_surcharge_amount ?? 0)
+  const grillRentalQty = Number(quote.grill_rental_qty ?? 0)
+  const grillRentalStored = Number(quote.grill_rental_total ?? 0)
+  const grillRentalTotal =
+    grillRentalStored > 0
+      ? grillRentalStored
+      : calcGrillRentalFee(
+          Boolean(quote.grill_rental_required),
+          grillRentalQty,
+        )
+  const minimumAdjustment = quote.minimum_order_applied
+    ? Math.max(
+        0,
+        Number(snapshot.quoteTotal ?? 0) -
+          Number(snapshot.packageTotal ?? 0) -
+          Number(snapshot.additionalTotal ?? 0) -
+          Number(snapshot.mileageFee ?? 0) -
+          grillRentalTotal -
+          holidaySurcharge,
+      )
+    : 0
+  const minimumOrderAmount = Number(quote.minimum_order_amount ?? 0)
 
   const pricingLines = [
-    { label: 'Pacote', value: formatMoneyOrDash(snapshot.packageTotal) },
+    { label: t('packageLabel'), value: formatMoneyOrDash(snapshot.packageTotal) },
     {
-      label: 'Adicionais',
+      label: t('additionalsLabel'),
       value: formatMoneyOrDash(snapshot.additionalTotal),
     },
-    { label: 'Milhagem', value: formatMoneyOrDash(snapshot.mileageFee) },
-    { label: 'Desconto', value: formatCurrency(discount), accent: true },
+    { label: t('mileageLabel'), value: formatMoneyOrDash(snapshot.mileageFee) },
+    ...(grillRentalTotal > 0
+      ? [
+          {
+            label:
+              grillRentalQty > 1
+                ? t('docGrillRentalLineQty').replace(
+                    '{qty}',
+                    String(grillRentalQty),
+                  )
+                : t('docGrillRentalLine'),
+            value: formatCurrency(grillRentalTotal),
+          },
+        ]
+      : []),
+    ...(holidaySurcharge > 0
+      ? [
+          {
+            label: t('docHolidaySurchargeLine'),
+            value: formatCurrency(holidaySurcharge),
+          },
+        ]
+      : []),
+    ...(minimumAdjustment > 0.009
+      ? [
+          {
+            label: tQuotesOrders(lang, 'minOrderAppliedWithMin', {
+              label: t('docMinOrderAppliedLine'),
+              min: formatCurrency(minimumOrderAmount),
+            }),
+            value: formatCurrency(minimumAdjustment),
+          },
+        ]
+      : []),
+    ...(discount > 0
+      ? [
+          {
+            label: t('docDiscountLine'),
+            value: formatCurrency(discount),
+            discount: true,
+          },
+        ]
+      : []),
     {
-      label: 'Reserva',
+      label: t('reservationLabel'),
       value: formatMoneyOrDash(snapshot.reservationAmount),
     },
     {
-      label: 'Saldo a pagar',
+      label: t('docBalanceDueLine'),
       value: formatMoneyOrDash(snapshot.balanceDue),
       highlight: true,
     },
@@ -600,47 +787,44 @@ export function QuotePdfDocument({
           Premium Brazilian BBQ Experience
         </Text>
         <View style={styles.coverDivider} />
-        <Text style={styles.coverLabel}>Prepared for</Text>
+        <Text style={styles.coverLabel}>{t('docPreparedFor')}</Text>
         <Text style={styles.coverClient}>{customerName}</Text>
         <View style={styles.coverMetaGrid}>
           <View style={styles.coverMetaBlock}>
-            <Text style={styles.coverLabel}>Event Date</Text>
+            <Text style={styles.coverLabel}>{t('docEventDateLabel')}</Text>
             <Text style={styles.coverMetaValue}>{eventDateLabel}</Text>
           </View>
           <View style={styles.coverMetaBlock}>
-            <Text style={styles.coverLabel}>Quote Number</Text>
+            <Text style={styles.coverLabel}>{t('docQuoteNumberLabel')}</Text>
             <Text style={styles.coverMetaValue}>{quoteNumber}</Text>
           </View>
         </View>
         <View style={styles.coverInvestmentBox}>
-          <Text style={styles.coverInvestmentLabel}>Total Investment</Text>
+          <Text style={styles.coverInvestmentLabel}>{t('docTotalInvestment')}</Text>
           <Text style={styles.coverInvestmentValue}>
             {formatMoneyOrDash(snapshot.quoteTotal)}
           </Text>
         </View>
       </Page>
 
-      <Page size="A4" style={styles.contentPage} wrap>
-        <PdfCompactHeader quoteNumber={quoteNumber} logoSrc={logoSrc} />
-        <PdfPageFooter />
-
-        <View style={styles.overview}>
+      <PdfDocumentPage quoteNumber={quoteNumber} logoSrc={logoSrc} pscsSrc={pscsSrc}>
+        <View wrap={false} style={styles.overview}>
           <View style={styles.overviewItem}>
-            <Text style={styles.overviewLabel}>Cliente</Text>
+            <Text style={styles.overviewLabel}>{t('docCustomer')}</Text>
             <Text style={styles.overviewValue}>{customerName}</Text>
           </View>
           <View style={styles.overviewItem}>
-            <Text style={styles.overviewLabel}>Evento</Text>
+            <Text style={styles.overviewLabel}>{t('docEventSection')}</Text>
             <Text style={styles.overviewValue}>{eventDateLabel}</Text>
           </View>
           <View style={styles.overviewItem}>
-            <Text style={styles.overviewLabel}>Local</Text>
+            <Text style={styles.overviewLabel}>{t('docLocation')}</Text>
             <Text style={styles.overviewValue}>
               {displayValue(cityState || quote.city)}
             </Text>
           </View>
           <View style={[styles.overviewItem, styles.overviewTotal]}>
-            <Text style={styles.overviewTotalLabel}>Investimento</Text>
+            <Text style={styles.overviewTotalLabel}>{t('docInvestment')}</Text>
             <Text style={styles.overviewTotalValue}>
               {formatMoneyOrDash(snapshot.quoteTotal)}
             </Text>
@@ -648,31 +832,64 @@ export function QuotePdfDocument({
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Pacote CDL</Text>
+          <Text style={styles.sectionTitle}>{t('docPackageSection')}</Text>
           <Text style={styles.packageName}>{packageName}</Text>
+          {packageImageSrc ? (
+            <Image src={packageImageSrc} style={styles.packageArt} />
+          ) : null}
+          {packagePerPerson ? (
+            <View style={styles.packagePriceBox}>
+              <View style={styles.packagePriceRow}>
+                <Text style={styles.packagePriceLabel}>
+                  {getPackagePriceLineLabel('package', quoteLang)}
+                </Text>
+                <Text style={styles.packagePriceValue}>
+                  {formatCurrency(packagePerPerson.packagePerPerson)} / {perPersonUnit}
+                </Text>
+              </View>
+              {packagePerPerson.showSides ? (
+                <View style={styles.packagePriceRow}>
+                  <Text style={styles.packagePriceLabel}>
+                    {getPackagePriceLineLabel('sides', quoteLang)}
+                  </Text>
+                  <Text style={styles.packagePriceValue}>
+                    {formatCurrency(packagePerPerson.sidesPerPerson)} / {perPersonUnit}
+                  </Text>
+                </View>
+              ) : null}
+              <View style={styles.packagePriceTotalRow}>
+                <Text style={styles.packagePriceTotalLabel}>
+                  {getPackagePriceLineLabel('total', quoteLang)}
+                </Text>
+                <Text style={styles.packagePriceTotalValue}>
+                  {formatCurrency(packagePerPerson.totalPerPerson)} / {perPersonUnit}
+                </Text>
+              </View>
+            </View>
+          ) : null}
           {packageDescription ? (
             <Text style={styles.packageDesc}>{packageDescription}</Text>
           ) : null}
           <View style={styles.grid2}>
-            <InfoCell label="Adultos" value={String(guestCounts.adultCount)} />
+            <InfoCell label={t('docAdults')} value={String(guestCounts.adultCount)} />
             <InfoCell
-              label="Crianças até 3 anos"
+              label={t('docChildrenUnder3')}
               value={String(guestCounts.childrenUnder3Count)}
             />
             <InfoCell
-              label="Crianças 4 a 12 anos"
+              label={t('docChildren4to12')}
               value={String(guestCounts.children4To12Count)}
             />
             <InfoCell
-              label="Convidados físicos"
+              label={t('docPhysicalGuests')}
               value={formatCountOrDash(snapshot.physicalGuestCount)}
             />
             <InfoCell
-              label="Pessoas cobradas equivalentes"
+              label={t('docBillableGuests')}
               value={formatCountOrDash(snapshot.billableGuestCount)}
             />
             <InfoCell
-              label="Valor do pacote"
+              label={t('docPackageValue')}
               value={formatMoneyOrDash(snapshot.packageTotal)}
             />
           </View>
@@ -682,35 +899,35 @@ export function QuotePdfDocument({
             <Text style={styles.packageDesc}>
               {formatCurrency(snapshot.packageUnitPrice)} ×{' '}
               {snapshot.billableGuestCount}{' '}
-              pessoas cobradas equivalentes
+              {t('docBillableGuestsSuffix')}
             </Text>
           ) : null}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Evento</Text>
+          <Text style={styles.sectionTitle}>{t('docEventSection')}</Text>
           <Text style={styles.packageName}>
             {displayValue(quote.event_name ?? getCustomerDisplayNameFromQuote(quote))}
           </Text>
           <View style={styles.grid2}>
-            <InfoCell label="Data" value={eventDateLabel} />
+            <InfoCell label={t('docDateLabel')} value={eventDateLabel} />
             <InfoCell
-              label="Horário"
+              label={t('docTimeLabel')}
               value={`${formatTime(quote.start_time)} – ${formatTime(quote.end_time)}`}
             />
-            <InfoCell label="Local" value={eventLocation || '—'} wide />
+            <InfoCell label={t('docLocation')} value={eventLocation || '—'} wide />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Churrasqueira</Text>
+          <Text style={styles.sectionTitle}>{t('docGrillSection')}</Text>
           <View style={styles.grid2}>
             <InfoCell
-              label="Cliente tem churrasqueira?"
+              label={t('docHasGrill')}
               value={formatBool(quote.has_grill)}
             />
             <InfoCell
-              label="Foto da churrasqueira"
+              label={t('docGrillPhoto')}
               value={getGrillPhotoDetailLabel({
                 hasGrill: quote.has_grill,
                 grillPhotoRequired: quote.grill_photo_required,
@@ -719,11 +936,11 @@ export function QuotePdfDocument({
               })}
             />
             <InfoCell
-              label="Necessário alugar churrasqueira?"
+              label={t('docGrillRentalRequired')}
               value={formatBool(quote.grill_rental_required)}
             />
             <InfoCell
-              label="Quantidade para aluguel"
+              label={t('docGrillRentalQty')}
               value={
                 quote.grill_rental_required
                   ? displayValue(quote.grill_rental_qty)
@@ -731,47 +948,49 @@ export function QuotePdfDocument({
               }
             />
             <InfoCell
-              label="Churrasqueiros"
+              label={t('docGrillMasters')}
               value={displayValue(quote.grill_masters_qty)}
             />
             <InfoCell
-              label="Assistentes"
+              label={t('docAssistants')}
               value={displayValue(quote.assistants_qty)}
             />
             {quote.grill_notes ? (
-              <InfoCell label="Observações" value={quote.grill_notes} wide />
+              <InfoCell label={t('docGrillNotes')} value={quote.grill_notes} wide />
             ) : null}
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Milhagem</Text>
+          <Text style={styles.sectionTitle}>{t('docMileageSection')}</Text>
           <View style={styles.grid2}>
-            <InfoCell label="Local base" value={mileageBase} />
+            <InfoCell label={t('docMileageBase')} value={mileageBase} />
             <InfoCell
-              label="Distância"
+              label={t('docMileageDistance')}
               value={
                 snapshot.mileageDistance != null
-                  ? `${snapshot.mileageDistance} mi`
+                  ? `${formatMileageQuantity(snapshot.mileageDistance)} mi`
                   : '—'
               }
             />
             <InfoCell
-              label="Milhas inclusas"
+              label={t('docMileageIncluded')}
               value={
                 snapshot.mileageFreeLimit != null
-                  ? `${snapshot.mileageFreeLimit} mi`
+                  ? `${formatMileageQuantity(snapshot.mileageFreeLimit)} mi`
                   : '—'
               }
             />
             <InfoCell
-              label="Milhas cobradas"
+              label={t('docMileageCharged')}
               value={
-                chargedMiles != null ? `${chargedMiles} mi` : '—'
+                chargedMiles != null
+                  ? `${formatMileageQuantity(chargedMiles)} mi`
+                  : '—'
               }
             />
             <InfoCell
-              label="Taxa"
+              label={t('docMileageRate')}
               value={
                 snapshot.mileageRate != null
                   ? `${formatCurrency(snapshot.mileageRate)}/mi`
@@ -779,16 +998,16 @@ export function QuotePdfDocument({
               }
             />
             <InfoCell
-              label="Taxa de milhagem"
+              label={t('docMileageFeeLabel')}
               value={formatMoneyOrDash(snapshot.mileageFee)}
             />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Adicionais selecionados</Text>
+          <Text style={styles.sectionTitle}>{t('docAdditionalsSection')}</Text>
           {groupedAdditionals.length === 0 ? (
-            <Text style={styles.muted}>Nenhum adicional selecionado.</Text>
+            <Text style={styles.muted}>{t('docNoAdditionalsSelected')}</Text>
           ) : (
             groupedAdditionals.map(({ category, items }) => (
               <View key={category}>
@@ -799,8 +1018,8 @@ export function QuotePdfDocument({
                       {getAdditionalLabel(item, lang)}
                     </Text>
                     <Text style={styles.additionalMeta}>
-                      Qtd. {displayValue(item.quantity)} ·{' '}
-                      {formatCurrency(item.unit_price)}/un ·{' '}
+                      {t('docQtyLabel')} {displayValue(item.quantity)} ·{' '}
+                      {formatCurrency(item.unit_price)}{t('docPerUnitSuffix')} ·{' '}
                       {formatCurrency(item.total_price)}
                     </Text>
                   </View>
@@ -810,8 +1029,8 @@ export function QuotePdfDocument({
           )}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Resumo financeiro</Text>
+        <View wrap={false} style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('docFinancialSection')}</Text>
           <View style={styles.pricingCard}>
             {pricingLines.map((line) => (
               <View
@@ -819,43 +1038,53 @@ export function QuotePdfDocument({
                 style={[
                   styles.pricingRow,
                   ...(line.highlight ? [styles.pricingRowHighlight] : []),
-                  ...(line.accent ? [styles.pricingRowAccent] : []),
                 ]}
               >
-                <Text>{line.label}</Text>
-                <Text>{line.value}</Text>
+                <Text style={styles.pricingRowLabel}>{line.label}</Text>
+                <Text
+                  style={
+                    'discount' in line && line.discount
+                      ? styles.pricingRowDiscountValue
+                      : styles.pricingRowValue
+                  }
+                >
+                  {line.value}
+                </Text>
               </View>
             ))}
             <View style={styles.totalBox}>
-              <Text style={styles.totalLabel}>Total da cotação</Text>
+              <Text style={styles.totalLabel}>{t('docQuoteTotalLine')}</Text>
               <Text style={styles.totalValue}>
                 {formatMoneyOrDash(snapshot.quoteTotal)}
               </Text>
             </View>
             <Text style={styles.reservationNote}>{RESERVATION_PAYMENT_TEXT}</Text>
             <Text style={styles.reservationNote}>
-              Reserva: {RESERVATION_PERCENTAGE}% · Saldo: {BALANCE_PERCENTAGE}%
+              {t('reservationLabel')}: {RESERVATION_PERCENTAGE}% ·{' '}
+              {t('docBalanceDueLine')}: {BALANCE_PERCENTAGE}%
             </Text>
           </View>
         </View>
+      </PdfDocumentPage>
 
+      <PdfDocumentPage quoteNumber={quoteNumber} logoSrc={logoSrc} pscsSrc={pscsSrc}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Regras comerciais</Text>
-          <RulesBlock title="Pedido mínimo" items={IMPORTANT_RULES.minimumOrder} />
-          <RulesBlock title="Milhagem" items={IMPORTANT_RULES.mileage} />
-          <RulesBlock title="Reserva" items={IMPORTANT_RULES.reservation} />
-          <RulesBlock title="Política de comida" items={IMPORTANT_RULES.foodPolicy} />
-          <RulesBlock title="Multa de atraso" items={IMPORTANT_RULES.latePayment} />
+          <Text style={styles.sectionTitle}>{t('docRulesSectionTitle')}</Text>
+          <RulesBlock title={t('docMinOrderRuleTitle')} items={IMPORTANT_RULES.minimumOrder} />
+          <RulesBlock title={t('docMileageSection')} items={IMPORTANT_RULES.mileage} />
+          <RulesBlock title={t('reservationLabel')} items={IMPORTANT_RULES.reservation} />
+          <RulesBlock title={t('docFoodPolicyRuleTitle')} items={IMPORTANT_RULES.foodPolicy} />
+          <RulesBlock title={t('docLatePaymentRuleTitle')} items={IMPORTANT_RULES.latePayment} />
           <RulesBlock
-            title="Dezembro / janeiro e feriados"
+            title={t('docDecJanRuleTitle')}
             items={IMPORTANT_RULES.decemberJanuary}
           />
           <RulesBlock
-            title="Política de cancelamento"
+            title={t('docCancellationPolicyRuleTitle')}
             items={CANCELLATION_POLICY_SUMMARY}
           />
         </View>
-      </Page>
+      </PdfDocumentPage>
     </Document>
   )
 }

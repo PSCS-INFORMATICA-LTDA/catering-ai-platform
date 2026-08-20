@@ -1,0 +1,20 @@
+---
+description: Catering AI environment safety — DEV default, PROD write protection
+alwaysApply: true
+---
+
+# CATERING AI — ENVIRONMENT SAFETY
+
+- **Default environment = DEV.**
+- Local and Preview use Supabase **DEV** (`yasprgtlqclwsjcshtls`).
+- Production uses Supabase **PROD** (`eapwtirhevxrqinytans`) via Vercel Production only.
+- **Never** execute Production writes without Philippe's explicit approval.
+- **Never** use `--prod` unless Philippe explicitly authorizes.
+- **Never** run `db reset`, `truncate`, or destructive SQL on PROD.
+- **Never** copy DEV data into PROD automatically.
+- **Never** put `SUPABASE_SERVICE_ROLE_KEY` in `NEXT_PUBLIC_*` or client code.
+- Before SQL, migrations, deploy, or env changes, **state the target environment**.
+- If the environment cannot be determined, **STOP** and ask Philippe.
+- Run `npm run env:check` when unsure about local configuration.
+
+See `docs/ENVIRONMENTS.md` for the full environment model.

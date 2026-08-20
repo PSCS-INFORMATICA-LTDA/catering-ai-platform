@@ -1,15 +1,17 @@
+import { helpHeaderTitle, tHelp } from '@/Lib/i18n/help'
+
 export type HelpChatChip = {
   id: string
   label: string
   response: string
 }
 
-export function getHelpGreeting(): string {
-  return 'Oi, tudo bem? Posso te ajudar nesta tela?'
+export function getHelpGreeting(locale?: string | null): string {
+  return tHelp(locale, 'greeting')
 }
 
-export function getHelpHintGreeting(): string {
-  return 'Oi, tudo bem? Posso te ajudar?'
+export function getHelpHintGreeting(locale?: string | null): string {
+  return tHelp(locale, 'hintGreeting')
 }
 
 export function getContextChatMessage(pathname: string): string {
@@ -39,26 +41,29 @@ export function getContextChatMessage(pathname: string): string {
   return 'Posso ajudar você a usar esta tela com mais rapidez.'
 }
 
-export function getChatChipsForRoute(pathname: string): HelpChatChip[] {
+export function getChatChipsForRoute(
+  pathname: string,
+  locale?: string | null,
+): HelpChatChip[] {
   const path = pathname.split('?')[0] ?? '/'
 
   if (path === '/quotes/new' || /^\/quotes\/[^/]+\/edit$/.test(path)) {
     return [
       {
         id: 'review-quote',
-        label: 'Revisar cotação',
+        label: tHelp(locale, 'chipReviewQuote'),
         response:
           'Confira cliente, data, pacote com escolhas, adicionais e endereço antes de avançar.',
       },
       {
         id: 'missing',
-        label: 'Falta algo?',
+        label: tHelp(locale, 'chipMissing'),
         response:
           'Vou verificar o básico: cliente, pacote, endereço e preço. Em breve isso será automático.',
       },
       {
         id: 'whatsapp',
-        label: 'WhatsApp',
+        label: tHelp(locale, 'chipWhatsapp'),
         response:
           'Em breve vou preparar a mensagem do WhatsApp com resumo e link da cotação.',
       },
@@ -69,19 +74,19 @@ export function getChatChipsForRoute(pathname: string): HelpChatChip[] {
     return [
       {
         id: 'new-quote',
-        label: 'Nova cotação',
+        label: tHelp(locale, 'chipNewQuote'),
         response:
           'Para criar uma cotação, toque em Nova Cotação e siga: cliente, evento, pacote, adicionais e revisão.',
       },
       {
         id: 'pending',
-        label: 'Ver pendências',
+        label: tHelp(locale, 'chipPending'),
         response:
           'Vou verificar o básico: cliente, pacote, endereço, preço e status. Em breve isso será automático.',
       },
       {
         id: 'whatsapp',
-        label: 'WhatsApp',
+        label: tHelp(locale, 'chipWhatsapp'),
         response:
           'Em breve vou preparar a mensagem do WhatsApp com resumo e link da cotação.',
       },
@@ -92,18 +97,18 @@ export function getChatChipsForRoute(pathname: string): HelpChatChip[] {
     return [
       {
         id: 'review-package',
-        label: 'Revisar pacote',
+        label: tHelp(locale, 'chipReviewPackage'),
         response:
           'Confira itens fixos, guarnições (+) e escolhas obrigatórias no cadastro do pacote.',
       },
       {
         id: 'items',
-        label: 'Ver itens',
+        label: tHelp(locale, 'chipItems'),
         response: 'Itens fixos ficam em package_items — separados de guarnições e escolhas.',
       },
       {
         id: 'sides',
-        label: 'Ver guarnições',
+        label: tHelp(locale, 'chipSides'),
         response:
           'Guarnições são configuradas dentro de cada pacote com +, em Pacotes.',
       },
@@ -114,17 +119,17 @@ export function getChatChipsForRoute(pathname: string): HelpChatChip[] {
     return [
       {
         id: 'no-price',
-        label: 'Itens sem preço',
+        label: tHelp(locale, 'chipNoPrice'),
         response: 'Itens sem preço não entram corretamente na cotação. Revise o cadastro.',
       },
       {
         id: 'no-category',
-        label: 'Sem categoria',
+        label: tHelp(locale, 'chipNoCategory'),
         response: 'Categoria ajuda a organizar adicionais na etapa de seleção.',
       },
       {
         id: 'usage',
-        label: 'Ver uso',
+        label: tHelp(locale, 'chipUsage'),
         response: 'Em breve mostrarei em quais pacotes e cotações o item aparece.',
       },
     ]
@@ -134,17 +139,17 @@ export function getChatChipsForRoute(pathname: string): HelpChatChip[] {
     return [
       {
         id: 'phone',
-        label: 'Validar telefone',
+        label: tHelp(locale, 'chipPhone'),
         response: 'Telefone válido facilita contato e confirmação do evento.',
       },
       {
         id: 'address',
-        label: 'Endereço',
+        label: tHelp(locale, 'chipAddress'),
         response: 'Endereço completo ajuda na etapa de logística da cotação.',
       },
       {
         id: 'whatsapp',
-        label: 'WhatsApp',
+        label: tHelp(locale, 'chipWhatsapp'),
         response: 'Em breve vou preparar mensagem para o cliente por WhatsApp.',
       },
     ]
@@ -153,19 +158,20 @@ export function getChatChipsForRoute(pathname: string): HelpChatChip[] {
   return [
     {
       id: 'help',
-      label: 'Como usar',
+      label: tHelp(locale, 'chipHowTo'),
       response: 'Use o menu superior para navegar entre módulos do Catering.',
     },
     {
       id: 'pending',
-      label: 'Ver pendências',
+      label: tHelp(locale, 'chipPending'),
       response: 'Revise os campos principais desta tela antes de salvar.',
     },
   ]
 }
 
-export function resolveHelpHeaderTitle(displayName: string): string {
-  if (/cdl/i.test(displayName)) return 'Ajuda CDL'
-  const short = displayName.split(/\s+/)[0]?.trim()
-  return short ? `Ajuda ${short}` : 'Catering Help'
+export function resolveHelpHeaderTitle(
+  displayName: string,
+  locale?: string | null,
+): string {
+  return helpHeaderTitle(locale, displayName)
 }

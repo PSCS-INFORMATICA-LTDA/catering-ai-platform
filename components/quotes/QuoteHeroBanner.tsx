@@ -2,11 +2,19 @@
 
 import CdlBrandLogo from '@/components/CdlBrandLogo'
 
+import { getQuoteStrings } from '@/Lib/quoteTranslations'
+import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+
 export default function QuoteHeroBanner({
   isEditMode = false,
+  language = 'pt',
 }: {
   isEditMode?: boolean
+  language?: QuoteLanguage | string | null
 }) {
+  const t = getQuoteStrings(
+    language === 'en' || language === 'es' ? language : 'pt',
+  )
   return (
     <header className="relative mb-6 hidden overflow-hidden rounded-2xl border border-cdl-border bg-cdl-surface px-7 py-10 shadow-cdl md:block sm:px-10 sm:py-12">
       <div
@@ -17,7 +25,7 @@ export default function QuoteHeroBanner({
         <CdlBrandLogo size="md" />
         <div className="min-w-0 flex-1">
           <span className="cdl-hero-tag">
-            {isEditMode ? 'Editar cotação' : 'Nova cotação'}
+            {isEditMode ? t.editQuoteTitle : t.newQuoteTitle}
           </span>
           <h1 className="mt-4 text-4xl font-black tracking-tight text-cdl-title sm:text-5xl lg:text-[3.25rem]">
             BBQ AT HOME

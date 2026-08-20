@@ -10,6 +10,8 @@ import {
   resolveHelpHeaderTitle,
   type HelpChatChip,
 } from '@/components/help/helpChat'
+import { tHelp } from '@/Lib/i18n/help'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 function IconClose({ className = 'h-4 w-4' }: { className?: string }) {
   return (
@@ -41,9 +43,10 @@ export default function HelpMiniChat({
   pathname: string
   onClose: () => void
 }) {
+  const locale = useAuthLocaleFromMe()
   const [reply, setReply] = useState<string | null>(null)
-  const chips = getChatChipsForRoute(pathname).slice(0, 3)
-  const headerTitle = resolveHelpHeaderTitle(brand.displayName)
+  const chips = getChatChipsForRoute(pathname, locale).slice(0, 3)
+  const headerTitle = resolveHelpHeaderTitle(brand.displayName, locale)
 
   function handleChip(chip: HelpChatChip) {
     setReply(chip.response)
@@ -53,7 +56,7 @@ export default function HelpMiniChat({
     <div
       className="flex max-h-[45vh] w-[320px] max-w-[calc(100vw-32px)] flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.18)] dark:border-neutral-700 dark:bg-neutral-900"
       role="dialog"
-      aria-label="Ajuda do sistema"
+      aria-label={tHelp(locale, 'helpDialog')}
     >
       <div className="flex shrink-0 items-center gap-2 border-b border-neutral-100 px-3 py-2.5 dark:border-neutral-800">
         <CompanyHelpAvatar brand={brand} size="sm" />
@@ -62,21 +65,21 @@ export default function HelpMiniChat({
             {headerTitle}
           </p>
           <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
-            online agora
+            {tHelp(locale, 'onlineNow')}
           </p>
         </div>
         <button
           type="button"
           onClick={onClose}
           className="rounded-full p-1.5 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-          aria-label="Fechar ajuda"
+          aria-label={tHelp(locale, 'closeHelp')}
         >
           <IconClose />
         </button>
       </div>
 
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-3">
-        <ChatBubble>{getHelpGreeting()}</ChatBubble>
+        <ChatBubble>{getHelpGreeting(locale)}</ChatBubble>
         <ChatBubble>{getContextChatMessage(pathname)}</ChatBubble>
         {reply ? <ChatBubble>{reply}</ChatBubble> : null}
       </div>

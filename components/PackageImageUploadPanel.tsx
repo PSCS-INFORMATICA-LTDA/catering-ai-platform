@@ -1,6 +1,10 @@
 'use client'
 
 import CatalogImageFrame from '@/components/CatalogImageFrame'
+import { tCommon } from '@/Lib/i18n/common'
+import { pickLocalizedText } from '@/Lib/i18n/locales'
+import { tPackages } from '@/Lib/i18n/packages'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -9,12 +13,17 @@ type PackageRow = {
   package_key?: string | null
   package_name?: string | null
   label_pt?: string | null
+  label_en?: string | null
+  label_es?: string | null
   image_url?: string | null
 }
 
-function getPackageLabel(pkg: PackageRow) {
+function getPackageLabel(pkg: PackageRow, locale?: string | null) {
   return (
-    pkg.label_pt?.trim() ||
+    pickLocalizedText(
+      { pt: pkg.label_pt, en: pkg.label_en, es: pkg.label_es },
+      locale,
+    ).trim() ||
     pkg.package_name?.trim() ||
     pkg.package_key?.trim() ||
     pkg.id
@@ -30,6 +39,7 @@ export default function PackageImageUploadPanel({
 }: {
   packages: PackageRow[]
 }) {
+  const locale = useAuthLocaleFromMe()
   const router = useRouter()
   const [selectedId, setSelectedId] = useState(packages[0]?.id ?? '')
   const [uploading, setUploading] = useState(false)
@@ -60,16 +70,16 @@ export default function PackageImageUploadPanel({
       }
 
       if (!response.ok) {
-        throw new Error(result.error ?? 'Falha ao enviar imagem.')
+        throw new Error(result.error ?? tCommon(locale, 'uploadFail'))
       }
 
-      setSuccess('Imagem atualizada com sucesso.')
+      setSuccess(tCommon(locale, 'uploadSuccess'))
       router.refresh()
     } catch (uploadError) {
       setError(
         uploadError instanceof Error
           ? uploadError.message
-          : 'Falha ao enviar imagem.',
+          : tCommon(locale, 'uploadFail'),
       )
     } finally {
       setUploading(false)
@@ -78,14 +88,14 @@ export default function PackageImageUploadPanel({
 
   if (packages.length === 0) {
     return (
-      <p className="text-sm text-cdl-muted">Nenhum pacote ativo encontrado.</p>
+      <p className="text-sm text-cdl-muted">{tPackages(locale, 'noActivePackages')}</p>
     )
   }
 
   return (
     <div className="space-y-5">
       <label className="block">
-        <span className="cdl-eyebrow">Pacote</span>
+        <span className="cdl-eyebrow">{tCommon(locale, 'package')}</span>
         <select
           value={selectedId}
           onChange={(e) => {
@@ -97,7 +107,7 @@ export default function PackageImageUploadPanel({
         >
           {packages.map((pkg) => (
             <option key={pkg.id} value={pkg.id}>
-              {getPackageLabel(pkg)}
+              {getPackageLabel(pkg, locale)}
             </option>
           ))}
         </select>
@@ -106,14 +116,14 @@ export default function PackageImageUploadPanel({
       <div className="overflow-hidden rounded-2xl border border-cdl-border bg-cdl-inset">
         <CatalogImageFrame
           src={previewUrl}
-          alt={selected ? getPackageLabel(selected) : 'Pacote'}
+          alt={selected ? getPackageLabel(selected, locale) : tCommon(locale, 'package')}
           variant="package"
           rounded="none"
         />
       </div>
 
       <label className="block">
-        <span className="cdl-eyebrow">Nova imagem</span>
+        <span className="cdl-eyebrow">{tCommon(locale, 'newImage')}</span>
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp"
@@ -127,12 +137,11 @@ export default function PackageImageUploadPanel({
       </label>
 
       <p className="text-xs text-cdl-muted">
-        Bucket Supabase: <code>package-images</code> · salva em{' '}
-        <code>packages.image_url</code>
+        {tPackages(locale, 'packageBucketHint')}
       </p>
 
       {uploading ? (
-        <p className="text-sm text-cdl-muted">Enviando imagem…</p>
+        <p className="text-sm text-cdl-muted">{tPackages(locale, 'uploadingImage')}</p>
       ) : null}
       {error ? <p className="text-sm text-cdl-action">{error}</p> : null}
       {success ? <p className="text-sm text-cdl-success">{success}</p> : null}

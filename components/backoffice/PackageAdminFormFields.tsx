@@ -9,6 +9,9 @@ import {
   BackofficeFormSectionTitle,
   BackofficeTextarea,
 } from '@/components/backoffice/BackofficeSectionPrimitives'
+import { tCommon } from '@/Lib/i18n/common'
+import { tPackages } from '@/Lib/i18n/packages'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import { getPackageDescription, type PackageFieldSource } from '@/Lib/packageFieldAccess'
 import type { PackagesInsertPayload } from '@/Lib/packagesTableSchema'
 
@@ -68,40 +71,43 @@ export function PackageAdminFormFields({
   draft: PackagesInsertPayload
   setDraft: React.Dispatch<React.SetStateAction<PackagesInsertPayload>>
 }) {
+  const locale = useAuthLocaleFromMe()
   return (
     <>
-      <BackofficeFormSectionTitle>Dados principais</BackofficeFormSectionTitle>
-      <BackofficeField label="Código">
+      <BackofficeFormSectionTitle>
+        {tCommon(locale, 'mainData')}
+      </BackofficeFormSectionTitle>
+      <BackofficeField label={tCommon(locale, 'code')}>
         <BackofficeInput
           value={draft.package_key ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, package_key: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Nome">
+      <BackofficeField label={tCommon(locale, 'name')}>
         <BackofficeInput
           value={draft.package_name ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, package_name: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Nome PT">
+      <BackofficeField label={tPackages(locale, 'namePt')}>
         <BackofficeInput
           value={draft.label_pt ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, label_pt: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Nome EN">
+      <BackofficeField label={tPackages(locale, 'nameEn')}>
         <BackofficeInput
           value={draft.label_en ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, label_en: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Nome ES">
+      <BackofficeField label={tPackages(locale, 'nameEs')}>
         <BackofficeInput
           value={draft.label_es ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, label_es: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Preço / pessoa">
+      <BackofficeField label={tPackages(locale, 'pricePerPersonLabel')}>
         <BackofficeInput
           type="number"
           value={draft.price_per_person ?? 0}
@@ -110,13 +116,13 @@ export function PackageAdminFormFields({
           }
         />
       </BackofficeField>
-      <BackofficeField label="Moeda">
+      <BackofficeField label={tCommon(locale, 'currency')}>
         <BackofficeInput
           value={draft.currency_code ?? 'USD'}
           onChange={(v) => setDraft((c) => ({ ...c, currency_code: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Ordem">
+      <BackofficeField label={tCommon(locale, 'displayOrder')}>
         <BackofficeInput
           type="number"
           value={draft.display_order ?? 0}
@@ -125,16 +131,16 @@ export function PackageAdminFormFields({
           }
         />
       </BackofficeField>
-      <BackofficeField label="Status">
+      <BackofficeField label={tCommon(locale, 'status')}>
         <BackofficeSelect
           value={draft.active === false ? 'false' : 'true'}
           onChange={(v) => setDraft((c) => ({ ...c, active: v === 'true' }))}
         >
-          <option value="true">Ativo</option>
-          <option value="false">Inativo</option>
+          <option value="true">{tCommon(locale, 'active')}</option>
+          <option value="false">{tCommon(locale, 'inactive')}</option>
         </BackofficeSelect>
       </BackofficeField>
-      <BackofficeField label="Imagem URL" className="sm:col-span-2">
+      <BackofficeField label={tPackages(locale, 'imageUrl')} className="sm:col-span-2">
         <BackofficeInput
           value={draft.image_url ?? ''}
           onChange={(v) => setDraft((c) => ({ ...c, image_url: v }))}
@@ -153,7 +159,9 @@ export function PackageAdminFormFields({
         />
       </BackofficeField>
 
-      <BackofficeFormSectionTitle>Descrições</BackofficeFormSectionTitle>
+      <BackofficeFormSectionTitle>
+        {tPackages(locale, 'descriptions')}
+      </BackofficeFormSectionTitle>
       <BackofficeField label="description" className="sm:col-span-2 lg:col-span-3">
         <BackofficeTextarea
           value={draft.description ?? ''}
@@ -181,21 +189,23 @@ export function PackageAdminFormFields({
         />
       </BackofficeField>
 
-      <BackofficeFormSectionTitle>Diferenciais comerciais</BackofficeFormSectionTitle>
-      <BackofficeField label="Diferenciais (PT)" className="sm:col-span-2 lg:col-span-3">
+      <BackofficeFormSectionTitle>
+        {tPackages(locale, 'commercialHighlights')}
+      </BackofficeFormSectionTitle>
+      <BackofficeField label={tPackages(locale, 'highlightsPt')} className="sm:col-span-2 lg:col-span-3">
         <BackofficeTextarea
           value={String(draft.package_highlights_pt ?? '')}
           onChange={(v) => setDraft((c) => ({ ...c, package_highlights_pt: v }))}
           rows={3}
         />
       </BackofficeField>
-      <BackofficeField label="Diferenciais (EN)" className="sm:col-span-2">
+      <BackofficeField label={tPackages(locale, 'highlightsEn')} className="sm:col-span-2">
         <BackofficeTextarea
           value={String(draft.package_highlights_en ?? '')}
           onChange={(v) => setDraft((c) => ({ ...c, package_highlights_en: v }))}
         />
       </BackofficeField>
-      <BackofficeField label="Diferenciais (ES)" className="sm:col-span-2">
+      <BackofficeField label={tPackages(locale, 'highlightsEs')} className="sm:col-span-2">
         <BackofficeTextarea
           value={String(draft.package_highlights_es ?? '')}
           onChange={(v) => setDraft((c) => ({ ...c, package_highlights_es: v }))}

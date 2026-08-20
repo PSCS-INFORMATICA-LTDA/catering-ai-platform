@@ -15,6 +15,9 @@ import {
 } from '@/Lib/packageCatalogVisual'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import CatalogImageFrame from '@/components/CatalogImageFrame'
+import { tCommon } from '@/Lib/i18n/common'
+import { tPackages } from '@/Lib/i18n/packages'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import {
   getPackageGarnishDisplayText,
   getPackageItemsDisplayText,
@@ -74,6 +77,7 @@ export default function PackageCatalogCard({
   allPackages?: ReadonlyArray<PackageCatalogFields>
   sidesPricePerPerson?: number
 }) {
+  const locale = useAuthLocaleFromMe()
   const image = getPackageCatalogImage(pkg, allPackages)
   const variant = getPackageCatalogVariant(pkg)
   const name = getPackageCatalogName(pkg, language)
@@ -92,8 +96,8 @@ export default function PackageCatalogCard({
       onDoubleClick={onSelectAndAdvance}
       title={
         autoAdvanceOnSelect
-          ? 'Selecionar pacote e continuar'
-          : 'Duplo clique para ir aos adicionais'
+          ? tPackages(locale, 'selectAndContinue')
+          : tPackages(locale, 'doubleClickAdditionals')
       }
       className={`relative flex h-full w-full flex-col overflow-hidden rounded-2xl border text-left shadow-cdl transition-colors ${
         selected
@@ -103,7 +107,7 @@ export default function PackageCatalogCard({
     >
       {selected && (
         <span className="absolute right-3 top-3 z-10 rounded-full border border-cdl-success-border bg-cdl-success-soft px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cdl-success">
-          Selecionado
+          {tCommon(locale, 'selected')}
         </span>
       )}
 
@@ -124,21 +128,19 @@ export default function PackageCatalogCard({
 
         {getPackageItemsDisplayText(pkg, language) ? (
           <p className="mt-2 line-clamp-3 text-xs leading-snug text-cdl-text-secondary sm:text-sm">
-            <span className="font-bold text-cdl-fg">Itens do pacote:</span>{' '}
+            <span className="font-bold text-cdl-fg">
+              {tPackages(locale, 'packageItems')}:
+            </span>{' '}
             {getPackageItemsDisplayText(pkg, language)}
           </p>
         ) : null}
 
         <p className="mt-2 line-clamp-2 text-xs leading-snug text-cdl-text-secondary sm:text-sm">
-          <span className="font-bold text-cdl-fg">Guarnições:</span>{' '}
+          <span className="font-bold text-cdl-fg">{tCommon(locale, 'sides')}:</span>{' '}
           {variant === 'with_sides'
             ? getPackageGarnishDisplayText(pkg, language) ||
               getPackageSidesDescription(language)
-            : language === 'en'
-              ? 'Not included'
-              : language === 'es'
-                ? 'No incluidas'
-                : 'Não inclusas'}
+            : tPackages(locale, 'sidesNotIncluded')}
         </p>
 
         <div className="mt-3 space-y-1 md:mt-2">

@@ -1,3 +1,4 @@
+import { rejectSpoofedCompanyId, requireApiPermission } from '@/Lib/auth/requireApi'
 import { getCdlCompanyId } from '@/Lib/cdlCompany'
 import {
   buildCustomersListSelect,
@@ -7,22 +8,29 @@ import {
 import {
   fetchActiveCustomers,
   fetchAllCustomers,
-  type CustomerListItem,
 } from '@/Lib/fetchCustomers'
 import { getNextAbNumber } from '@/Lib/getNextDocumentNumber'
 import { countOpenQuotesForCustomers } from '@/Lib/customerOpenQuotes'
-import { normalizePhone } from '@/Lib/normalizePhone'
+import {
+  formatPostalCode,
+  inferCountryFromPostalCode,
+  postalCodeSaveError,
+} from '@/Lib/cep'
+import { isUsablePhone, normalizePhone } from '@/Lib/normalizePhone'
 import {
   customerMatchesSearch,
   dedupeCustomersList,
   sortCustomersByRecency,
 } from '@/Lib/searchCustomers'
-import { supabase } from '@/Lib/supabase'
+import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export async function GET(request: Request) {
+  const auth = await requireApiPermission('customers.view')
+  if (!auth.ok) return auth.response
+
   const url = new URL(request.url)
   const query = url.searchParams.get('q')?.trim() ?? ''
   const activeParam = url.searchParams.get('active')
@@ -42,11 +50,21 @@ export async function GET(request: Request) {
     )
   }
 
+  const role = url.searchParams.get('role')?.trim().toLowerCase() ?? ''
+
   let result = dedupeCustomersList(data)
+  if (role === 'customer') {
+    result = result.filter((row) => row.is_customer !== false)
+  } else if (role === 'supplier') {
+    result = result.filter((row) => Boolean(row.is_supplier))
+  } else if (role === 'team') {
+    result = result.filter((row) => Boolean(row.is_team))
+  }
+
   if (query) {
     result = dedupeCustomersList(
       sortCustomersByRecency(
-        data.filter((customer) => customerMatchesSearch(customer, query)),
+        result.filter((customer) => customerMatchesSearch(customer, query)),
       ),
     )
   }
@@ -65,6 +83,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireApiPermission('customers.manage')
+  if (!auth.ok) return auth.response
+
   const companyId = getCdlCompanyId()
   if (!companyId?.trim()) {
     return Response.json({ error: 'company_id não configurado.' }, { status: 500 })
@@ -77,14 +98,24 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Payload inválido.' }, { status: 400 })
   }
 
+  const spoof = rejectSpoofedCompanyId(auth.session, (body as { company_id?: string }).company_id)
+  if (spoof) return spoof
+
   const phone =
     typeof body.phone === 'string' ? body.phone.trim() : String(body.phone ?? '').trim()
   const phoneNormalized = normalizePhone(phone)
-  if (!phoneNormalized || phoneNormalized.length < 10) {
+  if (!isUsablePhone(phone)) {
     return Response.json(
-      { error: 'Telefone inválido (mínimo 10 dígitos).' },
+      { error: 'Telefone inválido. Informe o DDI (ex.: +5511983481803).' },
       { status: 400 },
     )
+  }
+
+  const postal =
+    typeof body.postal_code === 'string' ? body.postal_code.trim() : ''
+  const postalError = postalCodeSaveError(postal)
+  if (postalError) {
+    return Response.json({ error: postalError }, { status: 400 })
   }
 
   const { number: abNumber } = await getNextAbNumber(companyId)
@@ -94,6 +125,12 @@ export async function POST(request: Request) {
     company_id: companyId,
     phone,
     phone_normalized: phoneNormalized,
+    ...(postal
+      ? {
+          postal_code: formatPostalCode(postal),
+          country: inferCountryFromPostalCode(postal),
+        }
+      : {}),
     active: body.active !== false,
     ...(abNumber ? { ab_number: abNumber } : {}),
     ab_name:
@@ -103,6 +140,7 @@ export async function POST(request: Request) {
       phone,
   })
 
+  const supabase = getSupabaseServerClient()
   const { data, error } = await supabase
     .from('customers')
     .insert(row)

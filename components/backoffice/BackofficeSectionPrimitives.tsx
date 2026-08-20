@@ -1,6 +1,8 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { tCommon } from '@/Lib/i18n/common'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 export function BackofficeSectionBlock({
   title,
@@ -23,9 +25,7 @@ export function BackofficeSectionBlock({
             <h2 className="text-2xl font-bold text-red-600">{title}</h2>
             {badge}
           </div>
-          <p className="mt-1 text-sm text-neutral-500">
-            {count} {count === 1 ? 'pacote' : 'pacotes'}
-          </p>
+          <BackofficePackageCount count={count} />
           {codes.length > 0 ? (
             <p className="mt-2 text-xs font-medium text-neutral-400">
               {codes.join(' · ')}
@@ -75,6 +75,18 @@ export function BackofficeTextarea({
   )
 }
 
+function BackofficePackageCount({ count }: { count: number }) {
+  const locale = useAuthLocaleFromMe()
+  return (
+    <p className="mt-1 text-sm text-neutral-500">
+      {count}{' '}
+      {count === 1
+        ? tCommon(locale, 'packageSingular')
+        : tCommon(locale, 'packages')}
+    </p>
+  )
+}
+
 export function BackofficeInventoryButton({
   source,
   id,
@@ -82,18 +94,19 @@ export function BackofficeInventoryButton({
   source: 'package' | 'additional_item'
   id: string
 }) {
+  const locale = useAuthLocaleFromMe()
   return (
     <button
       type="button"
-      title="Inventário em breve"
+      title={tCommon(locale, 'inventorySoon')}
       onClick={() => {
-        window.alert('Inventário em breve')
+        window.alert(tCommon(locale, 'inventorySoon'))
         void source
         void id
       }}
       className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-2 text-sm font-bold text-neutral-600 transition hover:border-neutral-400 hover:bg-neutral-100"
     >
-      Inventário
+      {tCommon(locale, 'inventory')}
     </button>
   )
 }
@@ -117,6 +130,7 @@ export function BackofficeCascadePanel({
   className?: string
   onBack?: () => void
 }) {
+  const locale = useAuthLocaleFromMe()
   return (
     <aside
       className={`rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm ${className}`}
@@ -129,7 +143,7 @@ export function BackofficeCascadePanel({
               onClick={onBack}
               className="mb-2 text-xs font-bold uppercase tracking-wider text-red-600 lg:hidden"
             >
-              ← Voltar
+              ← {tCommon(locale, 'back')}
             </button>
           ) : null}
           <h2 className="text-lg font-bold text-neutral-900">{title}</h2>

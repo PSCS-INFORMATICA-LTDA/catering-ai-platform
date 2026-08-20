@@ -1,8 +1,13 @@
 /**
- * Colunas reais de `public.events` (schema de produção).
- * Apenas estas chaves podem ser enviadas em insert/update.
+ * Colunas reais de `public.events` permitidas em insert/update.
+ *
+ * `company_id` é obrigatório no INSERT: a policy `events_insert_member`
+ * usa `private.is_company_member(company_id)` e recusa NULL (SQLSTATE 42501).
+ * O valor deve vir do tenant resolver — nunca de company_id enviado pelo cliente.
  */
 export const EVENTS_INSERT_COLUMNS = [
+  'company_id',
+  'customer_id',
   'event_name',
   'event_date',
   'start_time',
@@ -36,12 +41,7 @@ export type EventsInsertPayload = Partial<
   Record<EventsInsertColumn, EventsInsertValue>
 >
 
-const FORBIDDEN_EVENT_COLUMNS = new Set([
-  'zip_code',
-  'zipCode',
-  'customer_id',
-  'company_id',
-])
+const FORBIDDEN_EVENT_COLUMNS = new Set(['zip_code', 'zipCode'])
 
 /** Remove chaves inexistentes/forbidden antes do insert/update em `events`. */
 export function pickEventsInsertPayload(

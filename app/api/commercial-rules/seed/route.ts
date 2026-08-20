@@ -5,7 +5,7 @@ import {
 } from '@/Lib/commercialRulesTableSchema'
 import { DEFAULT_COMMERCIAL_RULE_SEEDS } from '@/Lib/defaultCommercialRulesSeed'
 import { fetchSupabaseCommercialRules } from '@/Lib/supabaseCommercialRules'
-import { supabase } from '@/Lib/supabase'
+import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -18,7 +18,8 @@ export async function POST() {
     return Response.json({ error: 'company_id não configurado.' }, { status: 500 })
   }
 
-  const { error: probeError } = await supabase.from(RULE_TABLE).select('id').limit(1)
+  const db = getSupabaseServerClient()
+  const { error: probeError } = await db.from(RULE_TABLE).select('id').limit(1)
 
   if (probeError) {
     return Response.json(
@@ -30,9 +31,10 @@ export async function POST() {
     )
   }
 
-  const { data: existingRows, error: existingError } = await supabase
+  const { data: existingRows, error: existingError } = await db
     .from(RULE_TABLE)
     .select('rule_key')
+    .or(`company_id.eq.${companyId},company_id.is.null`)
 
   if (existingError) {
     return Response.json({ error: existingError.message }, { status: 500 })
@@ -52,16 +54,17 @@ export async function POST() {
   }))
 
   if (rows.length > 0) {
-    const { error } = await supabase.from(RULE_TABLE).insert(rows)
+    const { error } = await db.from(RULE_TABLE).insert(rows)
 
     if (error) {
       return Response.json({ error: error.message }, { status: 500 })
     }
   }
 
-  const { data: inserted } = await supabase
+  const { data: inserted } = await db
     .from(RULE_TABLE)
     .select(buildCommercialRulesListSelect())
+    .or(`company_id.eq.${companyId},company_id.is.null`)
     .order('rule_key', { ascending: true })
 
   const rules = await fetchSupabaseCommercialRules()

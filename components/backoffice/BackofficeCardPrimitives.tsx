@@ -1,6 +1,8 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { tCommon } from '@/Lib/i18n/common'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 export function BackofficeCardGrid({ children }: { children: ReactNode }) {
   return (
@@ -12,21 +14,25 @@ export function BackofficeCardGrid({ children }: { children: ReactNode }) {
 
 export function BackofficeEmptyState({
   loading,
-  message = 'Nenhum registro encontrado.',
+  message,
 }: {
   loading?: boolean
   message?: string
 }) {
+  const locale = useAuthLocaleFromMe()
   return (
     <div className="col-span-full rounded-2xl border border-dashed border-neutral-200 bg-white px-6 py-16 text-center shadow-sm">
       <p className="text-sm text-neutral-500">
-        {loading ? 'Carregando…' : message}
+        {loading
+          ? tCommon(locale, 'loading')
+          : message || tCommon(locale, 'empty')}
       </p>
     </div>
   )
 }
 
 export function BackofficeStatusBadge({ active }: { active: boolean }) {
+  const locale = useAuthLocaleFromMe()
   return (
     <span
       className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
@@ -35,7 +41,7 @@ export function BackofficeStatusBadge({ active }: { active: boolean }) {
           : 'bg-neutral-100 text-neutral-600 ring-1 ring-neutral-200'
       }`}
     >
-      {active ? 'Ativo' : 'Inativo'}
+      {active ? tCommon(locale, 'active') : tCommon(locale, 'inactive')}
     </span>
   )
 }
@@ -49,10 +55,13 @@ export function BackofficeAccentBadge({ children }: { children: ReactNode }) {
 }
 
 export function BackofficeOpenQuoteBadge({ count }: { count: number }) {
+  const locale = useAuthLocaleFromMe()
   if (count <= 0) return null
   return (
     <span className="inline-flex items-center rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">
-      Cotação em aberto{count > 1 ? ` (${count})` : ''}
+      {count > 1
+        ? tCommon(locale, 'openQuotesCount', { count })
+        : tCommon(locale, 'openQuote')}
     </span>
   )
 }
@@ -155,17 +164,20 @@ export function BackofficeInput({
   value,
   onChange,
   disabled,
+  placeholder,
 }: {
   type?: string
   value: string | number | boolean | null | undefined
   onChange: (value: string) => void
   disabled?: boolean
+  placeholder?: string
 }) {
   return (
     <input
       type={type}
       value={value == null ? '' : String(value)}
       disabled={disabled}
+      placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
       className={inputClass}
     />

@@ -1,4 +1,6 @@
 import type { GuestCounts } from '@/Lib/calculateQuoteTotals'
+import { tw } from '@/Lib/quoteTranslations'
+import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 function StatCard({
   label,
@@ -49,11 +51,17 @@ export default function GuestBreakdownPanel({
   guestCounts,
   totals,
   variant = 'default',
+  language = 'pt',
+  showFinancialTotal = true,
 }: {
   guestCounts: GuestCounts
   totals: SnapshotTotals
   variant?: 'default' | 'compact' | 'pdf'
+  language?: QuoteLanguage | string | null
+  showFinancialTotal?: boolean
 }) {
+  const loc: QuoteLanguage =
+    language === 'en' || language === 'es' ? language : 'pt'
   const gridClass =
     variant === 'compact'
       ? 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6'
@@ -61,30 +69,32 @@ export default function GuestBreakdownPanel({
 
   const cards = (
     <>
-      <StatCard label="Adultos" value={guestCounts.adultCount} />
+      <StatCard label={tw(loc, 'adults')} value={guestCounts.adultCount} />
       <StatCard
-        label="Crianças até 3 anos"
+        label={tw(loc, 'childrenUnder3')}
         value={guestCounts.childrenUnder3Count}
       />
       <StatCard
-        label="Crianças 4 a 12 anos"
+        label={tw(loc, 'children4to12')}
         value={guestCounts.children4To12Count}
       />
       <StatCard
-        label="Convidados físicos"
+        label={tw(loc, 'physicalGuests')}
         value={formatCount(totals.physicalGuestCount)}
       />
       <StatCard
-        label="Pessoas cobradas equivalentes"
+        label={tw(loc, 'billedPeople')}
         value={formatCount(totals.billableGuestCount)}
         highlight
       />
-      <StatCard
-        label="Total financeiro"
-        value={formatQuoteTotal(totals.quoteTotal)}
-        highlight
-        money
-      />
+      {showFinancialTotal ? (
+        <StatCard
+          label={tw(loc, 'financialTotal')}
+          value={formatQuoteTotal(totals.quoteTotal)}
+          highlight
+          money
+        />
+      ) : null}
     </>
   )
 
@@ -97,15 +107,7 @@ export default function GuestBreakdownPanel({
       <div className={gridClass}>{cards}</div>
 
       <p className="text-sm leading-relaxed text-cdl-text-secondary">
-        <strong className="font-semibold text-cdl-fg">Regra CDL:</strong>{' '}
-        crianças até{' '}
-        <strong className="font-semibold text-cdl-fg">3 anos</strong> não pagam;
-        de <strong className="font-semibold text-cdl-fg">4 a 12 anos</strong>{' '}
-        pagam meia; adultos pagam valor cheio.{' '}
-        <strong className="font-semibold text-cdl-fg">
-          Pessoas cobradas equivalentes
-        </strong>{' '}
-        = adultos + (crianças 4–12 × 0,5).
+        {tw(loc, 'guestRule')}
       </p>
     </div>
   )

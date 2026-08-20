@@ -8,13 +8,18 @@ import {
 import { getCdlCompanyId } from './cdlCompany'
 import { findOrCreateCustomerByPhone } from './findOrCreateCustomerByPhone'
 import { getNextQuoteNumber } from './getNextDocumentNumber'
+import { postalCodeSaveError } from './cep'
 import { isUsablePhone } from './normalizePhone'
 import {
   buildSaveQuoteError,
   logSaveQuoteError,
   type SaveQuoteErrorInfo,
 } from './supabaseSaveError'
-import { supabase } from './supabase'
+import { getSupabaseServerClient } from './supabaseServer'
+import {
+  computeServerPricingForSave,
+  mergeServerPricingIntoSaveInput,
+} from './pricing/applyServerPricingToQuoteSave'
 
 export type CreateQuoteResult = {
   data: { id: string; quote_number: string | null } | null
@@ -28,6 +33,10 @@ function validateSaveInput(input: QuoteSaveInput): SaveQuoteErrorInfo | null {
   }
   if (!companyId?.trim()) {
     return buildSaveQuoteError('validation', new Error('company_id vazio.'))
+  }
+  const zipError = postalCodeSaveError(input.zipCode, true)
+  if (zipError) {
+    return buildSaveQuoteError('validation', new Error(zipError))
   }
   return null
 }
@@ -106,7 +115,7 @@ async function resolveCustomerIdForSave(
       customerId: null,
       error: buildSaveQuoteError(
         'validation',
-        new Error('Telefone do cliente inválido (mínimo 10 dígitos).'),
+        new Error('Telefone inválido. Informe o DDI (ex.: +5511983481803).'),
       ),
     }
   }
@@ -127,6 +136,7 @@ async function resolveCustomerIdForSave(
 }
 
 export async function createQuote(input: QuoteSaveInput): Promise<CreateQuoteResult> {
+  const supabase = getSupabaseServerClient()
   const validationError = validateSaveInput(input)
   if (validationError) {
     logSaveQuoteError(validationError)
@@ -140,11 +150,23 @@ export async function createQuote(input: QuoteSaveInput): Promise<CreateQuoteRes
     return { data: null, error: customerError }
   }
 
-  const saveInput: QuoteSaveInput = {
+  const saveInputBase: QuoteSaveInput = {
     ...input,
     customerId,
     customerDraft: null,
   }
+
+  const pricingResult = await computeServerPricingForSave(saveInputBase)
+  if (!pricingResult.ok) {
+    const errorInfo = buildSaveQuoteError(
+      'validation',
+      new Error(pricingResult.error.message),
+    )
+    logSaveQuoteError(errorInfo)
+    return { data: null, error: errorInfo }
+  }
+
+  const saveInput = mergeServerPricingIntoSaveInput(saveInputBase, pricingResult)
 
   const companyId = getCdlCompanyId()
   const { number: quoteNumber, error: numberError } =
@@ -165,7 +187,18 @@ export async function createQuote(input: QuoteSaveInput): Promise<CreateQuoteRes
     return { data: null, error: errorInfo }
   }
 
-  const eventPayload = buildEventSavePayload(saveInput)
+  const eventPayload = buildEventSavePayload(saveInput, { mode: 'create' })
+  if (!eventPayload.company_id) {
+    const errorInfo = buildSaveQuoteError(
+      'event',
+      new Error(
+        'Insert em events sem company_id. RLS events_insert_member recusa NULL.',
+      ),
+      { eventPayload },
+    )
+    logSaveQuoteError(errorInfo)
+    return { data: null, error: errorInfo }
+  }
 
   const { data: eventData, error: eventError } = await supabase
     .from('events')
@@ -191,6 +224,7 @@ export async function createQuote(input: QuoteSaveInput): Promise<CreateQuoteRes
     ...buildQuoteSavePayload(saveInput, {
       mode: 'create',
       eventId,
+      pricingBreakdown: pricingResult.breakdown,
     }),
     quote_number: quoteNumber,
   }
