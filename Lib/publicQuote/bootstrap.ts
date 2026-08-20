@@ -8,7 +8,10 @@ import { fetchSupabaseCommercialRules } from '@/Lib/supabaseCommercialRules'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import { resolveServiceDurationMinutes } from './eventDuration'
 import { resolvePublicLocationBias } from './locationBias'
-import { isPublicCatalogFixturePackage } from './catalogVisibility'
+import {
+  isPublicCatalogFixtureItem,
+  isPublicCatalogFixturePackage,
+} from './catalogVisibility'
 import {
   normalizePublicCompanySlug,
   parsePublicQuoteLocale,
@@ -518,9 +521,11 @@ export async function getPublicQuoteBootstrap(
     packages: packages.map((row) =>
       sanitizePackage(row as unknown as Record<string, unknown>),
     ),
-    catalogItems: (catalogResult.data ?? []).map((row) =>
-      sanitizeCatalogItem(row as unknown as Record<string, unknown>),
-    ),
+    catalogItems: (catalogResult.data ?? [])
+      .filter((row) => !isPublicCatalogFixtureItem(row))
+      .map((row) =>
+        sanitizeCatalogItem(row as unknown as Record<string, unknown>),
+      ),
     packageItems: (configurationResult.data?.packageItems ?? []).map((row) =>
       sanitizePackageItem(row as unknown as Record<string, unknown>),
     ),

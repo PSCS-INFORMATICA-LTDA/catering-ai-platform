@@ -19,7 +19,10 @@ import {
 } from '../../Lib/packageCatalogVisual.ts'
 import { shouldExposeAdditionalCategory } from '../../Lib/additionalCategoryExposure.ts'
 import { resolveQuotePdfPackagePerPersonBreakdown } from '../../Lib/quotePdfPackagePresentation.ts'
-import { isPublicCatalogFixturePackage } from '../../Lib/publicQuote/catalogVisibility.ts'
+import {
+  isPublicCatalogFixtureItem,
+  isPublicCatalogFixturePackage,
+} from '../../Lib/publicQuote/catalogVisibility.ts'
 import { isPublicGrillDraftAnswered } from '../../Lib/publicQuote/grillDraft.ts'
 import {
   formatDistanceForDisplay,
@@ -442,8 +445,14 @@ test('public catalog hides internal TEST fixtures', () => {
     isPublicCatalogFixturePackage({ package_key: 'BBQCHO+' }),
     false,
   )
+  assert.equal(
+    isPublicCatalogFixtureItem({ item_key: 'TEST-DEV-ADD-DESSERT' }),
+    true,
+  )
+  assert.equal(isPublicCatalogFixtureItem({ item_key: 'ITEM_084' }), false)
   const bootstrap = source('Lib/publicQuote/bootstrap.ts')
   assert.match(bootstrap, /isPublicCatalogFixturePackage/)
+  assert.match(bootstrap, /isPublicCatalogFixtureItem/)
 })
 
 if (failed > 0) {

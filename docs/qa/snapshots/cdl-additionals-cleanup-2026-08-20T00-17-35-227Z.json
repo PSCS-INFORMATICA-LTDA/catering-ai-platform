@@ -1,0 +1,332 @@
+{
+  "at": "2026-08-20T00:17:35.227Z",
+  "project": "yasprgtlqclwsjcshtls",
+  "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+  "apply": true,
+  "fixtures": [
+    {
+      "id": "d1000000-0000-4000-8000-000000000001",
+      "item_key": "DEV_PICANHA",
+      "item_name": "Picanha DEV",
+      "label_pt": "Picanha DEV",
+      "category_key": "meats",
+      "active": true,
+      "customer_visible": true,
+      "can_be_additional": false,
+      "price": 0,
+      "charge_type": "PERSON",
+      "image_url": null,
+      "image_status": "missing"
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000002",
+      "item_key": "DEV_LINGUICA",
+      "item_name": "Linguiça DEV",
+      "label_pt": "Linguiça DEV",
+      "category_key": "meats",
+      "active": true,
+      "customer_visible": true,
+      "can_be_additional": false,
+      "price": 0,
+      "charge_type": "PERSON",
+      "image_url": null,
+      "image_status": "missing"
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000003",
+      "item_key": "DEV_FAROFA",
+      "item_name": "Farofa DEV",
+      "label_pt": "Farofa DEV",
+      "category_key": "sides",
+      "active": true,
+      "customer_visible": true,
+      "can_be_additional": true,
+      "price": 3.5,
+      "charge_type": "PERSON",
+      "image_url": null,
+      "image_status": "missing"
+    },
+    {
+      "id": "d1000000-0000-4000-8000-000000000004",
+      "item_key": "DEV_REFRI",
+      "item_name": "Refrigerante DEV",
+      "label_pt": "Refrigerante DEV",
+      "category_key": "drinks",
+      "active": true,
+      "customer_visible": true,
+      "can_be_additional": true,
+      "price": 25,
+      "charge_type": "UNIT",
+      "image_url": null,
+      "image_status": "missing"
+    },
+    {
+      "id": "d2000000-0000-4000-8000-000000000001",
+      "item_key": "TEST-DEV-ITEM-BEEF",
+      "item_name": "Corte bovino de teste",
+      "label_pt": "Corte bovino de teste",
+      "category_key": "meats",
+      "active": true,
+      "customer_visible": true,
+      "can_be_additional": false,
+      "price": 0,
+      "charge_type": "PERSON",
+      "image_url": null,
+      "image_status": "missing"
+    },
+    {
+      "id": "d2000000-0000-4000-8000-000000000002",
+      "item_key": "TEST-DEV-ITEM-CHICKEN",
+      "item_name": "Frango grelhado de teste",
+      "label_pt": "Frango grelhado de teste",
+      "category_key": "meats",
+      "active": true,
+      "customer_visible": true,
+      "can_be_additional": false,
+      "price": 0,
+      "charge_type": "PERSON",
+      "image_url": null,
+      "image_status": "missing"
+    },
+    {
+      "id": "d2000000-0000-4000-8000-000000000003",
+      "item_key": "TEST-DEV-ITEM-RICE",
+      "item_name": "Arroz de teste",
+      "label_pt": "Arroz de teste",
+      "category_key": "sides",
+      "active": true,
+      "customer_visible": true,
+      "can_be_additional": false,
+      "price": 0,
+      "charge_type": "PERSON",
+      "image_url": null,
+      "image_status": "missing"
+    },
+    {
+      "id": "d2000000-0000-4000-8000-000000000004",
+      "item_key": "TEST-DEV-ITEM-SALAD",
+      "item_name": "Salada de teste",
+      "label_pt": "Salada de teste",
+      "category_key": "sides",
+      "active": true,
+      "customer_visible": true,
+      "can_be_additional": false,
+      "price": 0,
+      "charge_type": "PERSON",
+      "image_url": null,
+      "image_status": "missing"
+    },
+    {
+      "id": "d2000000-0000-4000-8000-000000000005",
+      "item_key": "TEST-DEV-ITEM-BREAD",
+      "item_name": "Pao de alho de teste",
+      "label_pt": "Pao de alho de teste",
+      "category_key": "sides",
+      "active": true,
+      "customer_visible": true,
+      "can_be_additional": false,
+      "price": 0,
+      "charge_type": "PERSON",
+      "image_url": null,
+      "image_status": "missing"
+    },
+    {
+      "id": "d2000000-0000-4000-8000-000000000006",
+      "item_key": "TEST-DEV-ITEM-SETUP",
+      "item_name": "Servico de montagem de teste",
+      "label_pt": "Servico de montagem de teste",
+      "category_key": "services",
+      "active": true,
+      "customer_visible": true,
+      "can_be_additional": false,
+      "price": 0,
+      "charge_type": "UNIT",
+      "image_url": null,
+      "image_status": "missing"
+    },
+    {
+      "id": "d2000000-0000-4000-8000-000000000011",
+      "item_key": "TEST-DEV-ADD-DESSERT",
+      "item_name": "TESTE DEV — Sobremesa por pessoa",
+      "label_pt": "TESTE DEV — Sobremesa por pessoa",
+      "category_key": "sides",
+      "active": true,
+      "customer_visible": true,
+      "can_be_additional": true,
+      "price": 6,
+      "charge_type": "PERSON",
+      "image_url": null,
+      "image_status": "missing"
+    },
+    {
+      "id": "d2000000-0000-4000-8000-000000000012",
+      "item_key": "TEST-DEV-ADD-TABLE",
+      "item_name": "TESTE DEV — Mesa adicional",
+      "label_pt": "TESTE DEV — Mesa adicional",
+      "category_key": "services",
+      "active": true,
+      "customer_visible": true,
+      "can_be_additional": true,
+      "price": 35,
+      "charge_type": "UNIT",
+      "image_url": null,
+      "image_status": "missing"
+    },
+    {
+      "id": "d2000000-0000-4000-8000-000000000013",
+      "item_key": "TEST-DEV-ADD-TRAVEL",
+      "item_name": "TESTE DEV — Taxa de deslocamento",
+      "label_pt": "TESTE DEV — Taxa de deslocamento",
+      "category_key": "services",
+      "active": true,
+      "customer_visible": true,
+      "can_be_additional": true,
+      "price": 90,
+      "charge_type": "UNIT",
+      "image_url": null,
+      "image_status": "missing"
+    },
+    {
+      "id": "d2000000-0000-4000-8000-000000000014",
+      "item_key": "TEST-DEV-ADD-STAFF",
+      "item_name": "TESTE DEV — Profissional adicional",
+      "label_pt": "TESTE DEV — Profissional adicional",
+      "category_key": "services",
+      "active": true,
+      "customer_visible": true,
+      "can_be_additional": true,
+      "price": 120,
+      "charge_type": "UNIT",
+      "image_url": null,
+      "image_status": "missing"
+    },
+    {
+      "id": "c2600000-0000-4000-8000-0000000000b2",
+      "item_key": "TEST-DEV-ADDITIONAL-BOM",
+      "item_name": "TEST-DEV Additional BOM",
+      "label_pt": "TEST-DEV Adicional BOM",
+      "category_key": null,
+      "active": true,
+      "customer_visible": true,
+      "can_be_additional": true,
+      "price": 25,
+      "charge_type": "UNIT",
+      "image_url": null,
+      "image_status": "missing"
+    }
+  ],
+  "remaps": {
+    "fraldinha": {
+      "from": "404c667b-0605-48b8-9ca3-07b510be23bc",
+      "to": "768c6e24-d24c-4cca-9ca3-35e7a789f54b",
+      "rows": [
+        {
+          "id": "8cc2e0ec-a79d-4146-beca-3eef5adc1c02",
+          "package_id": "aeab0e55-e41e-4632-9277-21e8b2031d50",
+          "item_key": "FRALDINHA",
+          "additional_item_id": "404c667b-0605-48b8-9ca3-07b510be23bc",
+          "blocks_additional_item": true
+        },
+        {
+          "id": "1c6c058f-a3e0-487e-b68a-17df6168e65b",
+          "package_id": "b8808ff7-f16e-40ec-8eae-0fe62c03cc23",
+          "item_key": "FRALDINHA",
+          "additional_item_id": "404c667b-0605-48b8-9ca3-07b510be23bc",
+          "blocks_additional_item": true
+        },
+        {
+          "id": "e45e4104-73a1-403c-a5cc-743654f43462",
+          "package_id": "3d1734fd-7604-4335-b7f0-d2da238fac27",
+          "item_key": "FRALDINHA",
+          "additional_item_id": "404c667b-0605-48b8-9ca3-07b510be23bc",
+          "blocks_additional_item": true
+        },
+        {
+          "id": "e37854e9-22e1-41a9-996f-f2f52c409d5e",
+          "package_id": "95a67f3e-3c1c-4eb1-ad5b-6012d7fbea71",
+          "item_key": "FRALDINHA",
+          "additional_item_id": "404c667b-0605-48b8-9ca3-07b510be23bc",
+          "blocks_additional_item": true
+        },
+        {
+          "id": "d1b79e1f-125b-45f0-8307-b4f4715a1698",
+          "package_id": "a10cbb3d-2b13-42d1-8b34-e440218cdb12",
+          "item_key": "FRALDINHA",
+          "additional_item_id": "404c667b-0605-48b8-9ca3-07b510be23bc",
+          "blocks_additional_item": true
+        },
+        {
+          "id": "567ab488-cf60-4ead-9275-de3aa6ac18ed",
+          "package_id": "30f75230-461b-4043-8598-9ad0dd1aa580",
+          "item_key": "FRALDINHA",
+          "additional_item_id": "404c667b-0605-48b8-9ca3-07b510be23bc",
+          "blocks_additional_item": true
+        }
+      ],
+      "reason": "package_items.item_key FRALDINHA was linked to catalog ITEM_010 (BOVINO_NOBRE Wagyu). Canonical traditional SKU is ITEM_004."
+    },
+    "frango": {
+      "from": "fe25605a-1035-40c8-ba96-e96c8bd6f6cc",
+      "to": "19e12f51-fc29-4940-9066-bd93f2d48b30",
+      "rows": [
+        {
+          "id": "04327e32-756e-41f4-b379-fd351f17b84c",
+          "package_id": "aeab0e55-e41e-4632-9277-21e8b2031d50",
+          "item_key": "FRANGO",
+          "additional_item_id": "fe25605a-1035-40c8-ba96-e96c8bd6f6cc",
+          "blocks_additional_item": true
+        },
+        {
+          "id": "5c7e50a3-be38-403a-b39c-ca379741a4f6",
+          "package_id": "b8808ff7-f16e-40ec-8eae-0fe62c03cc23",
+          "item_key": "FRANGO",
+          "additional_item_id": "fe25605a-1035-40c8-ba96-e96c8bd6f6cc",
+          "blocks_additional_item": true
+        },
+        {
+          "id": "eb9e2e17-0112-47ef-bfd9-deaf1e347e56",
+          "package_id": "3d1734fd-7604-4335-b7f0-d2da238fac27",
+          "item_key": "FRANGO",
+          "additional_item_id": "fe25605a-1035-40c8-ba96-e96c8bd6f6cc",
+          "blocks_additional_item": true
+        },
+        {
+          "id": "b5870393-a4f8-4a48-b285-ce519a484750",
+          "package_id": "95a67f3e-3c1c-4eb1-ad5b-6012d7fbea71",
+          "item_key": "FRANGO",
+          "additional_item_id": "fe25605a-1035-40c8-ba96-e96c8bd6f6cc",
+          "blocks_additional_item": true
+        },
+        {
+          "id": "d15edda4-7b62-49eb-8a0d-667fccbdf4aa",
+          "package_id": "2314dbd6-4a64-4e96-b22d-eead2b7991f8",
+          "item_key": "FRANGO",
+          "additional_item_id": "fe25605a-1035-40c8-ba96-e96c8bd6f6cc",
+          "blocks_additional_item": true
+        },
+        {
+          "id": "e97a7c78-87eb-4649-886c-56c58af2c8f7",
+          "package_id": "a10cbb3d-2b13-42d1-8b34-e440218cdb12",
+          "item_key": "FRANGO",
+          "additional_item_id": "fe25605a-1035-40c8-ba96-e96c8bd6f6cc",
+          "blocks_additional_item": true
+        },
+        {
+          "id": "2af9b166-6cf8-4d48-9535-545213dd2b48",
+          "package_id": "30f75230-461b-4043-8598-9ad0dd1aa580",
+          "item_key": "FRANGO",
+          "additional_item_id": "fe25605a-1035-40c8-ba96-e96c8bd6f6cc",
+          "blocks_additional_item": true
+        },
+        {
+          "id": "f1d1c5c1-d76a-4725-887b-8f552ffef463",
+          "package_id": "72227fbd-1b7d-4661-9e55-2ebbf61aaccd",
+          "item_key": "FRANGO",
+          "additional_item_id": "fe25605a-1035-40c8-ba96-e96c8bd6f6cc",
+          "blocks_additional_item": true
+        }
+      ],
+      "reason": "package_items.item_key FRANGO was linked to catalog ITEM_024 (LINGUICAS). The sausage slot is ITEM_LINGUICA_TOSCANA_TRADICIONAL; chicken SKU is ITEM_FRANGO_SOBRECOXA."
+    }
+  }
+}
