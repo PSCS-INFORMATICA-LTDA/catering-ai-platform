@@ -75,7 +75,8 @@ export function publicPscsOneSsoReason(error: unknown): string {
       text,
     )
   ) {
-    return text.slice(0, 80)
+    if (/^[a-z0-9_]{3,80}$/i.test(text)) return text
+    return 'sso_failed'
   }
   return 'sso_failed'
 }

@@ -126,6 +126,9 @@ export async function executePscsOneCallback(
   }
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 export function identityFromTokenPayload(payload: {
   ok?: boolean
   identity?: PscsOneIdentityV1
@@ -138,6 +141,13 @@ export function identityFromTokenPayload(payload: {
   }
   if (payload.identity.product_key !== 'catering_ai') {
     throw new Error('product_key_denied')
+  }
+  if (
+    !UUID_RE.test(payload.identity.user_id) ||
+    !UUID_RE.test(payload.identity.company_id) ||
+    !UUID_RE.test(payload.identity.external_company_id)
+  ) {
+    throw new Error('token_payload_invalid')
   }
   return payload.identity
 }

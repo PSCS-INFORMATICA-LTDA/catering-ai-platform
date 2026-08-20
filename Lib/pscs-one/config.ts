@@ -1,9 +1,13 @@
+import {
+  evaluateCateringSsoSupabase,
+} from './devSupabaseGuard.ts'
+
 export const PSCS_ONE_MAPPED_COMPANY_COOKIE = 'pscs_one_mapped_company_id'
 
 export function isPscsOneSsoEnabled(
   source: Record<string, string | undefined> = process.env,
 ): boolean {
-  return source.PSCS_ONE_SSO_ENABLED === 'true'
+  return evaluateCateringSsoSupabase(source).ok
 }
 
 export function pscsOneTokenUrl(
