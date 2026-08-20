@@ -116,6 +116,10 @@ export async function POST(request: NextRequest) {
       requireSupabaseRules: true,
     })
     if (!pricing.ok) {
+      console.warn('[public-quote] submit pricing rejected', {
+        code: pricing.error.code,
+        field: pricing.error.field ?? null,
+      })
       throw new PublicQuoteHttpError(422, 'invalid_payload')
     }
 
@@ -165,6 +169,13 @@ export async function POST(request: NextRequest) {
     }
     if (!result.ok || !result.quote?.id) {
       const code = result.error || 'server_error'
+      console.warn('[public-quote] finalize_public_quote rejected', {
+        error: code,
+        additionalCount: draft.selection.additionals.length,
+        pricedCount: Array.isArray(pricing.resolvedAdditionals)
+          ? pricing.resolvedAdditionals.length
+          : null,
+      })
       throw new PublicQuoteHttpError(
         rpcErrorStatus(code),
         code === 'expired'
