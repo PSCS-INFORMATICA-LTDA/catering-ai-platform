@@ -21,7 +21,7 @@ function loginDenied(request: NextRequest, reason: string) {
 
 export async function GET(request: NextRequest) {
   const correlation_id = crypto.randomUUID()
-  const ssoGate = evaluateCateringSsoSupabase()
+  const ssoGate = evaluateCateringSsoSupabase(process.env)
   if (!ssoGate.ok) {
     logPscsOneSsoCallback({
       correlation_id,

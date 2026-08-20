@@ -27,7 +27,21 @@ Logout on PSCS One does not clear Catering cookies. Sign out of each app separat
 
 ## Canonical DEV alias
 
-`catering-ai-agenda-dev.vercel.app` must stay on a Production deployment whose bundle points at DEV supabase. After an approved Production deploy, run `npm run alias:dev:pin`. Preview deploys must not take this alias.
+`catering-ai-agenda-dev.vercel.app` must stay on a Production deployment whose bundle points at DEV supabase.
+
+Operational sequence for every technical DEV publish:
+
+```text
+deploy --prod
+→ prebuild guard (SSO + yasprgtlqclwsjcshtls)
+→ smoke /login + /auth/pscs-one/callback
+→ vercel alias set <deployment-url> catering-ai-agenda-dev.vercel.app
+```
+
+Preview deploys must not keep this alias. After deploy, run `npm run alias:dev:pin` (API) or:
+
+`npx vercel alias set <deployment-url> catering-ai-agenda-dev.vercel.app --scope pscs-informatica-ltda-s-projects`
+
 
 ## Tenant
 
