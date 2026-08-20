@@ -162,22 +162,21 @@ test('TEST 17 Double submit protected', () => {
   assert.match(submitRoute, /p_idempotency_key_hash/)
 })
 
-test('TEST 18 Small colored Catering AI logo visible', () => {
-  const productMark = source('components/brand/CateringAiMark.tsx')
+test('TEST 18 Small colored PSCS One logo visible', () => {
   assert.match(experience, /size="footer"/)
   assert.match(experience, /variant="icon"/)
-  assert.match(productMark, /src="\/brand\/catering-logo-light\.png"/)
-  assert.match(productMark, /h-\[22px\]/)
-  assert.doesNotMatch(experience, /PscsOneMark/)
+  assert.match(mark, /src="\/brand\/pscs-one\.png"/)
+  assert.match(mark, /h-\[22px\]/)
+  assert.doesNotMatch(mark, /pscs-one-white/)
 })
 
-test('TEST 19 Footer contains only Powered by Catering AI', () => {
+test('TEST 19 Footer contains only Powered by PSCS One', () => {
   const powered = experience.slice(experience.indexOf('data-powered-by'))
   const block = powered.slice(0, powered.indexOf('</p>') + 4)
   assert.match(block, /\{copy\.poweredBy\}/)
-  assert.doesNotMatch(block, /PSCS One/)
+  assert.doesNotMatch(block, /Catering AI/)
   assert.doesNotMatch(block, /Catering App/)
-  assert.equal((experience.match(/poweredBy: 'Powered by Catering AI'/g) ?? []).length, 3)
+  assert.equal((experience.match(/poweredBy: 'Powered by PSCS One'/g) ?? []).length, 3)
 })
 
 test('TEST 20 No horizontal overflow classes on public shell', () => {

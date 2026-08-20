@@ -322,9 +322,9 @@ test('TEST 31 Public landing tenant-first', () => {
   assert.ok(powered > experience.indexOf('data-public-landing'))
 })
 
-test('TEST 32 Powered by Catering AI is discreet', () => {
-  assert.match(experience, /Powered by Catering AI/)
-  assert.doesNotMatch(experience, /Powered by PSCS One/)
+test('TEST 32 Powered by PSCS One is discreet', () => {
+  assert.match(experience, /Powered by PSCS One/)
+  assert.doesNotMatch(experience, /Powered by PSCS One · Catering AI/)
   assert.doesNotMatch(experience, /Catering App/)
   assert.match(experience, /data-powered-by/)
   assert.match(experience, /data-footer-cdl-logo/)
@@ -482,21 +482,17 @@ test('TEST 42 New quote hydrates empty package and additionals', () => {
   assert.match(types, /additionals: \{\}/)
 })
 
-test('TEST 43 CDL flame emblem and discreet Catering AI chrome', () => {
+test('TEST 43 CDL flame emblem and discreet PSCS One chrome', () => {
   const lockup = source('components/quotes/PublicQuoteBrandLockup.tsx')
-  const productMark = source('components/brand/CateringAiMark.tsx')
   assert.match(lockup, /CDL_FLAME_EMBLEM_SRC/)
   assert.match(lockup, /\/cdl\/logo\.png/)
   assert.match(experience, /publicQuoteEmblemSrc/)
   assert.match(experience, /data-success-flame-art/)
-  assert.match(experience, /data-public-wizard-product/)
-  assert.doesNotMatch(experience, /data-public-wizard-pscs/)
-  assert.doesNotMatch(experience, /PscsOneMark/)
+  assert.match(experience, /data-public-wizard-pscs/)
   assert.match(experience, /hidden lg:block/)
   assert.match(experience, /variant="icon"/)
   assert.doesNotMatch(lockup, /truncate text-sm font-black/)
-  assert.match(productMark, /variant\?: 'full' \| 'icon'/)
-  assert.match(productMark, /\/brand\/catering-logo-light\.png/)
+  assert.match(mark, /variant\?: 'full' \| 'icon'/)
 })
 
 if (failed > 0) {
