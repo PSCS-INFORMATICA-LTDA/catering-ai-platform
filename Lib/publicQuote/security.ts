@@ -19,6 +19,7 @@ export class PublicQuoteHttpError extends Error {
     readonly status: number,
     readonly code:
       | 'invalid_payload'
+      | 'invalid_event_date'
       | 'invalid_origin'
       | 'not_found'
       | 'expired'
@@ -164,6 +165,10 @@ export function publicErrorResponse(error: unknown): {
   body: { error: string; code: string }
 } {
   if (error instanceof PublicQuoteHttpError) {
+    console.warn('[public-quote] request rejected', {
+      code: error.code,
+      status: error.status,
+    })
     return {
       status: error.status,
       body: { error: 'Request could not be processed.', code: error.code },

@@ -116,6 +116,10 @@ export async function POST(request: NextRequest) {
       requireSupabaseRules: true,
     })
     if (!pricing.ok) {
+      console.warn('[public-quote] submit pricing rejected', {
+        code: pricing.error.code,
+        field: pricing.error.field ?? null,
+      })
       throw new PublicQuoteHttpError(422, 'invalid_payload')
     }
 
@@ -144,6 +148,10 @@ export async function POST(request: NextRequest) {
       p_consent_version: privacyPolicyVersion,
     })
     if (error || !data || typeof data !== 'object') {
+      console.error('[public-quote] finalize_public_quote failed', {
+        code: error?.code ?? null,
+        message: error?.message ?? null,
+      })
       throw new PublicQuoteHttpError(500, 'server_error')
     }
     const result = data as {
@@ -161,14 +169,23 @@ export async function POST(request: NextRequest) {
     }
     if (!result.ok || !result.quote?.id) {
       const code = result.error || 'server_error'
+      console.warn('[public-quote] finalize_public_quote rejected', {
+        error: code,
+        additionalCount: draft.selection.additionals.length,
+        pricedCount: Array.isArray(pricing.resolvedAdditionals)
+          ? pricing.resolvedAdditionals.length
+          : null,
+      })
       throw new PublicQuoteHttpError(
         rpcErrorStatus(code),
         code === 'expired'
           ? 'expired'
           : code === 'conflict'
             ? 'conflict'
-            : code === 'not_found'
-              ? 'not_found'
+          : code === 'not_found'
+            ? 'not_found'
+            : code === 'invalid_event_date'
+              ? 'invalid_event_date'
               : code.startsWith('invalid_')
                 ? 'invalid_payload'
                 : 'server_error',
