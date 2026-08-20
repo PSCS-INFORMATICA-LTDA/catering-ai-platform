@@ -1,5 +1,5 @@
 /**
- * Public CDL landing — randomized photographic hero.
+ * Public CDL landing — curated photographic hero gallery.
  * Run: node --experimental-strip-types scripts/dev/test-public-quote-hero-photography.mjs
  */
 import assert from 'node:assert/strict'
@@ -42,31 +42,23 @@ const wizard = source('app/quotes/new/QuoteWizard.tsx')
 const mediaConfig = source('Lib/publicQuote/companyPublicHeroMedia.ts')
 const cdlPhotos = getCompanyPublicHeroMedia('cdl')
 
-test('TEST 1 Hero possui cinco mídias CDL configuradas', () => {
-  assert.equal(cdlPhotos.length, 5)
+test('TEST 1 CDL gallery is tenant-scoped and curated', () => {
+  assert.ok(cdlPhotos.length >= 2)
   assert.deepEqual(
     cdlPhotos.map((item) => item.id),
-    [
-      'cdl-event-tent',
-      'cdl-event-van',
-      'cdl-event-buffet',
-      'cdl-event-board',
-      'cdl-event-fleet',
-    ],
+    ['cdl-event-pool-station', 'cdl-fleet-neighborhood'],
   )
-  assert.equal(getCompanyPublicHeroMedia('cdl').length, 5)
   assert.equal(getCompanyPublicHeroMedia('other-tenant').length, 0)
+  assert.equal(getCompanyPublicHeroMedia('').length, 0)
+  assert.equal(getCompanyPublicHeroMedia(null).length, 0)
   assert.match(source('Lib/publicQuote/heroMedia.ts'), /companySlug/)
   assert.match(source('Lib/publicQuote/heroMedia.ts'), /getCompanyPublicHeroMedia/)
-  assert.match(mediaConfig, /12A42ED0-52E8-4D95-BAE0-E2A58F200A26\.jpeg/)
-  assert.match(mediaConfig, /E91AAB0B-CD8C-4C9A-946B-71AFEBE96C96\.jpeg/)
-  assert.match(mediaConfig, /BCC58DBB-6448-4AFE-85C1-C8277D075AEE\.jpeg/)
-  assert.match(mediaConfig, /228C5DB0-5F5F-4B30-B72E-7E3337965435\.jpeg/)
-  assert.match(mediaConfig, /14D84C20-F765-434F-9EAE-444855C148C4\.jpeg/)
-  assert.doesNotMatch(mediaConfig, /AC197F92-C6E4-40E4-AB8F-D969A975D4E5/)
+  assert.doesNotMatch(experience, /\/cdl\/hero\//)
+  assert.doesNotMatch(hero, /\/cdl\/hero\//)
+  assert.doesNotMatch(mediaConfig, /BBQCHO|BBQTRAD|package flyer/i)
 })
 
-test('TEST 2 Nenhuma mídia repete imediatamente', () => {
+test('TEST 2 Playlist helper still avoids immediate repeats', () => {
   const items = cdlPhotos.map((item) => ({ id: item.id }))
   for (let seed = 0; seed < 40; seed += 1) {
     let cursor = 0.13 * seed
@@ -82,49 +74,45 @@ test('TEST 2 Nenhuma mídia repete imediatamente', () => {
   }
 })
 
-test('TEST 3 Novo ciclo embaralha corretamente', () => {
-  const items = cdlPhotos.map((item) => ({ id: item.id }))
-  const forced = [...items].reverse()
-  const random = () => 0
-  const reshuffled = shuffleHeroPlaylist(forced, forced[0]?.id, random)
-  assert.notEqual(reshuffled[0]?.id, forced[0]?.id)
-  assert.equal(new Set(reshuffled.map((item) => item.id)).size, 5)
-  assert.match(hero, /shuffleHeroPlaylist\(playable/)
+test('TEST 3 Ordered cinematic loop, not a shuffled carnival', () => {
+  assert.doesNotMatch(hero, /shuffleHeroPlaylist\(/)
   assert.match(hero, /PUBLIC_HERO_HOLD_MS/)
-  assert.ok(PUBLIC_HERO_HOLD_MS >= 6000 && PUBLIC_HERO_HOLD_MS <= 8000)
+  assert.match(hero, /\(base \+ 1\) % playable.length/)
+  assert.ok(PUBLIC_HERO_HOLD_MS >= 5000 && PUBLIC_HERO_HOLD_MS <= 7000)
   assert.ok(PUBLIC_HERO_FADE_MS >= 1200 && PUBLIC_HERO_FADE_MS <= 1800)
 })
 
-test('TEST 4 Hero mantém CTA clicável', () => {
+test('TEST 4 Hero keeps CTA clickable', () => {
   assert.match(experience, /data-landing-start-quote/)
   assert.match(experience, /startQuote\(\{ forceNew: true \}\)/)
   assert.match(experience, /bootstrap\.settings\.landing\.cta/)
-  assert.match(hero, /pointer-events-none/)
+  assert.match(experience, /data-public-hero-frame/)
   assert.doesNotMatch(hero, /slick-dots|swiper-pagination|carousel-dot/)
-  assert.doesNotMatch(hero, /arrow|thumbnail|1 de 5/)
+  assert.doesNotMatch(hero, /arrow|thumbnail/)
 })
 
-test('TEST 5 PT funciona', () => {
+test('TEST 5 PT works', () => {
   assert.match(switcher, /pt: 'PT'/)
   assert.match(experience, /PublicLocaleSwitcher/)
   assert.match(experience, /pt: \{/)
 })
 
-test('TEST 6 EN funciona', () => {
+test('TEST 6 EN works', () => {
   assert.match(switcher, /en: 'EN'/)
   assert.match(experience, /en: \{/)
 })
 
-test('TEST 7 ES funciona', () => {
+test('TEST 7 ES works', () => {
   assert.match(switcher, /es: 'ES'/)
   assert.match(experience, /es: \{/)
 })
 
-test('TEST 8 Mobile 375 object-cover + focal point', () => {
+test('TEST 8 Mobile object-cover + focal point', () => {
   assert.match(css, /object-fit: cover/)
   assert.match(css, /--hero-pos-mobile/)
-  assert.match(mediaConfig, /mobilePosition: '50% 68%'/)
+  assert.match(mediaConfig, /mobilePosition: '50% 42%'/)
   assert.match(hero, /sizes="100vw"/)
+  assert.match(experience, /h-\[42vh\]/)
 })
 
 test('TEST 9 Mobile 390 keeps cover crop', () => {
@@ -140,7 +128,7 @@ test('TEST 10 Mobile 430 keeps cover crop', () => {
   })
 })
 
-test('TEST 11 Desktop 1440 uses per-asset object-position', () => {
+test('TEST 11 Desktop uses per-asset object-position', () => {
   assert.match(css, /min-width: 1024px/)
   assert.match(css, /--hero-pos-desktop/)
   cdlPhotos.forEach((item) => {
@@ -176,12 +164,14 @@ test('TEST 15 Starting quote still works', () => {
   assert.doesNotMatch(wizard, /PublicQuoteHeroMedia/)
 })
 
-test('Hero is a live crossfade, not a carousel UI', () => {
+test('Hero is a live crossfade with discreet mobile indicators', () => {
   assert.match(hero, /public-hero-slide/)
   assert.match(css, /public-hero-kenburns/)
-  assert.doesNotMatch(hero, /data-hero-dots/)
+  assert.match(hero, /data-hero-indicators/)
+  assert.match(hero, /onTouchEnd/)
   assert.doesNotMatch(hero, /data-hero-arrows/)
   assert.doesNotMatch(experience, /data-landing-watermark/)
+  assert.match(hero, /paused/)
 })
 
 test('Official photographs are web-optimized and originals preserved', () => {
@@ -190,17 +180,7 @@ test('Official photographs are web-optimized and originals preserved', () => {
     const originalPath = join(ROOT, item.originalSrc)
     return !existsSync(publicPath) || !existsSync(originalPath)
   })
-  if (missing.length > 0) {
-    console.log(
-      'SKIP  Official photographs are web-optimized and originals preserved',
-    )
-    console.log(
-      `      IMPORT REQUIRED: ${missing
-        .map((item) => item.sourceFilename)
-        .join(', ')} → assets/branding/cdl/hero/inbox/ then npm run ingest:cdl-hero-photos`,
-    )
-    return
-  }
+  assert.equal(missing.length, 0, missing.map((item) => item.id).join(', '))
   for (const item of cdlPhotos) {
     const publicPath = join(ROOT, 'public', item.src.replace(/^\//, ''))
     const originalPath = join(ROOT, item.originalSrc)
@@ -209,12 +189,19 @@ test('Official photographs are web-optimized and originals preserved', () => {
       statSync(originalPath).size >= statSync(publicPath).size,
       `${item.id} original should remain at least as large as the web derivative`,
     )
+    assert.match(item.src, /\.webp$/)
   }
 })
 
 test('Wizard pricing extras and packages were not rewritten', () => {
   assert.match(wizard, /entryMode/)
   assert.doesNotMatch(mediaConfig, /BBQCHO|BBQTRAD|package flyer/i)
+})
+
+test('Header branding is not duplicated as a photo watermark', () => {
+  assert.match(experience, /data-tenant-logo/)
+  assert.doesNotMatch(hero, /data-landing-watermark/)
+  assert.doesNotMatch(experience, /data-hero-watermark/)
 })
 
 if (failed > 0) {

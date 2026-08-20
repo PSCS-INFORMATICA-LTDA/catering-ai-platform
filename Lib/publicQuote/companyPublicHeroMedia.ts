@@ -9,65 +9,40 @@ export type PublicHeroMediaItem = {
   src: string
   originalSrc: string
   sourceFilename: string
+  alt: string
   mobilePosition: string
   desktopPosition: string
   width: number
   height: number
 }
 
-export const PUBLIC_HERO_HOLD_MS = 7000
-export const PUBLIC_HERO_FADE_MS = 1500
+export const PUBLIC_HERO_HOLD_MS = 6500
+export const PUBLIC_HERO_FADE_MS = 1400
 
 const CDL_PUBLIC_HERO_PHOTOS: readonly PublicHeroMediaItem[] = [
   {
-    id: 'cdl-event-tent',
-    src: '/cdl/hero/cdl-event-tent.webp',
-    originalSrc: 'assets/branding/cdl/hero/originals/cdl-event-tent-original.jpeg',
-    sourceFilename: '12A42ED0-52E8-4D95-BAE0-E2A58F200A26.jpeg',
-    mobilePosition: '50% 68%',
-    desktopPosition: '48% 62%',
-    width: 1440,
-    height: 1920,
+    id: 'cdl-event-pool-station',
+    src: '/cdl/hero/cdl-event-pool-station.webp',
+    originalSrc:
+      'assets/branding/cdl/hero/originals/cdl-event-pool-station-original.jpeg',
+    sourceFilename: 'cdl-event-pool-station.jpeg',
+    alt: 'CDL Brazilian BBQ station under a branded tent beside a luxury pool',
+    mobilePosition: '50% 42%',
+    desktopPosition: '48% 38%',
+    width: 1920,
+    height: 1080,
   },
   {
-    id: 'cdl-event-van',
-    src: '/cdl/hero/cdl-event-van.webp',
-    originalSrc: 'assets/branding/cdl/hero/originals/cdl-event-van-original.jpeg',
-    sourceFilename: 'E91AAB0B-CD8C-4C9A-946B-71AFEBE96C96.jpeg',
-    mobilePosition: '50% 78%',
-    desktopPosition: '46% 72%',
-    width: 1440,
-    height: 1920,
-  },
-  {
-    id: 'cdl-event-buffet',
-    src: '/cdl/hero/cdl-event-buffet.webp',
-    originalSrc: 'assets/branding/cdl/hero/originals/cdl-event-buffet-original.jpeg',
-    sourceFilename: 'BCC58DBB-6448-4AFE-85C1-C8277D075AEE.jpeg',
-    mobilePosition: '50% 58%',
-    desktopPosition: '50% 62%',
-    width: 1440,
-    height: 1920,
-  },
-  {
-    id: 'cdl-event-board',
-    src: '/cdl/hero/cdl-event-board.webp',
-    originalSrc: 'assets/branding/cdl/hero/originals/cdl-event-board-original.jpeg',
-    sourceFilename: '228C5DB0-5F5F-4B30-B72E-7E3337965435.jpeg',
-    mobilePosition: '50% 62%',
-    desktopPosition: '48% 58%',
-    width: 1440,
-    height: 1920,
-  },
-  {
-    id: 'cdl-event-fleet',
-    src: '/cdl/hero/cdl-event-fleet.webp',
-    originalSrc: 'assets/branding/cdl/hero/originals/cdl-event-fleet-original.jpeg',
-    sourceFilename: '14D84C20-F765-434F-9EAE-444855C148C4.jpeg',
-    mobilePosition: '50% 76%',
-    desktopPosition: '44% 70%',
-    width: 1440,
-    height: 1920,
+    id: 'cdl-fleet-neighborhood',
+    src: '/cdl/hero/cdl-fleet-neighborhood.webp',
+    originalSrc:
+      'assets/branding/cdl/hero/originals/cdl-fleet-neighborhood-original.jpeg',
+    sourceFilename: 'cdl-fleet-neighborhood.jpeg',
+    alt: 'CDL Services branded catering van at a residential event',
+    mobilePosition: '50% 55%',
+    desktopPosition: '46% 52%',
+    width: 1920,
+    height: 1080,
   },
 ]
 

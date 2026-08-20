@@ -594,20 +594,25 @@ export default function PublicQuoteExperience({
                 : 'true'
             }
           >
-            <PublicQuoteHeroMedia
-              videos={PUBLIC_QUOTE_HERO_VIDEO_SRCS}
-              media={heroImages}
-              posterUrl={bootstrap.settings.heroImageUrl}
-            />
-            <div className="relative z-10 mx-auto grid min-h-[34rem] max-w-7xl items-center gap-10 px-4 py-16 text-white sm:px-8 lg:grid-cols-[minmax(0,3fr)_minmax(18rem,2fr)]">
+            <div
+              data-public-hero-frame
+              className="relative h-[42vh] min-h-[16.5rem] max-h-[22rem] overflow-hidden lg:absolute lg:inset-0 lg:h-auto lg:min-h-0 lg:max-h-none lg:-z-10"
+            >
+              <PublicQuoteHeroMedia
+                videos={PUBLIC_QUOTE_HERO_VIDEO_SRCS}
+                media={heroImages}
+                posterUrl={bootstrap.settings.heroImageUrl}
+              />
+            </div>
+            <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-8 bg-[#101828] px-4 py-8 text-white sm:px-8 lg:min-h-[34rem] lg:grid-cols-[minmax(0,3fr)_minmax(18rem,2fr)] lg:gap-10 lg:bg-transparent lg:py-16">
               <div>
                 <p className="mt-0 text-xs font-black uppercase tracking-[0.24em] text-[var(--brand-primary-2)]">
                   {bootstrap.settings.landing.eyebrow}
                 </p>
-                <h1 className="mt-5 max-w-4xl text-4xl font-black leading-[1.04] tracking-[-0.04em] sm:text-6xl">
+                <h1 className="mt-4 max-w-4xl text-3xl font-black leading-[1.04] tracking-[-0.04em] sm:text-5xl lg:mt-5 lg:text-6xl">
                   {bootstrap.settings.landing.title}
                 </h1>
-                <p className="mt-6 max-w-2xl text-lg leading-8 text-white/78">
+                <p className="mt-4 max-w-2xl text-base leading-7 text-white/78 sm:text-lg sm:leading-8 lg:mt-6">
                   {bootstrap.settings.landing.subtitle}
                 </p>
                 <button
@@ -615,7 +620,7 @@ export default function PublicQuoteExperience({
                   data-landing-start-quote
                   onClick={() => void startQuote({ forceNew: true })}
                   disabled={starting}
-                  className="mt-8 inline-flex min-h-14 items-center justify-center rounded-2xl bg-[var(--brand-primary)] px-8 text-base font-black text-white shadow-lg transition hover:-translate-y-0.5 disabled:opacity-60"
+                  className="mt-6 inline-flex min-h-14 items-center justify-center rounded-2xl bg-[var(--brand-primary)] px-8 text-base font-black text-white shadow-lg transition hover:-translate-y-0.5 disabled:opacity-60 lg:mt-8"
                 >
                   {starting ? '…' : bootstrap.settings.landing.cta}
                 </button>
