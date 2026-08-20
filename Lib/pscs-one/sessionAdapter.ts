@@ -1,5 +1,6 @@
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
-import { createClient } from '@/Lib/supabase/server'
+import { createRouteHandlerClient } from '@/Lib/supabase/route'
+import type { NextRequest, NextResponse } from 'next/server'
 import { pscsOneCallbackUri } from './config'
 import type { PscsOneIdentityV1 } from './types'
 
@@ -7,14 +8,16 @@ async function findAuthUserIdByEmail(
   admin: ReturnType<typeof getSupabaseServerClient>,
   email: string,
 ): Promise<string | null> {
-  const { data: appRow } = await admin
+  const { data: appRow, error: appError } = await admin
     .from('app_users')
     .select('auth_user_id')
     .eq('email', email)
     .maybeSingle()
+  if (appError) throw new Error(appError.message)
   if (appRow?.auth_user_id) return String(appRow.auth_user_id)
 
   const listed = await admin.auth.admin.listUsers({ page: 1, perPage: 200 })
+  if (listed.error) throw new Error(listed.error.message)
   const match = listed.data?.users?.find(
     (user) => user.email?.toLowerCase() === email.toLowerCase(),
   )
@@ -22,7 +25,11 @@ async function findAuthUserIdByEmail(
 }
 
 export class PscsOneSessionAdapter {
-  static async establishSession(identity: PscsOneIdentityV1): Promise<string> {
+  static async ensureLocalUser(identity: PscsOneIdentityV1): Promise<{
+    authUserId: string
+    email: string
+    tokenHash: string
+  }> {
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
       throw new Error('sso_admin_unconfigured')
     }
@@ -113,7 +120,15 @@ export class PscsOneSessionAdapter {
       throw new Error(link.error?.message || 'session_link_failed')
     }
 
-    const supabase = await createClient()
+    return { authUserId, email, tokenHash }
+  }
+
+  static async attachSessionCookie(
+    request: NextRequest,
+    response: NextResponse,
+    tokenHash: string,
+  ): Promise<void> {
+    const supabase = createRouteHandlerClient(request, response)
     const verified = await supabase.auth.verifyOtp({
       type: 'email',
       token_hash: tokenHash,
@@ -121,7 +136,5 @@ export class PscsOneSessionAdapter {
     if (verified.error) {
       throw new Error(verified.error.message)
     }
-
-    return authUserId
   }
 }

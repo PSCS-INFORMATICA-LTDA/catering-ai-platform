@@ -1,5 +1,24 @@
+export function ssoErrorText(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'object' && error && 'message' in error) {
+    return String((error as { message: unknown }).message)
+  }
+  return String(error)
+}
+
+export function describeSsoError(error: unknown): { name: string; detail: string } {
+  const name = error instanceof Error ? error.name : typeof error
+  const detail = ssoErrorText(error)
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email]')
+    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '[id]')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120)
+  return { name, detail: detail || 'empty' }
+}
+
 export function publicPscsOneSsoReason(error: unknown): string {
-  const raw = error instanceof Error ? error.message : 'sso_failed'
+  const raw = ssoErrorText(error)
   const text = raw.replace(/\s+/g, ' ').trim().slice(0, 180)
 
   if (/service role|sso_admin_unconfigured|admin_unconfigured/i.test(text)) {
@@ -8,8 +27,8 @@ export function publicPscsOneSsoReason(error: unknown): string {
   if (/pscs_one_user_id|schema cache|could not find the .* column/i.test(text)) {
     return 'identity_schema_mismatch'
   }
-  if (/null value in column ["']?company_id/i.test(text)) {
-    return 'identity_company_missing'
+  if (/null value in column/i.test(text)) {
+    return 'identity_row_rejected'
   }
   if (/already been registered|duplicate key|already exists/i.test(text)) {
     return 'identity_conflict'
@@ -17,8 +36,23 @@ export function publicPscsOneSsoReason(error: unknown): string {
   if (/row-level security|violates row-level/i.test(text)) {
     return 'identity_policy_denied'
   }
+  if (/violates foreign key/i.test(text)) {
+    return 'membership_fk_denied'
+  }
+  if (/violates check|violates not-null/i.test(text)) {
+    return 'identity_row_rejected'
+  }
+  if (/database error/i.test(text)) {
+    return 'identity_db_denied'
+  }
   if (/redirect url|redirect_to/i.test(text)) {
     return 'session_redirect_denied'
+  }
+  if (/fetch failed|failed to fetch|network/i.test(text)) {
+    return 'session_fetch_failed'
+  }
+  if (error instanceof TypeError) {
+    return 'session_type_failed'
   }
   if (/create_user_failed|user not allowed/i.test(text)) {
     return 'create_user_failed'
