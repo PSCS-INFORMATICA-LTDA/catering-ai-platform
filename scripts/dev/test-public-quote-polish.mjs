@@ -495,7 +495,7 @@ test('TEST 43 CDL flame emblem and discreet PSCS One footer', () => {
   assert.doesNotMatch(experience, /data-public-wizard-pscs/)
   assert.match(experience, /PscsOneMark/)
   assert.match(experience, /hidden lg:block/)
-  assert.match(experience, /variant="icon"/)
+  assert.match(experience, /variant="full"/)
   assert.doesNotMatch(lockup, /truncate text-sm font-black/)
   assert.match(productMark, /variant\?: 'full' \| 'icon'/)
   assert.match(productMark, /\/brand\/catering-logo-light\.png/)

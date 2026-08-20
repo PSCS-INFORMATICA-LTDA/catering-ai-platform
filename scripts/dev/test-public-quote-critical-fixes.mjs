@@ -165,7 +165,7 @@ test('TEST 17 Double submit protected', () => {
 test('TEST 18 Small colored footer mark visible', () => {
   const pscsMark = source('components/brand/PscsOneMark.tsx')
   assert.match(experience, /size="footer"/)
-  assert.match(experience, /variant="icon"/)
+  assert.match(experience, /variant="full"/)
   assert.match(pscsMark, /src="\/brand\/pscs-one\.png"/)
   assert.match(pscsMark, /h-\[22px\]/)
   assert.match(experience, /PscsOneMark/)
@@ -177,7 +177,11 @@ test('TEST 19 Footer contains only Powered by PSCS One', () => {
   assert.match(block, /\{copy\.poweredBy\}/)
   assert.match(block, /PscsOneMark/)
   assert.doesNotMatch(block, /Catering App/)
-  assert.equal((experience.match(/poweredBy: 'Powered by PSCS One'/g) ?? []).length, 3)
+  assert.equal((experience.match(/poweredBy: 'Powered by'/g) ?? []).length, 3)
+  assert.equal(
+    (experience.match(/poweredByLabel: 'Powered by PSCS One'/g) ?? []).length,
+    3,
+  )
 })
 
 test('TEST 20 No horizontal overflow classes on public shell', () => {

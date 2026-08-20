@@ -31,6 +31,7 @@ import { CateringAiMark } from '@/components/brand/CateringAiMark'
 import { PscsOneMark } from '@/components/brand/PscsOneMark'
 import PublicLocaleSwitcher from '@/components/quotes/PublicLocaleSwitcher'
 import PublicQuoteHeroMedia from '@/components/quotes/PublicQuoteHeroMedia'
+import PublicQuoteHowItWorks from '@/components/quotes/PublicQuoteHowItWorks'
 import {
   publicQuoteCopyrightLine,
   publicQuoteEmblemSrc,
@@ -161,7 +162,11 @@ const UI_COPY = {
     restart: 'Criar outra solicitação',
     privacy: 'Privacidade',
     support: 'Precisa de ajuda?',
-    poweredBy: 'Powered by PSCS One',
+    poweredBy: 'Powered by',
+    poweredByLabel: 'Powered by PSCS One',
+    howItWorks: 'Conheça como funciona',
+    howItWorksTitle: 'Como funciona',
+    howItWorksClose: 'Fechar',
   },
   en: {
     secure: 'Secure online quote',
@@ -181,7 +186,11 @@ const UI_COPY = {
     restart: 'Create another request',
     privacy: 'Privacy',
     support: 'Need help?',
-    poweredBy: 'Powered by PSCS One',
+    poweredBy: 'Powered by',
+    poweredByLabel: 'Powered by PSCS One',
+    howItWorks: 'See how it works',
+    howItWorksTitle: 'How it works',
+    howItWorksClose: 'Close',
   },
   es: {
     secure: 'Cotización online segura',
@@ -201,7 +210,11 @@ const UI_COPY = {
     restart: 'Crear otra solicitud',
     privacy: 'Privacidad',
     support: '¿Necesitas ayuda?',
-    poweredBy: 'Powered by PSCS One',
+    poweredBy: 'Powered by',
+    poweredByLabel: 'Powered by PSCS One',
+    howItWorks: 'Conoce cómo funciona',
+    howItWorksTitle: 'Cómo funciona',
+    howItWorksClose: 'Cerrar',
   },
 } as const
 
@@ -626,6 +639,13 @@ export default function PublicQuoteExperience({
                 >
                   {starting ? '…' : bootstrap.settings.landing.cta}
                 </button>
+                <div className="mt-0">
+                  <PublicQuoteHowItWorks
+                    label={copy.howItWorks}
+                    title={copy.howItWorksTitle}
+                    closeLabel={copy.howItWorksClose}
+                  />
+                </div>
                 {startError ? (
                   <p className="mt-4 max-w-xl rounded-xl border border-red-300/40 bg-red-950/50 p-3 text-sm text-red-100">
                     {copy.startError}
@@ -693,11 +713,11 @@ export default function PublicQuoteExperience({
           </div>
           <p
             data-powered-by
-            aria-label={copy.poweredBy}
+            aria-label={copy.poweredByLabel}
             className="flex flex-wrap items-center justify-center gap-2 text-[11px] leading-none tracking-[0.14em] text-cdl-faint"
           >
-            <PscsOneMark size="footer" variant="icon" className="shadow-sm !p-0" />
             <span>{copy.poweredBy}</span>
+            <PscsOneMark size="footer" variant="full" className="shadow-sm" />
           </p>
           <div className="flex flex-wrap justify-center gap-4 text-xs text-cdl-muted">
             {bootstrap.settings.consent.privacyUrl ? (

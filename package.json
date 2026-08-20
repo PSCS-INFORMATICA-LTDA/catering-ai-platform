@@ -64,6 +64,7 @@
     "test:dev:public-quote-critical-fixes": "node --experimental-strip-types scripts/dev/test-public-quote-critical-fixes.mjs",
     "test:dev:public-quote-polish": "node --experimental-strip-types scripts/dev/test-public-quote-polish.mjs",
     "test:dev:public-quote-hero": "node --experimental-strip-types scripts/dev/test-public-quote-hero-photography.mjs",
+    "test:dev:public-quote-how-it-works": "node scripts/dev/test-public-quote-how-it-works.mjs",
     "ingest:cdl-hero-photos": "node scripts/dev/ingest-cdl-hero-photos.mjs",
     "bind:dev:canonical-alias": "node scripts/dev/bind-canonical-dev-alias.mjs",
     "verify:dev:public-quote": "node scripts/dev/verify-dev-public-quote.mjs",
