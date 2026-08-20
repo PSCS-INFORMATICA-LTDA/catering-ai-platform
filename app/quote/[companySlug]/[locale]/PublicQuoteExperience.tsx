@@ -314,9 +314,10 @@ export default function PublicQuoteExperience({
   const heroImages = useMemo(
     () =>
       collectPublicHeroImages({
+        companySlug: bootstrap.company.slug,
         heroImageUrl: bootstrap.settings.heroImageUrl,
       }),
-    [bootstrap.settings.heroImageUrl],
+    [bootstrap.company.slug, bootstrap.settings.heroImageUrl],
   )
   const initialState = useMemo(
     () =>
@@ -589,7 +590,7 @@ export default function PublicQuoteExperience({
           >
             <PublicQuoteHeroMedia
               videos={PUBLIC_QUOTE_HERO_VIDEO_SRCS}
-              images={heroImages}
+              media={heroImages}
               posterUrl={bootstrap.settings.heroImageUrl}
             />
             <div className="relative z-10 mx-auto grid min-h-[34rem] max-w-7xl items-center gap-10 px-4 py-16 text-white sm:px-8 lg:grid-cols-[minmax(0,3fr)_minmax(18rem,2fr)]">
