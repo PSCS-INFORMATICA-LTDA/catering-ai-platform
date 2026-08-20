@@ -14,9 +14,6 @@ async function findAuthUserIdByEmail(
     .maybeSingle()
   if (appRow?.auth_user_id) return String(appRow.auth_user_id)
 
-  const byEmail = await admin.auth.admin.getUserByEmail(email)
-  if (byEmail.data?.user?.id) return byEmail.data.user.id
-
   const listed = await admin.auth.admin.listUsers({ page: 1, perPage: 200 })
   const match = listed.data?.users?.find(
     (user) => user.email?.toLowerCase() === email.toLowerCase(),
