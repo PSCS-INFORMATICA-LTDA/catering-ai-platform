@@ -1,13 +1,37 @@
 /**
  * Public landing hero media.
- * Drop real CDL operation clips in `public/cdl/hero/` and list the public
- * paths below. Do not fetch substitutes from the internet.
+ * Photography is company-scoped (see companyPublicHeroMedia).
+ * Do not fetch substitutes from the internet or use package flyer art.
  */
+import {
+  getCompanyPublicHeroMedia,
+  type PublicHeroMediaItem,
+} from './companyPublicHeroMedia'
+
 export const PUBLIC_QUOTE_HERO_VIDEO_SRCS: readonly string[] = []
 
+export type { PublicHeroMediaItem }
+
 export function collectPublicHeroImages(input: {
+  companySlug?: string | null
   heroImageUrl?: string | null
-}): string[] {
-  const next = input.heroImageUrl?.trim()
-  return next ? [next] : []
+}): PublicHeroMediaItem[] {
+  const configured = getCompanyPublicHeroMedia(input.companySlug)
+  if (configured.length > 0) return [...configured]
+
+  const fallback = input.heroImageUrl?.trim()
+  if (!fallback) return []
+
+  return [
+    {
+      id: 'tenant-hero',
+      src: fallback,
+      originalSrc: fallback,
+      sourceFilename: fallback,
+      mobilePosition: '50% 50%',
+      desktopPosition: '50% 50%',
+      width: 1600,
+      height: 900,
+    },
+  ]
 }
