@@ -55,6 +55,14 @@ test('/quote-admin is not public', () => {
   assert.equal(isPublicQuotePathname('/quote-admin'), false)
 })
 
+test('/cdl/video how-it-works file is public', () => {
+  assert.equal(
+    isPublicRoutePathname('/cdl/video/cdl-como-funciona.mp4'),
+    true,
+  )
+  assert.equal(isPublicRoutePathname('/quotes'), false)
+})
+
 if (failed > 0) {
   console.error(`\n${failed} failed, ${passed} passed`)
   process.exit(1)

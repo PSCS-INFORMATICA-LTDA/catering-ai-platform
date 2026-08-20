@@ -63,6 +63,11 @@ report('TEST 15: EN copy is See how it works', experience.includes("howItWorks: 
 report('TEST 16: ES copy is Conoce cómo funciona', experience.includes("howItWorks: 'Conoce cómo funciona'"));
 report('TEST 17: Footer uses gray Powered by + full PSCS One mark', experience.includes("poweredBy: 'Powered by'") && experience.includes('variant="full"'));
 report('TEST 18: Public quote routes remain listed as public', read('Lib/publicRoutes.ts').includes("'/quote'"));
+report(
+  'TEST 19: Proxy skips auth for public mp4 assets',
+  read('proxy.ts').includes('mp4') &&
+    read('Lib/publicRoutes.ts').includes("'/cdl/video'"),
+);
 
 console.log('');
 console.log(`Passed: ${passed}`);

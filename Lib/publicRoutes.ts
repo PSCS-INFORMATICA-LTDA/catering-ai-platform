@@ -14,6 +14,7 @@ const SEGMENT_PUBLIC_PREFIXES = [
   '/confirmacao-guarnicao',
   '/conferencia-saida',
   '/api/public',
+  '/cdl/video',
 ] as const
 
 function isPathSegmentMatch(pathname: string, prefix: string): boolean {
