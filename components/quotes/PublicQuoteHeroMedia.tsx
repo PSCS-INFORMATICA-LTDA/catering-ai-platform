@@ -62,10 +62,19 @@ export default function PublicQuoteHeroMedia({
     () => media.filter((item) => !failedIds.has(item.id)),
     [failedIds, media],
   )
-  const activePhoto = playable[activeIndex] ?? null
+  const mediaKey = media.map((item) => item.id).join('|')
+  const [seenMediaKey, setSeenMediaKey] = useState(mediaKey)
+  if (mediaKey !== seenMediaKey) {
+    setSeenMediaKey(mediaKey)
+    setActiveIndex(0)
+    setOutgoing(null)
+  }
+  const safeIndex =
+    playable.length === 0 ? 0 : Math.min(activeIndex, playable.length - 1)
+  const activePhoto = playable[safeIndex] ?? null
   const nextPhoto =
     playable.length > 1
-      ? (playable[(activeIndex + 1) % playable.length] ?? null)
+      ? (playable[(safeIndex + 1) % playable.length] ?? null)
       : null
   const hasPhotos = playable.length > 0
 
@@ -83,33 +92,27 @@ export default function PublicQuoteHeroMedia({
   }, [activeVideo])
 
   useEffect(() => {
-    setActiveIndex(0)
-    setOutgoing(null)
-  }, [media])
-
-  useEffect(() => {
-    if (activeIndex < playable.length) return
-    setActiveIndex(0)
-  }, [activeIndex, playable.length])
-
-  useEffect(() => {
     if (activeVideo || reducedMotion || !pageVisible || paused) return
     if (playable.length < 2) return
 
     const timer = window.setTimeout(() => {
-      const current = playable[activeIndex]
+      const current = playable[safeIndex]
       setOutgoing(current ?? null)
-      setActiveIndex((currentIndex) => (currentIndex + 1) % playable.length)
+      setActiveIndex((currentIndex) => {
+        if (playable.length < 2) return 0
+        const base = Math.min(currentIndex, playable.length - 1)
+        return (base + 1) % playable.length
+      })
     }, PUBLIC_HERO_HOLD_MS)
 
     return () => window.clearTimeout(timer)
   }, [
-    activeIndex,
     activeVideo,
     pageVisible,
     paused,
     playable,
     reducedMotion,
+    safeIndex,
   ])
 
   useEffect(() => {
@@ -133,8 +136,8 @@ export default function PublicQuoteHeroMedia({
   const goTo = (index: number) => {
     if (playable.length < 2) return
     const nextIndex = (index + playable.length) % playable.length
-    if (nextIndex === activeIndex) return
-    setOutgoing(playable[activeIndex] ?? null)
+    if (nextIndex === safeIndex) return
+    setOutgoing(playable[safeIndex] ?? null)
     setActiveIndex(nextIndex)
     setPaused(true)
   }
@@ -170,7 +173,7 @@ export default function PublicQuoteHeroMedia({
         if (start == null || end == null || playable.length < 2) return
         const delta = end - start
         if (Math.abs(delta) < 40) return
-        goTo(delta < 0 ? activeIndex + 1 : activeIndex - 1)
+        goTo(delta < 0 ? safeIndex + 1 : safeIndex - 1)
       }}
     >
       {activeVideo ? (
@@ -241,7 +244,7 @@ export default function PublicQuoteHeroMedia({
           aria-label="Gallery photographs"
         >
           {playable.map((item, index) => {
-            const selected = index === activeIndex
+            const selected = index === safeIndex
             return (
               <button
                 key={item.id}

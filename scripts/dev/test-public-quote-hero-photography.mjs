@@ -77,7 +77,7 @@ test('TEST 2 Playlist helper still avoids immediate repeats', () => {
 test('TEST 3 Ordered cinematic loop, not a shuffled carnival', () => {
   assert.doesNotMatch(hero, /shuffleHeroPlaylist\(/)
   assert.match(hero, /PUBLIC_HERO_HOLD_MS/)
-  assert.match(hero, /\(currentIndex \+ 1\) % playable.length/)
+  assert.match(hero, /\(base \+ 1\) % playable.length/)
   assert.ok(PUBLIC_HERO_HOLD_MS >= 5000 && PUBLIC_HERO_HOLD_MS <= 7000)
   assert.ok(PUBLIC_HERO_FADE_MS >= 1200 && PUBLIC_HERO_FADE_MS <= 1800)
 })
