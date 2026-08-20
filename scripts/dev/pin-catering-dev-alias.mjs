@@ -38,12 +38,18 @@ async function main() {
   const token = vercelToken()
   const listed = await api(
     token,
-    `/v6/deployments?projectId=${PROJECT}&teamId=${TEAM}&target=production&limit=5`,
+    `/v6/deployments?projectId=${PROJECT}&teamId=${TEAM}&limit=20`,
   )
+  if (listed.status >= 300) {
+    throw new Error(`deployments list failed: ${listed.status}`)
+  }
   const deployments = listed.body.deployments || []
-  const production = deployments.find((row) => row.target === 'production' || row.readyState === 'READY')
+  const production =
+    deployments.find((row) => row.target === 'production' && row.readyState === 'READY') ||
+    deployments.find((row) => row.target === 'production') ||
+    deployments.find((row) => row.readyState === 'READY')
   if (!production?.uid) {
-    throw new Error('no production deployment found')
+    throw new Error(`no production deployment found (http ${listed.status}, n=${deployments.length})`)
   }
 
   const inspect = await api(token, `/v13/deployments/${production.uid}?teamId=${TEAM}`)

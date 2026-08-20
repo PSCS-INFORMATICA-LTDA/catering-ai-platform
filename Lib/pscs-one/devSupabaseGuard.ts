@@ -13,7 +13,7 @@ export type CateringSsoSupabaseDecision =
   | { ok: false; reason: 'sso_disabled' | 'supabase_prod_forbidden' | 'supabase_project_denied' | 'supabase_url_missing' }
 
 export function evaluateCateringSsoSupabase(
-  source: Record<string, string | undefined> = {},
+  source: Record<string, string | undefined> = process.env,
 ): CateringSsoSupabaseDecision {
   if (source.PSCS_ONE_SSO_ENABLED !== 'true') {
     return { ok: false, reason: 'sso_disabled' }
