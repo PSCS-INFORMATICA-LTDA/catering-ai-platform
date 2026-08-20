@@ -66,6 +66,8 @@
     "test:dev:public-quote-hero": "node --experimental-strip-types scripts/dev/test-public-quote-hero-photography.mjs",
     "ingest:cdl-hero-photos": "node scripts/dev/ingest-cdl-hero-photos.mjs",
     "bind:dev:canonical-alias": "node scripts/dev/bind-canonical-dev-alias.mjs",
+    "verify:dev:public-quote": "node scripts/dev/verify-dev-public-quote.mjs",
+    "test:dev:public-quote-routes": "node --experimental-strip-types scripts/dev/test-public-quote-routes.mjs",
     "test:dev:public-quote-v2-nav": "node --experimental-strip-types scripts/dev/test-public-quote-v2-navigation.mjs",
     "test:dev:public-quote-extras-eligibility": "node --experimental-strip-types scripts/dev/test-public-quote-extras-eligibility.mjs",
     "apply:dev:additionals-catalog-cleanup": "node scripts/dev/apply-cdl-additionals-catalog-cleanup.mjs --apply",

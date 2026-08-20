@@ -20,7 +20,7 @@ Fonte compartilhada: GitHub + Supabase DEV + Vercel Preview/DEV. O GitHub é a f
 - Nunca usar PROD por padrão.
 - Nunca executar `vercel --prod`.
 - Nunca executar `npx vercel deploy --prod`. Neste projeto Vercel, `--prod` atribui o target Production e já tomou `catering-ai-agenda-dev.vercel.app` mais de uma vez, quebrando a cotação pública (`/quote` → `/login`).
-- O domínio DEV canônico deve permanecer com `gitBranch=feat/public-self-service-quote-dev` e `autoAssignCustomDomains=false`. Rebind: `npm run bind:dev:canonical-alias`.
+- O domínio DEV canônico deve permanecer com `gitBranch=feat/public-self-service-quote-dev` e `autoAssignCustomDomains=false`. `gitBranch` sozinho NÃO recupera o alias se um `vercel deploy --prod` (CLI, sem SHA) já o estiver segurando. Depois de cada push em `feat/public-self-service-quote-dev`, executar `npm run bind:dev:canonical-alias` e `npm run verify:dev:public-quote`.
 - Nunca executar migration em PROD.
 - Nunca usar `db reset` / `truncate`.
 - Supabase padrão = DEV (`yasprgtlqclwsjcshtls`).

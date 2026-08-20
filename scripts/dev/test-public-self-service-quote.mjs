@@ -104,6 +104,11 @@ await test('T01 canonical public company/locale route exists', () => {
   assertContains(publicRoutes, /['"]\/quote['"]/, 'shared public-route policy must include /quote')
   assertContains(
     publicRoutes,
+    /isBackofficeQuotesPathname/,
+    '/quotes backoffice must be excluded from the /quote public prefix',
+  )
+  assertContains(
+    publicRoutes,
     /startsWith\(\s*`\$\{prefix\}\/`\s*\)/,
     'public prefixes must not match lookalike paths such as /quote-admin',
   )

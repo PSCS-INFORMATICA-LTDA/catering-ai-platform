@@ -20,8 +20,13 @@ function isPathSegmentMatch(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`)
 }
 
+export function isBackofficeQuotesPathname(pathname: string): boolean {
+  return isPathSegmentMatch(pathname, '/quotes')
+}
+
 /** Single source of truth for routes that must never require an app session. */
 export function isPublicRoutePathname(pathname: string): boolean {
+  if (isBackofficeQuotesPathname(pathname)) return false
   if (EXACT_PUBLIC_PATHS.has(pathname)) return true
   return SEGMENT_PUBLIC_PREFIXES.some((prefix) =>
     isPathSegmentMatch(pathname, prefix),
@@ -29,5 +34,8 @@ export function isPublicRoutePathname(pathname: string): boolean {
 }
 
 export function isPublicQuotePathname(pathname: string): boolean {
-  return isPathSegmentMatch(pathname, '/quote')
+  return (
+    isPathSegmentMatch(pathname, '/quote') &&
+    !isBackofficeQuotesPathname(pathname)
+  )
 }
