@@ -5,6 +5,7 @@ import {
   PSCS_ONE_MAPPED_COMPANY_COOKIE,
   pscsOneCallbackUri,
 } from '@/Lib/pscs-one/config'
+import { publicPscsOneSsoReason } from '@/Lib/pscs-one/errors'
 import { PscsOneIdentityService } from '@/Lib/pscs-one/identityService'
 import { PscsOneSessionAdapter } from '@/Lib/pscs-one/sessionAdapter'
 
@@ -43,13 +44,9 @@ export async function GET(request: NextRequest) {
     })
     return response
   } catch (error) {
-    const reason = error instanceof Error ? error.message : 'sso_failed'
-    const safe = /denied|revoked|expired|replay|invalid|mismatch|conflict|missing|unconfigured|disabled/i.test(
-      reason,
-    )
-      ? reason
-      : 'sso_failed'
-    return loginDenied(request, safe.slice(0, 80))
+    const safe = publicPscsOneSsoReason(error)
+    console.error('pscs_one.callback_denied', { reason: safe })
+    return loginDenied(request, safe)
   }
 }
 

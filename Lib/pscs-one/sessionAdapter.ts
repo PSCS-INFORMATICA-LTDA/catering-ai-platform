@@ -1,20 +1,24 @@
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { createClient } from '@/Lib/supabase/server'
+import { pscsOneCallbackUri } from './config'
 import type { PscsOneIdentityV1 } from './types'
 
 async function findAuthUserIdByEmail(
   admin: ReturnType<typeof getSupabaseServerClient>,
   email: string,
 ): Promise<string | null> {
-  const { data } = await admin
+  const { data: appRow } = await admin
     .from('app_users')
     .select('auth_user_id')
     .eq('email', email)
     .maybeSingle()
-  if (data?.auth_user_id) return String(data.auth_user_id)
+  if (appRow?.auth_user_id) return String(appRow.auth_user_id)
+
+  const byEmail = await admin.auth.admin.getUserByEmail(email)
+  if (byEmail.data?.user?.id) return byEmail.data.user.id
 
   const listed = await admin.auth.admin.listUsers({ page: 1, perPage: 200 })
-  const match = listed.data.users.find(
+  const match = listed.data?.users?.find(
     (user) => user.email?.toLowerCase() === email.toLowerCase(),
   )
   return match?.id ?? null
@@ -22,20 +26,26 @@ async function findAuthUserIdByEmail(
 
 export class PscsOneSessionAdapter {
   static async establishSession(identity: PscsOneIdentityV1): Promise<string> {
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+      throw new Error('sso_admin_unconfigured')
+    }
+
     const email = identity.email?.trim().toLowerCase()
     if (!email) {
       throw new Error('identity_email_missing')
     }
 
     const admin = getSupabaseServerClient()
+    const mappedCompanyId = identity.external_company_id
 
-    const { data: linked } = await admin
+    const linked = await admin
       .from('app_users')
-      .select('auth_user_id, email')
+      .select('auth_user_id, email, pscs_one_user_id')
       .eq('pscs_one_user_id', identity.user_id)
       .maybeSingle()
+    if (linked.error) throw new Error(linked.error.message)
 
-    let authUserId = linked?.auth_user_id ? String(linked.auth_user_id) : null
+    let authUserId = linked.data?.auth_user_id ? String(linked.data.auth_user_id) : null
 
     if (!authUserId) {
       const byEmail = await findAuthUserIdByEmail(admin, email)
@@ -57,11 +67,12 @@ export class PscsOneSessionAdapter {
       }
     }
 
-    const { data: appUser } = await admin
+    const { data: appUser, error: appUserError } = await admin
       .from('app_users')
-      .select('id, email, pscs_one_user_id')
+      .select('id, email, pscs_one_user_id, company_id')
       .eq('auth_user_id', authUserId)
       .maybeSingle()
+    if (appUserError) throw new Error(appUserError.message)
 
     if (appUser?.pscs_one_user_id && appUser.pscs_one_user_id !== identity.user_id) {
       throw new Error('identity_conflict')
@@ -74,6 +85,7 @@ export class PscsOneSessionAdapter {
           pscs_one_user_id: identity.user_id,
           email,
           active: true,
+          company_id: appUser.company_id || mappedCompanyId,
         })
         .eq('auth_user_id', authUserId)
       if (error) throw new Error(error.message)
@@ -81,6 +93,7 @@ export class PscsOneSessionAdapter {
       const display = email.split('@')[0] || 'User'
       const { error } = await admin.from('app_users').insert({
         auth_user_id: authUserId,
+        company_id: mappedCompanyId,
         email,
         full_name: display,
         display_name: display,
@@ -92,9 +105,11 @@ export class PscsOneSessionAdapter {
       if (error) throw new Error(error.message)
     }
 
+    const redirectTo = `${new URL(pscsOneCallbackUri()).origin}/quotes`
     const link = await admin.auth.admin.generateLink({
       type: 'magiclink',
       email,
+      options: { redirectTo },
     })
     const tokenHash = link.data.properties?.hashed_token
     if (link.error || !tokenHash) {
