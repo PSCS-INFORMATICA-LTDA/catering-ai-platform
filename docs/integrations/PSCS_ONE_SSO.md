@@ -17,7 +17,17 @@ Callback: `GET /auth/pscs-one/callback` (already public in middleware `/auth/`).
 
 ## Rollback
 
-Unset the flag. Do not delete Auth users or `/login`.
+Unset `PSCS_ONE_SSO_ENABLED`. Do not delete Auth users or `/login`. Legacy `/login` remains.
+
+If the flag is `true`, build and runtime refuse Catering PROD project `eapwtirhevxrqinytans` and require DEV `yasprgtlqclwsjcshtls`.
+
+## Logout
+
+Logout on PSCS One does not clear Catering cookies. Sign out of each app separately. Single Logout is out of scope.
+
+## Canonical DEV alias
+
+`catering-ai-agenda-dev.vercel.app` must stay on a Production deployment whose bundle points at DEV supabase. After an approved Production deploy, run `npm run alias:dev:pin`. Preview deploys must not take this alias.
 
 ## Tenant
 

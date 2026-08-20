@@ -36,7 +36,14 @@ assert.deepEqual(
   identityFromTokenPayload({ ok: true, identity }),
   identity,
 )
-assert.throws(() => identityFromTokenPayload({ ok: false }), /token_payload_invalid/)
+assert.throws(
+  () =>
+    identityFromTokenPayload({
+      ok: true,
+      identity: { ...identity, external_company_id: 'not-a-uuid' },
+    }),
+  /token_payload_invalid/,
+)
 
 {
   const missing = await executePscsOneCallback({ code: null, origin: 'https://example.test' }, deps())

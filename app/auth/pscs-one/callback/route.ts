@@ -4,10 +4,8 @@ import {
   executePscsOneCallback,
   logPscsOneSsoCallback,
 } from '@/Lib/pscs-one/callbackFlow'
-import {
-  isPscsOneSsoEnabled,
-  pscsOneCallbackUri,
-} from '@/Lib/pscs-one/config'
+import { pscsOneCallbackUri } from '@/Lib/pscs-one/config'
+import { evaluateCateringSsoSupabase } from '@/Lib/pscs-one/devSupabaseGuard'
 import { PscsOneIdentityService } from '@/Lib/pscs-one/identityService'
 import { PscsOneSessionAdapter } from '@/Lib/pscs-one/sessionAdapter'
 
@@ -23,12 +21,13 @@ function loginDenied(request: NextRequest, reason: string) {
 
 export async function GET(request: NextRequest) {
   const correlation_id = crypto.randomUUID()
-  if (!isPscsOneSsoEnabled()) {
+  const ssoGate = evaluateCateringSsoSupabase()
+  if (!ssoGate.ok) {
     logPscsOneSsoCallback({
       correlation_id,
       stage: 'callback_params',
       result: 'failure',
-      reason: 'sso_disabled',
+      reason: ssoGate.reason,
     })
     return loginDenied(request, 'sso_disabled')
   }
