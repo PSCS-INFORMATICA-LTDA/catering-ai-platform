@@ -1,0 +1,75 @@
+{
+  "generatedAt": "2026-08-20T01:25:36.165Z",
+  "photos": [
+    {
+      "id": "cdl-event-pool-station",
+      "sourceFilename": "cdl-event-pool-station.jpeg",
+      "found": true,
+      "originalPath": "assets/branding/cdl/hero/originals/cdl-event-pool-station-original.jpeg",
+      "optimizedPath": "public/cdl/hero/cdl-event-pool-station.webp",
+      "original": {
+        "width": 3840,
+        "height": 2160,
+        "bytes": 5020004
+      },
+      "optimized": {
+        "width": 1920,
+        "height": 1080,
+        "bytes": 584566
+      },
+      "alt": "CDL Brazilian BBQ station under a branded tent beside a luxury pool",
+      "mobilePosition": "50% 42%",
+      "desktopPosition": "48% 38%"
+    },
+    {
+      "id": "cdl-fleet-neighborhood",
+      "sourceFilename": "cdl-fleet-neighborhood.jpeg",
+      "found": true,
+      "originalPath": "assets/branding/cdl/hero/originals/cdl-fleet-neighborhood-original.jpeg",
+      "optimizedPath": "public/cdl/hero/cdl-fleet-neighborhood.webp",
+      "original": {
+        "width": 3840,
+        "height": 2160,
+        "bytes": 3673145
+      },
+      "optimized": {
+        "width": 1920,
+        "height": 1080,
+        "bytes": 376772
+      },
+      "alt": "CDL Services branded catering van at a residential event",
+      "mobilePosition": "50% 55%",
+      "desktopPosition": "46% 52%"
+    },
+    {
+      "id": "cdl-event-tent",
+      "sourceFilename": "12A42ED0-52E8-4D95-BAE0-E2A58F200A26.jpeg",
+      "found": false,
+      "required": false
+    },
+    {
+      "id": "cdl-event-van",
+      "sourceFilename": "E91AAB0B-CD8C-4C9A-946B-71AFEBE96C96.jpeg",
+      "found": false,
+      "required": false
+    },
+    {
+      "id": "cdl-event-buffet",
+      "sourceFilename": "BCC58DBB-6448-4AFE-85C1-C8277D075AEE.jpeg",
+      "found": false,
+      "required": false
+    },
+    {
+      "id": "cdl-event-board",
+      "sourceFilename": "228C5DB0-5F5F-4B30-B72E-7E3337965435.jpeg",
+      "found": false,
+      "required": false
+    },
+    {
+      "id": "cdl-event-fleet",
+      "sourceFilename": "14D84C20-F765-434F-9EAE-444855C148C4.jpeg",
+      "found": false,
+      "required": false
+    }
+  ]
+}

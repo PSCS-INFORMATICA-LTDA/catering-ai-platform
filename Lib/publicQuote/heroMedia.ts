@@ -28,6 +28,7 @@ export function collectPublicHeroImages(input: {
       src: fallback,
       originalSrc: fallback,
       sourceFilename: fallback,
+      alt: 'Catering event photography',
       mobilePosition: '50% 50%',
       desktopPosition: '50% 50%',
       width: 1600,

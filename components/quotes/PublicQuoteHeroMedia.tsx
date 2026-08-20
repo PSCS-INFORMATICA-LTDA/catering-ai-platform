@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   PUBLIC_HERO_FADE_MS,
   PUBLIC_HERO_HOLD_MS,
-  shuffleHeroPlaylist,
   type PublicHeroMediaItem,
 } from '@/Lib/publicQuote/companyPublicHeroMedia'
 
@@ -19,11 +18,11 @@ function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(false)
 
   useEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const sync = () => setReduced(media.matches)
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const sync = () => setReduced(query.matches)
     sync()
-    media.addEventListener('change', sync)
-    return () => media.removeEventListener('change', sync)
+    query.addEventListener('change', sync)
+    return () => query.removeEventListener('change', sync)
   }, [])
 
   return reduced
@@ -48,10 +47,11 @@ export default function PublicQuoteHeroMedia({
   posterUrl,
 }: PublicQuoteHeroMediaProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const touchStartX = useRef<number | null>(null)
   const [videoIndex, setVideoIndex] = useState(0)
-  const [playlist, setPlaylist] = useState<PublicHeroMediaItem[] | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const [outgoing, setOutgoing] = useState<PublicHeroMediaItem | null>(null)
+  const [paused, setPaused] = useState(false)
   const [failedIds, setFailedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   )
@@ -59,15 +59,14 @@ export default function PublicQuoteHeroMedia({
   const pageVisible = usePageIsVisible()
   const activeVideo = videos[videoIndex] || null
   const playable = useMemo(
-    () => (playlist ?? media).filter((item) => !failedIds.has(item.id)),
-    [failedIds, media, playlist],
+    () => media.filter((item) => !failedIds.has(item.id)),
+    [failedIds, media],
   )
   const activePhoto = playable[activeIndex] ?? null
   const nextPhoto =
     playable.length > 1
       ? (playable[(activeIndex + 1) % playable.length] ?? null)
       : null
-  const ready = playlist !== null
   const hasPhotos = playable.length > 0
 
   useEffect(() => {
@@ -84,7 +83,6 @@ export default function PublicQuoteHeroMedia({
   }, [activeVideo])
 
   useEffect(() => {
-    setPlaylist(shuffleHeroPlaylist(media))
     setActiveIndex(0)
     setOutgoing(null)
   }, [media])
@@ -95,21 +93,13 @@ export default function PublicQuoteHeroMedia({
   }, [activeIndex, playable.length])
 
   useEffect(() => {
-    if (activeVideo || !ready || reducedMotion || !pageVisible) return
+    if (activeVideo || reducedMotion || !pageVisible || paused) return
     if (playable.length < 2) return
 
     const timer = window.setTimeout(() => {
       const current = playable[activeIndex]
-      if (activeIndex + 1 < playable.length) {
-        setOutgoing(current ?? null)
-        setActiveIndex(activeIndex + 1)
-        return
-      }
       setOutgoing(current ?? null)
-      setPlaylist(
-        shuffleHeroPlaylist(playable, playable.at(-1)?.id ?? null),
-      )
-      setActiveIndex(0)
+      setActiveIndex((currentIndex) => (currentIndex + 1) % playable.length)
     }, PUBLIC_HERO_HOLD_MS)
 
     return () => window.clearTimeout(timer)
@@ -117,8 +107,8 @@ export default function PublicQuoteHeroMedia({
     activeIndex,
     activeVideo,
     pageVisible,
+    paused,
     playable,
-    ready,
     reducedMotion,
   ])
 
@@ -140,6 +130,15 @@ export default function PublicQuoteHeroMedia({
     }
   }, [nextPhoto?.src])
 
+  const goTo = (index: number) => {
+    if (playable.length < 2) return
+    const nextIndex = (index + playable.length) % playable.length
+    if (nextIndex === activeIndex) return
+    setOutgoing(playable[activeIndex] ?? null)
+    setActiveIndex(nextIndex)
+    setPaused(true)
+  }
+
   const renderedPhotos = useMemo(() => {
     const byId = new Map<string, PublicHeroMediaItem>()
     if (activePhoto) byId.set(activePhoto.id, activePhoto)
@@ -154,9 +153,25 @@ export default function PublicQuoteHeroMedia({
       data-public-hero-media
       data-hero-photo-count={media.length}
       data-hero-active-id={activePhoto?.id ?? ''}
-      data-hero-ready={ready ? 'true' : 'false'}
-      aria-hidden
-      className="pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-[#0b1220]"
+      data-hero-paused={paused ? 'true' : 'false'}
+      aria-roledescription="carousel"
+      aria-label="Event photography"
+      className="absolute inset-0 overflow-hidden bg-[#0b1220]"
+      onPointerDown={() => {
+        if (playable.length > 1) setPaused(true)
+      }}
+      onTouchStart={(event) => {
+        touchStartX.current = event.changedTouches[0]?.clientX ?? null
+      }}
+      onTouchEnd={(event) => {
+        const start = touchStartX.current
+        const end = event.changedTouches[0]?.clientX
+        touchStartX.current = null
+        if (start == null || end == null || playable.length < 2) return
+        const delta = end - start
+        if (Math.abs(delta) < 40) return
+        goTo(delta < 0 ? activeIndex + 1 : activeIndex - 1)
+      }}
     >
       {activeVideo ? (
         <video
@@ -191,10 +206,11 @@ export default function PublicQuoteHeroMedia({
             >
               <Image
                 src={item.src}
-                alt=""
+                alt={item.alt || ''}
                 fill
                 sizes="100vw"
                 quality={90}
+                priority={isActive && item.id === playable[0]?.id}
                 loading={isActive ? 'eager' : 'lazy'}
                 fetchPriority={isActive ? 'high' : 'low'}
                 className="public-hero-photo"
@@ -217,6 +233,30 @@ export default function PublicQuoteHeroMedia({
         />
       )}
       <div className="public-hero-overlay" />
+      {playable.length > 1 && !activeVideo ? (
+        <div
+          data-hero-indicators
+          className="public-hero-indicators"
+          role="tablist"
+          aria-label="Gallery photographs"
+        >
+          {playable.map((item, index) => {
+            const selected = index === activeIndex
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                aria-label={item.alt || `Photograph ${index + 1}`}
+                data-hero-indicator={item.id}
+                className={`public-hero-indicator ${selected ? 'is-active' : ''}`}
+                onClick={() => goTo(index)}
+              />
+            )
+          })}
+        </div>
+      ) : null}
     </div>
   )
 }
