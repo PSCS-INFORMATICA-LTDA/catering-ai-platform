@@ -74,7 +74,6 @@ import {
   getCustomerDisplayName,
 } from '../../../Lib/getCustomerDisplayName'
 import { getCatalogItemImageUrl } from '../../../Lib/catalogItemVisual'
-import { filterCatalogItems } from '../../../Lib/itemCatalog'
 import { isUsablePostalCode } from '../../../Lib/cep'
 import { isUsablePhone, normalizePhone } from '../../../Lib/normalizePhone'
 import {
@@ -106,6 +105,10 @@ import type {
   PackageItem,
   PackageSideItem,
 } from '../../../Lib/packageConfiguration'
+import {
+  getVisiblePublicExtraItems,
+  pruneBlockedAdditionalSelections,
+} from '../../../Lib/publicQuote/extrasEligibility.ts'
 import {
   flattenPackageOptionGroupItems,
   getBlockedCatalogItemIds,
@@ -1486,10 +1489,7 @@ export default function QuoteWizardCore({
   ])
 
   const visibleAdditionalItems = useMemo(
-    () =>
-      filterCatalogItems(itemCatalog, 'additional', 'customer').filter(
-        (item) => !blockedCatalogItemIds.includes(item.id),
-      ),
+    () => getVisiblePublicExtraItems(itemCatalog, blockedCatalogItemIds),
     [itemCatalog, blockedCatalogItemIds],
   )
 
@@ -1512,16 +1512,12 @@ export default function QuoteWizardCore({
   useEffect(() => {
     if (blockedCatalogItemIds.length === 0) return
     setState((prev) => {
-      let changed = false
-      const nextAdditionals = { ...prev.additionals }
-      for (const itemId of blockedCatalogItemIds) {
-        if (nextAdditionals[itemId]) {
-          delete nextAdditionals[itemId]
-          changed = true
-        }
-      }
-      if (!changed) return prev
-      return { ...prev, additionals: nextAdditionals }
+      const { additionals, removedIds } = pruneBlockedAdditionalSelections(
+        prev.additionals,
+        blockedCatalogItemIds,
+      )
+      if (removedIds.length === 0) return prev
+      return { ...prev, additionals }
     })
   }, [blockedCatalogItemIds])
 

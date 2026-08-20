@@ -8,6 +8,7 @@ import type {
   PackageOptionGroupItem,
   PackageOptionGroupRecord,
 } from '@/Lib/packageOptionGroups'
+import { collectBlockedCatalogItemIds } from '@/Lib/publicQuote/extrasEligibility.ts'
 import { resolveCatalogItemDisplayLabel } from '@/Lib/cdlPackageItemI18n'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
@@ -391,20 +392,21 @@ export function getBlockedCatalogItemIdsFromConfig({
 
   const blocked = new Set<string>()
 
-  for (const item of getDisplayableFixedPackageItems(packageId, packageItems, {
-    optionGroups,
-    optionGroupItems,
-  })) {
-    if (item.blocks_additional_item && item.additional_item_id?.trim()) {
-      blocked.add(item.additional_item_id.trim())
-    }
+  for (const id of collectBlockedCatalogItemIds(
+    getDisplayableFixedPackageItems(packageId, packageItems, {
+      optionGroups,
+      optionGroupItems,
+    }),
+  )) {
+    blocked.add(id)
   }
 
-  for (const side of getPackageSideItemsForPackage(packageId, packageSideItems)) {
-    if (side.included === false) continue
-    if (side.blocks_additional_item && side.additional_item_id?.trim()) {
-      blocked.add(side.additional_item_id.trim())
-    }
+  for (const id of collectBlockedCatalogItemIds(
+    getPackageSideItemsForPackage(packageId, packageSideItems).filter(
+      (side) => side.included !== false,
+    ),
+  )) {
+    blocked.add(id)
   }
 
   for (const group of optionGroupsForPackage(packageId, optionGroups)) {

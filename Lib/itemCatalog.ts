@@ -1,3 +1,5 @@
+import { isPublicCatalogFixtureItem } from './publicQuote/catalogVisibility.ts'
+
 /** Item do catálogo mestre (`public.catalog_items`). */
 export type CatalogItemType =
   | 'PRODUCT'
@@ -105,6 +107,7 @@ export function isCatalogItemUsageAllowed(
   if (!item) return false
   if (item.active === false) return false
   if (audience === 'customer' && item.customer_visible === false) return false
+  if (audience === 'customer' && isPublicCatalogFixtureItem(item)) return false
 
   switch (usage) {
     case 'package_item':
