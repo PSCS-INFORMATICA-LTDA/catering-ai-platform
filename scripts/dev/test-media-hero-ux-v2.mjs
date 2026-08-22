@@ -41,7 +41,14 @@ const deleteMigration = read('supabase/migrations/20260822180000_media_delete_pe
 const editorMigration = read('supabase/migrations/20260822190000_media_editor_meta.sql')
 
 report('UX01: no onBlur autosave', !card.includes('onBlur') && !manager.includes('onBlur'))
-report('UX02: explicit Save button', card.includes('actionSave') && manager.includes('saveDraft'))
+report(
+  'UX02: explicit Save button is always visible and orange',
+  card.includes('data-media-save') &&
+    card.includes('bg-[var(--cdl-action)]') &&
+    card.includes('uppercase') &&
+    !card.includes('disabled={draft.saving || !draft.dirty}') &&
+    manager.includes('saveDraft'),
+)
 report('UX03: add media opens dedicated flow', manager.includes('addTitle') && manager.includes('setAdding(true)'))
 report('UX04: sequence is visual identifier', card.includes('formatSequence') && card.includes('sequence'))
 report('UX05: activate/inactivate is local until save', card.includes('actionDeactivate') && card.includes('active: !draft.active'))

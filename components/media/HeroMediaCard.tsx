@@ -541,16 +541,44 @@ export default function HeroMediaCard({
       </div>
 
       {canManage ? (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <div
+          data-media-card-actions
+          className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-cdl-border pt-4"
+        >
           <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex min-h-11 cursor-pointer items-center rounded-xl border border-cdl-border px-4 text-sm font-semibold">
+              {tMedia(locale, 'actionReplace')}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  if (file) void replaceFile(file)
+                  event.currentTarget.value = ''
+                }}
+              />
+            </label>
             <button
               type="button"
-              disabled={draft.saving || !draft.dirty}
-              onClick={onSave}
-              className="min-h-11 rounded-xl bg-[var(--brand-primary)] px-5 text-sm font-bold text-white disabled:opacity-50"
+              disabled={draft.saving}
+              className="min-h-11 rounded-xl border border-cdl-border px-4 text-sm font-semibold"
+              onClick={() => patch({ active: !draft.active })}
             >
-              {draft.saving ? tMedia(locale, 'actionSaving') : tMedia(locale, 'actionSave')}
+              {draft.active ? tMedia(locale, 'actionDeactivate') : tMedia(locale, 'actionActivate')}
             </button>
+            {canDelete ? (
+              <button
+                type="button"
+                disabled={draft.saving}
+                className="min-h-11 rounded-xl border border-red-300 px-4 text-sm font-semibold text-red-700"
+                onClick={() => onChange({ ...draft, confirmDelete: true })}
+              >
+                {tMedia(locale, 'actionDelete')}
+              </button>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-3">
             {draft.dirty ? (
               <span className="text-xs font-semibold text-amber-700">{tMedia(locale, 'unsaved')}</span>
             ) : null}
@@ -559,16 +587,16 @@ export default function HeroMediaCard({
                 {tMedia(locale, 'actionSaved')}
               </span>
             ) : null}
-          </div>
-          {canDelete ? (
             <button
               type="button"
-              className="min-h-11 rounded-xl border border-red-300 px-4 text-sm font-semibold text-red-700"
-              onClick={() => onChange({ ...draft, confirmDelete: true })}
+              data-media-save
+              disabled={draft.saving}
+              onClick={onSave}
+              className="min-h-11 min-w-[8.5rem] rounded-xl bg-[var(--cdl-action)] px-6 text-sm font-black uppercase tracking-wide text-white shadow-sm disabled:cursor-wait"
             >
-              {tMedia(locale, 'actionDelete')}
+              {draft.saving ? tMedia(locale, 'actionSaving') : tMedia(locale, 'actionSave')}
             </button>
-          ) : null}
+          </div>
         </div>
       ) : null}
 
