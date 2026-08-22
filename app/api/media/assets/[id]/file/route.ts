@@ -61,7 +61,7 @@ export async function POST(
     actor,
   )
   if (error || !asset) {
-    return Response.json({ error: error || 'update_failed' }, { status: 500 })
+    return Response.json({ error: error || 'save_failed' }, { status: 500 })
   }
   await writeAdminAudit({
     companyId,

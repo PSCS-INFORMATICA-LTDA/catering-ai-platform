@@ -2,11 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { tMedia } from '@/Lib/i18n/media'
-import type { PublicMediaAsset } from '@/Lib/media/types'
-import type { MediaCatalogImageItem } from '@/Lib/media/types'
+import { suggestFocusFromFile } from '@/Lib/media/autoFocus'
+import {
+  defaultEditorMeta,
+  nextDisplayOrder,
+  parseCssFocus,
+} from '@/Lib/media/editorMeta'
+import type { MediaCatalogImageItem, PublicMediaAsset } from '@/Lib/media/types'
+import { getCompanyPublicHeroMedia } from '@/Lib/publicQuote/companyPublicHeroMedia'
+import HeroMediaCard, { type HeroDraft } from './HeroMediaCard'
 
 type Tab = 'hero' | 'how_it_works' | 'video' | 'packages' | 'additionals'
-type PreviewMode = 'mobile' | 'tablet' | 'desktop'
 
 const TABS: Tab[] = ['hero', 'how_it_works', 'video', 'packages', 'additionals']
 
@@ -18,33 +24,83 @@ function tabLabel(tab: Tab, locale: string) {
   return tMedia(locale, 'tabAdditionals')
 }
 
-function statusLabel(status: string, locale: string) {
-  if (status === 'inactive') return tMedia(locale, 'statusInactive')
-  if (status === 'draft') return tMedia(locale, 'statusDraft')
-  return tMedia(locale, 'statusActive')
+function apiErrorMessage(locale: string, error?: string) {
+  if (error === 'delete_referenced') return tMedia(locale, 'deleteReferenced')
+  if (error === 'delete_forbidden') return tMedia(locale, 'deleteForbidden')
+  if (error === 'file_too_large') return tMedia(locale, 'fileTooLarge')
+  if (error === 'invalid_type' || error === 'invalidFile') return tMedia(locale, 'invalidFile')
+  return tMedia(locale, 'saveFailed')
+}
+
+function seedEditor(asset: PublicMediaAsset) {
+  if (asset.focal_x != null && asset.focal_y != null) return defaultEditorMeta(asset.editor)
+  const hint = getCompanyPublicHeroMedia('cdl').find(
+    (item) => item.id === asset.entity_key || item.src === asset.media_url,
+  )
+  if (!hint) return defaultEditorMeta(asset.editor)
+  const mobile = parseCssFocus(hint.mobilePosition)
+  const desktop = parseCssFocus(hint.desktopPosition)
+  return defaultEditorMeta({
+    ...asset.editor,
+    overlayDecided: asset.editor.overlayDecided,
+    overlayEnabled: asset.editor.overlayEnabled,
+    overlayPosition: hint.captionAlign ?? asset.editor.overlayPosition,
+    title_pt: asset.editor.title_pt || hint.caption?.pt || '',
+    title_en: asset.editor.title_en || hint.caption?.en || '',
+    title_es: asset.editor.title_es || hint.caption?.es || '',
+    suggested: { mobile, tablet: mobile, desktop },
+    applied: { mobile, tablet: mobile, desktop },
+  })
+}
+
+function toDraft(asset: PublicMediaAsset): HeroDraft {
+  return {
+    id: asset.id,
+    persisted: asset,
+    sequence: asset.display_order,
+    active: asset.active,
+    entityKey: asset.entity_key || '',
+    mediaUrl: asset.media_url,
+    pendingFile: null,
+    editor: seedEditor(asset),
+    preview: 'mobile',
+    dirty: false,
+    saving: false,
+    savedFlash: false,
+    confirmDelete: false,
+    showAdvanced: false,
+    lightbox: false,
+  }
 }
 
 export default function MediaContentManager({
   locale,
   canManage,
+  canDelete = false,
 }: {
   locale: string
   canManage: boolean
+  canDelete?: boolean
 }) {
   const [tab, setTab] = useState<Tab>('hero')
-  const [preview, setPreview] = useState<PreviewMode>('mobile')
-  const [assets, setAssets] = useState<PublicMediaAsset[]>([])
+  const [drafts, setDrafts] = useState<HeroDraft[]>([])
   const [catalog, setCatalog] = useState<MediaCatalogImageItem[]>([])
   const [query, setQuery] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [orderDirty, setOrderDirty] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const [addFile, setAddFile] = useState<File | null>(null)
+  const [addPreview, setAddPreview] = useState<string | null>(null)
+  const [addDraft, setAddDraft] = useState<HeroDraft | null>(null)
 
   const loadAssets = useCallback(async (placement: Tab) => {
     if (placement === 'packages' || placement === 'additionals') return
     const response = await fetch(`/api/media/assets?placement=${placement}`)
     const json = (await response.json()) as { assets?: PublicMediaAsset[]; error?: string }
     if (!response.ok) throw new Error(json.error || 'load_failed')
-    setAssets(json.assets ?? [])
+    setDrafts((json.assets ?? []).map(toDraft))
+    setOrderDirty(false)
   }, [])
 
   const loadCatalog = useCallback(async (kind: 'packages' | 'additionals') => {
@@ -72,105 +128,187 @@ export default function MediaContentManager({
     }
   }, [loadAssets, loadCatalog, tab])
 
-  const visibleAssets = useMemo(
+  const visibleDrafts = useMemo(
     () =>
-      assets.filter((asset) => {
-        const hay = `${asset.entity_key} ${asset.label_pt} ${asset.title_pt}`.toLowerCase()
+      drafts.filter((draft) => {
+        const hay = `${draft.entityKey} ${draft.editor.title_pt}`.toLowerCase()
         return hay.includes(query.trim().toLowerCase())
       }),
-    [assets, query],
-  )
-  const visibleCatalog = useMemo(
-    () =>
-      catalog.filter((item) =>
-        item.name.toLowerCase().includes(query.trim().toLowerCase()),
-      ),
-    [catalog, query],
+    [drafts, query],
   )
 
-  async function patchAsset(id: string, body: Record<string, unknown>) {
-    setBusy(true)
-    try {
-      const response = await fetch(`/api/media/assets/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      const json = (await response.json()) as { asset?: PublicMediaAsset; error?: string }
-      if (!response.ok) throw new Error(json.error || 'update_failed')
-      setAssets((current) =>
-        current.map((asset) => (asset.id === id ? (json.asset as PublicMediaAsset) : asset)),
-      )
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'error')
-    } finally {
-      setBusy(false)
-    }
+  function updateDraft(id: string, next: HeroDraft) {
+    setAddDraft((current) => (current?.id === id ? next : current))
+    setDrafts((current) => current.map((draft) => (draft.id === id ? next : draft)))
   }
 
-  async function addAsset() {
-    if (!canManage) return
-    setBusy(true)
+  function moveDraft(id: string, direction: -1 | 1) {
+    setDrafts((current) => {
+      const index = current.findIndex((draft) => draft.id === id)
+      const nextIndex = index + direction
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current
+      const copy = [...current]
+      const [item] = copy.splice(index, 1)
+      if (!item) return current
+      copy.splice(nextIndex, 0, item)
+      setOrderDirty(true)
+      return copy.map((draft, order) => ({ ...draft, sequence: order + 1, dirty: true }))
+    })
+  }
+
+  async function saveDraft(draft: HeroDraft) {
+    if (!canManage || draft.saving) return false
+    updateDraft(draft.id, { ...draft, saving: true })
     try {
-      const response = await fetch('/api/media/assets', {
-        method: 'POST',
+      let working = draft
+      let assetId = working.persisted?.id ?? null
+      if (!assetId) {
+        const created = await fetch('/api/media/assets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            placement: 'hero',
+            media_type: 'image',
+            entity_key: working.entityKey || `hero-${working.sequence}`,
+            display_order: working.sequence,
+            active: working.active,
+            status: working.active ? 'active' : 'inactive',
+            editor: working.editor,
+          }),
+        })
+        const createdJson = (await created.json()) as { asset?: PublicMediaAsset; error?: string }
+        if (!created.ok || !createdJson.asset) {
+          throw new Error(createdJson.error || 'save_failed')
+        }
+        assetId = createdJson.asset.id
+        working = { ...working, persisted: createdJson.asset }
+        updateDraft(working.id, { ...working, saving: true })
+      }
+
+      if (working.pendingFile && assetId) {
+        const form = new FormData()
+        form.set('file', working.pendingFile)
+        const uploaded = await fetch(`/api/media/assets/${assetId}/file`, {
+          method: 'POST',
+          body: form,
+        })
+        const uploadedJson = (await uploaded.json()) as { error?: string }
+        if (!uploaded.ok) throw new Error(uploadedJson.error || 'save_failed')
+      }
+
+      const response = await fetch(`/api/media/assets/${assetId}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          placement: tab,
-          media_type: tab === 'video' ? 'video' : 'image',
-          entity_key: tab === 'video' ? 'pt' : `item-${Date.now()}`,
-          status: 'draft',
-          display_order: assets.length + 1,
+          entity_key: working.entityKey,
+          display_order: working.sequence,
+          active: working.active,
+          status: working.active ? 'active' : 'inactive',
+          editor: working.editor,
         }),
       })
       const json = (await response.json()) as { asset?: PublicMediaAsset; error?: string }
-      if (!response.ok) throw new Error(json.error || 'insert_failed')
-      if (json.asset) setAssets((current) => [...current, json.asset as PublicMediaAsset])
+      if (!response.ok || !json.asset) throw new Error(json.error || 'save_failed')
+      updateDraft(working.id, {
+        ...toDraft(json.asset),
+        dirty: false,
+        saving: false,
+        savedFlash: true,
+        preview: working.preview,
+      })
+      return true
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'error')
+      updateDraft(draft.id, { ...draft, saving: false })
+      setError(apiErrorMessage(locale, caught instanceof Error ? caught.message : 'save_failed'))
+      return false
+    }
+  }
+
+  async function saveOrder() {
+    if (!canManage) return
+    setBusy(true)
+    try {
+      const ids = drafts.flatMap((draft) => (draft.persisted ? [draft.persisted.id] : []))
+      const response = await fetch('/api/media/assets/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      })
+      if (!response.ok) throw new Error('save_failed')
+      setDrafts((current) => current.map((draft) => ({ ...draft, dirty: false })))
+      setOrderDirty(false)
+    } catch {
+      setError(tMedia(locale, 'saveFailed'))
     } finally {
       setBusy(false)
     }
   }
 
-  async function uploadAsset(id: string, file: File, kind: 'media' | 'poster' = 'media') {
-    const form = new FormData()
-    form.set('file', file)
-    form.set('kind', kind)
-    const response = await fetch(`/api/media/assets/${id}/file`, {
-      method: 'POST',
-      body: form,
-    })
-    const json = (await response.json()) as { asset?: PublicMediaAsset; error?: string }
-    if (!response.ok) {
-      setError(
-        json.error === 'file_too_large'
-          ? tMedia(locale, 'fileTooLarge')
-          : tMedia(locale, 'invalidFile'),
-      )
+  async function deleteDraft(draft: HeroDraft) {
+    if (!draft.persisted) {
+      setDrafts((current) => current.filter((item) => item.id !== draft.id))
       return
     }
-    if (json.asset) {
-      setAssets((current) =>
-        current.map((asset) => (asset.id === id ? (json.asset as PublicMediaAsset) : asset)),
-      )
+    const response = await fetch(`/api/media/assets/${draft.persisted.id}?hard=1`, {
+      method: 'DELETE',
+    })
+    const json = (await response.json()) as { error?: string }
+    if (!response.ok) {
+      setError(apiErrorMessage(locale, json.error))
+      updateDraft(draft.id, { ...draft, confirmDelete: false })
+      return
     }
+    setDrafts((current) => current.filter((item) => item.id !== draft.id))
   }
 
-  async function moveAsset(id: string, direction: -1 | 1) {
-    const index = assets.findIndex((asset) => asset.id === id)
-    const next = index + direction
-    if (index < 0 || next < 0 || next >= assets.length) return
-    const ids = [...assets]
-    const [item] = ids.splice(index, 1)
-    if (!item) return
-    ids.splice(next, 0, item)
-    setAssets(ids)
-    await fetch('/api/media/assets/reorder', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids: ids.map((asset) => asset.id) }),
+  async function openAdd(file?: File) {
+    const sequence = nextDisplayOrder(drafts.map((draft) => draft.sequence))
+    let preview = null
+    let editor = defaultEditorMeta()
+    if (file) {
+      preview = URL.createObjectURL(file)
+      const analysis = await suggestFocusFromFile(file)
+      editor = defaultEditorMeta({
+        focusMode: 'auto',
+        suggested: analysis.suggested,
+        applied: analysis.suggested,
+      })
+    }
+    setAddFile(file ?? null)
+    setAddPreview(preview)
+    setAddDraft({
+      id: `draft-${Date.now()}`,
+      persisted: null,
+      sequence,
+      active: false,
+      entityKey: `hero-${sequence}`,
+      mediaUrl: preview,
+      pendingFile: file ?? null,
+      editor,
+      preview: 'mobile',
+      dirty: true,
+      saving: false,
+      savedFlash: false,
+      confirmDelete: false,
+      showAdvanced: false,
+      lightbox: false,
     })
+    setAdding(true)
+  }
+
+  async function saveNew() {
+    if (!addDraft || !addFile) return
+    const ok = await saveDraft({
+      ...addDraft,
+      pendingFile: addFile,
+      mediaUrl: addPreview,
+    })
+    if (!ok) return
+    setAdding(false)
+    setAddDraft(null)
+    setAddFile(null)
+    setAddPreview(null)
+    await loadAssets('hero')
   }
 
   async function uploadCatalog(kind: 'packages' | 'additionals', id: string, file: File) {
@@ -182,7 +320,7 @@ export default function MediaContentManager({
     })
     const json = (await response.json()) as { imageUrl?: string; error?: string }
     if (!response.ok) {
-      setError(json.error || tMedia(locale, 'invalidFile'))
+      setError(apiErrorMessage(locale, json.error))
       return
     }
     setCatalog((current) =>
@@ -192,12 +330,8 @@ export default function MediaContentManager({
     )
   }
 
-  const previewWidth =
-    preview === 'mobile' ? 'w-[360px]' : preview === 'tablet' ? 'w-[768px]' : 'w-full max-w-5xl'
-  const selectedPreview = visibleAssets.find((asset) => asset.media_url) ?? visibleAssets[0]
-
   return (
-    <div className="space-y-6" data-media-content-manager>
+    <div className="space-y-6" data-media-content-manager data-hero-ux="v2">
       <header className="space-y-2">
         <h1 className="text-2xl font-black tracking-tight text-cdl-title">
           {tMedia(locale, 'title')}
@@ -250,14 +384,23 @@ export default function MediaContentManager({
           placeholder={tMedia(locale, 'search')}
           className="min-h-11 w-full max-w-sm rounded-xl border border-cdl-border bg-white px-3 text-sm"
         />
-        {canManage && tab !== 'packages' && tab !== 'additionals' ? (
+        {canManage && tab === 'hero' ? (
+          <button
+            type="button"
+            className="min-h-11 rounded-xl bg-[var(--brand-primary)] px-4 text-sm font-bold text-white"
+            onClick={() => void openAdd()}
+          >
+            {tMedia(locale, 'actionAdd')}
+          </button>
+        ) : null}
+        {canManage && orderDirty && tab === 'hero' ? (
           <button
             type="button"
             disabled={busy}
-            onClick={() => void addAsset()}
-            className="min-h-11 rounded-xl bg-[var(--brand-primary)] px-4 text-sm font-bold text-white"
+            className="min-h-11 rounded-xl border border-cdl-border px-4 text-sm font-bold"
+            onClick={() => void saveOrder()}
           >
-            {tMedia(locale, 'actionAdd')}
+            {tMedia(locale, 'saveOrder')}
           </button>
         ) : null}
       </div>
@@ -268,258 +411,130 @@ export default function MediaContentManager({
         </p>
       ) : null}
 
-      {tab !== 'packages' && tab !== 'additionals' ? (
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
-          <ul className="space-y-3">
-            {visibleAssets.length === 0 ? (
-              <li className="rounded-2xl border border-dashed border-cdl-border p-6 text-sm text-cdl-muted">
-                {tMedia(locale, 'empty')}
-              </li>
-            ) : null}
-            {visibleAssets.map((asset, index) => (
-              <li
-                key={asset.id}
-                className="rounded-2xl border border-cdl-border bg-cdl-surface p-4 shadow-sm"
-                draggable={canManage}
-                onDragStart={(event) => event.dataTransfer.setData('text/plain', asset.id)}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => {
-                  event.preventDefault()
-                  const fromId = event.dataTransfer.getData('text/plain')
-                  if (!fromId || fromId === asset.id) return
-                  const from = assets.findIndex((row) => row.id === fromId)
-                  const to = assets.findIndex((row) => row.id === asset.id)
-                  if (from < 0 || to < 0) return
-                  const next = [...assets]
-                  const [moved] = next.splice(from, 1)
-                  if (!moved) return
-                  next.splice(to, 0, moved)
-                  setAssets(next)
-                  void fetch('/api/media/assets/reorder', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ids: next.map((row) => row.id) }),
-                  })
-                }}
-              >
-                <div className="flex gap-4">
-                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-neutral-100">
-                    {asset.media_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={asset.poster_url || asset.media_url}
-                        alt={asset.alt_pt || asset.label_pt || ''}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : null}
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <strong className="text-sm text-cdl-title">
-                        {asset.entity_key || asset.label_pt || asset.id.slice(0, 8)}
-                      </strong>
-                      <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
-                        {statusLabel(asset.status, locale)}
-                      </span>
-                      <span className="text-[11px] text-cdl-faint">
-                        {asset.placement} · {asset.variant || 'original'}
-                      </span>
-                    </div>
-                    {canManage ? (
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className="rounded-lg border border-cdl-border px-3 py-1 text-xs font-semibold"
-                          onClick={() =>
-                            void patchAsset(asset.id, {
-                              status: asset.status === 'active' ? 'inactive' : 'active',
-                            })
-                          }
-                        >
-                          {asset.status === 'active'
-                            ? tMedia(locale, 'actionDeactivate')
-                            : tMedia(locale, 'actionActivate')}
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded-lg border border-cdl-border px-3 py-1 text-xs font-semibold"
-                          disabled={index === 0}
-                          onClick={() => void moveAsset(asset.id, -1)}
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded-lg border border-cdl-border px-3 py-1 text-xs font-semibold"
-                          disabled={index === visibleAssets.length - 1}
-                          onClick={() => void moveAsset(asset.id, 1)}
-                        >
-                          ↓
-                        </button>
-                        <label className="rounded-lg border border-cdl-border px-3 py-1 text-xs font-semibold">
-                          {tMedia(locale, 'actionReplace')}
-                          <input
-                            type="file"
-                            className="sr-only"
-                            accept={tab === 'video' ? 'video/mp4,video/webm' : 'image/*'}
-                            onChange={(event) => {
-                              const file = event.target.files?.[0]
-                              if (file) void uploadAsset(asset.id, file)
-                              event.currentTarget.value = ''
-                            }}
-                          />
-                        </label>
-                      </div>
-                    ) : null}
-                    {canManage ? (
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <input
-                          className="min-h-10 rounded-lg border border-cdl-border px-2 text-sm"
-                          defaultValue={asset.entity_key ?? ''}
-                          placeholder={tMedia(locale, 'internalName')}
-                          onBlur={(event) =>
-                            void patchAsset(asset.id, { entity_key: event.target.value })
-                          }
-                        />
-                        <input
-                          className="min-h-10 rounded-lg border border-cdl-border px-2 text-sm"
-                          defaultValue={asset.title_pt ?? ''}
-                          placeholder="PT"
-                          onBlur={(event) =>
-                            void patchAsset(asset.id, { title_pt: event.target.value })
-                          }
-                        />
-                        <input
-                          className="min-h-10 rounded-lg border border-cdl-border px-2 text-sm"
-                          defaultValue={asset.title_en ?? ''}
-                          placeholder="EN"
-                          onBlur={(event) =>
-                            void patchAsset(asset.id, { title_en: event.target.value })
-                          }
-                        />
-                        <input
-                          className="min-h-10 rounded-lg border border-cdl-border px-2 text-sm"
-                          defaultValue={asset.title_es ?? ''}
-                          placeholder="ES"
-                          onBlur={(event) =>
-                            void patchAsset(asset.id, { title_es: event.target.value })
-                          }
-                        />
-                        <label className="flex items-center gap-2 text-xs text-cdl-muted">
-                          <span>FX</span>
-                          <input
-                            type="number"
-                            min={0}
-                            max={1}
-                            step={0.01}
-                            className="min-h-10 w-full rounded-lg border border-cdl-border px-2"
-                            defaultValue={asset.focal_x ?? 0.5}
-                            onBlur={(event) =>
-                              void patchAsset(asset.id, { focal_x: Number(event.target.value) })
-                            }
-                          />
-                        </label>
-                        <label className="flex items-center gap-2 text-xs text-cdl-muted">
-                          <span>FY</span>
-                          <input
-                            type="number"
-                            min={0}
-                            max={1}
-                            step={0.01}
-                            className="min-h-10 w-full rounded-lg border border-cdl-border px-2"
-                            defaultValue={asset.focal_y ?? 0.5}
-                            onBlur={(event) =>
-                              void patchAsset(asset.id, { focal_y: Number(event.target.value) })
-                            }
-                          />
-                        </label>
-                      </div>
-                    ) : null}
-                  </div>
+      {tab === 'hero' ? (
+        <div className="space-y-4">
+          {visibleDrafts.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-cdl-border p-6 text-sm text-cdl-muted">
+              {tMedia(locale, 'empty')}
+            </p>
+          ) : null}
+          {visibleDrafts.map((draft, index) => (
+            <HeroMediaCard
+              key={draft.id}
+              locale={locale}
+              draft={draft}
+              canManage={canManage}
+              canDelete={canDelete}
+              isFirst={index === 0}
+              isLast={index === visibleDrafts.length - 1}
+              onChange={(next) => updateDraft(draft.id, next)}
+              onMove={(direction) => moveDraft(draft.id, direction)}
+              onSave={() => void saveDraft(draft)}
+              onDelete={() => void deleteDraft(draft)}
+            />
+          ))}
+        </div>
+      ) : tab === 'packages' || tab === 'additionals' ? (
+        <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {catalog
+            .filter((item) => item.name.toLowerCase().includes(query.trim().toLowerCase()))
+            .map((item) => (
+              <li key={item.id} className="rounded-2xl border border-cdl-border bg-cdl-surface p-4">
+                <div className="h-36 overflow-hidden rounded-xl bg-neutral-100">
+                  {item.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
+                  ) : null}
                 </div>
+                <p className="mt-3 text-sm font-semibold text-cdl-title">{item.name}</p>
+                {canManage ? (
+                  <label className="mt-2 inline-flex rounded-lg border border-cdl-border px-3 py-1 text-xs font-semibold">
+                    {tMedia(locale, 'actionReplace')}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0]
+                        if (file) void uploadCatalog(tab, item.id, file)
+                        event.currentTarget.value = ''
+                      }}
+                    />
+                  </label>
+                ) : null}
               </li>
             ))}
-          </ul>
-
-          <aside className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              {(['mobile', 'tablet', 'desktop'] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setPreview(mode)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${
-                    preview === mode
-                      ? 'bg-neutral-900 text-white'
-                      : 'border border-cdl-border text-cdl-title'
-                  }`}
-                >
-                  {tMedia(locale, mode === 'mobile' ? 'previewMobile' : mode === 'tablet' ? 'previewTablet' : 'previewDesktop')}
-                </button>
-              ))}
-            </div>
-            <div
-              data-media-preview={preview}
-              className={`overflow-hidden rounded-3xl border border-cdl-border bg-neutral-950 ${previewWidth}`}
-            >
-              <div
-                className={`relative w-full max-h-[28rem] ${
-                  preview === 'mobile'
-                    ? 'aspect-[9/16]'
-                    : preview === 'tablet'
-                      ? 'aspect-[3/4]'
-                      : 'aspect-[16/9]'
-                }`}
-              >
-                {selectedPreview?.media_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={selectedPreview.media_url}
-                    alt={selectedPreview.alt_pt || ''}
-                    className="h-full w-full object-cover"
-                    style={{
-                      objectPosition: `${Math.round((selectedPreview.focal_x ?? 0.5) * 100)}% ${Math.round((selectedPreview.focal_y ?? 0.5) * 100)}%`,
-                    }}
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-sm text-white/60">
-                    {tMedia(locale, 'empty')}
-                  </div>
-                )}
-              </div>
-            </div>
-          </aside>
-        </div>
+        </ul>
       ) : (
-        <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {visibleCatalog.map((item) => (
-            <li key={item.id} className="rounded-2xl border border-cdl-border bg-cdl-surface p-4">
-              <div className="h-36 overflow-hidden rounded-xl bg-neutral-100">
-                {item.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
-                ) : null}
+        <ul className="space-y-3">
+          {drafts.map((draft) => (
+            <li key={draft.id} className="rounded-2xl border border-cdl-border bg-cdl-surface p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <strong>{draft.editor.title_pt || draft.entityKey}</strong>
+                <button
+                  type="button"
+                  disabled={!canManage || draft.saving}
+                  className="rounded-xl bg-[var(--brand-primary)] px-4 py-2 text-sm font-bold text-white"
+                  onClick={() => void saveDraft(draft)}
+                >
+                  {tMedia(locale, 'actionSave')}
+                </button>
               </div>
-              <p className="mt-3 text-sm font-semibold text-cdl-title">{item.name}</p>
-              {canManage ? (
-                <label className="mt-2 inline-flex rounded-lg border border-cdl-border px-3 py-1 text-xs font-semibold">
-                  {tMedia(locale, 'actionReplace')}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="sr-only"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0]
-                      if (file) void uploadCatalog(tab, item.id, file)
-                      event.currentTarget.value = ''
-                    }}
-                  />
-                </label>
-              ) : null}
             </li>
           ))}
         </ul>
       )}
+
+      {adding && addDraft ? (
+        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/50 p-4 sm:items-center">
+          <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-3xl bg-white p-5">
+            <h2 className="text-xl font-black">{tMedia(locale, 'addTitle')}</h2>
+            <p className="mt-1 text-sm text-cdl-muted">{tMedia(locale, 'addHint')}</p>
+            <label className="mt-4 inline-flex min-h-11 cursor-pointer items-center rounded-xl border border-cdl-border px-4 text-sm font-semibold">
+              {tMedia(locale, 'actionReplace')}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  if (file) void openAdd(file)
+                }}
+              />
+            </label>
+            {addFile ? (
+              <div className="mt-4">
+                <HeroMediaCard
+                  locale={locale}
+                  draft={addDraft}
+                  canManage={canManage}
+                  canDelete={false}
+                  isFirst
+                  isLast
+                  onChange={setAddDraft}
+                  onMove={() => undefined}
+                  onSave={() => void saveNew()}
+                  onDelete={() => undefined}
+                />
+              </div>
+            ) : null}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="min-h-11 rounded-xl border border-cdl-border px-5 text-sm font-semibold"
+                onClick={() => {
+                  setAdding(false)
+                  setAddDraft(null)
+                  setAddFile(null)
+                  setAddPreview(null)
+                }}
+              >
+                {tMedia(locale, 'actionCancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

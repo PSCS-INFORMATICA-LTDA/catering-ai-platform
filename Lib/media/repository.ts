@@ -102,6 +102,9 @@ export async function updateCompanyPublicMedia(
   const current = await getCompanyPublicMedia(client, companyId, id)
   if (!current.asset) return { asset: null, error: current.error || 'not_found' }
   const patch = toUpdateRow(body, current.asset, current.extended, actor)
+  if (Object.keys(patch).length === 0) {
+    return { asset: current.asset, error: null }
+  }
   const { data, error } = await client
     .from('media_assets')
     .update(patch)
@@ -110,8 +113,11 @@ export async function updateCompanyPublicMedia(
     .eq('entity_type', PUBLIC_MEDIA_ENTITY_TYPE)
     .select(mediaAssetSelect(current.extended))
     .maybeSingle()
-  if (error || !data) {
-    return { asset: null, error: error?.message || 'update_failed' }
+  if (error) {
+    return { asset: null, error: error.message }
+  }
+  if (!data) {
+    return { asset: current.asset, error: null }
   }
   return {
     asset: mapMediaAssetRow(data as unknown as Record<string, unknown>, current.extended),
@@ -138,6 +144,32 @@ export async function softDisableCompanyPublicMedia(
     return { ok: false, error: error?.message || 'delete_failed' }
   }
   return { ok: true, error: null }
+}
+
+export async function hardDeleteCompanyPublicMedia(
+  client: SupabaseClient,
+  companyId: string,
+  id: string,
+): Promise<{ ok: boolean; error: string | null; storagePath: string | null }> {
+  const current = await getCompanyPublicMedia(client, companyId, id)
+  if (!current.asset) return { ok: false, error: current.error || 'not_found', storagePath: null }
+  const { error } = await client
+    .from('media_assets')
+    .delete()
+    .eq('id', id)
+    .eq('company_id', companyId)
+    .eq('entity_type', PUBLIC_MEDIA_ENTITY_TYPE)
+  if (error) return { ok: false, error: error.message, storagePath: current.asset.storage_path }
+  return { ok: true, error: null, storagePath: current.asset.storage_path }
+}
+
+export async function nextCompanyMediaOrder(
+  client: SupabaseClient,
+  companyId: string,
+  placement: MediaPlacement,
+) {
+  const { assets } = await listCompanyPublicMedia(client, companyId, placement)
+  return assets.reduce((max, asset) => Math.max(max, asset.display_order || 0), 0) + 1
 }
 
 export async function reorderCompanyPublicMedia(

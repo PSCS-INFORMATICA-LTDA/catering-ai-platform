@@ -3,6 +3,14 @@ import {
   type MediaPlacement,
   type MediaStatus,
 } from './constants'
+import {
+  defaultEditorMeta,
+  isOverlayPosition,
+  parseCssFocus,
+  parseEditorEnvelope,
+  serializeEditorEnvelope,
+  type MediaEditorMeta,
+} from './editorMeta'
 import type { PublicMediaAsset } from './types'
 
 const PLACEMENT_PREFIX = /^(hero|how_it_works|video):/
@@ -62,6 +70,52 @@ export function mapMediaAssetRow(
   const status = (
     typeof row.status === 'string' ? row.status : active ? 'active' : 'inactive'
   ) as MediaStatus
+  const envelope = parseEditorEnvelope(
+    typeof row.label_es === 'string' ? row.label_es : null,
+  )
+  const editor = defaultEditorMeta({
+    ...envelope.editor,
+    overlayEnabled: extended
+      ? row.overlay_enabled === true
+      : envelope.editor?.overlayEnabled === true,
+    overlayPosition: isOverlayPosition(
+      typeof row.overlay_position === 'string'
+        ? row.overlay_position
+        : envelope.editor?.overlayPosition,
+    )
+      ? ((row.overlay_position as MediaEditorMeta['overlayPosition']) ??
+        envelope.editor?.overlayPosition)
+      : envelope.editor?.overlayPosition,
+    title_pt:
+      typeof row.title_pt === 'string'
+        ? row.title_pt
+        : envelope.editor?.title_pt ||
+          (typeof row.label_pt === 'string' ? row.label_pt : ''),
+    title_en:
+      typeof row.title_en === 'string'
+        ? row.title_en
+        : envelope.editor?.title_en ||
+          (typeof row.label_en === 'string' ? row.label_en : ''),
+    title_es:
+      typeof row.title_es === 'string'
+        ? row.title_es
+        : envelope.editor?.title_es || envelope.label_es || '',
+    applied:
+      envelope.editor?.applied ??
+      (row.focal_x != null && row.focal_y != null
+        ? {
+            mobile: parseCssFocus(
+              `${Number(row.focal_x) * 100}% ${Number(row.focal_y) * 100}%`,
+            ),
+            tablet: parseCssFocus(
+              `${Number(row.focal_x) * 100}% ${Number(row.focal_y) * 100}%`,
+            ),
+            desktop: parseCssFocus(
+              `${Number(row.focal_x) * 100}% ${Number(row.focal_y) * 100}%`,
+            ),
+          }
+        : undefined),
+  })
 
   return {
     id: String(row.id),
@@ -75,7 +129,12 @@ export function mapMediaAssetRow(
     poster_url: poster,
     label_pt: typeof row.label_pt === 'string' ? row.label_pt : null,
     label_en: typeof row.label_en === 'string' ? row.label_en : null,
-    label_es: typeof row.label_es === 'string' ? row.label_es : null,
+    label_es:
+      envelope.editor
+        ? envelope.label_es
+        : typeof row.label_es === 'string'
+          ? row.label_es
+          : null,
     alt_pt:
       typeof row.alt_pt === 'string'
         ? row.alt_pt
@@ -94,42 +153,27 @@ export function mapMediaAssetRow(
         : typeof row.label_es === 'string'
           ? row.label_es
           : null,
-    title_pt:
-      typeof row.title_pt === 'string'
-        ? row.title_pt
-        : typeof row.label_pt === 'string'
-          ? row.label_pt
-          : null,
-    title_en:
-      typeof row.title_en === 'string'
-        ? row.title_en
-        : typeof row.label_en === 'string'
-          ? row.label_en
-          : null,
-    title_es:
-      typeof row.title_es === 'string'
-        ? row.title_es
-        : typeof row.label_es === 'string'
-          ? row.label_es
-          : null,
+    title_pt: editor.title_pt || null,
+    title_en: editor.title_en || null,
+    title_es: editor.title_es || null,
     subtitle_pt: typeof row.subtitle_pt === 'string' ? row.subtitle_pt : null,
     subtitle_en: typeof row.subtitle_en === 'string' ? row.subtitle_en : null,
     subtitle_es: typeof row.subtitle_es === 'string' ? row.subtitle_es : null,
-    overlay_enabled: extended ? row.overlay_enabled === true : false,
-    overlay_position:
-      typeof row.overlay_position === 'string' ? row.overlay_position : null,
+    overlay_enabled: editor.overlayEnabled,
+    overlay_position: editor.overlayPosition,
     placement: decoded.placement,
     variant:
       typeof row.variant === 'string'
         ? (row.variant as PublicMediaAsset['variant'])
         : 'original',
-    focal_x: row.focal_x == null ? null : Number(row.focal_x),
-    focal_y: row.focal_y == null ? null : Number(row.focal_y),
+    focal_x: envelope.editor ? editor.applied.mobile.x : row.focal_x == null ? null : Number(row.focal_x),
+    focal_y: envelope.editor ? editor.applied.mobile.y : row.focal_y == null ? null : Number(row.focal_y),
     display_order: Number(row.display_order ?? 1),
     active,
     status,
     created_at: typeof row.created_at === 'string' ? row.created_at : null,
     updated_at: typeof row.updated_at === 'string' ? row.updated_at : null,
+    editor,
   }
 }
 
@@ -176,14 +220,9 @@ export function toInsertRow(
         : typeof input.title_en === 'string'
           ? input.title_en
           : null,
-    label_es:
-      typeof input.label_es === 'string'
-        ? input.label_es
-        : typeof input.title_es === 'string'
-          ? input.title_es
-          : null,
+    label_es: persistCompatLabelEs(input),
     display_order: Number(input.display_order ?? 1),
-    active: status !== 'inactive',
+    active: typeof input.active === 'boolean' ? input.active : status !== 'inactive',
   }
   if (!extended) return row
   return {
@@ -209,6 +248,21 @@ export function toInsertRow(
     created_by: input.created_by ?? null,
     updated_by: input.updated_by ?? null,
   }
+}
+
+function persistCompatLabelEs(input: Record<string, unknown>) {
+  const editor = (input.editor ?? input.editorMeta) as MediaEditorMeta | undefined
+  if (editor) {
+    return serializeEditorEnvelope(
+      typeof input.label_es === 'string' ? input.label_es : editor.title_es,
+      editor,
+    )
+  }
+  return typeof input.label_es === 'string'
+    ? input.label_es
+    : typeof input.title_es === 'string'
+      ? input.title_es
+      : null
 }
 
 const COMPAT_UPDATABLE = new Set([
@@ -266,6 +320,21 @@ export function toUpdateRow(
     if (typeof patch.status === 'string') {
       patch.active = patch.status !== 'inactive'
     }
+    if (body.editor || body.editorMeta) {
+      const editor = defaultEditorMeta(
+        (body.editor ?? body.editorMeta) as MediaEditorMeta,
+      )
+      patch.overlay_enabled = editor.overlayEnabled
+      patch.overlay_position = editor.overlayPosition
+      patch.title_pt = editor.title_pt
+      patch.title_en = editor.title_en
+      patch.title_es = editor.title_es
+      patch.subtitle_pt = editor.subtitle_pt
+      patch.subtitle_en = editor.subtitle_en
+      patch.subtitle_es = editor.subtitle_es
+      patch.focal_x = editor.applied.mobile.x
+      patch.focal_y = editor.applied.mobile.y
+    }
     return patch
   }
 
@@ -283,14 +352,20 @@ export function toUpdateRow(
   if (typeof body.label_en === 'string' || typeof body.title_en === 'string') {
     patch.label_en = (body.label_en ?? body.title_en) as string
   }
-  if (typeof body.label_es === 'string' || typeof body.title_es === 'string') {
-    patch.label_es = (body.label_es ?? body.title_es) as string
-  }
   if (body.display_order != null) patch.display_order = Number(body.display_order)
   if (typeof body.status === 'string') {
     patch.active = body.status !== 'inactive'
   } else if (typeof body.active === 'boolean') {
     patch.active = body.active
+  }
+  const editorInput = (body.editor ?? body.editorMeta) as MediaEditorMeta | undefined
+  if (editorInput) {
+    const editor = defaultEditorMeta(editorInput)
+    patch.label_pt = editor.title_pt || current.label_pt
+    patch.label_en = editor.title_en || current.label_en
+    patch.label_es = serializeEditorEnvelope(editor.title_es || current.label_es, editor)
+  } else if (typeof body.label_es === 'string' || typeof body.title_es === 'string') {
+    patch.label_es = (body.label_es ?? body.title_es) as string
   }
   for (const key of Object.keys(patch)) {
     if (!COMPAT_UPDATABLE.has(key)) delete patch[key]

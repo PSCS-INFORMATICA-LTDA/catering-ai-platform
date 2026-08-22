@@ -29,7 +29,9 @@ export async function GET(request: Request) {
   if (error) {
     return Response.json({ error, assets: [] }, { status: 500 })
   }
-  return Response.json({ assets })
+  const nextOrder =
+    assets.reduce((max, asset) => Math.max(max, asset.display_order || 0), 0) + 1
+  return Response.json({ assets, nextOrder })
 }
 
 export async function POST(request: Request) {
@@ -48,7 +50,7 @@ export async function POST(request: Request) {
   if (!MEDIA_PLACEMENTS.includes(placement as (typeof MEDIA_PLACEMENTS)[number])) {
     return Response.json({ error: 'invalid_placement' }, { status: 400 })
   }
-  const actor = auth.session.appUser?.id ?? auth.session.userId
+  const actor = auth.session.userId
   const { asset, error } = await insertCompanyPublicMedia(getSupabaseServerClient(), {
     ...body,
     company_id: companyId,

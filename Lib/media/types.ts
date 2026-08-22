@@ -4,6 +4,7 @@ import type {
   MediaStatus,
   MediaVariant,
 } from './constants'
+import type { MediaEditorMeta } from './editorMeta'
 
 export type PublicMediaAsset = {
   id: string
@@ -38,6 +39,7 @@ export type PublicMediaAsset = {
   status: MediaStatus
   created_at: string | null
   updated_at: string | null
+  editor: MediaEditorMeta
 }
 
 export type PublicHowItWorksVideo = {

@@ -1690,6 +1690,28 @@ body {
   left: 0.9rem;
 }
 
+.public-hero-caption--center {
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.public-hero-caption--center .public-hero-caption-rule {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.public-hero-caption--bottom-right {
+  bottom: 2.35rem;
+  right: 0.9rem;
+  text-align: right;
+}
+
+.public-hero-caption--bottom-right .public-hero-caption-rule {
+  margin-left: auto;
+}
+
 @media (min-width: 1024px) {
   .public-hero-caption {
     display: none;

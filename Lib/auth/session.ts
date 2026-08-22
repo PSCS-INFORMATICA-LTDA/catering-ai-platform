@@ -148,10 +148,12 @@ export async function getAuthSession(): Promise<AuthSessionContext | null> {
       const fallbackMedia = fallbackPermissionsForRole(activeMembership.role).filter(
         (key) => key.startsWith('media.'),
       )
-      const dbHasMedia = fromDb.some((key) => key.startsWith('media.'))
-      permissions = dbHasMedia
-        ? fromDb
-        : Array.from(new Set([...fromDb, ...fallbackMedia]))
+      permissions = Array.from(
+        new Set([
+          ...fromDb,
+          ...fallbackMedia.filter((key) => !fromDb.includes(key)),
+        ]),
+      )
     }
   }
 

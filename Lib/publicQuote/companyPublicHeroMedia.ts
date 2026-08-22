@@ -4,7 +4,12 @@
  * receive their own official set. Do not inline these URLs in JSX.
  */
 
-export type PublicHeroCaptionAlign = 'top-left' | 'top-right' | 'bottom-left'
+export type PublicHeroCaptionAlign =
+  | 'top-left'
+  | 'top-right'
+  | 'center'
+  | 'bottom-left'
+  | 'bottom-right'
 
 export type PublicHeroCaptionCopy = {
   readonly pt: string

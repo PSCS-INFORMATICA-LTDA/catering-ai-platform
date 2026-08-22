@@ -26,7 +26,9 @@ function parseAlign(value: string | null | undefined): PublicHeroCaptionAlign | 
   if (
     value === 'top-left' ||
     value === 'top-right' ||
-    value === 'bottom-left'
+    value === 'bottom-left' ||
+    value === 'center' ||
+    value === 'bottom-right'
   ) {
     return value
   }
@@ -39,10 +41,10 @@ export function mediaAssetToHeroItem(asset: PublicMediaAsset): PublicHeroMediaIt
   const hint = catalogHint(asset)
   const hasStoredFocal = asset.focal_x != null && asset.focal_y != null
   const mobilePosition = hasStoredFocal
-    ? `${focalToCss(asset.focal_x)} ${focalToCss(asset.focal_y)}`
+    ? `${focalToCss(asset.editor?.applied.mobile.x ?? asset.focal_x)} ${focalToCss(asset.editor?.applied.mobile.y ?? asset.focal_y)}`
     : hint?.mobilePosition || `${focalToCss(asset.focal_x)} ${focalToCss(asset.focal_y)}`
   const desktopPosition = hasStoredFocal
-    ? mobilePosition
+    ? `${focalToCss(asset.editor?.applied.desktop.x ?? asset.focal_x)} ${focalToCss(asset.editor?.applied.desktop.y ?? asset.focal_y)}`
     : hint?.desktopPosition || mobilePosition
   const overlayCaption = asset.overlay_enabled
     ? {
@@ -51,8 +53,14 @@ export function mediaAssetToHeroItem(asset: PublicMediaAsset): PublicHeroMediaIt
         es: asset.title_es || asset.label_es || '',
       }
     : undefined
-  const caption =
-    overlayCaption && (overlayCaption.pt || overlayCaption.en || overlayCaption.es)
+  const hasOverlayCopy = Boolean(
+    overlayCaption && (overlayCaption.pt || overlayCaption.en || overlayCaption.es),
+  )
+  const caption = asset.editor?.overlayDecided
+    ? hasOverlayCopy
+      ? overlayCaption
+      : undefined
+    : hasOverlayCopy
       ? overlayCaption
       : hint?.caption
   return {

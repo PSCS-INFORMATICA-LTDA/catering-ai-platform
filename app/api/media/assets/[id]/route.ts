@@ -1,9 +1,17 @@
 import { writeAdminAudit } from '@/Lib/auth/session'
+import { hasPermission } from '@/Lib/auth/permissions'
 import {
   requireApiPermission,
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
 import {
+  COMPANY_PUBLIC_MEDIA_BUCKET,
+  canDeleteStorageObject,
+  findMediaDeleteBlockers,
+} from '@/Lib/media/references'
+import {
+  getCompanyPublicMedia,
+  hardDeleteCompanyPublicMedia,
   softDisableCompanyPublicMedia,
   updateCompanyPublicMedia,
 } from '@/Lib/media/repository'
@@ -34,12 +42,13 @@ export async function PATCH(
     actor,
   )
   if (error || !asset) {
-    return Response.json({ error: error || 'update_failed' }, { status: 404 })
+    console.error('[media] save failed', { companyId, id, error })
+    return Response.json({ error: 'save_failed' }, { status: 400 })
   }
   await writeAdminAudit({
     companyId,
     actorUserId: actor,
-    action: body.status ? 'media.publish' : 'media.update',
+    action: body.active === false || body.status === 'inactive' ? 'media.unpublish' : 'media.update',
     entityType: 'media_assets',
     entityId: id,
     metadata: { keys: Object.keys(body) },
@@ -48,7 +57,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   const auth = await requireApiPermission('media.manage')
@@ -56,22 +65,77 @@ export async function DELETE(
   const companyId = resolveAuthorizedCompanyId(auth.session)
   const { id } = await context.params
   const actor = auth.session.appUser?.id ?? auth.session.userId
-  const { ok, error } = await softDisableCompanyPublicMedia(
-    getSupabaseServerClient(),
-    companyId,
-    id,
-    actor,
-  )
-  if (!ok) {
-    return Response.json({ error: error || 'delete_failed' }, { status: 404 })
+  const hard = new URL(request.url).searchParams.get('hard') === '1'
+  const supabase = getSupabaseServerClient()
+
+  if (!hard) {
+    const { ok, error } = await softDisableCompanyPublicMedia(supabase, companyId, id, actor)
+    if (!ok) {
+      console.error('[media] inactivate failed', { companyId, id, error })
+      return Response.json({ error: 'save_failed' }, { status: 404 })
+    }
+    await writeAdminAudit({
+      companyId,
+      actorUserId: actor,
+      action: 'media.delete',
+      entityType: 'media_assets',
+      entityId: id,
+      metadata: { soft: true },
+    })
+    return Response.json({ ok: true, soft: true })
   }
+
+  const canHardDelete =
+    auth.session.isPlatformAdmin || hasPermission(auth.session.permissions, 'media.delete')
+  if (!canHardDelete) {
+    return Response.json({ error: 'delete_forbidden' }, { status: 403 })
+  }
+
+  const current = await getCompanyPublicMedia(supabase, companyId, id)
+  if (!current.asset) {
+    return Response.json({ error: 'not_found' }, { status: 404 })
+  }
+
+  const blockers = await findMediaDeleteBlockers(supabase, {
+    companyId,
+    assetId: id,
+    mediaUrl: current.asset.media_url,
+    storagePath: current.asset.storage_path,
+  })
+  const unsafe = blockers.filter((item) => item !== 'media_assets')
+  if (unsafe.length > 0) {
+    return Response.json({ error: 'delete_referenced', blockers: unsafe }, { status: 409 })
+  }
+
+  const storagePath = current.asset.storage_path
+  const { ok, error } = await hardDeleteCompanyPublicMedia(supabase, companyId, id)
+  if (!ok) {
+    console.error('[media] hard delete failed', { companyId, id, error })
+    return Response.json({ error: 'delete_failed' }, { status: 400 })
+  }
+
+  if (
+    canDeleteStorageObject({
+      companyId,
+      storagePath,
+      sharedBlockers: blockers,
+    })
+  ) {
+    const removed = await supabase.storage
+      .from(COMPANY_PUBLIC_MEDIA_BUCKET)
+      .remove([storagePath as string])
+    if (removed.error) {
+      console.error('[media] storage delete after row delete', removed.error.message)
+    }
+  }
+
   await writeAdminAudit({
     companyId,
     actorUserId: actor,
     action: 'media.delete',
     entityType: 'media_assets',
     entityId: id,
-    metadata: { soft: true },
+    metadata: { soft: false, storagePath, blockers },
   })
-  return Response.json({ ok: true })
+  return Response.json({ ok: true, soft: false })
 }

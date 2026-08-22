@@ -66,6 +66,7 @@
     "test:dev:public-quote-hero": "node --experimental-strip-types scripts/dev/test-public-quote-hero-photography.mjs",
     "test:dev:public-quote-how-it-works": "node scripts/dev/test-public-quote-how-it-works.mjs",
     "test:dev:media-content": "node scripts/dev/test-media-content-manager.mjs",
+    "test:dev:media-hero-ux": "node scripts/dev/test-media-hero-ux-v2.mjs",
     "test:dev:media-isolation": "node --experimental-strip-types scripts/dev/test-media-isolation.mjs",
     "provision:dev:media-foundation": "node scripts/dev/provision-dev-media-foundation.mjs",
     "apply:dev:media-migration": "node scripts/dev/apply-dev-media-migration.mjs",

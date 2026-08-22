@@ -17,6 +17,10 @@ export default async function MediaContentPage() {
     session &&
       (session.isPlatformAdmin || hasPermission(session.permissions, 'media.manage')),
   )
+  const canDelete = Boolean(
+    session &&
+      (session.isPlatformAdmin || hasPermission(session.permissions, 'media.delete')),
+  )
 
   if (!session || !canView) {
     return (
@@ -30,7 +34,7 @@ export default async function MediaContentPage() {
 
   return (
     <main className="min-h-screen bg-cdl-bg px-4 py-8 sm:px-6">
-      <MediaContentManager locale={locale} canManage={canManage} />
+      <MediaContentManager locale={locale} canManage={canManage} canDelete={canDelete} />
     </main>
   )
 }

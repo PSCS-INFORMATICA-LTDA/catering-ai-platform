@@ -39,6 +39,14 @@ const permissions = [
     category_key: 'media',
     active: true,
   },
+  {
+    permission_key: 'media.delete',
+    label_pt: 'Excluir mídia permanentemente',
+    label_en: 'Delete media permanently',
+    label_es: 'Eliminar medios de forma permanente',
+    category_key: 'media',
+    active: true,
+  },
 ]
 
 const { error: permError } = await supabase
@@ -51,6 +59,7 @@ if (permError) {
 
 const roleKeys = ['owner', 'admin', 'manager']
 const permKeys = ['media.view', 'media.manage']
+const deleteRoles = ['owner', 'admin']
 for (const role_key of roleKeys) {
   for (const permission_key of permKeys) {
     const { data: existing } = await supabase
@@ -67,6 +76,23 @@ for (const role_key of roleKeys) {
       console.error('role_permissions:', error.message)
       process.exit(1)
     }
+  }
+}
+
+for (const role_key of deleteRoles) {
+  const { data: existing } = await supabase
+    .from('role_permissions')
+    .select('id')
+    .eq('role_key', role_key)
+    .eq('permission_key', 'media.delete')
+    .maybeSingle()
+  if (existing) continue
+  const { error } = await supabase
+    .from('role_permissions')
+    .insert({ role_key, permission_key: 'media.delete' })
+  if (error) {
+    console.error('role_permissions delete:', error.message)
+    process.exit(1)
   }
 }
 
@@ -97,7 +123,7 @@ if (!(buckets ?? []).some((bucket) => bucket.id === 'company-public-media')) {
 const { data: seededPerms } = await supabase
   .from('permissions')
   .select('permission_key')
-  .in('permission_key', permKeys)
+  .in('permission_key', [...permKeys, 'media.delete'])
 const { data: seededRoles } = await supabase
   .from('role_permissions')
   .select('role_key, permission_key')
