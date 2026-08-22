@@ -4,6 +4,7 @@ import {
   requireApiPermission,
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
+import { noStoreJson } from '@/Lib/media/batchValidate'
 import { PUBLIC_MEDIA_ENTITY_TYPE, MEDIA_PLACEMENTS } from '@/Lib/media/constants'
 import {
   insertCompanyPublicMedia,
@@ -27,11 +28,11 @@ export async function GET(request: Request) {
       : null,
   )
   if (error) {
-    return Response.json({ error, assets: [] }, { status: 500 })
+    return noStoreJson({ error, assets: [] }, 500)
   }
   const nextOrder =
     assets.reduce((max, asset) => Math.max(max, asset.display_order || 0), 0) + 1
-  return Response.json({ assets, nextOrder })
+  return noStoreJson({ assets, nextOrder })
 }
 
 export async function POST(request: Request) {
@@ -42,25 +43,27 @@ export async function POST(request: Request) {
   try {
     body = (await request.json()) as Record<string, unknown>
   } catch {
-    return Response.json({ error: 'invalid_json' }, { status: 400 })
+    return noStoreJson({ error: 'invalid_json' }, 400)
   }
   const spoofed = rejectSpoofedCompanyId(auth.session, body.company_id)
   if (spoofed) return spoofed
   const placement = String(body.placement || '')
   if (!MEDIA_PLACEMENTS.includes(placement as (typeof MEDIA_PLACEMENTS)[number])) {
-    return Response.json({ error: 'invalid_placement' }, { status: 400 })
+    return noStoreJson({ error: 'invalid_placement' }, 400)
   }
   const actor = auth.session.userId
+  const requestedKey = typeof body.entity_key === 'string' ? body.entity_key.trim() : ''
   const { asset, error } = await insertCompanyPublicMedia(getSupabaseServerClient(), {
     ...body,
     company_id: companyId,
     entity_type: PUBLIC_MEDIA_ENTITY_TYPE,
     placement,
+    entity_key: requestedKey.startsWith(`${placement}:`) ? requestedKey : undefined,
     created_by: actor,
     updated_by: actor,
   })
   if (error || !asset) {
-    return Response.json({ error: error || 'insert_failed' }, { status: 500 })
+    return noStoreJson({ error: error || 'insert_failed' }, 500)
   }
   await writeAdminAudit({
     companyId,
@@ -70,5 +73,5 @@ export async function POST(request: Request) {
     entityId: asset.id,
     metadata: { placement, entity_key: asset.entity_key },
   })
-  return Response.json({ asset })
+  return noStoreJson({ asset })
 }

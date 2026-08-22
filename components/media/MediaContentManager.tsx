@@ -12,6 +12,9 @@ import {
 } from '@/Lib/media/editorMeta'
 import type { MediaCatalogImageItem, PublicMediaAsset } from '@/Lib/media/types'
 import { getCompanyPublicHeroMedia } from '@/Lib/publicQuote/companyPublicHeroMedia'
+import HeroBatchImporter from './HeroBatchImporter'
+import HeroDeviceCompare from './HeroDeviceCompare'
+import HeroFocusEditor from './HeroFocusEditor'
 import HeroMediaCard, { type HeroDraft } from './HeroMediaCard'
 
 type Tab = 'hero' | 'how_it_works' | 'video' | 'packages' | 'additionals'
@@ -31,6 +34,7 @@ function apiErrorMessage(locale: string, error?: string) {
   if (error === 'delete_forbidden') return tMedia(locale, 'deleteForbidden')
   if (error === 'file_too_large') return tMedia(locale, 'fileTooLarge')
   if (error === 'invalid_type' || error === 'invalidFile') return tMedia(locale, 'invalidFile')
+  if (error === 'reorder_failed') return tMedia(locale, 'batchReorderFailed')
   return tMedia(locale, 'saveFailed')
 }
 
@@ -67,7 +71,7 @@ function seedCopy(asset: PublicMediaAsset) {
   })
 }
 
-function toDraft(asset: PublicMediaAsset): HeroDraft {
+function toDraft(asset: PublicMediaAsset, importedIds: string[] = []): HeroDraft {
   return {
     id: asset.id,
     persisted: asset,
@@ -85,6 +89,8 @@ function toDraft(asset: PublicMediaAsset): HeroDraft {
     confirmDelete: false,
     showAdvanced: false,
     lightbox: false,
+    selected: false,
+    imported: importedIds.includes(asset.id),
   }
 }
 
@@ -105,18 +111,25 @@ export default function MediaContentManager({
   const [busy, setBusy] = useState(false)
   const [orderDirty, setOrderDirty] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [batching, setBatching] = useState(false)
   const [addFile, setAddFile] = useState<File | null>(null)
   const [addPreview, setAddPreview] = useState<string | null>(null)
   const [addDraft, setAddDraft] = useState<HeroDraft | null>(null)
+  const [focusId, setFocusId] = useState<string | null>(null)
+  const [compareId, setCompareId] = useState<string | null>(null)
+  const [importedIds, setImportedIds] = useState<string[]>([])
+  const [onlyImported, setOnlyImported] = useState(false)
 
-  const loadAssets = useCallback(async (placement: Tab) => {
+  const loadAssets = useCallback(async (placement: Tab, keepImported = importedIds) => {
     if (placement === 'packages' || placement === 'additionals') return
-    const response = await fetch(`/api/media/assets?placement=${placement}`)
+    const response = await fetch(`/api/media/assets?placement=${placement}`, {
+      cache: 'no-store',
+    })
     const json = (await response.json()) as { assets?: PublicMediaAsset[]; error?: string }
     if (!response.ok) throw new Error(json.error || 'load_failed')
-    setDrafts((json.assets ?? []).map(toDraft))
+    setDrafts((json.assets ?? []).map((asset) => toDraft(asset, keepImported)))
     setOrderDirty(false)
-  }, [])
+  }, [importedIds])
 
   const loadCatalog = useCallback(async (kind: 'packages' | 'additionals') => {
     const response = await fetch(`/api/media/catalog?kind=${kind}`)
@@ -146,11 +159,15 @@ export default function MediaContentManager({
   const visibleDrafts = useMemo(
     () =>
       drafts.filter((draft) => {
+        if (onlyImported && !draft.imported) return false
         const hay = `${draft.entityKey} ${draft.copy.title_pt}`.toLowerCase()
         return hay.includes(query.trim().toLowerCase())
       }),
-    [drafts, query],
+    [drafts, onlyImported, query],
   )
+  const selectedIds = drafts.filter((draft) => draft.selected && draft.persisted).map((draft) => draft.persisted!.id)
+  const focusDraft = drafts.find((draft) => draft.id === focusId) ?? addDraft
+  const compareDraft = drafts.find((draft) => draft.id === compareId) ?? addDraft
 
   function updateDraft(id: string, next: HeroDraft) {
     setAddDraft((current) => (current?.id === id ? next : current))
@@ -184,7 +201,6 @@ export default function MediaContentManager({
           body: JSON.stringify({
             placement: 'hero',
             media_type: 'image',
-            entity_key: working.entityKey || `hero-${working.sequence}`,
             display_order: working.sequence,
             active: working.active,
             editor: working.editor,
@@ -205,8 +221,6 @@ export default function MediaContentManager({
         updateDraft(working.id, { ...working, saving: true })
       }
 
-      // Existing rows keep their stored identity. Edit PATCH must not send entity_key.
-
       if (working.pendingFile && assetId) {
         const form = new FormData()
         form.set('file', working.pendingFile)
@@ -222,7 +236,6 @@ export default function MediaContentManager({
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          display_order: working.sequence,
           active: working.active,
           editor: working.editor,
           title_pt: working.copy.title_pt,
@@ -236,7 +249,7 @@ export default function MediaContentManager({
       const json = (await response.json()) as { asset?: PublicMediaAsset; error?: string }
       if (!response.ok || !json.asset) throw new Error(json.error || 'save_failed')
       updateDraft(working.id, {
-        ...toDraft(json.asset),
+        ...toDraft(json.asset, importedIds),
         dirty: false,
         saving: false,
         savedFlash: true,
@@ -258,11 +271,47 @@ export default function MediaContentManager({
       const response = await fetch('/api/media/assets/reorder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids }),
+        body: JSON.stringify({ placement: tab === 'hero' ? 'hero' : tab, ids }),
+      })
+      const json = (await response.json()) as { error?: string }
+      if (!response.ok) throw new Error(json.error || 'reorder_failed')
+      await loadAssets(tab)
+    } catch {
+      setError(tMedia(locale, 'saveFailed'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function normalizeOrder() {
+    if (!canManage || tab !== 'hero') return
+    setBusy(true)
+    try {
+      const response = await fetch('/api/media/assets/normalize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ placement: 'hero' }),
       })
       if (!response.ok) throw new Error('save_failed')
-      setDrafts((current) => current.map((draft) => ({ ...draft, dirty: false })))
-      setOrderDirty(false)
+      await loadAssets('hero')
+    } catch {
+      setError(tMedia(locale, 'saveFailed'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function bulkActive(active: boolean) {
+    if (!canManage || selectedIds.length === 0) return
+    setBusy(true)
+    try {
+      const response = await fetch('/api/media/assets/bulk-active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds, active }),
+      })
+      if (!response.ok) throw new Error('save_failed')
+      await loadAssets(tab)
     } catch {
       setError(tMedia(locale, 'saveFailed'))
     } finally {
@@ -296,6 +345,8 @@ export default function MediaContentManager({
       const analysis = await suggestFocusFromFile(file)
       editor = defaultEditorMeta({
         focusMode: 'auto',
+        overlayEnabled: false,
+        overlayDecided: true,
         suggested: analysis.suggested,
         applied: analysis.suggested,
       })
@@ -307,7 +358,7 @@ export default function MediaContentManager({
       persisted: null,
       sequence,
       active: false,
-      entityKey: `hero-${sequence}`,
+      entityKey: '',
       mediaUrl: preview,
       pendingFile: file ?? null,
       editor,
@@ -319,6 +370,8 @@ export default function MediaContentManager({
       confirmDelete: false,
       showAdvanced: false,
       lightbox: false,
+      selected: false,
+      imported: false,
     })
     setAdding(true)
   }
@@ -358,7 +411,7 @@ export default function MediaContentManager({
   }
 
   return (
-    <div className="space-y-6" data-media-content-manager data-hero-ux="v2">
+    <div className="space-y-6" data-media-content-manager data-hero-ux="v3">
       <header className="space-y-2">
         <h1 className="text-2xl font-black tracking-tight text-cdl-title">
           {tMedia(locale, 'title')}
@@ -412,13 +465,30 @@ export default function MediaContentManager({
           className="min-h-11 w-full max-w-sm rounded-xl border border-cdl-border bg-white px-3 text-sm"
         />
         {canManage && tab === 'hero' ? (
-          <button
-            type="button"
-            className="min-h-11 rounded-xl bg-[var(--brand-primary)] px-4 text-sm font-bold text-white"
-            onClick={() => void openAdd()}
-          >
-            {tMedia(locale, 'actionAdd')}
-          </button>
+          <>
+            <button
+              type="button"
+              className="min-h-11 rounded-xl bg-[var(--brand-primary)] px-4 text-sm font-bold text-white"
+              onClick={() => void openAdd()}
+            >
+              {tMedia(locale, 'actionAdd')}
+            </button>
+            <button
+              type="button"
+              className="min-h-11 rounded-xl border border-cdl-border px-4 text-sm font-bold"
+              onClick={() => setBatching(true)}
+            >
+              {tMedia(locale, 'actionBatchAdd')}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              className="min-h-11 rounded-xl border border-cdl-border px-4 text-sm font-bold"
+              onClick={() => void normalizeOrder()}
+            >
+              {tMedia(locale, 'actionNormalize')}
+            </button>
+          </>
         ) : null}
         {canManage && orderDirty && tab === 'hero' ? (
           <button
@@ -430,6 +500,36 @@ export default function MediaContentManager({
             {tMedia(locale, 'saveOrder')}
           </button>
         ) : null}
+        {canManage && selectedIds.length > 0 ? (
+          <>
+            <button
+              type="button"
+              disabled={busy}
+              className="min-h-11 rounded-xl border border-cdl-border px-4 text-sm font-bold"
+              onClick={() => void bulkActive(true)}
+            >
+              {tMedia(locale, 'actionActivateSelected')}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              className="min-h-11 rounded-xl border border-cdl-border px-4 text-sm font-bold"
+              onClick={() => void bulkActive(false)}
+            >
+              {tMedia(locale, 'actionDeactivateSelected')}
+            </button>
+          </>
+        ) : null}
+        {importedIds.length > 0 ? (
+          <label className="flex items-center gap-2 text-sm font-semibold">
+            <input
+              type="checkbox"
+              checked={onlyImported}
+              onChange={(event) => setOnlyImported(event.target.checked)}
+            />
+            {tMedia(locale, 'batchImportedFilter')}
+          </label>
+        ) : null}
       </div>
 
       {error ? (
@@ -439,7 +539,7 @@ export default function MediaContentManager({
       ) : null}
 
       {tab === 'hero' ? (
-        <div className="space-y-4">
+        <div className="space-y-4" data-media-playlist>
           {visibleDrafts.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-cdl-border p-6 text-sm text-cdl-muted">
               {tMedia(locale, 'empty')}
@@ -458,6 +558,7 @@ export default function MediaContentManager({
               onMove={(direction) => moveDraft(draft.id, direction)}
               onSave={() => void saveDraft(draft)}
               onDelete={() => void deleteDraft(draft)}
+              onAdjustFocus={() => setFocusId(draft.id)}
             />
           ))}
         </div>
@@ -517,6 +618,9 @@ export default function MediaContentManager({
           <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-3xl bg-white p-5">
             <h2 className="text-xl font-black">{tMedia(locale, 'addTitle')}</h2>
             <p className="mt-1 text-sm text-cdl-muted">{tMedia(locale, 'addHint')}</p>
+            <p className="mt-1 text-xs font-semibold text-cdl-muted">
+              {tMedia(locale, 'defaultInactiveHint')}
+            </p>
             <label className="mt-4 inline-flex min-h-11 cursor-pointer items-center rounded-xl border border-cdl-border px-4 text-sm font-semibold">
               {tMedia(locale, 'actionReplace')}
               <input
@@ -542,6 +646,7 @@ export default function MediaContentManager({
                   onMove={() => undefined}
                   onSave={() => void saveNew()}
                   onDelete={() => undefined}
+                  onAdjustFocus={() => setFocusId(addDraft.id)}
                 />
               </div>
             ) : null}
@@ -561,6 +666,39 @@ export default function MediaContentManager({
             </div>
           </div>
         </div>
+      ) : null}
+
+      {batching ? (
+        <HeroBatchImporter
+          locale={locale}
+          existing={drafts}
+          onClose={() => setBatching(false)}
+          onDone={async (ids, reorderFailed) => {
+            setImportedIds(ids)
+            setOnlyImported(true)
+            setBatching(false)
+            if (reorderFailed) setError(tMedia(locale, 'batchReorderFailed'))
+            await loadAssets('hero', ids)
+          }}
+        />
+      ) : null}
+
+      {focusDraft && focusId ? (
+        <HeroFocusEditor
+          locale={locale}
+          draft={focusDraft}
+          onChange={(next) => updateDraft(focusDraft.id, next)}
+          onClose={() => setFocusId(null)}
+          onCompare={() => setCompareId(focusDraft.id)}
+        />
+      ) : null}
+
+      {compareDraft && compareId ? (
+        <HeroDeviceCompare
+          locale={locale}
+          draft={compareDraft}
+          onClose={() => setCompareId(null)}
+        />
       ) : null}
     </div>
   )

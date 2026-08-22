@@ -12,6 +12,8 @@ export type MediaLocale = (typeof MEDIA_LOCALES)[number]
 
 export const MAX_PUBLIC_IMAGE_BYTES = 8 * 1024 * 1024
 export const MAX_PUBLIC_VIDEO_BYTES = 40 * 1024 * 1024
+export const MEDIA_BATCH_LIMIT = 20
+export const MEDIA_UPLOAD_CONCURRENCY = 4
 
 export const ALLOWED_PUBLIC_IMAGE_TYPES = new Set([
   'image/jpeg',

@@ -153,7 +153,7 @@ export function toInsertRow(
   const row: Record<string, unknown> = {
     company_id: input.company_id,
     entity_type: input.entity_type,
-    entity_key: extended ? key : encodePublicEntityKey(placement, key),
+    entity_key: encodePublicEntityKey(placement, key),
     media_type: typeof input.media_type === 'string' ? input.media_type : 'image',
     media_url: typeof input.media_url === 'string' ? input.media_url : null,
     storage_path:
