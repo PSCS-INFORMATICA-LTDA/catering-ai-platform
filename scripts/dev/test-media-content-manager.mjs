@@ -129,12 +129,12 @@ report(
     !editAllow.includes('media_url') &&
     !editAllow.includes('storage_path') &&
     !editAllow.includes('company_id') &&
-    manager.includes('display_order: working.sequence') &&
-    patchPayload.includes('display_order: working.sequence') &&
     !patchPayload.includes('entity_key') &&
+    !patchPayload.includes('display_order') &&
     !patchPayload.includes('media_url') &&
     !patchPayload.includes('storage_path') &&
-    !patchPayload.includes('company_id'),
+    !patchPayload.includes('company_id') &&
+    manager.includes('/api/media/assets/reorder'),
 )
 
 console.log('')

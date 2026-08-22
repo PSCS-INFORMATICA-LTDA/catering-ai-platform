@@ -4,8 +4,7 @@ import {
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
 import { noStoreJson } from '@/Lib/media/batchValidate'
-import { MEDIA_PLACEMENTS, type MediaPlacement } from '@/Lib/media/constants'
-import { reorderCompanyPublicMedia } from '@/Lib/media/repository'
+import { bulkSetCompanyPublicMediaActive } from '@/Lib/media/repository'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
@@ -14,36 +13,33 @@ export async function POST(request: Request) {
   const auth = await requireApiPermission('media.manage')
   if (!auth.ok) return auth.response
   const companyId = resolveAuthorizedCompanyId(auth.session)
-  let body: { ids?: string[]; placement?: string }
+  let body: { ids?: string[]; active?: boolean }
   try {
-    body = (await request.json()) as { ids?: string[]; placement?: string }
+    body = (await request.json()) as { ids?: string[]; active?: boolean }
   } catch {
     return noStoreJson({ error: 'invalid_json' }, 400)
   }
   const ids = (body.ids ?? []).filter((id) => typeof id === 'string')
-  if (ids.length === 0) {
-    return noStoreJson({ error: 'missing_ids' }, 400)
+  if (typeof body.active !== 'boolean' || ids.length === 0) {
+    return noStoreJson({ error: 'invalid_bulk_active' }, 400)
   }
-  const placement = MEDIA_PLACEMENTS.includes(body.placement as MediaPlacement)
-    ? (body.placement as MediaPlacement)
-    : null
   const actor = auth.session.appUser?.id ?? auth.session.userId
-  const { ok, error, assets } = await reorderCompanyPublicMedia(
+  const { ok, error, assets } = await bulkSetCompanyPublicMediaActive(
     getSupabaseServerClient(),
     companyId,
     ids,
+    body.active,
     actor,
-    placement,
   )
   if (!ok) {
-    return noStoreJson({ error: error || 'reorder_failed' }, 500)
+    return noStoreJson({ error: error || 'bulk_active_failed' }, 500)
   }
   await writeAdminAudit({
     companyId,
     actorUserId: actor,
-    action: 'media.reorder',
+    action: body.active ? 'media.bulk_activate' : 'media.bulk_unpublish',
     entityType: 'media_assets',
-    metadata: { ids, placement },
+    metadata: { ids, active: body.active },
   })
   return noStoreJson({ ok: true, assets })
 }

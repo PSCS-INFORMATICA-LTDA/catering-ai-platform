@@ -8,6 +8,7 @@ import {
   canDeleteStorageObject,
   findMediaDeleteBlockers,
 } from '@/Lib/media/references'
+import { noStoreJson } from '@/Lib/media/batchValidate'
 import {
   getCompanyPublicMedia,
   hardDeleteCompanyPublicMedia,
@@ -29,9 +30,14 @@ export async function PATCH(
   try {
     body = (await request.json()) as Record<string, unknown>
   } catch {
-    return Response.json({ error: 'invalid_json' }, { status: 400 })
+    return noStoreJson({ error: 'invalid_json' }, 400)
   }
   const actor = auth.session.appUser?.id ?? auth.session.userId
+  delete body.entity_key
+  delete body.entity_type
+  delete body.entity_id
+  delete body.company_id
+  delete body.id
   const { asset, error } = await updateCompanyPublicMedia(
     getSupabaseServerClient(),
     companyId,
@@ -41,7 +47,7 @@ export async function PATCH(
   )
   if (error || !asset) {
     console.error('[media] save failed', { companyId, id, error })
-    return Response.json({ error: 'save_failed' }, { status: 400 })
+    return noStoreJson({ error: 'save_failed' }, 400)
   }
   await writeAdminAudit({
     companyId,
@@ -51,7 +57,7 @@ export async function PATCH(
     entityId: id,
     metadata: { keys: Object.keys(body) },
   })
-  return Response.json({ asset })
+  return noStoreJson({ asset })
 }
 
 export async function DELETE(
