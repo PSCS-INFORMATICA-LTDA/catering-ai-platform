@@ -28,6 +28,16 @@ const { t, list } = makeI18nModule('media', 'ui', {
   actionSave: { pt: 'Salvar', en: 'Save', es: 'Guardar' },
   actionSaving: { pt: 'Salvando…', en: 'Saving…', es: 'Guardando…' },
   actionSaved: { pt: 'Salvo', en: 'Saved', es: 'Guardado' },
+  savedPublicUpdated: {
+    pt: 'Alterações salvas e atualizadas na página pública.',
+    en: 'Changes saved and updated on the public page.',
+    es: 'Cambios guardados y actualizados en la página pública.',
+  },
+  savedInactiveHidden: {
+    pt: 'Alterações salvas. Esta mídia está inativa e não aparece na página pública.',
+    en: 'Changes saved. This media is inactive and is not shown on the public page.',
+    es: 'Cambios guardados. Este medio está inactivo y no aparece en la página pública.',
+  },
   actionDelete: { pt: 'Excluir', en: 'Delete', es: 'Eliminar' },
   actionDeleteForever: {
     pt: 'Excluir definitivamente',

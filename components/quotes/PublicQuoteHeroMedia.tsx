@@ -202,9 +202,13 @@ export default function PublicQuoteHeroMedia({
             <div
               key={item.id}
               data-hero-photo-id={item.id}
+              data-hero-mobile-pos={item.mobilePosition}
+              data-hero-tablet-pos={item.tabletPosition || item.mobilePosition}
+              data-hero-desktop-pos={item.desktopPosition}
               className={`public-hero-slide ${isActive ? 'is-active' : ''}`}
               style={{
                 ['--hero-pos-mobile' as string]: item.mobilePosition,
+                ['--hero-pos-tablet' as string]: item.tabletPosition || item.mobilePosition,
                 ['--hero-pos-desktop' as string]: item.desktopPosition,
                 transitionDuration: `${PUBLIC_HERO_FADE_MS}ms`,
               }}

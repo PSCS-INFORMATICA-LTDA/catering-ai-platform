@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { connection } from 'next/server'
 import { fetchCatalogItems } from '@/Lib/fetchCatalogItems'
 import { fetchPackages } from '@/Lib/fetchPackages'
 import { loadPackageConfiguration } from '@/Lib/packageConfiguration'
@@ -392,6 +393,7 @@ export async function getPublicQuoteBootstrap(
   companySlugValue: string,
   localeValue: string,
 ): Promise<PublicQuoteBootstrap | null> {
+  await connection()
   const tenant = await resolvePublicQuoteTenant(companySlugValue, localeValue)
   if (!tenant) return null
   const { company, settings, locale, allowedLocales } = tenant

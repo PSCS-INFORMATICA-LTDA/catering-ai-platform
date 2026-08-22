@@ -14,6 +14,7 @@ import {
   newPublicEntityKey,
   sortByCanonicalOrder,
 } from './playlist'
+import { matchesPublicPlacement } from './publicPlacement'
 import { detectMediaSchema } from './schema'
 import type { PublicMediaAsset } from './types'
 
@@ -50,8 +51,14 @@ export async function listCompanyPublicMedia(
 
   const assets = sortByCanonicalOrder(
     (data ?? [])
-      .map((row) => mapMediaAssetRow(row as unknown as Record<string, unknown>, schema))
-      .filter((asset) => !placement || asset.placement === placement),
+      .filter((row) => {
+        if (!placement) return true
+        return matchesPublicPlacement(
+          row as { placement?: unknown; entity_key?: unknown },
+          placement,
+        )
+      })
+      .map((row) => mapMediaAssetRow(row as unknown as Record<string, unknown>, schema)),
   )
 
   return { assets, error: null, extended: schema.extended }

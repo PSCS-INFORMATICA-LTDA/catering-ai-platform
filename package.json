@@ -68,6 +68,7 @@
     "test:dev:media-content": "node scripts/dev/test-media-content-manager.mjs",
     "test:dev:media-hero-ux": "node scripts/dev/test-media-hero-ux-v2.mjs",
     "test:dev:media-v3": "node scripts/dev/test-media-manager-v3.mjs",
+    "test:dev:media-save-public": "node scripts/dev/test-media-save-public-reflect.mjs",
     "test:dev:media-isolation": "node --experimental-strip-types scripts/dev/test-media-isolation.mjs",
     "provision:dev:media-foundation": "node scripts/dev/provision-dev-media-foundation.mjs",
     "apply:dev:media-migration": "node scripts/dev/apply-dev-media-migration.mjs",

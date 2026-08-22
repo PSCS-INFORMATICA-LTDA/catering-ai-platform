@@ -5,6 +5,7 @@ import {
 } from '@/Lib/auth/requireApi'
 import type { MediaPlacement, MediaVariant } from '@/Lib/media/constants'
 import { getCompanyPublicMedia, updateCompanyPublicMedia } from '@/Lib/media/repository'
+import { revalidatePublicMediaPages } from '@/Lib/media/revalidatePublic'
 import { uploadCompanyPublicMedia } from '@/Lib/media/storage'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
@@ -72,5 +73,6 @@ export async function POST(
     entityId: id,
     metadata: { kind, path: uploaded.storagePath },
   })
+  revalidatePublicMediaPages()
   return Response.json({ asset })
 }

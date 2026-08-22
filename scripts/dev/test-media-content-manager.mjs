@@ -110,7 +110,7 @@ report(
 )
 report(
   'TEST 27: list falls back to entity_key when placement column is null',
-  repo.includes('.filter((asset) => !placement || asset.placement === placement)') &&
+  repo.includes('matchesPublicPlacement') &&
     !repo.includes("query.eq('placement'"),
 )
 const editAllow = compat.slice(
