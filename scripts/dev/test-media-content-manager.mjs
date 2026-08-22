@@ -107,6 +107,11 @@ report(
     editorMigration.includes("has_permission((storage.foldername(name))[1]::uuid, 'media.manage')") &&
     editorMigration.includes("has_permission((storage.foldername(name))[1]::uuid, 'media.delete')"),
 )
+report(
+  'TEST 27: list falls back to entity_key when placement column is null',
+  repo.includes('.filter((asset) => !placement || asset.placement === placement)') &&
+    !repo.includes("query.eq('placement'"),
+)
 
 console.log('')
 console.log(`Passed: ${passed}`)

@@ -30,9 +30,8 @@ export async function listCompanyPublicMedia(
     .eq('entity_type', PUBLIC_MEDIA_ENTITY_TYPE)
     .order('display_order', { ascending: true })
 
-  if (schema.extended && placement) {
-    query = query.eq('placement', placement)
-  }
+  // placement is additive and may still be null on existing DEV rows.
+  // Decode from entity_key in the mapper, then filter in memory.
   if (publishedOnly) {
     query = query.eq('active', true)
   }
