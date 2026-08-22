@@ -46,7 +46,7 @@ export async function PATCH(
   await writeAdminAudit({
     companyId,
     actorUserId: actor,
-    action: body.active === false || body.status === 'inactive' ? 'media.unpublish' : 'media.update',
+    action: body.active === false ? 'media.unpublish' : 'media.update',
     entityType: 'media_assets',
     entityId: id,
     metadata: { keys: Object.keys(body) },

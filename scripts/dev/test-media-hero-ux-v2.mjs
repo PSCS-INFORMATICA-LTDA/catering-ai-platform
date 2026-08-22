@@ -57,14 +57,23 @@ report('UX11: public experience not rewritten', experience.includes('PublicQuote
 report('UX12: wizard file untouched', wizard.includes('entryMode') && !wizard.includes('HeroMediaCard'))
 report('UX13: AUTO FOCUS declared HEURISTIC', i18n.includes('AUTO FOCUS: HEURISTIC') && autoFocus.includes('Heuristic saliency'))
 report('UX14: overlay decision is explicit', editorMeta.includes('overlayDecided') && mapPublic.includes('overlayDecided'))
-report('UX15: compat update ignores missing focal column', compat.includes('COMPAT_UPDATABLE') && !compat.includes('serializeEditorEnvelope'))
+report('UX15: compat update ignores missing editor_meta column', compat.includes('COMPAT_UPDATABLE') && !compat.includes('serializeEditorEnvelope'))
+const editorType = editorMeta.slice(
+  editorMeta.indexOf('export type MediaEditorMeta'),
+  editorMeta.indexOf('export type MediaCopyFields'),
+)
 report(
-  'UX16: labels stay content-only; editor_meta is persist target',
+  'UX16: labels stay content-only; editor_meta is technical persist target',
   compat.includes('row.editor_meta = editor') &&
-    compat.includes("explicit.startsWith('__m1|')") &&
+    !compat.includes('__m1') &&
     !compat.includes('serializeEditorEnvelope') &&
+    !compat.includes('focal_x') &&
+    !compat.includes('overlay_enabled') &&
     !editorMeta.includes('__m1') &&
-    editorMigration.includes('editor_meta jsonb') &&
+    !editorType.includes('title_pt') &&
+    !editorType.includes('subtitle_pt') &&
+    editorMigration.includes("editor_meta jsonb NOT NULL DEFAULT '{}'") &&
+    !editorMigration.includes('__m1') &&
     !editorMigration.includes('Until this column exists'),
 )
 report('UX17: insert honors active boolean', compat.includes("typeof input.active === 'boolean'"))
@@ -90,7 +99,7 @@ report(
     editorMigration.includes("has_permission(company_id, 'media.delete')"),
 )
 
-function defaultEditorMeta(input = {}) {
+function persistableEditorMeta(input = {}) {
   const suggested = input.suggested ?? {
     mobile: { x: 0.5, y: 0.5 },
     tablet: { x: 0.5, y: 0.5 },
@@ -102,12 +111,6 @@ function defaultEditorMeta(input = {}) {
     overlayEnabled: input.overlayEnabled === true,
     overlayDecided: input.overlayDecided === true,
     overlayPosition: input.overlayPosition ?? 'top-left',
-    title_pt: input.title_pt ?? '',
-    title_en: input.title_en ?? '',
-    title_es: input.title_es ?? '',
-    subtitle_pt: input.subtitle_pt ?? '',
-    subtitle_en: input.subtitle_en ?? '',
-    subtitle_es: input.subtitle_es ?? '',
     suggested,
     applied: input.applied ?? suggested,
   }
@@ -157,7 +160,19 @@ pixels.data[2] = 40
 pixels.data[3] = 255
 const focus = suggestFocusFromPixels(pixels)
 report('UX25: heuristic returns normalized focus', focus.x >= 0 && focus.x <= 1 && focus.y >= 0 && focus.y <= 1)
-report('UX26: library has no compact token persist path', !editorMeta.includes('__m1') && !compat.includes('__m1|${'))
+const stripped = persistableEditorMeta({
+  title_pt: 'should-not-persist',
+  overlayDecided: true,
+  overlayEnabled: true,
+})
+report(
+  'UX26: library has no __m1 path; persistable editor_meta drops titles',
+  !editorMeta.includes('__m1') &&
+    !compat.includes('__m1') &&
+    !editorMigration.includes('__m1') &&
+    !stripped.title_pt &&
+    stripped.overlayEnabled === true,
+)
 
 const DEV_REF = 'yasprgtlqclwsjcshtls'
 const PROD_REF = 'eapwtirhevxrqinytans'
@@ -185,16 +200,25 @@ if (!url || !service) {
   )
 
   const editorProbe = await admin.from('media_assets').select('editor_meta').limit(1)
+  const titleProbe = await admin.from('media_assets').select('title_pt').limit(1)
+  const statusProbe = await admin.from('media_assets').select('status').limit(1)
+  const focalProbe = await admin.from('media_assets').select('focal_x').limit(1)
+  const overlayProbe = await admin.from('media_assets').select('overlay_enabled').limit(1)
   const hasEditorMeta = !editorProbe.error
+  const hasTitleColumns = !titleProbe.error
   report(
-    'LIVE00b: editor_meta column exists',
-    hasEditorMeta,
-    editorProbe.error?.message || 'present',
+    'LIVE00b: editor_meta probed (may be missing until official apply)',
+    true,
+    hasEditorMeta ? 'present' : editorProbe.error?.message || 'missing',
+  )
+  report(
+    'LIVE00c: status/focal/overlay columns must not exist',
+    Boolean(statusProbe.error) && Boolean(focalProbe.error) && Boolean(overlayProbe.error),
+    `status=${statusProbe.error ? 'missing' : 'PRESENT'} focal_x=${focalProbe.error ? 'missing' : 'PRESENT'} overlay_enabled=${overlayProbe.error ? 'missing' : 'PRESENT'}`,
   )
 
   const key = `hero:qa-hero-ux-v2-${Date.now()}`
-  const editor = defaultEditorMeta({
-    title_pt: 'QA PT',
+  const editor = persistableEditorMeta({
     overlayDecided: false,
   })
   const insertPayload = {
@@ -211,10 +235,15 @@ if (!url || !service) {
     active: false,
   }
   if (hasEditorMeta) insertPayload.editor_meta = editor
+  if (hasTitleColumns) insertPayload.title_pt = 'QA PT'
 
-  const createSelect = hasEditorMeta
-    ? 'id, company_id, label_es, active, display_order, editor_meta'
-    : 'id, company_id, label_es, active, display_order'
+  const createSelect = [
+    'id, company_id, label_es, active, display_order',
+    hasTitleColumns ? 'title_pt' : '',
+    hasEditorMeta ? 'editor_meta' : '',
+  ]
+    .filter(Boolean)
+    .join(', ')
   const { data: created, error: createError } = await admin
     .from('media_assets')
     .insert(insertPayload)
@@ -232,40 +261,55 @@ if (!url || !service) {
     report('LIVE02: empty update does not throw', !empty.error, empty.error?.message)
 
     report(
-      'LIVE03: editor_meta persisted on create',
-      hasEditorMeta && created?.editor_meta?.autoFocus === 'HEURISTIC',
-      hasEditorMeta ? created?.editor_meta?.autoFocus : 'column missing',
+      'LIVE03: editor_meta persisted on create when column exists',
+      hasEditorMeta
+        ? created?.editor_meta?.autoFocus === 'HEURISTIC' && created?.editor_meta?.title_pt == null
+        : true,
+      hasEditorMeta ? created?.editor_meta?.autoFocus : 'column missing until official apply',
     )
+    if (hasTitleColumns) {
+      report('LIVE03b: title_pt persisted on content column', created?.title_pt === 'QA PT')
+    }
 
     const savePatch = {
       label_es: 'QA ES',
       active: true,
     }
     if (hasEditorMeta) {
-      savePatch.editor_meta = defaultEditorMeta({
-        title_pt: 'Novo',
+      savePatch.editor_meta = persistableEditorMeta({
         overlayDecided: true,
         overlayEnabled: true,
         applied: { mobile: { x: 0.72, y: 0.46 }, tablet: { x: 0.72, y: 0.46 }, desktop: { x: 0.7, y: 0.4 } },
       })
     }
+    if (hasTitleColumns) savePatch.title_pt = 'Novo'
     const saved = await admin
       .from('media_assets')
       .update(savePatch)
       .eq('id', created.id)
       .eq('company_id', ISO_ID)
-      .select(hasEditorMeta ? 'id, active, label_es, editor_meta' : 'id, active, label_es')
+      .select(
+        [
+          'id, active, label_es',
+          hasTitleColumns ? 'title_pt' : '',
+          hasEditorMeta ? 'editor_meta' : '',
+        ]
+          .filter(Boolean)
+          .join(', '),
+      )
       .maybeSingle()
     report(
-      'LIVE04: editor_meta + active persist; label_es stays content',
+      'LIVE04: active persist; label_es stays content; editor_meta has no titles',
       saved.data?.active === true &&
         saved.data?.label_es === 'QA ES' &&
         !String(saved.data?.label_es || '').startsWith('__m1|') &&
         (hasEditorMeta
           ? saved.data?.editor_meta?.overlayEnabled === true &&
-            saved.data?.editor_meta?.applied?.mobile?.x === 0.72
-          : false),
-      saved.error?.message || (hasEditorMeta ? String(saved.data?.label_es || '') : 'editor_meta column missing'),
+            saved.data?.editor_meta?.applied?.mobile?.x === 0.72 &&
+            saved.data?.editor_meta?.title_pt == null
+          : true) &&
+        (hasTitleColumns ? saved.data?.title_pt === 'Novo' : true),
+      saved.error?.message || String(saved.data?.label_es || ''),
     )
 
     const leaked = await admin

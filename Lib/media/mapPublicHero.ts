@@ -3,6 +3,7 @@ import {
   type PublicHeroCaptionAlign,
   type PublicHeroMediaItem,
 } from '@/Lib/publicQuote/companyPublicHeroMedia'
+import { focusToCss } from './editorMeta'
 import type { PublicMediaAsset } from './types'
 
 function catalogHint(asset: PublicMediaAsset): PublicHeroMediaItem | undefined {
@@ -15,11 +16,6 @@ function catalogHint(asset: PublicMediaAsset): PublicHeroMediaItem | undefined {
     if (match) return match
   }
   return undefined
-}
-
-function focalToCss(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) return '50%'
-  return `${Math.round(Math.min(1, Math.max(0, value)) * 100)}%`
 }
 
 function parseAlign(value: string | null | undefined): PublicHeroCaptionAlign | undefined {
@@ -39,14 +35,14 @@ export function mediaAssetToHeroItem(asset: PublicMediaAsset): PublicHeroMediaIt
   const src = asset.media_url?.trim()
   if (!src) return null
   const hint = catalogHint(asset)
-  const hasStoredFocal = asset.focal_x != null && asset.focal_y != null
-  const mobilePosition = hasStoredFocal
-    ? `${focalToCss(asset.editor?.applied.mobile.x ?? asset.focal_x)} ${focalToCss(asset.editor?.applied.mobile.y ?? asset.focal_y)}`
-    : hint?.mobilePosition || `${focalToCss(asset.focal_x)} ${focalToCss(asset.focal_y)}`
-  const desktopPosition = hasStoredFocal
-    ? `${focalToCss(asset.editor?.applied.desktop.x ?? asset.focal_x)} ${focalToCss(asset.editor?.applied.desktop.y ?? asset.focal_y)}`
+  const editor = asset.editor
+  const mobilePosition = asset.editorStored
+    ? `${focusToCss(editor.applied.mobile)}`
+    : hint?.mobilePosition || '50% 50%'
+  const desktopPosition = asset.editorStored
+    ? `${focusToCss(editor.applied.desktop)}`
     : hint?.desktopPosition || mobilePosition
-  const overlayCaption = asset.overlay_enabled
+  const overlayCaption = editor.overlayEnabled
     ? {
         pt: asset.title_pt || asset.label_pt || '',
         en: asset.title_en || asset.label_en || '',
@@ -56,7 +52,7 @@ export function mediaAssetToHeroItem(asset: PublicMediaAsset): PublicHeroMediaIt
   const hasOverlayCopy = Boolean(
     overlayCaption && (overlayCaption.pt || overlayCaption.en || overlayCaption.es),
   )
-  const caption = asset.editor?.overlayDecided
+  const caption = editor.overlayDecided
     ? hasOverlayCopy
       ? overlayCaption
       : undefined
@@ -73,7 +69,7 @@ export function mediaAssetToHeroItem(asset: PublicMediaAsset): PublicHeroMediaIt
     desktopPosition,
     width: hint?.width || 1440,
     height: hint?.height || 1920,
-    captionAlign: parseAlign(asset.overlay_position) || hint?.captionAlign,
+    captionAlign: parseAlign(editor.overlayPosition) || hint?.captionAlign,
     caption,
   }
 }

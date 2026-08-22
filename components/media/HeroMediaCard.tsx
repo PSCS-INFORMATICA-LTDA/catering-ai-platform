@@ -5,8 +5,10 @@ import { tMedia } from '@/Lib/i18n/media'
 import { suggestFocusFromFile, suggestFocusFromImageSource } from '@/Lib/media/autoFocus'
 import {
   defaultEditorMeta,
+  emptyMediaCopy,
   formatSequence,
   point,
+  type MediaCopyFields,
   type MediaEditorMeta,
   type OverlayPosition,
 } from '@/Lib/media/editorMeta'
@@ -21,6 +23,7 @@ export type HeroDraft = {
   mediaUrl: string | null
   pendingFile: File | null
   editor: MediaEditorMeta
+  copy: MediaCopyFields
   preview: 'mobile' | 'tablet' | 'desktop'
   dirty: boolean
   saving: boolean
@@ -83,6 +86,10 @@ export default function HeroMediaCard({
 
   function patchEditor(partial: Partial<MediaEditorMeta>) {
     patch({ editor: defaultEditorMeta({ ...draft.editor, ...partial }) })
+  }
+
+  function patchCopy(partial: Partial<MediaCopyFields>) {
+    patch({ copy: emptyMediaCopy({ ...draft.copy, ...partial }) })
   }
 
   function setApplied(next: { x?: number; y?: number }, mode: 'auto' | 'manual' = 'manual') {
@@ -160,7 +167,7 @@ export default function HeroMediaCard({
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={previewSrc}
-                alt={draft.editor.title_pt || draft.entityKey}
+                alt={draft.copy.title_pt || draft.entityKey}
                 className="aspect-[3/4] h-auto w-full object-cover"
                 style={{ objectPosition: `${Math.round(focus.x * 100)}% ${Math.round(focus.y * 100)}%` }}
                 draggable={false}
@@ -278,15 +285,15 @@ export default function HeroMediaCard({
                     <input
                       className="min-h-10 w-full rounded-lg border border-cdl-border px-2 text-sm"
                       placeholder={`${lang.toUpperCase()} ${tMedia(locale, 'overlayTitle')}`}
-                      value={draft.editor[`title_${lang}`]}
-                      onChange={(event) => patchEditor({ [`title_${lang}`]: event.target.value })}
+                      value={draft.copy[`title_${lang}`]}
+                      onChange={(event) => patchCopy({ [`title_${lang}`]: event.target.value })}
                     />
                     <input
                       className="min-h-10 w-full rounded-lg border border-cdl-border px-2 text-sm"
                       placeholder={`${lang.toUpperCase()} ${tMedia(locale, 'overlaySubtitle')}`}
-                      value={draft.editor[`subtitle_${lang}`]}
+                      value={draft.copy[`subtitle_${lang}`]}
                       onChange={(event) =>
-                        patchEditor({ [`subtitle_${lang}`]: event.target.value })
+                        patchCopy({ [`subtitle_${lang}`]: event.target.value })
                       }
                     />
                   </div>
@@ -522,10 +529,10 @@ export default function HeroMediaCard({
                 style={{ left: `${focus.x * 100}%`, top: `${focus.y * 100}%` }}
                 aria-hidden
               />
-              {draft.editor.overlayEnabled && draft.editor.title_pt ? (
+              {draft.editor.overlayEnabled && draft.copy.title_pt ? (
                 <p className={overlayClass(draft.editor.overlayPosition)}>
                   <span className="public-hero-caption-rule" aria-hidden />
-                  {draft.editor.title_pt}
+                  {draft.copy.title_pt}
                 </p>
               ) : null}
             </button>

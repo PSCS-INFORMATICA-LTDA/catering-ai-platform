@@ -21,14 +21,17 @@ export type MediaEditorMeta = {
   overlayEnabled: boolean
   overlayDecided: boolean
   overlayPosition: OverlayPosition
+  suggested: DeviceFocusMap
+  applied: DeviceFocusMap
+}
+
+export type MediaCopyFields = {
   title_pt: string
   title_en: string
   title_es: string
   subtitle_pt: string
   subtitle_en: string
   subtitle_es: string
-  suggested: DeviceFocusMap
-  applied: DeviceFocusMap
 }
 
 export function clampFocus(value: number | null | undefined) {
@@ -57,18 +60,54 @@ export function defaultEditorMeta(input?: Partial<MediaEditorMeta>): MediaEditor
     overlayEnabled: input?.overlayEnabled === true,
     overlayDecided: input?.overlayDecided === true,
     overlayPosition: input?.overlayPosition ?? 'top-left',
-    title_pt: input?.title_pt ?? '',
-    title_en: input?.title_en ?? '',
-    title_es: input?.title_es ?? '',
-    subtitle_pt: input?.subtitle_pt ?? '',
-    subtitle_en: input?.subtitle_en ?? '',
-    subtitle_es: input?.subtitle_es ?? '',
     suggested,
     applied: input?.applied ?? {
       mobile: { ...suggested.mobile },
       tablet: { ...suggested.tablet },
       desktop: { ...suggested.desktop },
     },
+  }
+}
+
+function isFocusPoint(value: unknown): value is FocusPoint {
+  return (
+    Boolean(value) &&
+    typeof value === 'object' &&
+    Number.isFinite((value as FocusPoint).x) &&
+    Number.isFinite((value as FocusPoint).y)
+  )
+}
+
+function isDeviceFocusMap(value: unknown): value is DeviceFocusMap {
+  return (
+    Boolean(value) &&
+    typeof value === 'object' &&
+    isFocusPoint((value as DeviceFocusMap).mobile) &&
+    isFocusPoint((value as DeviceFocusMap).tablet) &&
+    isFocusPoint((value as DeviceFocusMap).desktop)
+  )
+}
+
+export function persistableEditorMeta(value?: unknown): MediaEditorMeta {
+  const raw = isEditorMeta(value) ? value : {}
+  return defaultEditorMeta({
+    focusMode: raw.focusMode === 'manual' ? 'manual' : raw.focusMode === 'auto' ? 'auto' : undefined,
+    overlayEnabled: raw.overlayEnabled === true,
+    overlayDecided: raw.overlayDecided === true,
+    overlayPosition: isOverlayPosition(raw.overlayPosition) ? raw.overlayPosition : undefined,
+    suggested: isDeviceFocusMap(raw.suggested) ? raw.suggested : undefined,
+    applied: isDeviceFocusMap(raw.applied) ? raw.applied : undefined,
+  })
+}
+
+export function emptyMediaCopy(input?: Partial<MediaCopyFields>): MediaCopyFields {
+  return {
+    title_pt: input?.title_pt ?? '',
+    title_en: input?.title_en ?? '',
+    title_es: input?.title_es ?? '',
+    subtitle_pt: input?.subtitle_pt ?? '',
+    subtitle_en: input?.subtitle_en ?? '',
+    subtitle_es: input?.subtitle_es ?? '',
   }
 }
 
@@ -95,6 +134,10 @@ export function isOverlayPosition(value: string | null | undefined): value is Ov
 
 export function isEditorMeta(value: unknown): value is Partial<MediaEditorMeta> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+export function hasStoredEditorMeta(value: unknown): boolean {
+  return isEditorMeta(value) && Object.keys(value).length > 0
 }
 
 export function formatSequence(order: number) {

@@ -1,9 +1,4 @@
-import type {
-  MediaLocale,
-  MediaPlacement,
-  MediaStatus,
-  MediaVariant,
-} from './constants'
+import type { MediaLocale, MediaPlacement, MediaVariant } from './constants'
 import type { MediaEditorMeta } from './editorMeta'
 
 export type PublicMediaAsset = {
@@ -28,18 +23,14 @@ export type PublicMediaAsset = {
   subtitle_pt: string | null
   subtitle_en: string | null
   subtitle_es: string | null
-  overlay_enabled: boolean
-  overlay_position: string | null
   placement: MediaPlacement | null
   variant: MediaVariant | null
-  focal_x: number | null
-  focal_y: number | null
   display_order: number
   active: boolean
-  status: MediaStatus
   created_at: string | null
   updated_at: string | null
   editor: MediaEditorMeta
+  editorStored: boolean
 }
 
 export type PublicHowItWorksVideo = {

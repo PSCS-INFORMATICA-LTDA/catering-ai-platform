@@ -1,60 +1,17 @@
 -- DEV ONLY target: yasprgtlqclwsjcshtls
 -- NÃO aplicar em Production (eapwtirhevxrqinytans).
 --
--- editor_meta jsonb is the canonical store for focus / overlay / editor config.
--- label_pt / label_en / label_es are multilingual content only.
--- Never persist technical metadata in label_*.
+-- editor_meta jsonb is the canonical store for technical editor config:
+-- autoFocus, focusMode, overlayEnabled, overlayDecided, overlayPosition,
+-- suggested.{mobile,tablet,desktop}, applied.{mobile,tablet,desktop}.
+-- label_*/alt_*/title_*/subtitle_* remain multilingual content columns.
+-- Never persist titles or other copy inside editor_meta.
 
 ALTER TABLE public.media_assets
-  ADD COLUMN IF NOT EXISTS editor_meta jsonb;
+  ADD COLUMN IF NOT EXISTS editor_meta jsonb NOT NULL DEFAULT '{}'::jsonb;
 
 COMMENT ON COLUMN public.media_assets.editor_meta IS
-  'Canonical editor config (per-device focus, overlay, titles). label_pt/en/es stay multilingual content only.';
-COMMENT ON COLUMN public.media_assets.label_pt IS
-  'Portuguese content label. Never store technical metadata.';
-COMMENT ON COLUMN public.media_assets.label_en IS
-  'English content label. Never store technical metadata.';
-COMMENT ON COLUMN public.media_assets.label_es IS
-  'Spanish content label. Never store technical metadata.';
-
--- Recover leftover compact tokens if any were persisted in label_es.
--- Format: __m1|<flags>|<packed>|<label content>
--- Flags: [a|m][overlay 0|1][decided 0|1]...
-UPDATE public.media_assets
-SET
-  editor_meta = jsonb_strip_nulls(
-    jsonb_build_object(
-      'autoFocus', 'HEURISTIC',
-      'focusMode', CASE
-        WHEN substring(split_part(label_es, '|', 2) FROM 1 FOR 1) = 'm' THEN 'manual'
-        ELSE 'auto'
-      END,
-      'overlayEnabled', substring(split_part(label_es, '|', 2) FROM 2 FOR 1) = '1',
-      'overlayDecided', substring(split_part(label_es, '|', 2) FROM 3 FOR 1) = '1',
-      'overlayPosition', 'top-left',
-      'title_pt', COALESCE(title_pt, ''),
-      'title_en', COALESCE(title_en, ''),
-      'title_es', COALESCE(
-        NULLIF(array_to_string((string_to_array(label_es, '|'))[4:], '|'), ''),
-        ''
-      ),
-      'subtitle_pt', COALESCE(subtitle_pt, ''),
-      'subtitle_en', COALESCE(subtitle_en, ''),
-      'subtitle_es', COALESCE(subtitle_es, ''),
-      'suggested', jsonb_build_object(
-        'mobile', jsonb_build_object('x', 0.5, 'y', 0.5),
-        'tablet', jsonb_build_object('x', 0.5, 'y', 0.5),
-        'desktop', jsonb_build_object('x', 0.5, 'y', 0.5)
-      ),
-      'applied', jsonb_build_object(
-        'mobile', jsonb_build_object('x', 0.5, 'y', 0.5),
-        'tablet', jsonb_build_object('x', 0.5, 'y', 0.5),
-        'desktop', jsonb_build_object('x', 0.5, 'y', 0.5)
-      )
-    )
-  ),
-  label_es = NULLIF(array_to_string((string_to_array(label_es, '|'))[4:], '|'), '')
-WHERE label_es LIKE '__m1|%';
+  'Canonical technical editor config: focus, overlay flags/position, per-device suggested/applied points. Not titles.';
 
 -- Permission helper used by media RLS. SECURITY DEFINER avoids RLS recursion.
 CREATE OR REPLACE FUNCTION private.has_permission(

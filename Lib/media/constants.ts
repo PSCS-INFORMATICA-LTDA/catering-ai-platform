@@ -7,9 +7,6 @@ export type MediaPlacement = (typeof MEDIA_PLACEMENTS)[number]
 export const MEDIA_VARIANTS = ['original', 'mobile', 'tablet', 'desktop'] as const
 export type MediaVariant = (typeof MEDIA_VARIANTS)[number]
 
-export const MEDIA_STATUSES = ['draft', 'active', 'inactive'] as const
-export type MediaStatus = (typeof MEDIA_STATUSES)[number]
-
 export const MEDIA_LOCALES = ['pt', 'en', 'es'] as const
 export type MediaLocale = (typeof MEDIA_LOCALES)[number]
 

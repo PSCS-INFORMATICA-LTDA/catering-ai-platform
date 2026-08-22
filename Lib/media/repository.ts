@@ -35,7 +35,6 @@ export async function listCompanyPublicMedia(
   }
   if (publishedOnly) {
     query = query.eq('active', true)
-    if (schema.extended) query = query.eq('status', 'active')
   }
 
   const { data, error } = await query

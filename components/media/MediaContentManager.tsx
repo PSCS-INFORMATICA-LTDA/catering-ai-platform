@@ -5,8 +5,10 @@ import { tMedia } from '@/Lib/i18n/media'
 import { suggestFocusFromFile } from '@/Lib/media/autoFocus'
 import {
   defaultEditorMeta,
+  emptyMediaCopy,
   nextDisplayOrder,
   parseCssFocus,
+  persistableEditorMeta,
 } from '@/Lib/media/editorMeta'
 import type { MediaCatalogImageItem, PublicMediaAsset } from '@/Lib/media/types'
 import { getCompanyPublicHeroMedia } from '@/Lib/publicQuote/companyPublicHeroMedia'
@@ -32,24 +34,36 @@ function apiErrorMessage(locale: string, error?: string) {
   return tMedia(locale, 'saveFailed')
 }
 
-function seedEditor(asset: PublicMediaAsset) {
-  if (asset.focal_x != null && asset.focal_y != null) return defaultEditorMeta(asset.editor)
-  const hint = getCompanyPublicHeroMedia('cdl').find(
+function catalogHint(asset: PublicMediaAsset) {
+  return getCompanyPublicHeroMedia('cdl').find(
     (item) => item.id === asset.entity_key || item.src === asset.media_url,
   )
+}
+
+function seedEditor(asset: PublicMediaAsset) {
+  if (asset.editorStored) return persistableEditorMeta(asset.editor)
+  const hint = catalogHint(asset)
   if (!hint) return defaultEditorMeta(asset.editor)
   const mobile = parseCssFocus(hint.mobilePosition)
   const desktop = parseCssFocus(hint.desktopPosition)
   return defaultEditorMeta({
-    ...asset.editor,
     overlayDecided: asset.editor.overlayDecided,
     overlayEnabled: asset.editor.overlayEnabled,
     overlayPosition: hint.captionAlign ?? asset.editor.overlayPosition,
-    title_pt: asset.editor.title_pt || hint.caption?.pt || '',
-    title_en: asset.editor.title_en || hint.caption?.en || '',
-    title_es: asset.editor.title_es || hint.caption?.es || '',
     suggested: { mobile, tablet: mobile, desktop },
     applied: { mobile, tablet: mobile, desktop },
+  })
+}
+
+function seedCopy(asset: PublicMediaAsset) {
+  const hint = catalogHint(asset)
+  return emptyMediaCopy({
+    title_pt: asset.title_pt || hint?.caption?.pt || '',
+    title_en: asset.title_en || hint?.caption?.en || '',
+    title_es: asset.title_es || hint?.caption?.es || '',
+    subtitle_pt: asset.subtitle_pt || '',
+    subtitle_en: asset.subtitle_en || '',
+    subtitle_es: asset.subtitle_es || '',
   })
 }
 
@@ -63,6 +77,7 @@ function toDraft(asset: PublicMediaAsset): HeroDraft {
     mediaUrl: asset.media_url,
     pendingFile: null,
     editor: seedEditor(asset),
+    copy: seedCopy(asset),
     preview: 'mobile',
     dirty: false,
     saving: false,
@@ -131,7 +146,7 @@ export default function MediaContentManager({
   const visibleDrafts = useMemo(
     () =>
       drafts.filter((draft) => {
-        const hay = `${draft.entityKey} ${draft.editor.title_pt}`.toLowerCase()
+        const hay = `${draft.entityKey} ${draft.copy.title_pt}`.toLowerCase()
         return hay.includes(query.trim().toLowerCase())
       }),
     [drafts, query],
@@ -172,8 +187,13 @@ export default function MediaContentManager({
             entity_key: working.entityKey || `hero-${working.sequence}`,
             display_order: working.sequence,
             active: working.active,
-            status: working.active ? 'active' : 'inactive',
             editor: working.editor,
+            title_pt: working.copy.title_pt,
+            title_en: working.copy.title_en,
+            title_es: working.copy.title_es,
+            subtitle_pt: working.copy.subtitle_pt,
+            subtitle_en: working.copy.subtitle_en,
+            subtitle_es: working.copy.subtitle_es,
           }),
         })
         const createdJson = (await created.json()) as { asset?: PublicMediaAsset; error?: string }
@@ -203,8 +223,13 @@ export default function MediaContentManager({
           entity_key: working.entityKey,
           display_order: working.sequence,
           active: working.active,
-          status: working.active ? 'active' : 'inactive',
           editor: working.editor,
+          title_pt: working.copy.title_pt,
+          title_en: working.copy.title_en,
+          title_es: working.copy.title_es,
+          subtitle_pt: working.copy.subtitle_pt,
+          subtitle_en: working.copy.subtitle_en,
+          subtitle_es: working.copy.subtitle_es,
         }),
       })
       const json = (await response.json()) as { asset?: PublicMediaAsset; error?: string }
@@ -285,6 +310,7 @@ export default function MediaContentManager({
       mediaUrl: preview,
       pendingFile: file ?? null,
       editor,
+      copy: emptyMediaCopy(),
       preview: 'mobile',
       dirty: true,
       saving: false,
@@ -470,7 +496,7 @@ export default function MediaContentManager({
           {drafts.map((draft) => (
             <li key={draft.id} className="rounded-2xl border border-cdl-border bg-cdl-surface p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <strong>{draft.editor.title_pt || draft.entityKey}</strong>
+                <strong>{draft.copy.title_pt || draft.entityKey}</strong>
                 <button
                   type="button"
                   disabled={!canManage || draft.saving}

@@ -47,7 +47,7 @@ const admin = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 })
 
-for (const column of ['placement', 'editor_meta', 'status', 'focal_x']) {
+for (const column of ['placement', 'editor_meta', 'title_pt', 'active', 'status', 'focal_x', 'overlay_enabled']) {
   const { error } = await admin.from('media_assets').select(column).limit(1)
   console.log(`column ${column}: ${error ? `MISSING (${error.message})` : 'present'}`)
 }

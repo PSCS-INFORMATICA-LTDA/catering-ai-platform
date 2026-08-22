@@ -59,15 +59,34 @@ const { error: placementProbe } = await supabase
   .from('media_assets')
   .select('placement')
   .limit(1)
+const { error: editorProbe } = await supabase
+  .from('media_assets')
+  .select('editor_meta')
+  .limit(1)
 const extended = !placementProbe
+const hasEditorMeta = !editorProbe
 
-function parseFocal(position) {
+function parseFocusPoint(position) {
   const [x, y] = String(position || '50% 50%')
     .split(/\s+/)
     .map((part) => Number(String(part).replace('%', '')) / 100)
   return {
-    focal_x: Number.isFinite(x) ? x : 0.5,
-    focal_y: Number.isFinite(y) ? y : 0.5,
+    x: Number.isFinite(x) ? x : 0.5,
+    y: Number.isFinite(y) ? y : 0.5,
+  }
+}
+
+function editorMetaFromPhoto(photo) {
+  const mobile = parseFocusPoint(photo.mobilePosition)
+  const desktop = parseFocusPoint(photo.desktopPosition || photo.mobilePosition)
+  return {
+    autoFocus: 'HEURISTIC',
+    focusMode: 'auto',
+    overlayEnabled: Boolean(photo.caption),
+    overlayDecided: Boolean(photo.caption),
+    overlayPosition: photo.captionAlign ?? 'top-left',
+    suggested: { mobile, tablet: mobile, desktop },
+    applied: { mobile, tablet: mobile, desktop },
   }
 }
 
@@ -103,7 +122,6 @@ const photos = getCompanyPublicHeroMedia('cdl')
 const heroRows = photos
   .map((photo, index) => {
     if (haveHero.has(photo.id)) return null
-    const focal = parseFocal(photo.mobilePosition)
     const base = {
       company_id: CDL_ID,
       entity_type: ENTITY,
@@ -128,12 +146,9 @@ const heroRows = photos
       title_pt: photo.caption?.pt ?? null,
       title_en: photo.caption?.en ?? null,
       title_es: photo.caption?.es ?? null,
-      overlay_enabled: Boolean(photo.caption),
-      overlay_position: photo.captionAlign ?? null,
       placement: 'hero',
       variant: 'original',
-      status: 'active',
-      ...focal,
+      ...(hasEditorMeta ? { editor_meta: editorMetaFromPhoto(photo) } : {}),
     }
   })
   .filter(Boolean)
@@ -203,7 +218,6 @@ const howRows = howBlocks
       title_es: block.es,
       placement: 'how_it_works',
       variant: 'original',
-      status: 'active',
     }
   })
 
@@ -262,7 +276,6 @@ if (!haveVideo) {
           poster_url: '/cdl/video/cdl-como-funciona-poster.webp',
           placement: 'video',
           variant: 'original',
-          status: 'active',
         }
       : videoRow,
   )
@@ -300,7 +313,6 @@ if (!isoExisting) {
           ...isoRow,
           placement: 'hero',
           variant: 'original',
-          status: 'active',
         }
       : isoRow,
   )

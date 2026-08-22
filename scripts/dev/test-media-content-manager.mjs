@@ -76,11 +76,36 @@ report('TEST 21: Session keeps media.* fallback until DB is seeded', session.inc
 report('TEST 22: Isolation test covers CDL vs ISO and anon', isolation.includes('iso-isolation-probe') && isolation.includes('anon cannot read'))
 report('TEST 23: Seed refuses PROD and does not migrate grill photos', seed.includes('eapwtirhevxrqinytans') && seed.includes("entity_type: ENTITY"))
 report(
-  'TEST 24: editor_meta is canonical; labels never store tokens',
-  editorMigration.includes('ADD COLUMN IF NOT EXISTS editor_meta jsonb') &&
-    editorMigration.includes('Never persist technical metadata') &&
+  'TEST 24: editor_meta is canonical technical config only',
+  editorMigration.includes("editor_meta jsonb NOT NULL DEFAULT '{}'") &&
+    editorMigration.includes('focus, overlay flags/position') &&
+    editorMigration.includes('Not titles') &&
+    !editorMigration.includes('__m1') &&
     compat.includes('row.editor_meta = editor') &&
-    !compat.includes('serializeEditorEnvelope'),
+    !compat.includes('serializeEditorEnvelope') &&
+    !compat.includes('focal_x') &&
+    !compat.includes('overlay_enabled'),
+)
+report(
+  'TEST 25: 1400 keeps active canonical; no status/focal/overlay columns',
+  migration.includes('(company_id, placement, active, display_order)') &&
+    !migration.includes('ADD COLUMN IF NOT EXISTS status') &&
+    !migration.includes('focal_x') &&
+    !migration.includes('focal_y') &&
+    !migration.includes('overlay_enabled') &&
+    !migration.includes('overlay_position') &&
+    !migration.includes('media_assets_status_check') &&
+    !migration.includes('media_assets_focal_check') &&
+    !migration.includes('__m1'),
+)
+report(
+  'TEST 26: 1800 stays idempotent; 1900 keeps permission split',
+  deleteMigration.includes('ON CONFLICT (permission_key) DO NOTHING') &&
+    deleteMigration.includes('ON CONFLICT (role_key, permission_key) DO NOTHING') &&
+    editorMigration.includes("has_permission(company_id, 'media.manage')") &&
+    editorMigration.includes("has_permission(company_id, 'media.delete')") &&
+    editorMigration.includes("has_permission((storage.foldername(name))[1]::uuid, 'media.manage')") &&
+    editorMigration.includes("has_permission((storage.foldername(name))[1]::uuid, 'media.delete')"),
 )
 
 console.log('')
