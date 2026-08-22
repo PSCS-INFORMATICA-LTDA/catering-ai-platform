@@ -48,7 +48,9 @@ export function matchesPlacement(
   asset: Pick<PublicMediaAsset, 'placement' | 'entity_key'>,
   placement: MediaPlacement,
 ) {
-  return asset.placement === placement
+  if (asset.placement === placement) return true
+  const key = String(asset.entity_key || '')
+  return !asset.placement && key.startsWith(`${placement}:`)
 }
 
 export function fileBaseName(value: string | null | undefined) {

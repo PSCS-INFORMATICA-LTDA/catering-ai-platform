@@ -66,6 +66,7 @@ export type PublicQuotePageBootstrap = {
       sourceFilename: string
       alt: string
       mobilePosition: string
+      tabletPosition?: string
       desktopPosition: string
       width: number
       height: number

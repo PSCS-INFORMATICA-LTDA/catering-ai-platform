@@ -7,6 +7,7 @@ import {
   PUBLIC_HERO_HOLD_MS,
   type PublicHeroMediaItem,
 } from '@/Lib/publicQuote/companyPublicHeroMedia'
+import { publicHeroUrlKind } from '@/Lib/media/publicHeroSrc'
 
 type PublicQuoteHeroMediaProps = {
   videos?: readonly string[]
@@ -57,6 +58,9 @@ export default function PublicQuoteHeroMedia({
   const [failedIds, setFailedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   )
+  const [rawFallbackIds, setRawFallbackIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  )
   const reducedMotion = usePrefersReducedMotion()
   const pageVisible = usePageIsVisible()
   const activeVideo = videos[videoIndex] || null
@@ -70,6 +74,8 @@ export default function PublicQuoteHeroMedia({
     setSeenMediaKey(mediaKey)
     setActiveIndex(0)
     setOutgoing(null)
+    setFailedIds(new Set())
+    setRawFallbackIds(new Set())
   }
   const safeIndex =
     playable.length === 0 ? 0 : Math.min(activeIndex, playable.length - 1)
@@ -202,24 +208,40 @@ export default function PublicQuoteHeroMedia({
             <div
               key={item.id}
               data-hero-photo-id={item.id}
+              data-hero-url-kind={publicHeroUrlKind(item.src)}
+              data-hero-mobile-pos={item.mobilePosition}
+              data-hero-tablet-pos={item.tabletPosition || item.mobilePosition}
+              data-hero-desktop-pos={item.desktopPosition}
               className={`public-hero-slide ${isActive ? 'is-active' : ''}`}
               style={{
                 ['--hero-pos-mobile' as string]: item.mobilePosition,
+                ['--hero-pos-tablet' as string]: item.tabletPosition || item.mobilePosition,
                 ['--hero-pos-desktop' as string]: item.desktopPosition,
                 transitionDuration: `${PUBLIC_HERO_FADE_MS}ms`,
               }}
             >
               <Image
+                key={`${item.id}:${rawFallbackIds.has(item.id) ? 'raw' : 'opt'}`}
                 src={item.src}
                 alt={item.alt || ''}
                 fill
                 sizes="100vw"
                 quality={90}
+                unoptimized={rawFallbackIds.has(item.id)}
                 priority={isActive && item.id === playable[0]?.id}
                 loading={isActive ? 'eager' : 'lazy'}
                 fetchPriority={isActive ? 'high' : 'low'}
                 className="public-hero-photo"
                 onError={() => {
+                  if (!rawFallbackIds.has(item.id)) {
+                    setRawFallbackIds((current) => {
+                      if (current.has(item.id)) return current
+                      const next = new Set(current)
+                      next.add(item.id)
+                      return next
+                    })
+                    return
+                  }
                   setFailedIds((current) => {
                     if (current.has(item.id)) return current
                     const next = new Set(current)

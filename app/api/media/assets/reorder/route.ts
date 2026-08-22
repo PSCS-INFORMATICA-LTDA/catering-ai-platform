@@ -6,6 +6,7 @@ import {
 import { noStoreJson } from '@/Lib/media/batchValidate'
 import { MEDIA_PLACEMENTS, type MediaPlacement } from '@/Lib/media/constants'
 import { reorderCompanyPublicMedia } from '@/Lib/media/repository'
+import { revalidatePublicMediaPages } from '@/Lib/media/revalidatePublic'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
@@ -45,5 +46,6 @@ export async function POST(request: Request) {
     entityType: 'media_assets',
     metadata: { ids, placement },
   })
+  revalidatePublicMediaPages()
   return noStoreJson({ ok: true, assets })
 }

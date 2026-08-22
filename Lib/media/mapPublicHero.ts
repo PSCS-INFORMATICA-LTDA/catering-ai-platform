@@ -4,6 +4,7 @@ import {
   type PublicHeroMediaItem,
 } from '@/Lib/publicQuote/companyPublicHeroMedia'
 import { focusToCss } from './editorMeta'
+import { isAllowedPublicHeroSrc } from './publicHeroSrc'
 import type { PublicMediaAsset } from './types'
 
 function catalogHint(asset: PublicMediaAsset): PublicHeroMediaItem | undefined {
@@ -32,16 +33,19 @@ function parseAlign(value: string | null | undefined): PublicHeroCaptionAlign | 
 }
 
 export function mediaAssetToHeroItem(asset: PublicMediaAsset): PublicHeroMediaItem | null {
-  const src = asset.media_url?.trim()
-  if (!src) return null
+  const src = asset.media_url?.trim() || ''
+  if (!isAllowedPublicHeroSrc(src)) return null
   const hint = catalogHint(asset)
   const editor = asset.editor
   const mobilePosition = asset.editorStored
-    ? `${focusToCss(editor.applied.mobile)}`
-    : hint?.mobilePosition || '50% 50%'
+    ? focusToCss(editor.applied.mobile)
+    : '50% 50%'
+  const tabletPosition = asset.editorStored
+    ? focusToCss(editor.applied.tablet)
+    : mobilePosition
   const desktopPosition = asset.editorStored
-    ? `${focusToCss(editor.applied.desktop)}`
-    : hint?.desktopPosition || mobilePosition
+    ? focusToCss(editor.applied.desktop)
+    : mobilePosition
   const overlayCaption = editor.overlayEnabled
     ? {
         pt: asset.title_pt || asset.label_pt || '',
@@ -66,6 +70,7 @@ export function mediaAssetToHeroItem(asset: PublicMediaAsset): PublicHeroMediaIt
     sourceFilename: asset.storage_path || hint?.sourceFilename || src,
     alt: asset.alt_en || asset.alt_pt || hint?.alt || asset.label_en || asset.label_pt || 'Event photography',
     mobilePosition,
+    tabletPosition,
     desktopPosition,
     width: hint?.width || 1440,
     height: hint?.height || 1920,

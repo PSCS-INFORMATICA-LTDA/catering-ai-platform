@@ -9,6 +9,7 @@ import {
   findMediaDeleteBlockers,
 } from '@/Lib/media/references'
 import { noStoreJson } from '@/Lib/media/batchValidate'
+import { revalidatePublicMediaPages } from '@/Lib/media/revalidatePublic'
 import {
   getCompanyPublicMedia,
   hardDeleteCompanyPublicMedia,
@@ -57,6 +58,7 @@ export async function PATCH(
     entityId: id,
     metadata: { keys: Object.keys(body) },
   })
+  revalidatePublicMediaPages()
   return noStoreJson({ asset })
 }
 
@@ -122,5 +124,6 @@ export async function DELETE(
     entityId: id,
     metadata: { soft: false, storagePath, blockers },
   })
+  revalidatePublicMediaPages()
   return Response.json({ ok: true, soft: false })
 }

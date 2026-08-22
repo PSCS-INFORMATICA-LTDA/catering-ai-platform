@@ -10,6 +10,7 @@ import {
   insertCompanyPublicMedia,
   listCompanyPublicMedia,
 } from '@/Lib/media/repository'
+import { revalidatePublicMediaPages } from '@/Lib/media/revalidatePublic'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
@@ -73,5 +74,6 @@ export async function POST(request: Request) {
     entityId: asset.id,
     metadata: { placement, entity_key: asset.entity_key },
   })
+  revalidatePublicMediaPages()
   return noStoreJson({ asset })
 }
