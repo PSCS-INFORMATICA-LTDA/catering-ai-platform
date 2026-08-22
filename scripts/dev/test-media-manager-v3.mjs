@@ -79,7 +79,7 @@ const assetsApi = read('app/api/media/assets/route.ts')
 const i18n = read('Lib/i18n/media.ts')
 const playlist = read('Lib/media/playlist.ts')
 const constants = read('Lib/media/constants.ts')
-const migration = read('supabase/migrations/20260822180134_media_placement_backfill.sql')
+const migration = read('supabase/migrations/20260822201000_media_placement_backfill.sql')
 const wizard = read('app/quotes/new/QuoteWizard.tsx')
 const isolation = read('scripts/dev/test-media-isolation.mjs')
 

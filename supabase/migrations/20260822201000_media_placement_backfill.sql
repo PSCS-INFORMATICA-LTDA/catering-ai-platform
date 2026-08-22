@@ -6,6 +6,7 @@
 -- Aditiva e idempotente. Sem DELETE. Sem DROP.
 -- Não altera entity_type = event (grill photos).
 -- Não altera entity_key, media_url, storage_path, active, editor_meta.
+-- Timestamp after 20260822190000 so DEV history stays linear.
 -- =============================================================================
 
 UPDATE public.media_assets
