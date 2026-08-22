@@ -4,6 +4,7 @@ import {
   type PublicHeroMediaItem,
 } from '@/Lib/publicQuote/companyPublicHeroMedia'
 import { focusToCss } from './editorMeta'
+import { isAllowedPublicHeroSrc } from './publicHeroSrc'
 import type { PublicMediaAsset } from './types'
 
 function catalogHint(asset: PublicMediaAsset): PublicHeroMediaItem | undefined {
@@ -32,8 +33,8 @@ function parseAlign(value: string | null | undefined): PublicHeroCaptionAlign | 
 }
 
 export function mediaAssetToHeroItem(asset: PublicMediaAsset): PublicHeroMediaItem | null {
-  const src = asset.media_url?.trim()
-  if (!src) return null
+  const src = asset.media_url?.trim() || ''
+  if (!isAllowedPublicHeroSrc(src)) return null
   const hint = catalogHint(asset)
   const editor = asset.editor
   const mobilePosition = asset.editorStored

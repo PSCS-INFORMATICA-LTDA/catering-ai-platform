@@ -69,6 +69,7 @@
     "test:dev:media-hero-ux": "node scripts/dev/test-media-hero-ux-v2.mjs",
     "test:dev:media-v3": "node scripts/dev/test-media-manager-v3.mjs",
     "test:dev:media-save-public": "node scripts/dev/test-media-save-public-reflect.mjs",
+    "test:dev:media-batch-hero": "node scripts/dev/test-media-batch-hero-public.mjs",
     "test:dev:media-restore": "node scripts/dev/test-restore-missing-hero-media.mjs",
     "test:dev:canonical-alias": "node scripts/dev/test-canonical-dev-alias-matches-head.mjs",
     "restore:dev:missing-hero-media": "node scripts/dev/restore-missing-cdl-hero-media.mjs",
