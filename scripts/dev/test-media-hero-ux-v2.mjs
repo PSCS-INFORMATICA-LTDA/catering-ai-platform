@@ -212,10 +212,13 @@ if (!url || !service) {
   }
   if (hasEditorMeta) insertPayload.editor_meta = editor
 
+  const createSelect = hasEditorMeta
+    ? 'id, company_id, label_es, active, display_order, editor_meta'
+    : 'id, company_id, label_es, active, display_order'
   const { data: created, error: createError } = await admin
     .from('media_assets')
     .insert(insertPayload)
-    .select('id, company_id, label_es, active, display_order, editor_meta')
+    .select(createSelect)
     .maybeSingle()
 
   report(
@@ -234,30 +237,35 @@ if (!url || !service) {
       hasEditorMeta ? created?.editor_meta?.autoFocus : 'column missing',
     )
 
+    const savePatch = {
+      label_es: 'QA ES',
+      active: true,
+    }
+    if (hasEditorMeta) {
+      savePatch.editor_meta = defaultEditorMeta({
+        title_pt: 'Novo',
+        overlayDecided: true,
+        overlayEnabled: true,
+        applied: { mobile: { x: 0.72, y: 0.46 }, tablet: { x: 0.72, y: 0.46 }, desktop: { x: 0.7, y: 0.4 } },
+      })
+    }
     const saved = await admin
       .from('media_assets')
-      .update({
-        label_es: 'QA ES',
-        editor_meta: defaultEditorMeta({
-          title_pt: 'Novo',
-          overlayDecided: true,
-          overlayEnabled: true,
-          applied: { mobile: { x: 0.72, y: 0.46 }, tablet: { x: 0.72, y: 0.46 }, desktop: { x: 0.7, y: 0.4 } },
-        }),
-        active: true,
-      })
+      .update(savePatch)
       .eq('id', created.id)
       .eq('company_id', ISO_ID)
-      .select('id, active, label_es, editor_meta')
+      .select(hasEditorMeta ? 'id, active, label_es, editor_meta' : 'id, active, label_es')
       .maybeSingle()
     report(
       'LIVE04: editor_meta + active persist; label_es stays content',
       saved.data?.active === true &&
         saved.data?.label_es === 'QA ES' &&
         !String(saved.data?.label_es || '').startsWith('__m1|') &&
-        saved.data?.editor_meta?.overlayEnabled === true &&
-        saved.data?.editor_meta?.applied?.mobile?.x === 0.72,
-      saved.error?.message || String(saved.data?.label_es || ''),
+        (hasEditorMeta
+          ? saved.data?.editor_meta?.overlayEnabled === true &&
+            saved.data?.editor_meta?.applied?.mobile?.x === 0.72
+          : false),
+      saved.error?.message || (hasEditorMeta ? String(saved.data?.label_es || '') : 'editor_meta column missing'),
     )
 
     const leaked = await admin
