@@ -11,6 +11,8 @@ import type { PackageListItem } from '@/Lib/fetchPackages'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import type { CommercialRulesSnapshot } from '@/Lib/supabaseCommercialRules'
 import type { PublicLocationBias } from './locationBias'
+import type { PublicHeroMediaItem } from './companyPublicHeroMedia'
+import type { PublicHowItWorksVideo } from '@/Lib/media/types'
 
 export const PUBLIC_QUOTE_LOCALES = ['pt', 'en', 'es'] as const
 
@@ -32,6 +34,8 @@ export type PublicQuoteBootstrap = {
     allowedLocales: QuoteLanguage[]
     allowedCountries: string[]
     heroImageUrl: string | null
+    heroGallery: PublicHeroMediaItem[]
+    howItWorksVideo: PublicHowItWorksVideo | null
     landing: {
       eyebrow: string
       title: string

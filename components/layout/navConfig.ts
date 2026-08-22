@@ -40,6 +40,7 @@ export const CATERING_NAV: NavGroup[] = [
       { href: '/packages', label: 'Pacotes' },
       { href: '/additional-items', label: 'Cadastro de itens' },
       { href: '/packages/images', label: 'Imagens' },
+      { href: '/media', label: 'Mídia e Conteúdo' },
     ],
   },
   {

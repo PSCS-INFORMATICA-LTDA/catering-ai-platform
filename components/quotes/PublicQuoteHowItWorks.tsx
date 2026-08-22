@@ -11,13 +11,19 @@ type PublicQuoteHowItWorksProps = {
   label: string
   closeLabel: string
   title: string
+  src?: string | null
+  poster?: string | null
 }
 
 export default function PublicQuoteHowItWorks({
   label,
   closeLabel,
   title,
+  src,
+  poster,
 }: PublicQuoteHowItWorksProps) {
+  const videoSrc = src?.trim() || PUBLIC_QUOTE_HOW_IT_WORKS_VIDEO_SRC
+  const posterSrc = poster?.trim() || PUBLIC_QUOTE_HOW_IT_WORKS_POSTER_SRC
   const titleId = useId()
   const closeRef = useRef<HTMLButtonElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -110,8 +116,8 @@ export default function PublicQuoteHowItWorks({
               ref={videoRef}
               data-how-it-works-video
               className="mx-auto block h-auto max-h-[min(72dvh,38rem)] w-full bg-black object-contain"
-              src={PUBLIC_QUOTE_HOW_IT_WORKS_VIDEO_SRC}
-              poster={PUBLIC_QUOTE_HOW_IT_WORKS_POSTER_SRC}
+              src={videoSrc}
+              poster={posterSrc}
               controls
               playsInline
               preload="none"

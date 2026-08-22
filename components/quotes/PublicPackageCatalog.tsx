@@ -130,7 +130,7 @@ function PackageGroupToggle({
       }`}
     >
       <span
-        className={`${packageGroupDisplay.className} text-[0.82rem] font-bold uppercase tracking-[0.2em] text-cdl-title sm:text-[0.95rem]`}
+        className={`${packageGroupDisplay.className} text-[0.88rem] font-black uppercase tracking-[0.22em] text-cdl-title sm:text-base`}
       >
         {title}
       </span>

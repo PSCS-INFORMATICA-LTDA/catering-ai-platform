@@ -59,6 +59,18 @@ export type PublicQuotePageBootstrap = {
     allowedLocales: QuoteLanguage[]
     allowedCountries: string[]
     heroImageUrl: string | null
+    heroGallery?: Array<{
+      id: string
+      src: string
+      originalSrc: string
+      sourceFilename: string
+      alt: string
+      mobilePosition: string
+      desktopPosition: string
+      width: number
+      height: number
+    }>
+    howItWorksVideo?: { src: string; poster: string | null } | null
     serviceDurationMinutes?: number
     locationBias?: {
       lat: number
@@ -333,8 +345,13 @@ export default function PublicQuoteExperience({
       collectPublicHeroImages({
         companySlug: bootstrap.company.slug,
         heroImageUrl: bootstrap.settings.heroImageUrl,
+        managed: bootstrap.settings.heroGallery,
       }),
-    [bootstrap.company.slug, bootstrap.settings.heroImageUrl],
+    [
+      bootstrap.company.slug,
+      bootstrap.settings.heroGallery,
+      bootstrap.settings.heroImageUrl,
+    ],
   )
   const initialState = useMemo(
     () =>
@@ -644,6 +661,8 @@ export default function PublicQuoteExperience({
                     label={copy.howItWorks}
                     title={copy.howItWorksTitle}
                     closeLabel={copy.howItWorksClose}
+                    src={bootstrap.settings.howItWorksVideo?.src}
+                    poster={bootstrap.settings.howItWorksVideo?.poster}
                   />
                 </div>
                 {startError ? (

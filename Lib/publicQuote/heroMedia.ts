@@ -15,7 +15,9 @@ export type { PublicHeroMediaItem }
 export function collectPublicHeroImages(input: {
   companySlug?: string | null
   heroImageUrl?: string | null
+  managed?: readonly PublicHeroMediaItem[] | null
 }): PublicHeroMediaItem[] {
+  if (input.managed && input.managed.length > 0) return [...input.managed]
   const configured = getCompanyPublicHeroMedia(input.companySlug)
   if (configured.length > 0) return [...configured]
 
