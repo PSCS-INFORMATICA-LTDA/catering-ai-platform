@@ -31,7 +31,10 @@ const session = read('Lib/auth/session.ts')
 const nav = read('components/layout/navConfig.ts')
 const page = read('app/media/page.tsx')
 const assetsApi = read('app/api/media/assets/route.ts')
+const assetIdApi = read('app/api/media/assets/[id]/route.ts')
 const fileApi = read('app/api/media/assets/[id]/file/route.ts')
+const editorMigration = read('supabase/migrations/20260822190000_media_editor_meta.sql')
+const deleteMigration = read('supabase/migrations/20260822180000_media_delete_permission.sql')
 const catalogApi = read('app/api/media/catalog/[kind]/[id]/image/route.ts')
 const publicRoutes = read('Lib/publicRoutes.ts')
 const wizard = read('app/quotes/new/QuoteWizard.tsx')
@@ -47,7 +50,16 @@ report('TEST 04: company-public-media bucket is generic', migration.includes('co
 report('TEST 05: anon still revoked from media_assets', migration.includes('REVOKE ALL ON TABLE public.media_assets FROM anon'))
 report('TEST 06: Admin page exists and checks media.view', page.includes('media.view') && page.includes('MediaContentManager'))
 report('TEST 07: Nav has Media & Content', nav.includes("href: '/media'"))
-report('TEST 08: Media write APIs require media.manage', assetsApi.includes("requireApiPermission('media.manage')") && fileApi.includes("requireApiPermission('media.manage')"))
+report(
+  'TEST 08: Media write APIs require media.manage; DELETE requires media.delete',
+  assetsApi.includes("requireApiPermission('media.manage')") &&
+    fileApi.includes("requireApiPermission('media.manage')") &&
+    assetIdApi.includes("requireApiPermission('media.manage')") &&
+    assetIdApi.includes("requireApiPermission('media.delete')") &&
+    assetIdApi.includes('hard_delete_required') &&
+    deleteMigration.includes('ON CONFLICT (role_key, permission_key)') &&
+    editorMigration.includes("has_permission(company_id, 'media.delete')"),
+)
 report('TEST 09: Catalog image API does not update price fields', !catalogApi.includes('sale_price') && !catalogApi.includes('charge_type'))
 report('TEST 10: Public landing keeps hardcoded fallback', hero.includes('getCompanyPublicHeroMedia') && hero.includes('managed'))
 report('TEST 11: Bootstrap loads managed hero/video', bootstrap.includes('loadManagedPublicHero') && bootstrap.includes('fallbackHowItWorksVideo'))
@@ -63,6 +75,13 @@ report('TEST 20: Admin APIs use media repository', assetsApi.includes('listCompa
 report('TEST 21: Session keeps media.* fallback until DB is seeded', session.includes("key.startsWith('media.')"))
 report('TEST 22: Isolation test covers CDL vs ISO and anon', isolation.includes('iso-isolation-probe') && isolation.includes('anon cannot read'))
 report('TEST 23: Seed refuses PROD and does not migrate grill photos', seed.includes('eapwtirhevxrqinytans') && seed.includes("entity_type: ENTITY"))
+report(
+  'TEST 24: editor_meta is canonical; labels never store tokens',
+  editorMigration.includes('ADD COLUMN IF NOT EXISTS editor_meta jsonb') &&
+    editorMigration.includes('Never persist technical metadata') &&
+    compat.includes('row.editor_meta = editor') &&
+    !compat.includes('serializeEditorEnvelope'),
+)
 
 console.log('')
 console.log(`Passed: ${passed}`)

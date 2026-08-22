@@ -8,7 +8,7 @@ import {
   toSoftDisableRow,
   toUpdateRow,
 } from './compat'
-import { mediaAssetsSchemaIsExtended } from './schema'
+import { detectMediaSchema } from './schema'
 import type { PublicMediaAsset } from './types'
 
 function asClient(client: SupabaseClient) {
@@ -22,49 +22,49 @@ export async function listCompanyPublicMedia(
   publishedOnly = false,
 ): Promise<{ assets: PublicMediaAsset[]; error: string | null; extended: boolean }> {
   const supabase = asClient(client)
-  const extended = await mediaAssetsSchemaIsExtended(supabase)
+  const schema = await detectMediaSchema(supabase)
   let query = supabase
     .from('media_assets')
-    .select(mediaAssetSelect(extended))
+    .select(mediaAssetSelect(schema))
     .eq('company_id', companyId)
     .eq('entity_type', PUBLIC_MEDIA_ENTITY_TYPE)
     .order('display_order', { ascending: true })
 
-  if (extended && placement) {
+  if (schema.extended && placement) {
     query = query.eq('placement', placement)
   }
   if (publishedOnly) {
     query = query.eq('active', true)
-    if (extended) query = query.eq('status', 'active')
+    if (schema.extended) query = query.eq('status', 'active')
   }
 
   const { data, error } = await query
   if (error) {
-    return { assets: [], error: error.message, extended }
+    return { assets: [], error: error.message, extended: schema.extended }
   }
 
   const assets = (data ?? [])
-    .map((row) => mapMediaAssetRow(row as unknown as Record<string, unknown>, extended))
+    .map((row) => mapMediaAssetRow(row as unknown as Record<string, unknown>, schema))
     .filter((asset) => !placement || asset.placement === placement)
 
-  return { assets, error: null, extended }
+  return { assets, error: null, extended: schema.extended }
 }
 
 export async function insertCompanyPublicMedia(
   client: SupabaseClient,
   input: Record<string, unknown>,
 ): Promise<{ asset: PublicMediaAsset | null; error: string | null }> {
-  const extended = await mediaAssetsSchemaIsExtended(client)
+  const schema = await detectMediaSchema(client)
   const { data, error } = await client
     .from('media_assets')
-    .insert(toInsertRow(input, extended))
-    .select(mediaAssetSelect(extended))
+    .insert(toInsertRow(input, schema))
+    .select(mediaAssetSelect(schema))
     .maybeSingle()
   if (error || !data) {
     return { asset: null, error: error?.message || 'insert_failed' }
   }
   return {
-    asset: mapMediaAssetRow(data as unknown as Record<string, unknown>, extended),
+    asset: mapMediaAssetRow(data as unknown as Record<string, unknown>, schema),
     error: null,
   }
 }
@@ -74,21 +74,21 @@ export async function getCompanyPublicMedia(
   companyId: string,
   id: string,
 ): Promise<{ asset: PublicMediaAsset | null; error: string | null; extended: boolean }> {
-  const extended = await mediaAssetsSchemaIsExtended(client)
+  const schema = await detectMediaSchema(client)
   const { data, error } = await client
     .from('media_assets')
-    .select(mediaAssetSelect(extended))
+    .select(mediaAssetSelect(schema))
     .eq('id', id)
     .eq('company_id', companyId)
     .eq('entity_type', PUBLIC_MEDIA_ENTITY_TYPE)
     .maybeSingle()
   if (error || !data) {
-    return { asset: null, error: error?.message || 'not_found', extended }
+    return { asset: null, error: error?.message || 'not_found', extended: schema.extended }
   }
   return {
-    asset: mapMediaAssetRow(data as unknown as Record<string, unknown>, extended),
+    asset: mapMediaAssetRow(data as unknown as Record<string, unknown>, schema),
     error: null,
-    extended,
+    extended: schema.extended,
   }
 }
 
@@ -99,9 +99,10 @@ export async function updateCompanyPublicMedia(
   body: Record<string, unknown>,
   actor?: string | null,
 ): Promise<{ asset: PublicMediaAsset | null; error: string | null }> {
+  const schema = await detectMediaSchema(client)
   const current = await getCompanyPublicMedia(client, companyId, id)
   if (!current.asset) return { asset: null, error: current.error || 'not_found' }
-  const patch = toUpdateRow(body, current.asset, current.extended, actor)
+  const patch = toUpdateRow(body, current.asset, schema, actor)
   if (Object.keys(patch).length === 0) {
     return { asset: current.asset, error: null }
   }
@@ -111,7 +112,7 @@ export async function updateCompanyPublicMedia(
     .eq('id', id)
     .eq('company_id', companyId)
     .eq('entity_type', PUBLIC_MEDIA_ENTITY_TYPE)
-    .select(mediaAssetSelect(current.extended))
+    .select(mediaAssetSelect(schema))
     .maybeSingle()
   if (error) {
     return { asset: null, error: error.message }
@@ -120,7 +121,7 @@ export async function updateCompanyPublicMedia(
     return { asset: current.asset, error: null }
   }
   return {
-    asset: mapMediaAssetRow(data as unknown as Record<string, unknown>, current.extended),
+    asset: mapMediaAssetRow(data as unknown as Record<string, unknown>, schema),
     error: null,
   }
 }
@@ -131,10 +132,10 @@ export async function softDisableCompanyPublicMedia(
   id: string,
   actor?: string | null,
 ): Promise<{ ok: boolean; error: string | null }> {
-  const extended = await mediaAssetsSchemaIsExtended(client)
+  const schema = await detectMediaSchema(client)
   const { data, error } = await client
     .from('media_assets')
-    .update(toSoftDisableRow(extended, actor))
+    .update(toSoftDisableRow(schema, actor))
     .eq('id', id)
     .eq('company_id', companyId)
     .eq('entity_type', PUBLIC_MEDIA_ENTITY_TYPE)
@@ -178,11 +179,11 @@ export async function reorderCompanyPublicMedia(
   ids: string[],
   actor?: string | null,
 ): Promise<{ ok: boolean; error: string | null }> {
-  const extended = await mediaAssetsSchemaIsExtended(client)
+  const schema = await detectMediaSchema(client)
   for (const [index, id] of ids.entries()) {
     const { error } = await client
       .from('media_assets')
-      .update(toReorderRow(index + 1, extended, actor))
+      .update(toReorderRow(index + 1, schema, actor))
       .eq('id', id)
       .eq('company_id', companyId)
       .eq('entity_type', PUBLIC_MEDIA_ENTITY_TYPE)

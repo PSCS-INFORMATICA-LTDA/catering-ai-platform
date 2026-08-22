@@ -1,3 +1,8 @@
+/**
+ * Maps media_assets rows to the admin/public model.
+ * Editor focus/overlay lives in editor_meta jsonb.
+ * label_pt / label_en / label_es are multilingual content only.
+ */
 import {
   MEDIA_PLACEMENTS,
   type MediaPlacement,
@@ -5,12 +10,12 @@ import {
 } from './constants'
 import {
   defaultEditorMeta,
+  isEditorMeta,
   isOverlayPosition,
   parseCssFocus,
-  parseEditorEnvelope,
-  serializeEditorEnvelope,
   type MediaEditorMeta,
 } from './editorMeta'
+import type { MediaSchema } from './schema'
 import type { PublicMediaAsset } from './types'
 
 const PLACEMENT_PREFIX = /^(hero|how_it_works|video):/
@@ -50,10 +55,53 @@ function isImagePath(value: string | null | undefined) {
   return /\.(webp|jpe?g|png)(\?|$)/i.test(value)
 }
 
+function contentLabel(
+  explicit: unknown,
+  fallback: string | null | undefined = null,
+) {
+  if (typeof explicit !== 'string') return fallback ?? null
+  if (explicit.startsWith('__m1|')) return fallback ?? null
+  return explicit
+}
+
+function editorFromRow(row: Record<string, unknown>, extended: boolean): MediaEditorMeta {
+  if (isEditorMeta(row.editor_meta)) {
+    return defaultEditorMeta(row.editor_meta)
+  }
+  if (
+    extended &&
+    (row.focal_x != null ||
+      row.overlay_enabled === true ||
+      typeof row.title_pt === 'string')
+  ) {
+    const focal = parseCssFocus(
+      `${Number(row.focal_x ?? 0.5) * 100}% ${Number(row.focal_y ?? 0.5) * 100}%`,
+    )
+    return defaultEditorMeta({
+      overlayEnabled: row.overlay_enabled === true,
+      overlayPosition: isOverlayPosition(
+        typeof row.overlay_position === 'string' ? row.overlay_position : null,
+      )
+        ? (row.overlay_position as MediaEditorMeta['overlayPosition'])
+        : 'top-left',
+      title_pt: typeof row.title_pt === 'string' ? row.title_pt : '',
+      title_en: typeof row.title_en === 'string' ? row.title_en : '',
+      title_es: typeof row.title_es === 'string' ? row.title_es : '',
+      subtitle_pt: typeof row.subtitle_pt === 'string' ? row.subtitle_pt : '',
+      subtitle_en: typeof row.subtitle_en === 'string' ? row.subtitle_en : '',
+      subtitle_es: typeof row.subtitle_es === 'string' ? row.subtitle_es : '',
+      suggested: { mobile: focal, tablet: focal, desktop: focal },
+      applied: { mobile: focal, tablet: focal, desktop: focal },
+    })
+  }
+  return defaultEditorMeta()
+}
+
 export function mapMediaAssetRow(
   row: Record<string, unknown>,
-  extended: boolean,
+  schema: MediaSchema | boolean,
 ): PublicMediaAsset {
+  const extended = typeof schema === 'boolean' ? schema : schema.extended
   const decoded = decodePublicEntityKey(
     typeof row.entity_key === 'string' ? row.entity_key : null,
     typeof row.placement === 'string' ? row.placement : null,
@@ -70,52 +118,7 @@ export function mapMediaAssetRow(
   const status = (
     typeof row.status === 'string' ? row.status : active ? 'active' : 'inactive'
   ) as MediaStatus
-  const envelope = parseEditorEnvelope(
-    typeof row.label_es === 'string' ? row.label_es : null,
-  )
-  const editor = defaultEditorMeta({
-    ...envelope.editor,
-    overlayEnabled: extended
-      ? row.overlay_enabled === true
-      : envelope.editor?.overlayEnabled === true,
-    overlayPosition: isOverlayPosition(
-      typeof row.overlay_position === 'string'
-        ? row.overlay_position
-        : envelope.editor?.overlayPosition,
-    )
-      ? ((row.overlay_position as MediaEditorMeta['overlayPosition']) ??
-        envelope.editor?.overlayPosition)
-      : envelope.editor?.overlayPosition,
-    title_pt:
-      typeof row.title_pt === 'string'
-        ? row.title_pt
-        : envelope.editor?.title_pt ||
-          (typeof row.label_pt === 'string' ? row.label_pt : ''),
-    title_en:
-      typeof row.title_en === 'string'
-        ? row.title_en
-        : envelope.editor?.title_en ||
-          (typeof row.label_en === 'string' ? row.label_en : ''),
-    title_es:
-      typeof row.title_es === 'string'
-        ? row.title_es
-        : envelope.editor?.title_es || envelope.label_es || '',
-    applied:
-      envelope.editor?.applied ??
-      (row.focal_x != null && row.focal_y != null
-        ? {
-            mobile: parseCssFocus(
-              `${Number(row.focal_x) * 100}% ${Number(row.focal_y) * 100}%`,
-            ),
-            tablet: parseCssFocus(
-              `${Number(row.focal_x) * 100}% ${Number(row.focal_y) * 100}%`,
-            ),
-            desktop: parseCssFocus(
-              `${Number(row.focal_x) * 100}% ${Number(row.focal_y) * 100}%`,
-            ),
-          }
-        : undefined),
-  })
+  const editor = editorFromRow(row, extended)
 
   return {
     id: String(row.id),
@@ -127,32 +130,12 @@ export function mapMediaAssetRow(
     media_url: typeof row.media_url === 'string' ? row.media_url : null,
     storage_path: storagePath,
     poster_url: poster,
-    label_pt: typeof row.label_pt === 'string' ? row.label_pt : null,
-    label_en: typeof row.label_en === 'string' ? row.label_en : null,
-    label_es:
-      envelope.editor
-        ? envelope.label_es
-        : typeof row.label_es === 'string'
-          ? row.label_es
-          : null,
-    alt_pt:
-      typeof row.alt_pt === 'string'
-        ? row.alt_pt
-        : typeof row.label_pt === 'string'
-          ? row.label_pt
-          : null,
-    alt_en:
-      typeof row.alt_en === 'string'
-        ? row.alt_en
-        : typeof row.label_en === 'string'
-          ? row.label_en
-          : null,
-    alt_es:
-      typeof row.alt_es === 'string'
-        ? row.alt_es
-        : typeof row.label_es === 'string'
-          ? row.label_es
-          : null,
+    label_pt: contentLabel(row.label_pt),
+    label_en: contentLabel(row.label_en),
+    label_es: contentLabel(row.label_es),
+    alt_pt: contentLabel(row.alt_pt, contentLabel(row.label_pt)),
+    alt_en: contentLabel(row.alt_en, contentLabel(row.label_en)),
+    alt_es: contentLabel(row.alt_es, contentLabel(row.label_es)),
     title_pt: editor.title_pt || null,
     title_en: editor.title_en || null,
     title_es: editor.title_es || null,
@@ -166,8 +149,16 @@ export function mapMediaAssetRow(
       typeof row.variant === 'string'
         ? (row.variant as PublicMediaAsset['variant'])
         : 'original',
-    focal_x: envelope.editor ? editor.applied.mobile.x : row.focal_x == null ? null : Number(row.focal_x),
-    focal_y: envelope.editor ? editor.applied.mobile.y : row.focal_y == null ? null : Number(row.focal_y),
+    focal_x: isEditorMeta(row.editor_meta)
+      ? editor.applied.mobile.x
+      : row.focal_x == null
+        ? null
+        : Number(row.focal_x),
+    focal_y: isEditorMeta(row.editor_meta)
+      ? editor.applied.mobile.y
+      : row.focal_y == null
+        ? null
+        : Number(row.focal_y),
     display_order: Number(row.display_order ?? 1),
     active,
     status,
@@ -183,19 +174,32 @@ export const MEDIA_ASSET_SELECT_EXTENDED =
 export const MEDIA_ASSET_SELECT_COMPAT =
   'id, company_id, entity_type, entity_id, entity_key, media_type, media_url, storage_path, label_pt, label_en, label_es, display_order, active, created_at'
 
-export function mediaAssetSelect(extended: boolean) {
-  return extended ? MEDIA_ASSET_SELECT_EXTENDED : MEDIA_ASSET_SELECT_COMPAT
+export function mediaAssetSelect(schema: MediaSchema | boolean) {
+  const extended = typeof schema === 'boolean' ? schema : schema.extended
+  const hasEditorMeta = typeof schema === 'boolean' ? false : schema.hasEditorMeta
+  const base = extended ? MEDIA_ASSET_SELECT_EXTENDED : MEDIA_ASSET_SELECT_COMPAT
+  return hasEditorMeta ? `${base}, editor_meta` : base
+}
+
+function editorFromInput(input: Record<string, unknown>): MediaEditorMeta | null {
+  const raw = input.editor ?? input.editorMeta
+  return isEditorMeta(raw) ? defaultEditorMeta(raw) : null
 }
 
 export function toInsertRow(
   input: Record<string, unknown>,
-  extended: boolean,
+  schema: MediaSchema | boolean,
 ): Record<string, unknown> {
+  const extended = typeof schema === 'boolean' ? schema : schema.extended
+  const hasEditorMeta = typeof schema === 'boolean' ? false : schema.hasEditorMeta
   const placement = String(input.placement || '') as MediaPlacement
   const key =
     typeof input.entity_key === 'string' ? input.entity_key : `item-${Date.now()}`
   const status =
     typeof input.status === 'string' ? input.status : extended ? 'draft' : 'active'
+  const editor =
+    editorFromInput(input) ??
+    defaultEditorMeta({ overlayEnabled: input.overlay_enabled === true })
   const row: Record<string, unknown> = {
     company_id: input.company_id,
     entity_type: input.entity_type,
@@ -208,21 +212,14 @@ export function toInsertRow(
         : typeof input.poster_url === 'string'
           ? input.poster_url
           : null,
-    label_pt:
-      typeof input.label_pt === 'string'
-        ? input.label_pt
-        : typeof input.title_pt === 'string'
-          ? input.title_pt
-          : null,
-    label_en:
-      typeof input.label_en === 'string'
-        ? input.label_en
-        : typeof input.title_en === 'string'
-          ? input.title_en
-          : null,
-    label_es: persistCompatLabelEs(input),
+    label_pt: contentLabel(input.label_pt),
+    label_en: contentLabel(input.label_en),
+    label_es: contentLabel(input.label_es),
     display_order: Number(input.display_order ?? 1),
     active: typeof input.active === 'boolean' ? input.active : status !== 'inactive',
+  }
+  if (hasEditorMeta) {
+    row.editor_meta = editor
   }
   if (!extended) return row
   return {
@@ -231,38 +228,23 @@ export function toInsertRow(
     alt_pt: typeof input.alt_pt === 'string' ? input.alt_pt : null,
     alt_en: typeof input.alt_en === 'string' ? input.alt_en : null,
     alt_es: typeof input.alt_es === 'string' ? input.alt_es : null,
-    title_pt: typeof input.title_pt === 'string' ? input.title_pt : null,
-    title_en: typeof input.title_en === 'string' ? input.title_en : null,
-    title_es: typeof input.title_es === 'string' ? input.title_es : null,
-    subtitle_pt: typeof input.subtitle_pt === 'string' ? input.subtitle_pt : null,
-    subtitle_en: typeof input.subtitle_en === 'string' ? input.subtitle_en : null,
-    subtitle_es: typeof input.subtitle_es === 'string' ? input.subtitle_es : null,
-    overlay_enabled: input.overlay_enabled === true,
-    overlay_position:
-      typeof input.overlay_position === 'string' ? input.overlay_position : null,
+    title_pt: editor?.title_pt ?? (typeof input.title_pt === 'string' ? input.title_pt : null),
+    title_en: editor?.title_en ?? (typeof input.title_en === 'string' ? input.title_en : null),
+    title_es: editor?.title_es ?? (typeof input.title_es === 'string' ? input.title_es : null),
+    subtitle_pt: editor?.subtitle_pt ?? (typeof input.subtitle_pt === 'string' ? input.subtitle_pt : null),
+    subtitle_en: editor?.subtitle_en ?? (typeof input.subtitle_en === 'string' ? input.subtitle_en : null),
+    subtitle_es: editor?.subtitle_es ?? (typeof input.subtitle_es === 'string' ? input.subtitle_es : null),
+    overlay_enabled: editor ? editor.overlayEnabled : input.overlay_enabled === true,
+    overlay_position: editor?.overlayPosition
+      ?? (typeof input.overlay_position === 'string' ? input.overlay_position : null),
     placement,
     variant: typeof input.variant === 'string' ? input.variant : 'original',
-    focal_x: input.focal_x == null ? null : Number(input.focal_x),
-    focal_y: input.focal_y == null ? null : Number(input.focal_y),
+    focal_x: editor ? editor.applied.mobile.x : input.focal_x == null ? null : Number(input.focal_x),
+    focal_y: editor ? editor.applied.mobile.y : input.focal_y == null ? null : Number(input.focal_y),
     status,
     created_by: input.created_by ?? null,
     updated_by: input.updated_by ?? null,
   }
-}
-
-function persistCompatLabelEs(input: Record<string, unknown>) {
-  const editor = (input.editor ?? input.editorMeta) as MediaEditorMeta | undefined
-  if (editor) {
-    return serializeEditorEnvelope(
-      typeof input.label_es === 'string' ? input.label_es : editor.title_es,
-      editor,
-    )
-  }
-  return typeof input.label_es === 'string'
-    ? input.label_es
-    : typeof input.title_es === 'string'
-      ? input.title_es
-      : null
 }
 
 const COMPAT_UPDATABLE = new Set([
@@ -275,14 +257,19 @@ const COMPAT_UPDATABLE = new Set([
   'label_es',
   'display_order',
   'active',
+  'editor_meta',
 ])
 
 export function toUpdateRow(
   body: Record<string, unknown>,
   current: PublicMediaAsset,
-  extended: boolean,
+  schema: MediaSchema | boolean,
   actor?: string | null,
 ): Record<string, unknown> {
+  const extended = typeof schema === 'boolean' ? schema : schema.extended
+  const hasEditorMeta = typeof schema === 'boolean' ? false : schema.hasEditorMeta
+  const editor = editorFromInput(body)
+
   if (extended) {
     const patch: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
@@ -320,10 +307,8 @@ export function toUpdateRow(
     if (typeof patch.status === 'string') {
       patch.active = patch.status !== 'inactive'
     }
-    if (body.editor || body.editorMeta) {
-      const editor = defaultEditorMeta(
-        (body.editor ?? body.editorMeta) as MediaEditorMeta,
-      )
+    if (editor) {
+      if (hasEditorMeta) patch.editor_meta = editor
       patch.overlay_enabled = editor.overlayEnabled
       patch.overlay_position = editor.overlayPosition
       patch.title_pt = editor.title_pt
@@ -346,26 +331,17 @@ export function toUpdateRow(
   if (typeof body.media_url === 'string') patch.media_url = body.media_url
   if (typeof body.storage_path === 'string') patch.storage_path = body.storage_path
   if (typeof body.poster_url === 'string') patch.storage_path = body.poster_url
-  if (typeof body.label_pt === 'string' || typeof body.title_pt === 'string') {
-    patch.label_pt = (body.label_pt ?? body.title_pt) as string
-  }
-  if (typeof body.label_en === 'string' || typeof body.title_en === 'string') {
-    patch.label_en = (body.label_en ?? body.title_en) as string
-  }
+  if (typeof body.label_pt === 'string') patch.label_pt = body.label_pt
+  if (typeof body.label_en === 'string') patch.label_en = body.label_en
+  if (typeof body.label_es === 'string') patch.label_es = body.label_es
   if (body.display_order != null) patch.display_order = Number(body.display_order)
   if (typeof body.status === 'string') {
     patch.active = body.status !== 'inactive'
   } else if (typeof body.active === 'boolean') {
     patch.active = body.active
   }
-  const editorInput = (body.editor ?? body.editorMeta) as MediaEditorMeta | undefined
-  if (editorInput) {
-    const editor = defaultEditorMeta(editorInput)
-    patch.label_pt = editor.title_pt || current.label_pt
-    patch.label_en = editor.title_en || current.label_en
-    patch.label_es = serializeEditorEnvelope(editor.title_es || current.label_es, editor)
-  } else if (typeof body.label_es === 'string' || typeof body.title_es === 'string') {
-    patch.label_es = (body.label_es ?? body.title_es) as string
+  if (editor && hasEditorMeta) {
+    patch.editor_meta = editor
   }
   for (const key of Object.keys(patch)) {
     if (!COMPAT_UPDATABLE.has(key)) delete patch[key]
@@ -373,7 +349,8 @@ export function toUpdateRow(
   return patch
 }
 
-export function toSoftDisableRow(extended: boolean, actor?: string | null) {
+export function toSoftDisableRow(schema: MediaSchema | boolean, actor?: string | null) {
+  const extended = typeof schema === 'boolean' ? schema : schema.extended
   if (extended) {
     return {
       active: false,
@@ -387,9 +364,10 @@ export function toSoftDisableRow(extended: boolean, actor?: string | null) {
 
 export function toReorderRow(
   displayOrder: number,
-  extended: boolean,
+  schema: MediaSchema | boolean,
   actor?: string | null,
 ) {
+  const extended = typeof schema === 'boolean' ? schema : schema.extended
   if (extended) {
     return {
       display_order: displayOrder,

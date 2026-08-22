@@ -1,5 +1,4 @@
 import { writeAdminAudit } from '@/Lib/auth/session'
-import { hasPermission } from '@/Lib/auth/permissions'
 import {
   requireApiPermission,
   resolveAuthorizedCompanyId,
@@ -12,7 +11,6 @@ import {
 import {
   getCompanyPublicMedia,
   hardDeleteCompanyPublicMedia,
-  softDisableCompanyPublicMedia,
   updateCompanyPublicMedia,
 } from '@/Lib/media/repository'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
@@ -60,7 +58,7 @@ export async function DELETE(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireApiPermission('media.manage')
+  const auth = await requireApiPermission('media.delete')
   if (!auth.ok) return auth.response
   const companyId = resolveAuthorizedCompanyId(auth.session)
   const { id } = await context.params
@@ -69,26 +67,7 @@ export async function DELETE(
   const supabase = getSupabaseServerClient()
 
   if (!hard) {
-    const { ok, error } = await softDisableCompanyPublicMedia(supabase, companyId, id, actor)
-    if (!ok) {
-      console.error('[media] inactivate failed', { companyId, id, error })
-      return Response.json({ error: 'save_failed' }, { status: 404 })
-    }
-    await writeAdminAudit({
-      companyId,
-      actorUserId: actor,
-      action: 'media.delete',
-      entityType: 'media_assets',
-      entityId: id,
-      metadata: { soft: true },
-    })
-    return Response.json({ ok: true, soft: true })
-  }
-
-  const canHardDelete =
-    auth.session.isPlatformAdmin || hasPermission(auth.session.permissions, 'media.delete')
-  if (!canHardDelete) {
-    return Response.json({ error: 'delete_forbidden' }, { status: 403 })
+    return Response.json({ error: 'hard_delete_required' }, { status: 400 })
   }
 
   const current = await getCompanyPublicMedia(supabase, companyId, id)

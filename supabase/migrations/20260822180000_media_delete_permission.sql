@@ -15,4 +15,4 @@ ON CONFLICT (permission_key) DO NOTHING;
 INSERT INTO public.role_permissions (role_key, permission_key)
 SELECT r.role_key, 'media.delete'
 FROM (VALUES ('owner'), ('admin')) AS r(role_key)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (role_key, permission_key) DO NOTHING;

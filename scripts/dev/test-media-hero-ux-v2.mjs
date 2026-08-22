@@ -24,6 +24,7 @@ function report(name, ok, detail = '') {
 const manager = read('components/media/MediaContentManager.tsx')
 const card = read('components/media/HeroMediaCard.tsx')
 const patchApi = read('app/api/media/assets/[id]/route.ts')
+const assetsApi = read('app/api/media/assets/route.ts')
 const i18n = read('Lib/i18n/media.ts')
 const repo = read('Lib/media/repository.ts')
 const compat = read('Lib/media/compat.ts')
@@ -37,6 +38,7 @@ const perms = read('Lib/auth/permissions.ts')
 const session = read('Lib/auth/session.ts')
 const fileApi = read('app/api/media/assets/[id]/file/route.ts')
 const deleteMigration = read('supabase/migrations/20260822180000_media_delete_permission.sql')
+const editorMigration = read('supabase/migrations/20260822190000_media_editor_meta.sql')
 
 report('UX01: no onBlur autosave', !card.includes('onBlur') && !manager.includes('onBlur'))
 report('UX02: explicit Save button', card.includes('actionSave') && manager.includes('saveDraft'))
@@ -55,20 +57,38 @@ report('UX11: public experience not rewritten', experience.includes('PublicQuote
 report('UX12: wizard file untouched', wizard.includes('entryMode') && !wizard.includes('HeroMediaCard'))
 report('UX13: AUTO FOCUS declared HEURISTIC', i18n.includes('AUTO FOCUS: HEURISTIC') && autoFocus.includes('Heuristic saliency'))
 report('UX14: overlay decision is explicit', editorMeta.includes('overlayDecided') && mapPublic.includes('overlayDecided'))
-report('UX15: compat update ignores missing focal column', compat.includes("COMPAT_UPDATABLE") && compat.includes('serializeEditorEnvelope'))
-report('UX16: compat save writes envelope into label_es', compat.includes('serializeEditorEnvelope') && compat.includes('label_es'))
-report('UX17: insert honors active boolean', compat.includes('typeof input.active === \'boolean\''))
-report('UX18: sequence label helper exists', editorMeta.includes('SEQ.') && editorMeta.includes('padStart(2, \'0\')'))
+report('UX15: compat update ignores missing focal column', compat.includes('COMPAT_UPDATABLE') && !compat.includes('serializeEditorEnvelope'))
+report(
+  'UX16: labels stay content-only; editor_meta is persist target',
+  compat.includes('row.editor_meta = editor') &&
+    compat.includes("explicit.startsWith('__m1|')") &&
+    !compat.includes('serializeEditorEnvelope') &&
+    !editorMeta.includes('__m1') &&
+    editorMigration.includes('editor_meta jsonb') &&
+    !editorMigration.includes('Until this column exists'),
+)
+report('UX17: insert honors active boolean', compat.includes("typeof input.active === 'boolean'"))
+report('UX18: sequence label helper exists', editorMeta.includes('SEQ.') && editorMeta.includes("padStart(2, '0')"))
 const managerBlock = perms.slice(perms.indexOf('manager: ['), perms.indexOf('sales: ['))
 report(
   'UX19: media.delete is owner/admin only',
   perms.includes("'media.delete'") &&
     !managerBlock.includes("'media.delete'") &&
-    deleteMigration.includes('media.delete'),
+    deleteMigration.includes('media.delete') &&
+    deleteMigration.includes('ON CONFLICT (role_key, permission_key)'),
 )
 report('UX20: session still merges missing media.* keys', session.includes("key.startsWith('media.')"))
 report('UX21: shared /cdl/ files are never deleted', refs.includes('isSharedPublicFallbackPath') && refs.includes("startsWith('/cdl/')"))
 report('UX22: storage paths are company-scoped', refs.includes('isCompanyScopedStoragePath'))
+report(
+  'UX23: POST/PATCH require media.manage; DELETE requires media.delete',
+  assetsApi.includes("requireApiPermission('media.manage')") &&
+    patchApi.includes("requireApiPermission('media.manage')") &&
+    patchApi.includes("requireApiPermission('media.delete')") &&
+    patchApi.includes('hard_delete_required') &&
+    editorMigration.includes("has_permission(company_id, 'media.manage')") &&
+    editorMigration.includes("has_permission(company_id, 'media.delete')"),
+)
 
 function defaultEditorMeta(input = {}) {
   const suggested = input.suggested ?? {
@@ -91,35 +111,6 @@ function defaultEditorMeta(input = {}) {
     suggested,
     applied: input.applied ?? suggested,
   }
-}
-
-function pct(value) {
-  return String(Math.round(Math.min(1, Math.max(0, value)) * 100)).padStart(2, '0')
-}
-
-function serializeEditorEnvelope(labelEs, editor) {
-  const meta = defaultEditorMeta(editor)
-  const flags = `${meta.focusMode === 'manual' ? 'm' : 'a'}${meta.overlayEnabled ? '1' : '0'}${
-    meta.overlayDecided ? '1' : '0'
-  }tl`
-  const maps = [meta.suggested, meta.applied]
-  const packed = maps
-    .flatMap((map) => [map.mobile, map.tablet, map.desktop])
-    .map((point) => `${pct(point.x)}${pct(point.y)}`)
-    .join('')
-  return `__m1|${flags}|${packed}|${labelEs || meta.title_es || ''}`
-}
-
-function parseEditorEnvelope(labelEs) {
-  const raw = String(labelEs || '').trim()
-  if (raw.startsWith('__m1|')) {
-    const parts = raw.split('|')
-    return { label_es: parts.slice(3).join('|') || null, editor: defaultEditorMeta() }
-  }
-  if (!raw.startsWith('{')) return { label_es: labelEs ?? null, editor: null }
-  const parsed = JSON.parse(raw)
-  if (parsed?.__me !== 1 || !parsed.editor) return { label_es: labelEs ?? null, editor: null }
-  return { label_es: parsed.label_es ?? null, editor: defaultEditorMeta(parsed.editor) }
 }
 
 function formatSequence(order) {
@@ -157,14 +148,6 @@ function suggestFocusFromPixels(buffer) {
   return { x: weightX / total, y: weightY / total }
 }
 
-const envelope = serializeEditorEnvelope('ES title', defaultEditorMeta({ overlayEnabled: true, title_pt: 'PT' }))
-const parsed = parseEditorEnvelope(envelope)
-report(
-  'UX23: compact envelope roundtrip fits 255',
-  envelope.startsWith('__m1|') && envelope.length <= 255 && parsed.label_es === 'ES title',
-  `${envelope.length} chars`,
-)
-report('UX26: library persists compact __m1 not JSON blob', editorMeta.includes("COMPACT_MARK = '__m1'") && editorMeta.includes('LABEL_ES_MAX'))
 report('UX24: sequence label is SEQ. 03', formatSequence(3) === 'SEQ. 03')
 
 const pixels = { width: 4, height: 4, data: new Uint8ClampedArray(4 * 4 * 4) }
@@ -174,6 +157,7 @@ pixels.data[2] = 40
 pixels.data[3] = 255
 const focus = suggestFocusFromPixels(pixels)
 report('UX25: heuristic returns normalized focus', focus.x >= 0 && focus.x <= 1 && focus.y >= 0 && focus.y <= 1)
+report('UX26: library has no compact token persist path', !editorMeta.includes('__m1') && !compat.includes('__m1|${'))
 
 const DEV_REF = 'yasprgtlqclwsjcshtls'
 const PROD_REF = 'eapwtirhevxrqinytans'
@@ -189,57 +173,91 @@ if (!url || !service) {
 } else {
   const { createClient } = await import('@supabase/supabase-js')
   const admin = createClient(url, service, { auth: { persistSession: false } })
+
+  const { count: tokenCount, error: tokenError } = await admin
+    .from('media_assets')
+    .select('id', { count: 'exact', head: true })
+    .like('label_es', '__m1|%')
+  report(
+    'LIVE00: no leftover __m1 in label_es',
+    !tokenError && (tokenCount ?? 0) === 0,
+    tokenError?.message || `count=${tokenCount ?? 0}`,
+  )
+
+  const editorProbe = await admin.from('media_assets').select('editor_meta').limit(1)
+  const hasEditorMeta = !editorProbe.error
+  report(
+    'LIVE00b: editor_meta column exists',
+    hasEditorMeta,
+    editorProbe.error?.message || 'present',
+  )
+
   const key = `hero:qa-hero-ux-v2-${Date.now()}`
+  const editor = defaultEditorMeta({
+    title_pt: 'QA PT',
+    overlayDecided: false,
+  })
+  const insertPayload = {
+    company_id: ISO_ID,
+    entity_type: 'public_landing',
+    entity_key: key,
+    media_type: 'image',
+    media_url: '/iso-isolation-probe.webp',
+    storage_path: '/iso-isolation-probe.webp',
+    label_pt: 'QA hero ux',
+    label_en: 'QA hero ux',
+    label_es: 'QA ES',
+    display_order: 99,
+    active: false,
+  }
+  if (hasEditorMeta) insertPayload.editor_meta = editor
+
   const { data: created, error: createError } = await admin
     .from('media_assets')
-    .insert({
-      company_id: ISO_ID,
-      entity_type: 'public_landing',
-      entity_key: key,
-      media_type: 'image',
-      media_url: '/iso-isolation-probe.webp',
-      storage_path: '/iso-isolation-probe.webp',
-      label_pt: 'QA hero ux',
-      label_en: 'QA hero ux',
-      label_es: serializeEditorEnvelope('QA ES', defaultEditorMeta({ title_pt: 'QA PT', overlayDecided: false })),
-      display_order: 99,
-      active: false,
-    })
-    .select('id, company_id, label_es, active, display_order')
+    .insert(insertPayload)
+    .select('id, company_id, label_es, active, display_order, editor_meta')
     .maybeSingle()
 
-  report('LIVE01: create inactive ISO throwaway', !createError && created?.active === false, createError?.message || created?.id)
+  report(
+    'LIVE01: create inactive ISO throwaway',
+    !createError && created?.active === false && created?.label_es === 'QA ES',
+    createError?.message || created?.id,
+  )
 
   if (created?.id) {
     const empty = await admin.from('media_assets').update({}).eq('id', created.id).eq('company_id', ISO_ID).select('id')
     report('LIVE02: empty update does not throw', !empty.error, empty.error?.message)
 
-    const missingCol = await admin.from('media_assets').update({ focal_x: 0.72 }).eq('id', created.id).eq('company_id', ISO_ID).select('id')
     report(
-      'LIVE03: missing focal_x column is the old update_failed cause',
-      Boolean(missingCol.error),
-      missingCol.error?.message || 'column unexpectedly exists',
+      'LIVE03: editor_meta persisted on create',
+      hasEditorMeta && created?.editor_meta?.autoFocus === 'HEURISTIC',
+      hasEditorMeta ? created?.editor_meta?.autoFocus : 'column missing',
     )
 
     const saved = await admin
       .from('media_assets')
       .update({
-        label_es: serializeEditorEnvelope('QA ES', defaultEditorMeta({
+        label_es: 'QA ES',
+        editor_meta: defaultEditorMeta({
           title_pt: 'Novo',
           overlayDecided: true,
           overlayEnabled: true,
           applied: { mobile: { x: 0.72, y: 0.46 }, tablet: { x: 0.72, y: 0.46 }, desktop: { x: 0.7, y: 0.4 } },
-        })),
+        }),
         active: true,
       })
       .eq('id', created.id)
       .eq('company_id', ISO_ID)
-      .select('id, active, label_es')
+      .select('id, active, label_es, editor_meta')
       .maybeSingle()
     report(
-      'LIVE04: envelope + active persist',
-      saved.data?.active === true && String(saved.data?.label_es || '').startsWith('__m1|'),
-      saved.error?.message || String(saved.data?.label_es || '').slice(0, 40),
+      'LIVE04: editor_meta + active persist; label_es stays content',
+      saved.data?.active === true &&
+        saved.data?.label_es === 'QA ES' &&
+        !String(saved.data?.label_es || '').startsWith('__m1|') &&
+        saved.data?.editor_meta?.overlayEnabled === true &&
+        saved.data?.editor_meta?.applied?.mobile?.x === 0.72,
+      saved.error?.message || String(saved.data?.label_es || ''),
     )
 
     const leaked = await admin

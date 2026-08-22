@@ -31,9 +31,11 @@ ALTER TABLE public.media_assets
   ADD COLUMN IF NOT EXISTS created_by uuid,
   ADD COLUMN IF NOT EXISTS updated_by uuid;
 
+-- ADD COLUMN status DEFAULT 'active' stamps existing rows. Sync from active.
 UPDATE public.media_assets
-SET status = CASE WHEN active IS FALSE THEN 'inactive' ELSE 'active' END
-WHERE status IS NULL;
+SET status = CASE WHEN active IS FALSE THEN 'inactive' ELSE COALESCE(status, 'active') END
+WHERE status IS NULL
+   OR (active IS FALSE AND status IS DISTINCT FROM 'inactive');
 
 DO $$
 BEGIN
@@ -155,6 +157,6 @@ CREATE POLICY company_public_media_auth_write
     AND private.is_company_member((storage.foldername(name))[1]::uuid)
   );
 
--- 4) RLS existente permanece (member SELECT/INSERT/UPDATE, admin/owner DELETE).
---    Write funcional de mídia é autorizado no servidor com media.manage.
+-- 4) SELECT membership remains here. INSERT/UPDATE/DELETE policies are
+--    tightened to media.manage / media.delete in 20260822190000.
 REVOKE ALL ON TABLE public.media_assets FROM anon;
