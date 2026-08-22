@@ -90,7 +90,7 @@ report(
     i18n.includes('Este medio está inactivo y no aparece en la página pública.') &&
     manager.includes('savedPublicUpdated') &&
     manager.includes('savedInactiveHidden') &&
-    manager.includes('...toDraft(json.asset'),
+    manager.includes('toDraft(json.asset'),
 )
 report(
   'SRC05: public hero uses applied CSS vars and tablet breakpoint',
