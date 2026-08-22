@@ -584,12 +584,19 @@ if (!url || !service) {
     .select('id, entity_key, active, media_url, display_order')
     .eq('company_id', CDL_ID)
     .eq('entity_type', 'public_landing')
-    .in('entity_key', ['hero:cdl-canape-sausage-crostini', 'hero:item-1787407319293'])
+    .in('entity_key', [
+      'hero:cdl-canape-sausage-crostini',
+      'hero:item-1787407319293',
+      'hero:cdl-grill-corn-flames',
+      'hero:cdl-event-pool-station',
+    ])
   const restoredKeys = new Set((restoredHero ?? []).map((row) => row.entity_key))
   report(
     'LIVE14: CDL hero keys stay namespaced',
     restoredKeys.has('hero:cdl-canape-sausage-crostini') &&
       restoredKeys.has('hero:item-1787407319293') &&
+      restoredKeys.has('hero:cdl-grill-corn-flames') &&
+      restoredKeys.has('hero:cdl-event-pool-station') &&
       (restoredHero ?? []).every((row) => row.active === true),
     (restoredHero ?? []).map((row) => `${row.entity_key}:${row.display_order}:${row.active}`).join('|'),
   )

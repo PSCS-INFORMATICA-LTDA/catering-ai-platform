@@ -1596,6 +1596,13 @@ body {
   filter: saturate(1.04) contrast(1.03);
 }
 
+@media (min-width: 768px) and (max-width: 1023px) {
+  .public-hero-photo {
+    object-position: var(--hero-pos-tablet, var(--hero-pos-mobile));
+    transform-origin: var(--hero-pos-tablet, var(--hero-pos-mobile));
+  }
+}
+
 @media (min-width: 1024px) {
   .public-hero-photo {
     object-position: var(--hero-pos-desktop);

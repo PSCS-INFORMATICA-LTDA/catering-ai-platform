@@ -108,6 +108,7 @@ export default function MediaContentManager({
   const [catalog, setCatalog] = useState<MediaCatalogImageItem[]>([])
   const [query, setQuery] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [saveNotice, setSaveNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [orderDirty, setOrderDirty] = useState(false)
   const [adding, setAdding] = useState(false)
@@ -248,13 +249,19 @@ export default function MediaContentManager({
       })
       const json = (await response.json()) as { asset?: PublicMediaAsset; error?: string }
       if (!response.ok || !json.asset) throw new Error(json.error || 'save_failed')
+      const saved = toDraft(json.asset, importedIds)
       updateDraft(working.id, {
-        ...toDraft(json.asset, importedIds),
+        ...saved,
         dirty: false,
         saving: false,
         savedFlash: true,
         preview: working.preview,
       })
+      setSaveNotice(
+        saved.active
+          ? tMedia(locale, 'savedPublicUpdated')
+          : tMedia(locale, 'savedInactiveHidden'),
+      )
       return true
     } catch (caught) {
       updateDraft(draft.id, { ...draft, saving: false })
@@ -276,6 +283,7 @@ export default function MediaContentManager({
       const json = (await response.json()) as { error?: string }
       if (!response.ok) throw new Error(json.error || 'reorder_failed')
       await loadAssets(tab)
+      setSaveNotice(tMedia(locale, 'savedPublicUpdated'))
     } catch {
       setError(tMedia(locale, 'saveFailed'))
     } finally {
@@ -312,6 +320,11 @@ export default function MediaContentManager({
       })
       if (!response.ok) throw new Error('save_failed')
       await loadAssets(tab)
+      setSaveNotice(
+        active
+          ? tMedia(locale, 'savedPublicUpdated')
+          : tMedia(locale, 'savedInactiveHidden'),
+      )
     } catch {
       setError(tMedia(locale, 'saveFailed'))
     } finally {
@@ -535,6 +548,14 @@ export default function MediaContentManager({
       {error ? (
         <p className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
           {error}
+        </p>
+      ) : null}
+      {saveNotice ? (
+        <p
+          data-media-save-notice
+          className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
+        >
+          {saveNotice}
         </p>
       ) : null}
 
