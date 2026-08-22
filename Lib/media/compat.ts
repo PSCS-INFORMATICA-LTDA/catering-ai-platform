@@ -191,83 +191,79 @@ export function toInsertRow(
   }
 }
 
-const COMPAT_UPDATABLE = new Set([
+export const MEDIA_IDENTITY_KEYS = [
+  'id',
+  'company_id',
+  'entity_type',
+  'entity_id',
   'entity_key',
-  'media_type',
-  'media_url',
-  'storage_path',
+] as const
+
+export const MEDIA_EDIT_PATCH_ALLOWLIST = [
+  'display_order',
+  'active',
   'label_pt',
   'label_en',
   'label_es',
-  'display_order',
-  'active',
+  'alt_pt',
+  'alt_en',
+  'alt_es',
+  'title_pt',
+  'title_en',
+  'title_es',
+  'subtitle_pt',
+  'subtitle_en',
+  'subtitle_es',
   'editor_meta',
-])
+] as const
 
+export const MEDIA_REPLACE_PATCH_ALLOWLIST = [
+  'media_url',
+  'storage_path',
+  'poster_url',
+  'media_type',
+] as const
+
+export type MediaUpdateMode = 'edit' | 'replace'
+
+/** Edit PATCH never writes identity or file paths. Replace is file-only. */
 export function toUpdateRow(
   body: Record<string, unknown>,
-  current: PublicMediaAsset,
+  _current: PublicMediaAsset,
   schema: MediaSchema | boolean,
   actor?: string | null,
+  mode: MediaUpdateMode = 'edit',
 ): Record<string, unknown> {
   const extended = typeof schema === 'boolean' ? schema : schema.extended
   const hasEditorMeta = typeof schema === 'boolean' ? false : schema.hasEditorMeta
   const editor = editorFromInput(body)
-
-  if (extended) {
-    const patch: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
-      updated_by: actor ?? null,
-    }
-    const keys = [
-      'entity_key',
-      'media_type',
-      'media_url',
-      'poster_url',
-      'label_pt',
-      'label_en',
-      'label_es',
-      'alt_pt',
-      'alt_en',
-      'alt_es',
-      'title_pt',
-      'title_en',
-      'title_es',
-      'subtitle_pt',
-      'subtitle_en',
-      'subtitle_es',
-      'variant',
-      'display_order',
-      'storage_path',
-      'active',
-    ] as const
-    for (const key of keys) {
-      if (body[key] !== undefined) patch[key] = body[key]
-    }
-    if (editor && hasEditorMeta) {
-      patch.editor_meta = editor
-    }
-    return patch
-  }
+  const allow = new Set<string>(
+    mode === 'replace' ? MEDIA_REPLACE_PATCH_ALLOWLIST : MEDIA_EDIT_PATCH_ALLOWLIST,
+  )
 
   const patch: Record<string, unknown> = {}
-  if (typeof body.entity_key === 'string' && current.placement) {
-    patch.entity_key = encodePublicEntityKey(current.placement, body.entity_key)
+  if (extended) {
+    patch.updated_at = new Date().toISOString()
+    patch.updated_by = actor ?? null
   }
-  if (typeof body.media_type === 'string') patch.media_type = body.media_type
-  if (typeof body.media_url === 'string') patch.media_url = body.media_url
-  if (typeof body.storage_path === 'string') patch.storage_path = body.storage_path
-  if (typeof body.poster_url === 'string') patch.storage_path = body.poster_url
-  if (typeof body.label_pt === 'string') patch.label_pt = body.label_pt
-  if (typeof body.label_en === 'string') patch.label_en = body.label_en
-  if (typeof body.label_es === 'string') patch.label_es = body.label_es
-  if (body.display_order != null) patch.display_order = Number(body.display_order)
-  if (typeof body.active === 'boolean') patch.active = body.active
-  if (editor && hasEditorMeta) {
+
+  for (const key of allow) {
+    if (key === 'editor_meta') continue
+    if (body[key] !== undefined) patch[key] = body[key]
+  }
+  if (mode === 'edit' && editor && hasEditorMeta) {
     patch.editor_meta = editor
   }
+  if (mode === 'edit' && body.display_order != null) {
+    patch.display_order = Number(body.display_order)
+  }
+
+  for (const key of MEDIA_IDENTITY_KEYS) {
+    delete patch[key]
+  }
   for (const key of Object.keys(patch)) {
-    if (!COMPAT_UPDATABLE.has(key)) delete patch[key]
+    if (key === 'updated_at' || key === 'updated_by') continue
+    if (!allow.has(key)) delete patch[key]
   }
   return patch
 }

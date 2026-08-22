@@ -59,6 +59,7 @@ export async function POST(
     id,
     patch,
     actor,
+    'replace',
   )
   if (error || !asset) {
     return Response.json({ error: error || 'save_failed' }, { status: 500 })

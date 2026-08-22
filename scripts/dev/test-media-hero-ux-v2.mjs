@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { toReorderRow, toSoftDisableRow, toUpdateRow } from '../../Lib/media/compat.ts'
 
 const ROOT = process.cwd()
 let passed = 0
@@ -64,7 +65,12 @@ report('UX11: public experience not rewritten', experience.includes('PublicQuote
 report('UX12: wizard file untouched', wizard.includes('entryMode') && !wizard.includes('HeroMediaCard'))
 report('UX13: AUTO FOCUS declared HEURISTIC', i18n.includes('AUTO FOCUS: HEURISTIC') && autoFocus.includes('Heuristic saliency'))
 report('UX14: overlay decision is explicit', editorMeta.includes('overlayDecided') && mapPublic.includes('overlayDecided'))
-report('UX15: compat update ignores missing editor_meta column', compat.includes('COMPAT_UPDATABLE') && !compat.includes('serializeEditorEnvelope'))
+report(
+  'UX15: edit PATCH allowlist ignores missing editor_meta and identity keys',
+  compat.includes('MEDIA_EDIT_PATCH_ALLOWLIST') &&
+    compat.includes('MEDIA_IDENTITY_KEYS') &&
+    !compat.includes('serializeEditorEnvelope'),
+)
 const editorType = editorMeta.slice(
   editorMeta.indexOf('export type MediaEditorMeta'),
   editorMeta.indexOf('export type MediaCopyFields'),
@@ -84,6 +90,92 @@ report(
     !editorMigration.includes('Until this column exists'),
 )
 report('UX17: insert honors active boolean', compat.includes("typeof input.active === 'boolean'"))
+const identityCurrent = {
+  id: 'row-1',
+  company_id: 'co-1',
+  entity_type: 'public_landing',
+  entity_key: 'test-save-key',
+  placement: 'hero',
+  display_order: 1,
+  active: true,
+}
+const identityPatch = toUpdateRow(
+  {
+    id: 'should-not-write',
+    company_id: 'should-not-write',
+    entity_type: 'event',
+    entity_id: 'should-not-write',
+    entity_key: 'test-save-key',
+    media_url: '/should-not-write.webp',
+    storage_path: '/should-not-write.webp',
+    display_order: 3,
+    active: false,
+    title_pt: 'Novo',
+    editor: persistableEditorMeta({ overlayDecided: true }),
+  },
+  identityCurrent,
+  { extended: true, hasEditorMeta: true },
+)
+const titleOnlyPatch = toUpdateRow(
+  { entity_key: 'test-save-key', title_pt: 'Titulo' },
+  identityCurrent,
+  { extended: true, hasEditorMeta: true },
+)
+const activeOnlyPatch = toUpdateRow(
+  { entity_key: 'test-save-key', active: false },
+  identityCurrent,
+  { extended: true, hasEditorMeta: true },
+)
+const editorOnlyPatch = toUpdateRow(
+  { entity_key: 'test-save-key', editor: persistableEditorMeta({ overlayDecided: true }) },
+  identityCurrent,
+  { extended: true, hasEditorMeta: true },
+)
+const reorderPatch = toReorderRow(4, { extended: true, hasEditorMeta: true })
+const disablePatch = toSoftDisableRow({ extended: true, hasEditorMeta: true })
+const replacePatch = toUpdateRow(
+  {
+    entity_key: 'test-save-key',
+    media_url: '/replaced.webp',
+    storage_path: '/replaced.webp',
+    title_pt: 'should-not-write-on-replace',
+  },
+  identityCurrent,
+  { extended: true, hasEditorMeta: true },
+  null,
+  'replace',
+)
+const patchPayload = manager.slice(
+  manager.indexOf("method: 'PATCH'"),
+  manager.indexOf('const json = (await response.json())'),
+)
+report(
+  'UX27: SAVE MUST NOT MUTATE ENTITY IDENTITY',
+  compat.includes('MEDIA_EDIT_PATCH_ALLOWLIST') &&
+    !patchPayload.includes('entity_key') &&
+    identityPatch.entity_key === undefined &&
+    identityPatch.entity_type === undefined &&
+    identityPatch.media_url === undefined &&
+    identityPatch.storage_path === undefined &&
+    identityPatch.company_id === undefined &&
+    identityPatch.id === undefined &&
+    identityPatch.display_order === 3 &&
+    identityPatch.active === false &&
+    identityPatch.title_pt === 'Novo' &&
+    titleOnlyPatch.entity_key === undefined &&
+    titleOnlyPatch.title_pt === 'Titulo' &&
+    activeOnlyPatch.entity_key === undefined &&
+    activeOnlyPatch.active === false &&
+    editorOnlyPatch.entity_key === undefined &&
+    editorOnlyPatch.editor_meta?.overlayDecided === true &&
+    reorderPatch.entity_key === undefined &&
+    reorderPatch.display_order === 4 &&
+    disablePatch.entity_key === undefined &&
+    disablePatch.active === false &&
+    replacePatch.entity_key === undefined &&
+    replacePatch.media_url === '/replaced.webp' &&
+    replacePatch.title_pt === undefined,
+)
 report('UX18: sequence label helper exists', editorMeta.includes('SEQ.') && editorMeta.includes("padStart(2, '0')"))
 const managerBlock = perms.slice(perms.indexOf('manager: ['), perms.indexOf('sales: ['))
 report(
@@ -355,6 +447,125 @@ if (!url || !service) {
     .eq('active', true)
     .like('entity_key', 'hero:%')
   report('LIVE09: CDL still has active public hero rows', (cdlActive ?? []).length >= 1, String(cdlActive?.length || 0))
+
+  const PRESERVE_KEY = 'hero:qa-save-preserves-key'
+  await admin.from('media_assets').delete().eq('company_id', ISO_ID).eq('entity_key', PRESERVE_KEY)
+
+  const preservePayload = {
+    company_id: ISO_ID,
+    entity_type: 'public_landing',
+    entity_key: PRESERVE_KEY,
+    media_type: 'image',
+    media_url: '/iso-isolation-probe.webp',
+    storage_path: '/iso-isolation-probe.webp',
+    label_pt: 'QA preserve key',
+    label_en: 'QA preserve key',
+    label_es: 'QA preserve key',
+    display_order: 98,
+    active: true,
+  }
+  if (hasEditorMeta) preservePayload.editor_meta = persistableEditorMeta()
+  if (hasTitleColumns) preservePayload.title_pt = 'Antes'
+
+  const { data: preserveRow, error: preserveCreateError } = await admin
+    .from('media_assets')
+    .insert(preservePayload)
+    .select('id, company_id, entity_type, entity_key, media_url, storage_path, display_order, active')
+    .maybeSingle()
+
+  report(
+    'LIVE10: throwaway hero:qa-save-preserves-key created',
+    !preserveCreateError && preserveRow?.entity_key === PRESERVE_KEY,
+    preserveCreateError?.message || preserveRow?.id,
+  )
+
+  if (preserveRow?.id) {
+    const mappedCurrent = {
+      id: preserveRow.id,
+      company_id: ISO_ID,
+      entity_type: 'public_landing',
+      entity_key: 'qa-save-preserves-key',
+      placement: 'hero',
+      display_order: preserveRow.display_order,
+      active: preserveRow.active,
+    }
+    const hostileBody = {
+      id: preserveRow.id,
+      company_id: CDL_ID,
+      entity_type: 'event',
+      entity_key: 'qa-save-preserves-key',
+      media_url: '/should-not-write.webp',
+      storage_path: '/should-not-write.webp',
+      display_order: 8,
+      active: false,
+      title_pt: 'Depois',
+      editor: persistableEditorMeta({
+        overlayDecided: true,
+        overlayEnabled: true,
+        applied: {
+          mobile: { x: 0.61, y: 0.42 },
+          tablet: { x: 0.61, y: 0.42 },
+          desktop: { x: 0.6, y: 0.4 },
+        },
+      }),
+    }
+    const preservePatch = toUpdateRow(
+      hostileBody,
+      mappedCurrent,
+      { extended: true, hasEditorMeta },
+      null,
+      'edit',
+    )
+    const savedPreserve = await admin
+      .from('media_assets')
+      .update(preservePatch)
+      .eq('id', preserveRow.id)
+      .eq('company_id', ISO_ID)
+      .select('id, entity_key, media_url, storage_path, display_order, active, title_pt, editor_meta')
+      .maybeSingle()
+
+    report(
+      'LIVE11: SAVE MUST NOT MUTATE ENTITY IDENTITY',
+      savedPreserve.data?.entity_key === PRESERVE_KEY &&
+        preservePatch.entity_key === undefined &&
+        savedPreserve.data?.media_url === '/iso-isolation-probe.webp' &&
+        savedPreserve.data?.storage_path === '/iso-isolation-probe.webp' &&
+        savedPreserve.data?.display_order === 8 &&
+        savedPreserve.data?.active === false &&
+        (hasTitleColumns ? savedPreserve.data?.title_pt === 'Depois' : true) &&
+        (hasEditorMeta ? savedPreserve.data?.editor_meta?.overlayDecided === true : true),
+      savedPreserve.error?.message || savedPreserve.data?.entity_key,
+    )
+
+    const { error: preserveDeleteError } = await admin
+      .from('media_assets')
+      .delete()
+      .eq('id', preserveRow.id)
+      .eq('company_id', ISO_ID)
+    report('LIVE12: throwaway hero:qa-save-preserves-key deleted', !preserveDeleteError, preserveDeleteError?.message)
+
+    const { data: preserveLeftover } = await admin
+      .from('media_assets')
+      .select('id')
+      .eq('company_id', ISO_ID)
+      .eq('entity_key', PRESERVE_KEY)
+    report('LIVE13: identity throwaway gone', (preserveLeftover ?? []).length === 0)
+  }
+
+  const { data: restoredHero } = await admin
+    .from('media_assets')
+    .select('id, entity_key, active, media_url, display_order')
+    .eq('company_id', CDL_ID)
+    .eq('entity_type', 'public_landing')
+    .in('entity_key', ['hero:cdl-grill-corn-flames', 'hero:cdl-canape-sausage-crostini'])
+  const restoredKeys = new Set((restoredHero ?? []).map((row) => row.entity_key))
+  report(
+    'LIVE14: restored CDL hero keys are namespaced',
+    restoredKeys.has('hero:cdl-grill-corn-flames') &&
+      restoredKeys.has('hero:cdl-canape-sausage-crostini') &&
+      (restoredHero ?? []).every((row) => row.active === true),
+    (restoredHero ?? []).map((row) => `${row.entity_key}:${row.display_order}:${row.active}`).join('|'),
+  )
 }
 
 console.log('')

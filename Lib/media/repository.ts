@@ -96,11 +96,12 @@ export async function updateCompanyPublicMedia(
   id: string,
   body: Record<string, unknown>,
   actor?: string | null,
+  mode: 'edit' | 'replace' = 'edit',
 ): Promise<{ asset: PublicMediaAsset | null; error: string | null }> {
   const schema = await detectMediaSchema(client)
   const current = await getCompanyPublicMedia(client, companyId, id)
   if (!current.asset) return { asset: null, error: current.error || 'not_found' }
-  const patch = toUpdateRow(body, current.asset, schema, actor)
+  const patch = toUpdateRow(body, current.asset, schema, actor, mode)
   if (Object.keys(patch).length === 0) {
     return { asset: current.asset, error: null }
   }

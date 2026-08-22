@@ -205,6 +205,8 @@ export default function MediaContentManager({
         updateDraft(working.id, { ...working, saving: true })
       }
 
+      // Existing rows keep their stored identity. Edit PATCH must not send entity_key.
+
       if (working.pendingFile && assetId) {
         const form = new FormData()
         form.set('file', working.pendingFile)
@@ -220,7 +222,6 @@ export default function MediaContentManager({
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          entity_key: working.entityKey,
           display_order: working.sequence,
           active: working.active,
           editor: working.editor,

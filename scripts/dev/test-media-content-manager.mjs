@@ -40,6 +40,7 @@ const publicRoutes = read('Lib/publicRoutes.ts')
 const wizard = read('app/quotes/new/QuoteWizard.tsx')
 const compat = read('Lib/media/compat.ts')
 const repo = read('Lib/media/repository.ts')
+const manager = read('components/media/MediaContentManager.tsx')
 const seed = read('scripts/dev/seed-cdl-public-media.mjs')
 const isolation = read('scripts/dev/test-media-isolation.mjs')
 
@@ -111,6 +112,28 @@ report(
   'TEST 27: list falls back to entity_key when placement column is null',
   repo.includes('.filter((asset) => !placement || asset.placement === placement)') &&
     !repo.includes("query.eq('placement'"),
+)
+const editAllow = compat.slice(
+  compat.indexOf('MEDIA_EDIT_PATCH_ALLOWLIST'),
+  compat.indexOf('MEDIA_REPLACE_PATCH_ALLOWLIST'),
+)
+const patchPayload = manager.slice(
+  manager.indexOf("method: 'PATCH'"),
+  manager.indexOf('const json = (await response.json())'),
+)
+report(
+  'TEST 28: SAVE MUST NOT MUTATE ENTITY IDENTITY',
+  compat.includes('MEDIA_EDIT_PATCH_ALLOWLIST') &&
+    !editAllow.includes('entity_key') &&
+    !editAllow.includes('media_url') &&
+    !editAllow.includes('storage_path') &&
+    !editAllow.includes('company_id') &&
+    manager.includes('display_order: working.sequence') &&
+    patchPayload.includes('display_order: working.sequence') &&
+    !patchPayload.includes('entity_key') &&
+    !patchPayload.includes('media_url') &&
+    !patchPayload.includes('storage_path') &&
+    !patchPayload.includes('company_id'),
 )
 
 console.log('')
