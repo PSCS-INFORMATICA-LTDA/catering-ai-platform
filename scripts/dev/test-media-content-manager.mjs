@@ -117,9 +117,10 @@ const editAllow = compat.slice(
   compat.indexOf('MEDIA_EDIT_PATCH_ALLOWLIST'),
   compat.indexOf('MEDIA_REPLACE_PATCH_ALLOWLIST'),
 )
+const patchStart = manager.indexOf("method: 'PATCH'")
 const patchPayload = manager.slice(
-  manager.indexOf("method: 'PATCH'"),
-  manager.indexOf('const json = (await response.json())'),
+  patchStart,
+  manager.indexOf('const json = (await response.json())', patchStart),
 )
 report(
   'TEST 28: SAVE MUST NOT MUTATE ENTITY IDENTITY',

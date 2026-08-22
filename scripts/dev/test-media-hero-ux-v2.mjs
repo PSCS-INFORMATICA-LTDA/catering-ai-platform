@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { toReorderRow, toSoftDisableRow, toUpdateRow } from '../../Lib/media/compat.ts'
 
 const ROOT = process.cwd()
 let passed = 0
@@ -90,16 +89,47 @@ report(
     !editorMigration.includes('Until this column exists'),
 )
 report('UX17: insert honors active boolean', compat.includes("typeof input.active === 'boolean'"))
-const identityCurrent = {
-  id: 'row-1',
-  company_id: 'co-1',
-  entity_type: 'public_landing',
-  entity_key: 'test-save-key',
-  placement: 'hero',
-  display_order: 1,
-  active: true,
+const MEDIA_IDENTITY_KEYS = ['id', 'company_id', 'entity_type', 'entity_id', 'entity_key']
+const MEDIA_EDIT_PATCH_ALLOWLIST = [
+  'display_order',
+  'active',
+  'label_pt',
+  'label_en',
+  'label_es',
+  'alt_pt',
+  'alt_en',
+  'alt_es',
+  'title_pt',
+  'title_en',
+  'title_es',
+  'subtitle_pt',
+  'subtitle_en',
+  'subtitle_es',
+  'editor_meta',
+]
+const MEDIA_REPLACE_PATCH_ALLOWLIST = ['media_url', 'storage_path', 'poster_url', 'media_type']
+
+function simulateUpdateRow(body, { hasEditorMeta = false, mode = 'edit' } = {}) {
+  const allow = new Set(mode === 'replace' ? MEDIA_REPLACE_PATCH_ALLOWLIST : MEDIA_EDIT_PATCH_ALLOWLIST)
+  const patch = {}
+  for (const key of allow) {
+    if (key === 'editor_meta') continue
+    if (body[key] !== undefined) patch[key] = body[key]
+  }
+  if (mode === 'edit' && body.editor && hasEditorMeta) {
+    patch.editor_meta = persistableEditorMeta(body.editor)
+  }
+  if (mode === 'edit' && body.display_order != null) {
+    patch.display_order = Number(body.display_order)
+  }
+  for (const key of MEDIA_IDENTITY_KEYS) delete patch[key]
+  for (const key of Object.keys(patch)) {
+    if (!allow.has(key)) delete patch[key]
+  }
+  return patch
 }
-const identityPatch = toUpdateRow(
+
+const identityPatch = simulateUpdateRow(
   {
     id: 'should-not-write',
     company_id: 'should-not-write',
@@ -113,45 +143,46 @@ const identityPatch = toUpdateRow(
     title_pt: 'Novo',
     editor: persistableEditorMeta({ overlayDecided: true }),
   },
-  identityCurrent,
-  { extended: true, hasEditorMeta: true },
+  { hasEditorMeta: true },
 )
-const titleOnlyPatch = toUpdateRow(
-  { entity_key: 'test-save-key', title_pt: 'Titulo' },
-  identityCurrent,
-  { extended: true, hasEditorMeta: true },
+const titleOnlyPatch = simulateUpdateRow({ entity_key: 'hero:test-save-key', title_pt: 'Titulo' })
+const activeOnlyPatch = simulateUpdateRow({ entity_key: 'hero:test-save-key', active: false })
+const editorOnlyPatch = simulateUpdateRow(
+  { entity_key: 'hero:test-save-key', editor: persistableEditorMeta({ overlayDecided: true }) },
+  { hasEditorMeta: true },
 )
-const activeOnlyPatch = toUpdateRow(
-  { entity_key: 'test-save-key', active: false },
-  identityCurrent,
-  { extended: true, hasEditorMeta: true },
-)
-const editorOnlyPatch = toUpdateRow(
-  { entity_key: 'test-save-key', editor: persistableEditorMeta({ overlayDecided: true }) },
-  identityCurrent,
-  { extended: true, hasEditorMeta: true },
-)
-const reorderPatch = toReorderRow(4, { extended: true, hasEditorMeta: true })
-const disablePatch = toSoftDisableRow({ extended: true, hasEditorMeta: true })
-const replacePatch = toUpdateRow(
+const reorderPatch = { display_order: 4 }
+const disablePatch = { active: false }
+const replacePatch = simulateUpdateRow(
   {
-    entity_key: 'test-save-key',
+    entity_key: 'hero:test-save-key',
     media_url: '/replaced.webp',
     storage_path: '/replaced.webp',
     title_pt: 'should-not-write-on-replace',
   },
-  identityCurrent,
-  { extended: true, hasEditorMeta: true },
-  null,
-  'replace',
+  { mode: 'replace' },
 )
+const updateFn = compat.slice(compat.indexOf('export function toUpdateRow'), compat.indexOf('export function toSoftDisableRow'))
+const reorderFn = compat.slice(compat.indexOf('export function toReorderRow'), compat.indexOf('export function toReorderRow') + 400)
+const disableFn = compat.slice(compat.indexOf('export function toSoftDisableRow'), compat.indexOf('export function toReorderRow'))
+const editAllow = compat.slice(
+  compat.indexOf('MEDIA_EDIT_PATCH_ALLOWLIST'),
+  compat.indexOf('MEDIA_REPLACE_PATCH_ALLOWLIST'),
+)
+const patchStart = manager.indexOf("method: 'PATCH'")
 const patchPayload = manager.slice(
-  manager.indexOf("method: 'PATCH'"),
-  manager.indexOf('const json = (await response.json())'),
+  patchStart,
+  manager.indexOf('const json = (await response.json())', patchStart),
 )
 report(
   'UX27: SAVE MUST NOT MUTATE ENTITY IDENTITY',
   compat.includes('MEDIA_EDIT_PATCH_ALLOWLIST') &&
+    MEDIA_IDENTITY_KEYS.every((key) => compat.includes(`'${key}'`)) &&
+    !editAllow.includes('entity_key') &&
+    !editAllow.includes('media_url') &&
+    updateFn.includes('delete patch[key]') &&
+    !updateFn.includes('patch.entity_key') &&
+    !updateFn.includes('encodePublicEntityKey') &&
     !patchPayload.includes('entity_key') &&
     identityPatch.entity_key === undefined &&
     identityPatch.entity_type === undefined &&
@@ -168,9 +199,9 @@ report(
     activeOnlyPatch.active === false &&
     editorOnlyPatch.entity_key === undefined &&
     editorOnlyPatch.editor_meta?.overlayDecided === true &&
-    reorderPatch.entity_key === undefined &&
+    !reorderFn.includes('entity_key') &&
     reorderPatch.display_order === 4 &&
-    disablePatch.entity_key === undefined &&
+    !disableFn.includes('entity_key') &&
     disablePatch.active === false &&
     replacePatch.entity_key === undefined &&
     replacePatch.media_url === '/replaced.webp' &&
@@ -509,13 +540,7 @@ if (!url || !service) {
         },
       }),
     }
-    const preservePatch = toUpdateRow(
-      hostileBody,
-      mappedCurrent,
-      { extended: true, hasEditorMeta },
-      null,
-      'edit',
-    )
+    const preservePatch = simulateUpdateRow(hostileBody, { hasEditorMeta })
     const savedPreserve = await admin
       .from('media_assets')
       .update(preservePatch)
@@ -526,7 +551,9 @@ if (!url || !service) {
 
     report(
       'LIVE11: SAVE MUST NOT MUTATE ENTITY IDENTITY',
-      savedPreserve.data?.entity_key === PRESERVE_KEY &&
+      preserveRow.entity_key === PRESERVE_KEY &&
+        mappedCurrent.entity_key === 'qa-save-preserves-key' &&
+        savedPreserve.data?.entity_key === PRESERVE_KEY &&
         preservePatch.entity_key === undefined &&
         savedPreserve.data?.media_url === '/iso-isolation-probe.webp' &&
         savedPreserve.data?.storage_path === '/iso-isolation-probe.webp' &&
@@ -534,7 +561,7 @@ if (!url || !service) {
         savedPreserve.data?.active === false &&
         (hasTitleColumns ? savedPreserve.data?.title_pt === 'Depois' : true) &&
         (hasEditorMeta ? savedPreserve.data?.editor_meta?.overlayDecided === true : true),
-      savedPreserve.error?.message || savedPreserve.data?.entity_key,
+      savedPreserve.error?.message || `${preserveRow.entity_key} -> ${savedPreserve.data?.entity_key}`,
     )
 
     const { error: preserveDeleteError } = await admin
