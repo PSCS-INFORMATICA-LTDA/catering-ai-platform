@@ -115,7 +115,7 @@ export function mapMediaAssetRow(
     subtitle_pt: typeof row.subtitle_pt === 'string' ? row.subtitle_pt : null,
     subtitle_en: typeof row.subtitle_en === 'string' ? row.subtitle_en : null,
     subtitle_es: typeof row.subtitle_es === 'string' ? row.subtitle_es : null,
-    overlay_enabled: row.overlay_enabled === true,
+    overlay_enabled: extended ? row.overlay_enabled === true : false,
     overlay_position:
       typeof row.overlay_position === 'string' ? row.overlay_position : null,
     placement: decoded.placement,
