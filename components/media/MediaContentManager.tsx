@@ -462,7 +462,15 @@ export default function MediaContentManager({
               data-media-preview={preview}
               className={`overflow-hidden rounded-3xl border border-cdl-border bg-neutral-950 ${previewWidth}`}
             >
-              <div className="relative aspect-[9/16] max-h-[28rem] w-full">
+              <div
+                className={`relative w-full max-h-[28rem] ${
+                  preview === 'mobile'
+                    ? 'aspect-[9/16]'
+                    : preview === 'tablet'
+                      ? 'aspect-[3/4]'
+                      : 'aspect-[16/9]'
+                }`}
+              >
                 {selectedPreview?.media_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -489,7 +497,7 @@ export default function MediaContentManager({
               <div className="h-36 overflow-hidden rounded-xl bg-neutral-100">
                 {item.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />
+                    <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
                 ) : null}
               </div>
               <p className="mt-3 text-sm font-semibold text-cdl-title">{item.name}</p>

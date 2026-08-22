@@ -3,7 +3,8 @@ import {
   requireApiPermission,
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
-import { PUBLIC_MEDIA_ENTITY_TYPE, type MediaVariant } from '@/Lib/media/constants'
+import type { MediaPlacement, MediaVariant } from '@/Lib/media/constants'
+import { getCompanyPublicMedia, updateCompanyPublicMedia } from '@/Lib/media/repository'
 import { uploadCompanyPublicMedia } from '@/Lib/media/storage'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
@@ -29,52 +30,46 @@ export async function POST(
   }
   const kind = String(formData.get('kind') || 'media')
   const supabase = getSupabaseServerClient()
-  const { data: current, error: loadError } = await supabase
-    .from('media_assets')
-    .select('id, placement, variant')
-    .eq('id', id)
-    .eq('company_id', companyId)
-    .eq('entity_type', PUBLIC_MEDIA_ENTITY_TYPE)
-    .maybeSingle()
-  if (loadError || !current) {
+  const current = await getCompanyPublicMedia(supabase, companyId, id)
+  if (!current.asset || !current.asset.placement) {
     return Response.json({ error: 'not_found' }, { status: 404 })
   }
   const uploaded = await uploadCompanyPublicMedia({
     companyId,
-    placement: current.placement,
+    placement: current.asset.placement as MediaPlacement,
     assetId: id,
-    variant: (current.variant || 'original') as MediaVariant,
+    variant: (current.asset.variant || 'original') as MediaVariant,
     file,
   })
   if (uploaded.error || !uploaded.publicUrl) {
-    const status = uploaded.error === 'file_too_large' || uploaded.error === 'invalid_type' ? 400 : 500
+    const status =
+      uploaded.error === 'file_too_large' || uploaded.error === 'invalid_type'
+        ? 400
+        : 500
     return Response.json({ error: uploaded.error || 'upload_failed' }, { status })
   }
+  const actor = auth.session.appUser?.id ?? auth.session.userId
   const patch =
     kind === 'poster'
-      ? { poster_url: uploaded.publicUrl }
+      ? { poster_url: uploaded.publicUrl, storage_path: uploaded.publicUrl }
       : { media_url: uploaded.publicUrl, storage_path: uploaded.storagePath }
-  const { data, error } = await supabase
-    .from('media_assets')
-    .update({
-      ...patch,
-      updated_at: new Date().toISOString(),
-      updated_by: auth.session.appUser?.id ?? auth.session.userId,
-    })
-    .eq('id', id)
-    .eq('company_id', companyId)
-    .select('*')
-    .maybeSingle()
-  if (error || !data) {
-    return Response.json({ error: error?.message || 'update_failed' }, { status: 500 })
+  const { asset, error } = await updateCompanyPublicMedia(
+    supabase,
+    companyId,
+    id,
+    patch,
+    actor,
+  )
+  if (error || !asset) {
+    return Response.json({ error: error || 'update_failed' }, { status: 500 })
   }
   await writeAdminAudit({
     companyId,
-    actorUserId: auth.session.appUser?.id ?? auth.session.userId,
+    actorUserId: actor,
     action: 'media.replace',
     entityType: 'media_assets',
     entityId: id,
     metadata: { kind, path: uploaded.storagePath },
   })
-  return Response.json({ asset: data })
+  return Response.json({ asset })
 }

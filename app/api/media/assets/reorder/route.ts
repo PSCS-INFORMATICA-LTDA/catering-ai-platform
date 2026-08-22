@@ -3,7 +3,7 @@ import {
   requireApiPermission,
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
-import { PUBLIC_MEDIA_ENTITY_TYPE } from '@/Lib/media/constants'
+import { reorderCompanyPublicMedia } from '@/Lib/media/repository'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
@@ -22,22 +22,15 @@ export async function POST(request: Request) {
   if (ids.length === 0) {
     return Response.json({ error: 'missing_ids' }, { status: 400 })
   }
-  const supabase = getSupabaseServerClient()
   const actor = auth.session.appUser?.id ?? auth.session.userId
-  for (const [index, id] of ids.entries()) {
-    const { error } = await supabase
-      .from('media_assets')
-      .update({
-        display_order: index + 1,
-        updated_at: new Date().toISOString(),
-        updated_by: actor,
-      })
-      .eq('id', id)
-      .eq('company_id', companyId)
-      .eq('entity_type', PUBLIC_MEDIA_ENTITY_TYPE)
-    if (error) {
-      return Response.json({ error: error.message }, { status: 500 })
-    }
+  const { ok, error } = await reorderCompanyPublicMedia(
+    getSupabaseServerClient(),
+    companyId,
+    ids,
+    actor,
+  )
+  if (!ok) {
+    return Response.json({ error: error || 'reorder_failed' }, { status: 500 })
   }
   await writeAdminAudit({
     companyId,

@@ -1,5 +1,21 @@
-import type { PublicHeroCaptionAlign, PublicHeroMediaItem } from '@/Lib/publicQuote/companyPublicHeroMedia'
+import {
+  getCompanyPublicHeroMedia,
+  type PublicHeroCaptionAlign,
+  type PublicHeroMediaItem,
+} from '@/Lib/publicQuote/companyPublicHeroMedia'
 import type { PublicMediaAsset } from './types'
+
+function catalogHint(asset: PublicMediaAsset): PublicHeroMediaItem | undefined {
+  const key = asset.entity_key || asset.id
+  const catalogs = [
+    getCompanyPublicHeroMedia('cdl'),
+  ]
+  for (const catalog of catalogs) {
+    const match = catalog.find((item) => item.id === key || item.src === asset.media_url)
+    if (match) return match
+  }
+  return undefined
+}
 
 function focalToCss(value: number | null | undefined) {
   if (value == null || Number.isNaN(value)) return '50%'
@@ -20,27 +36,37 @@ function parseAlign(value: string | null | undefined): PublicHeroCaptionAlign | 
 export function mediaAssetToHeroItem(asset: PublicMediaAsset): PublicHeroMediaItem | null {
   const src = asset.media_url?.trim()
   if (!src) return null
-  const mobilePosition = `${focalToCss(asset.focal_x)} ${focalToCss(asset.focal_y)}`
-  const caption = asset.overlay_enabled
+  const hint = catalogHint(asset)
+  const hasStoredFocal = asset.focal_x != null && asset.focal_y != null
+  const mobilePosition = hasStoredFocal
+    ? `${focalToCss(asset.focal_x)} ${focalToCss(asset.focal_y)}`
+    : hint?.mobilePosition || `${focalToCss(asset.focal_x)} ${focalToCss(asset.focal_y)}`
+  const desktopPosition = hasStoredFocal
+    ? mobilePosition
+    : hint?.desktopPosition || mobilePosition
+  const overlayCaption = asset.overlay_enabled
     ? {
         pt: asset.title_pt || asset.label_pt || '',
         en: asset.title_en || asset.label_en || '',
         es: asset.title_es || asset.label_es || '',
       }
     : undefined
+  const caption =
+    overlayCaption && (overlayCaption.pt || overlayCaption.en || overlayCaption.es)
+      ? overlayCaption
+      : hint?.caption
   return {
-    id: asset.entity_key || asset.id,
+    id: asset.entity_key || hint?.id || asset.id,
     src,
-    originalSrc: src,
-    sourceFilename: asset.storage_path || src,
-    alt: asset.alt_en || asset.alt_pt || asset.label_en || asset.label_pt || 'Event photography',
+    originalSrc: hint?.originalSrc || src,
+    sourceFilename: asset.storage_path || hint?.sourceFilename || src,
+    alt: asset.alt_en || asset.alt_pt || hint?.alt || asset.label_en || asset.label_pt || 'Event photography',
     mobilePosition,
-    desktopPosition: mobilePosition,
-    width: 1440,
-    height: 1920,
-    captionAlign: parseAlign(asset.overlay_position),
-    caption:
-      caption && (caption.pt || caption.en || caption.es) ? caption : undefined,
+    desktopPosition,
+    width: hint?.width || 1440,
+    height: hint?.height || 1920,
+    captionAlign: parseAlign(asset.overlay_position) || hint?.captionAlign,
+    caption,
   }
 }
 

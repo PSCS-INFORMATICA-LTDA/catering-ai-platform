@@ -144,7 +144,14 @@ export async function getAuthSession(): Promise<AuthSessionContext | null> {
       .select('permission_key')
       .eq('role_key', activeMembership.role)
     if (rp?.length) {
-      permissions = rp.map((x) => x.permission_key as string)
+      const fromDb = rp.map((x) => x.permission_key as string)
+      const fallbackMedia = fallbackPermissionsForRole(activeMembership.role).filter(
+        (key) => key.startsWith('media.'),
+      )
+      const dbHasMedia = fromDb.some((key) => key.startsWith('media.'))
+      permissions = dbHasMedia
+        ? fromDb
+        : Array.from(new Set([...fromDb, ...fallbackMedia]))
     }
   }
 
