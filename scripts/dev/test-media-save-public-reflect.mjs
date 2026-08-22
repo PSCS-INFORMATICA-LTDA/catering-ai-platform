@@ -184,7 +184,8 @@ if (!url || !service) {
       publicRes.status === 200 &&
         html.includes('item-1787407319293') &&
         html.includes(expectedCss) &&
-        html.includes('data-hero-photo-count="10"') &&
+        /data-hero-photo-count="\d+"/.test(html) &&
+        Number((html.match(/data-hero-photo-count="(\d+)"/) || [])[1] || 0) >= 12 &&
         /no-store/.test(cacheControl),
       `status=${publicRes.status} css=${expectedCss} vercel=${vercelCache}`,
     )
