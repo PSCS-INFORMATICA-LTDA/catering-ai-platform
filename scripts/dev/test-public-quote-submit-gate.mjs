@@ -134,10 +134,11 @@ test('TEST 20 Past event date is the submit blocker', () => {
   assert.ok(getQuoteStrings('es').wizard.publicEventDatePast.includes('hoy'))
 })
 
-test('Success uses official CDL emblem CSS flame, not generated art', () => {
-  assert.match(successScreen, /data-success-flame-art/)
-  assert.match(successScreen, /cdl-success-emblem/)
-  assert.match(source('app/globals.css'), /cdl-success-turn/)
+test('Success uses official CDL fire logo, not grill photography', () => {
+  assert.match(successScreen, /PublicSuccessFireLogo/)
+  assert.match(source('components/quotes/PublicSuccessFireLogo.tsx'), /data-success-fire-logo/)
+  assert.doesNotMatch(successScreen, /cdl-grill-flames/)
+  assert.match(source('app/globals.css'), /public-success-fire-logo/)
   assert.match(source('components/quotes/PublicQuoteBrandLockup.tsx'), /CDL_FLAME_EMBLEM_SRC/)
 })
 

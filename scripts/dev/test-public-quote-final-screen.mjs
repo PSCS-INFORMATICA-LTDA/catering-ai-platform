@@ -9,10 +9,7 @@ import { fileURLToPath } from 'node:url'
 import { PUBLIC_SUCCESS_COPY } from '../../Lib/publicQuote/successCopy.ts'
 import { resolvePublicCompanyContacts } from '../../Lib/publicQuote/companyContacts.ts'
 import { PUBLIC_PHONE_EXAMPLE } from '../../Lib/publicQuote/phone.ts'
-import {
-  PUBLIC_SUCCESS_FIRE_POSTER_SRC,
-  PUBLIC_SUCCESS_FIRE_VIDEO_SRC,
-} from '../../Lib/publicQuote/successHeroMedia.ts'
+import { PUBLIC_SUCCESS_FIRE_LOGO_SRC } from '../../Lib/publicQuote/successHeroMedia.ts'
 import { getQuoteStrings } from '../../Lib/quoteTranslations.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -37,6 +34,7 @@ const experience = source(
   'app/quote/[companySlug]/[locale]/PublicQuoteExperience.tsx',
 )
 const successScreen = source('components/quotes/PublicQuoteSuccessScreen.tsx')
+const fireLogo = source('components/quotes/PublicSuccessFireLogo.tsx')
 const scroll = source('Lib/publicQuote/scrollPublicQuoteToTop.ts')
 const css = source('app/globals.css')
 const wizard = source('app/quotes/new/QuoteWizard.tsx')
@@ -47,11 +45,11 @@ const packages = source('components/quotes/PublicPackageCatalog.tsx')
 
 test('FINAL_SCREEN_PREMIUM_DARK', () => {
   assert.match(successScreen, /data-public-success/)
-  assert.match(successScreen, /public-success-hero/)
+  assert.match(successScreen, /data-success-confirm/)
   assert.match(successScreen, /public-cinematic-display/)
   assert.match(successScreen, /public-cinematic-eyebrow/)
   assert.match(css, /\.public-success \{/)
-  assert.match(css, /background: #070707/)
+  assert.match(css, /background: #050505/)
   assert.doesNotMatch(successScreen, /min-h-\[calc\(100vh-4rem\)\]/)
   assert.match(successScreen, /className="public-success"/)
   assert.doesNotMatch(experience, /min-h-\[calc\(100vh-4rem\)\]/)
@@ -75,18 +73,19 @@ test('SCROLL_CONTAINER_RESET', () => {
   assert.match(successScreen, /pageshow/)
 })
 
-test('VIDEO_CDL_FIRE_HERO', () => {
-  assert.match(successScreen, /data-success-fire-hero/)
-  assert.match(successScreen, /data-success-flame-art/)
-  assert.match(successScreen, /PUBLIC_SUCCESS_FIRE_POSTER_SRC/)
-  assert.equal(
-    PUBLIC_SUCCESS_FIRE_POSTER_SRC,
-    '/cdl/hero/cdl-grill-flames-steaks.webp',
-  )
-  assert.ok(existsSync(join(ROOT, 'public', PUBLIC_SUCCESS_FIRE_POSTER_SRC)))
-  assert.equal(PUBLIC_SUCCESS_FIRE_VIDEO_SRC, null)
-  assert.match(css, /public-success-hero-photo/)
-  assert.match(css, /public-success-kenburns/)
+test('CDL_FIRE_LOGO_CLOSING', () => {
+  assert.match(successScreen, /PublicSuccessFireLogo/)
+  assert.match(fireLogo, /data-success-fire-logo/)
+  assert.doesNotMatch(successScreen, /data-success-fire-poster/)
+  assert.doesNotMatch(successScreen, /cdl-grill-flames/)
+  assert.doesNotMatch(css, /public-success-hero-photo/)
+  assert.equal(PUBLIC_SUCCESS_FIRE_LOGO_SRC, '/cdl/logo.png')
+  assert.ok(existsSync(join(ROOT, 'public', PUBLIC_SUCCESS_FIRE_LOGO_SRC)))
+  assert.match(css, /public-success-fire-logo/)
+  assert.match(css, /public-success-fire-flicker/)
+  const logoIndex = successScreen.indexOf('<PublicSuccessFireLogo')
+  const summaryIndex = successScreen.indexOf('data-success-summary')
+  assert.ok(logoIndex > summaryIndex)
 })
 
 test('FINAL_SUMMARY', () => {
@@ -101,6 +100,7 @@ test('CTA_FINAL', () => {
   assert.match(successScreen, /data-success-restart/)
   assert.match(successScreen, /public-cinematic-cta/)
   assert.match(successScreen, /data-success-talk/)
+  assert.match(experience, /setStarted\(false\)/)
   assert.equal(PUBLIC_SUCCESS_COPY.pt.restart, 'Criar outra solicitação')
   assert.equal(PUBLIC_SUCCESS_COPY.en.restart, 'Create another request')
   assert.equal(PUBLIC_SUCCESS_COPY.es.restart, 'Crear otra solicitud')
@@ -117,6 +117,8 @@ test('ZELLE_INFO', () => {
 
 test('CONTACTS', () => {
   assert.match(successScreen, /data-success-contacts/)
+  assert.match(successScreen, /data-success-whatsapp/)
+  assert.match(successScreen, /data-success-instagram/)
   assert.match(successScreen, /resolvePublicCompanyContacts/)
   const cdl = resolvePublicCompanyContacts(
     { phone: '+14075551234', whatsappUrl: 'https://wa.me/14075551234' },
@@ -124,6 +126,8 @@ test('CONTACTS', () => {
   )
   assert.equal(cdl.phone, '+14075551234')
   assert.ok(cdl.instagramUrl?.includes('instagram.com'))
+  const derived = resolvePublicCompanyContacts({ phone: '+14079152242' }, 'cdl')
+  assert.equal(derived.whatsappUrl, 'https://wa.me/14079152242')
 })
 
 test('PHONE_PLACEHOLDER_ONLY', () => {
@@ -173,6 +177,10 @@ test('REGRESSION_LANDING_PACKAGES', () => {
   assert.match(landing, /public-cinematic-hero/)
   assert.match(packages, /public-package-group/)
   assert.doesNotMatch(landing, /data-success-screen/)
+  const videoAt = landing.indexOf('data-landing-chapter="video"')
+  const closeAt = landing.indexOf('data-landing-chapter="final-cta"')
+  const howAt = landing.indexOf('data-landing-chapter="how-it-works"')
+  assert.ok(howAt > -1 && videoAt > howAt && closeAt > videoAt)
 })
 
 if (failed > 0) {
