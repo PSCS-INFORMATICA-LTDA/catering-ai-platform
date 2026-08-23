@@ -27,9 +27,9 @@ function CdlFireFlames() {
           <stop offset="100%" stopColor="#ffd36a" />
         </linearGradient>
         <radialGradient id="cdlFireBrazilHint" cx="50%" cy="42%" r="55%">
-          <stop offset="0%" stopColor="#ffdf00" stopOpacity="0.32" />
-          <stop offset="42%" stopColor="#009b3a" stopOpacity="0.16" />
-          <stop offset="78%" stopColor="#002776" stopOpacity="0.08" />
+          <stop offset="0%" stopColor="#ffdf00" stopOpacity="0.42" />
+          <stop offset="42%" stopColor="#009b3a" stopOpacity="0.26" />
+          <stop offset="78%" stopColor="#002776" stopOpacity="0.14" />
           <stop offset="100%" stopColor="#002776" stopOpacity="0" />
         </radialGradient>
         <filter id="cdlFireSoft" x="-20%" y="-20%" width="140%" height="140%">
