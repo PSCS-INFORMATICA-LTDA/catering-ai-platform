@@ -247,43 +247,56 @@ try {
     options: document.querySelector('[data-public-package-options]') != null,
   }))
   writeFileSync(join(OUT, 'package-selected.json'), JSON.stringify(packageState))
-  await packages.close()
 
-  const extras = await browser.newPage()
-  await openLanding(extras, 'pt', 390, 844)
-  await jumpToStep(extras, 3)
-  await extras.waitForSelector('[data-additional-category-header], [data-category-key]', {
-    timeout: 45_000,
+  await packages.evaluate(() => {
+    document
+      .querySelectorAll('[data-public-package-options] [role="group"]')
+      .forEach((group) => {
+        group.querySelector('button')?.click()
+      })
   })
-  if (!(await overflow(extras, 'ADDITIONALS_390'))) overflowFailed += 1
-  const firstHeader = await extras.$(
+  await new Promise((r) => setTimeout(r, 400))
+  const next = await packages.$('[data-testid="wizard-global-next"]')
+  if (!next) throw new Error('missing wizard next')
+  await packages.evaluate(() => {
+    document.querySelector('[data-testid="wizard-global-next"]')?.scrollIntoView({
+      block: 'center',
+    })
+  })
+  await next.click()
+  await packages.waitForSelector(
+    '[data-category-key], [data-additional-category-header], [data-additional-item-card]',
+    { timeout: 45_000 },
+  )
+  if (!(await overflow(packages, 'ADDITIONALS_390'))) overflowFailed += 1
+  const firstHeader = await packages.$(
     '[data-additional-category-header], [data-additional-category-hitarea]',
   )
   if (firstHeader) await firstHeader.click()
-  await extras.waitForSelector('[data-additional-item-card]', { timeout: 15_000 })
-  await extras.evaluate(() => {
+  await packages.waitForSelector('[data-additional-item-card]', { timeout: 15_000 })
+  await packages.evaluate(() => {
     document.querySelector('[data-additional-item-card]')?.scrollIntoView({ block: 'center' })
   })
   await new Promise((r) => setTimeout(r, 300))
-  await shot(extras, '06_additionals_390')
-  await extras.evaluate(() => {
+  await shot(packages, '06_additionals_390')
+  await packages.evaluate(() => {
     const card = document.querySelector('[data-additional-item-card]')
     const plus = card?.querySelector('.public-additional-qty-btn:last-of-type')
     const select = card?.querySelector('.public-additional-card-select')
     ;(plus || select)?.click()
   })
-  await extras
+  await packages
     .waitForSelector(
       '[data-additional-item-card].is-selected, .public-additional-card.is-selected',
       { timeout: 8_000 },
     )
     .catch(() => {})
-  await extras.evaluate(() => {
+  await packages.evaluate(() => {
     document.querySelector('[data-additional-item-card]')?.scrollIntoView({ block: 'center' })
   })
   await new Promise((r) => setTimeout(r, 250))
-  await shot(extras, '07_additional_selected_390')
-  await extras.close()
+  await shot(packages, '07_additional_selected_390')
+  await packages.close()
 
   for (const locale of ['pt', 'en', 'es']) {
     const success = await browser.newPage()
