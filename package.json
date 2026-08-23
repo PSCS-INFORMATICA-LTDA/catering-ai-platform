@@ -65,6 +65,7 @@
     "test:dev:public-quote-polish": "node --experimental-strip-types scripts/dev/test-public-quote-polish.mjs",
     "test:dev:public-quote-hero": "node --experimental-strip-types scripts/dev/test-public-quote-hero-photography.mjs",
     "test:dev:hero-transition": "node --experimental-strip-types scripts/dev/test-public-hero-transition.mjs",
+    "test:dev:landing-cinematic": "node --experimental-strip-types scripts/dev/test-public-landing-cinematic.mjs",
     "test:dev:public-quote-how-it-works": "node scripts/dev/test-public-quote-how-it-works.mjs",
     "test:dev:media-content": "node scripts/dev/test-media-content-manager.mjs",
     "test:dev:media-hero-ux": "node scripts/dev/test-media-hero-ux-v2.mjs",

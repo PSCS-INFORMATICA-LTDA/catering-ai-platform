@@ -60,7 +60,7 @@ report('UX07: referenced delete is blocked', patchApi.includes('delete_reference
 report('UX08: friendly save error, not update_failed in UI', i18n.includes('saveFailed') && !card.includes('update_failed') && !fileApi.includes('update_failed'))
 report('UX09: empty patch is treated as success', repo.includes('Object.keys(patch).length === 0'))
 report('UX10: PT/EN/ES save/add/delete strings', i18n.includes('Adicionar nova mídia') && i18n.includes('Excluir definitivamente') && i18n.includes('Guardar'))
-report('UX11: public experience not rewritten', experience.includes('PublicQuoteHowItWorks') && !experience.includes('data-hero-ux'))
+report('UX11: public experience not rewritten', experience.includes('PublicLandingCinematic') && !experience.includes('data-hero-ux'))
 report('UX12: wizard file untouched', wizard.includes('entryMode') && !wizard.includes('HeroMediaCard'))
 report('UX13: AUTO FOCUS declared HEURISTIC', i18n.includes('AUTO FOCUS: HEURISTIC') && autoFocus.includes('Heuristic saliency'))
 report('UX14: overlay decision is explicit', editorMeta.includes('overlayDecided') && mapPublic.includes('overlayDecided'))

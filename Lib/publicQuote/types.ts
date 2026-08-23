@@ -36,6 +36,7 @@ export type PublicQuoteBootstrap = {
     heroImageUrl: string | null
     heroGallery: PublicHeroMediaItem[]
     howItWorksVideo: PublicHowItWorksVideo | null
+    howItWorksVideos: PublicHowItWorksVideo[]
     landing: {
       eyebrow: string
       title: string

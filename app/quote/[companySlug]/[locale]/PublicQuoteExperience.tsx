@@ -30,17 +30,14 @@ import {
 import { CateringAiMark } from '@/components/brand/CateringAiMark'
 import { PscsOneMark } from '@/components/brand/PscsOneMark'
 import PublicLocaleSwitcher from '@/components/quotes/PublicLocaleSwitcher'
-import PublicQuoteHeroMedia from '@/components/quotes/PublicQuoteHeroMedia'
-import PublicQuoteHowItWorks from '@/components/quotes/PublicQuoteHowItWorks'
+import PublicLandingCinematic from '@/components/quotes/PublicLandingCinematic'
+import { usePublicQuoteThemeLock } from '@/components/quotes/usePublicQuoteThemeLock'
 import {
   publicQuoteCopyrightLine,
   publicQuoteEmblemSrc,
   PublicQuoteBrandLockup,
 } from '@/components/quotes/PublicQuoteBrandLockup'
-import {
-  collectPublicHeroImages,
-  PUBLIC_QUOTE_HERO_VIDEO_SRCS,
-} from '@/Lib/publicQuote/heroMedia'
+import { collectPublicHeroImages } from '@/Lib/publicQuote/heroMedia'
 import { tw } from '@/Lib/quoteTranslations'
 
 export type PublicQuotePageBootstrap = {
@@ -72,6 +69,11 @@ export type PublicQuotePageBootstrap = {
       height: number
     }>
     howItWorksVideo?: { src: string; poster: string | null } | null
+    howItWorksVideos?: Array<{
+      src: string
+      poster: string | null
+      locale: 'pt' | 'en' | 'es'
+    }>
     serviceDurationMinutes?: number
     locationBias?: {
       lat: number
@@ -180,6 +182,7 @@ const UI_COPY = {
     howItWorks: 'Conheça como funciona',
     howItWorksTitle: 'Como funciona',
     howItWorksClose: 'Fechar',
+    startQuote: 'COMEÇAR COTAÇÃO',
   },
   en: {
     secure: 'Secure online quote',
@@ -204,6 +207,7 @@ const UI_COPY = {
     howItWorks: 'See how it works',
     howItWorksTitle: 'How it works',
     howItWorksClose: 'Close',
+    startQuote: 'START QUOTE',
   },
   es: {
     secure: 'Cotización online segura',
@@ -228,6 +232,7 @@ const UI_COPY = {
     howItWorks: 'Conoce cómo funciona',
     howItWorksTitle: 'Cómo funciona',
     howItWorksClose: 'Cerrar',
+    startQuote: 'COMENZAR COTIZACIÓN',
   },
 } as const
 
@@ -442,6 +447,9 @@ export default function PublicQuoteExperience({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeStorageKey, locale])
 
+  const wizardActive = started && !success
+  usePublicQuoteThemeLock(wizardActive ? 'wizard-light' : 'landing-dark')
+
   const style = {
     '--brand-primary': bootstrap.company.primaryColor,
     '--brand-primary-2': bootstrap.company.accentColor,
@@ -453,9 +461,22 @@ export default function PublicQuoteExperience({
   )
 
   return (
-    <div style={style} className="min-h-screen bg-cdl-bg text-cdl-fg">
-      <header className="sticky top-0 z-40 border-b border-cdl-border/80 bg-cdl-bg/95 backdrop-blur">
-        <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:gap-4 sm:px-8">
+    <div
+      style={style}
+      data-public-quote-shell
+      data-theme={wizardActive ? 'light' : 'dark'}
+      data-public-wizard-theme={wizardActive ? 'light-locked' : undefined}
+      data-public-landing-theme={wizardActive ? undefined : 'dark'}
+      className="public-quote-shell min-h-screen bg-cdl-bg text-cdl-fg"
+    >
+      <header
+        className={`public-quote-header sticky top-0 z-40 border-b backdrop-blur-md ${
+          wizardActive
+            ? 'border-cdl-border/80 bg-cdl-bg/95'
+            : 'border-white/10 bg-black/45'
+        }`}
+      >
+        <div className="mx-auto flex min-h-14 max-w-7xl items-center justify-between gap-3 px-4 sm:gap-4 sm:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <div
               data-tenant-logo
@@ -580,6 +601,7 @@ export default function PublicQuoteExperience({
           </section>
         </main>
       ) : started ? (
+        <div data-public-wizard-theme="light-locked" data-theme="light">
         <QuoteWizardCore
           key={`${locale}-${restoredDraft ? 'restored' : 'new'}`}
           entryMode="public"
@@ -613,80 +635,31 @@ export default function PublicQuoteExperience({
           }}
           onPublicSuccess={setSuccess}
         />
+        </div>
       ) : (
         <main>
           {/* LANDING AGUARDANDO ASSETS FINAIS when no tenant hero image is configured. */}
-          <section
-            className="relative isolate overflow-hidden border-b border-cdl-border"
-            data-public-landing
-            data-landing-pending-assets={
-              PUBLIC_QUOTE_HERO_VIDEO_SRCS.length > 0 ||
-              heroImages.length > 0
-                ? undefined
-                : 'true'
+          <PublicLandingCinematic
+            locale={locale}
+            heroImages={heroImages}
+            posterUrl={bootstrap.settings.heroImageUrl}
+            videos={
+              bootstrap.settings.howItWorksVideos ??
+              (bootstrap.settings.howItWorksVideo
+                ? [
+                    {
+                      src: bootstrap.settings.howItWorksVideo.src,
+                      poster: bootstrap.settings.howItWorksVideo.poster,
+                      locale,
+                    },
+                  ]
+                : [])
             }
-          >
-            <div
-              data-public-hero-frame
-              className="relative h-[42vh] min-h-[16.5rem] max-h-[22rem] overflow-hidden lg:absolute lg:inset-0 lg:h-auto lg:min-h-0 lg:max-h-none lg:-z-10"
-            >
-              <PublicQuoteHeroMedia
-                videos={PUBLIC_QUOTE_HERO_VIDEO_SRCS}
-                media={heroImages}
-                posterUrl={bootstrap.settings.heroImageUrl}
-                locale={locale}
-              />
-            </div>
-            <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-8 bg-[#101828] px-4 py-8 text-white sm:px-8 lg:min-h-[34rem] lg:grid-cols-[minmax(0,3fr)_minmax(18rem,2fr)] lg:gap-10 lg:bg-transparent lg:py-16">
-              <div>
-                <p className="mt-0 text-xs font-black uppercase tracking-[0.24em] text-[var(--brand-primary-2)]">
-                  {bootstrap.settings.landing.eyebrow}
-                </p>
-                <h1 className="mt-4 max-w-4xl text-3xl font-black leading-[1.04] tracking-[-0.04em] sm:text-5xl lg:mt-5 lg:text-6xl">
-                  {bootstrap.settings.landing.title}
-                </h1>
-                <p className="mt-4 max-w-2xl text-base leading-7 text-white/78 sm:text-lg sm:leading-8 lg:mt-6">
-                  {bootstrap.settings.landing.subtitle}
-                </p>
-                <button
-                  type="button"
-                  data-landing-start-quote
-                  onClick={() => void startQuote({ forceNew: true })}
-                  disabled={starting}
-                  className="mt-6 inline-flex min-h-14 items-center justify-center rounded-2xl bg-[var(--brand-primary)] px-8 text-base font-black text-white shadow-lg transition hover:-translate-y-0.5 disabled:opacity-60 lg:mt-8"
-                >
-                  {starting ? '…' : bootstrap.settings.landing.cta}
-                </button>
-                <div className="mt-0">
-                  <PublicQuoteHowItWorks
-                    label={copy.howItWorks}
-                    title={copy.howItWorksTitle}
-                    closeLabel={copy.howItWorksClose}
-                    src={bootstrap.settings.howItWorksVideo?.src}
-                    poster={bootstrap.settings.howItWorksVideo?.poster}
-                  />
-                </div>
-                {startError ? (
-                  <p className="mt-4 max-w-xl rounded-xl border border-red-300/40 bg-red-950/50 p-3 text-sm text-red-100">
-                    {copy.startError}
-                  </p>
-                ) : null}
-              </div>
-              <aside className="rounded-[2rem] border border-white/15 bg-white/10 p-6 shadow-2xl backdrop-blur-md sm:p-8">
-                <p className="text-sm leading-7 text-white/85">
-                  {bootstrap.settings.landing.intro}
-                </p>
-                <ul className="mt-6 space-y-4 text-sm font-semibold">
-                  {[copy.feature1, copy.feature2, copy.feature3].map((item) => (
-                    <li key={item} className="flex gap-3">
-                      <span className="mt-0.5 text-emerald-300">✓</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </aside>
-            </div>
-          </section>
+            starting={starting}
+            startError={startError}
+            startErrorText={copy.startError}
+            onStart={() => void startQuote({ forceNew: true })}
+          />
         </main>
       )}
 
@@ -701,9 +674,19 @@ export default function PublicQuoteExperience({
       ) : null}
 
       {!started || success ? (
-      <footer className="border-t border-cdl-border bg-cdl-surface">
-        <div className="mx-auto flex max-w-7xl flex-col items-center gap-6 px-4 py-10 text-center sm:px-8">
-          {emblemSrc ? (
+      <footer
+        className={
+          success
+            ? 'border-t border-cdl-border bg-cdl-surface'
+            : 'public-landing-footer'
+        }
+      >
+        <div
+          className={`mx-auto flex max-w-7xl flex-col items-center text-center sm:px-8 ${
+            success ? 'gap-6 px-4 py-10' : 'gap-3 px-4 py-6'
+          }`}
+        >
+          {success && emblemSrc ? (
             <div
               data-footer-cdl-logo
               className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-white shadow-md sm:h-36 sm:w-36"

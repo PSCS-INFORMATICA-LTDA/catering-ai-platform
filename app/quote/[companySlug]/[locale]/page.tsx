@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getPublicQuoteBootstrap } from '@/Lib/publicQuote/bootstrap'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import { publicLandingStory } from '@/Lib/publicQuote/landingStoryCopy'
 import PublicQuoteExperience, {
   type PublicQuotePageBootstrap,
 } from './PublicQuoteExperience'
@@ -45,9 +46,10 @@ export async function generateMetadata({
     }
   }
 
-  const { bootstrap } = resolved
-  const title = `${bootstrap.settings.landing.title} · ${bootstrap.company.name}`
-  const description = bootstrap.settings.landing.subtitle
+  const { bootstrap, locale } = resolved
+  const story = publicLandingStory(locale)
+  const title = `${story.hero.eyebrow} · ${bootstrap.company.name}`
+  const description = story.hero.subtitle
   const image =
     bootstrap.settings.heroImageUrl || bootstrap.company.logoUrl || undefined
 

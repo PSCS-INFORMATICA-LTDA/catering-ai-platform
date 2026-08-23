@@ -21,6 +21,7 @@ import type { PublicQuoteBootstrap } from './types'
 import {
   fallbackHowItWorksVideo,
   loadManagedHowItWorksVideo,
+  loadManagedHowItWorksVideos,
   loadManagedPublicHero,
 } from '@/Lib/media/loadPublishedPublicMedia'
 import { resolveCompanyLogoUrl } from '@/Lib/help/companyBranding'
@@ -447,9 +448,10 @@ export async function getPublicQuoteBootstrap(
     company.trade_name?.trim() || company.company_name.trim()
   const defaultLocale =
     parsePublicQuoteLocale(company.default_language) ?? allowedLocales[0] ?? 'pt'
-  const [managedHero, managedVideo] = await Promise.all([
+  const [managedHero, managedVideo, managedVideos] = await Promise.all([
     loadManagedPublicHero(company.id),
     loadManagedHowItWorksVideo(company.id, locale, defaultLocale),
+    loadManagedHowItWorksVideos(company.id),
   ])
   const currencyCode =
     company.default_currency?.trim() ||
@@ -495,6 +497,11 @@ export async function getPublicQuoteBootstrap(
       heroGallery: managedHero,
       howItWorksVideo:
         managedVideo ?? fallbackHowItWorksVideo(company.slug),
+      howItWorksVideos: managedVideos.length
+        ? managedVideos
+        : [fallbackHowItWorksVideo(company.slug)].filter(
+            (video): video is NonNullable<typeof video> => Boolean(video),
+          ),
       landing: {
         eyebrow: textField(landing, 'eyebrow', 'Catering made for you'),
         title: textField(landing, 'title', 'Plan your event with confidence'),

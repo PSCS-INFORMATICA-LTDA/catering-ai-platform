@@ -11,6 +11,10 @@ import { mediaAssetToHeroItem } from './mapPublicHero'
 import { listCompanyPublicMedia } from './repository'
 import type { PublicHowItWorksVideo, PublicMediaAsset } from './types'
 import type { PublicHeroMediaItem } from '@/Lib/publicQuote/companyPublicHeroMedia'
+import {
+  pickHowItWorksVideo,
+  videoLocaleFromEntityKey,
+} from '@/Lib/publicQuote/howItWorksVideos'
 
 export async function listPublishedPublicMedia(
   companyId: string,
@@ -45,25 +49,33 @@ export async function loadManagedPublicHero(
     .filter((item): item is PublicHeroMediaItem => Boolean(item))
 }
 
+export async function loadManagedHowItWorksVideos(
+  companyId: string,
+): Promise<PublicHowItWorksVideo[]> {
+  const rows = await listPublishedPublicMedia(companyId, 'video')
+  const byLocale = new Map<PublicHowItWorksVideo['locale'], PublicHowItWorksVideo>()
+  for (const row of rows) {
+    const locale = videoLocaleFromEntityKey(row.entity_key)
+    if (!locale || !row.media_url || byLocale.has(locale)) continue
+    byLocale.set(locale, {
+      src: row.media_url,
+      poster: row.poster_url,
+      locale,
+    })
+  }
+  return (['pt', 'en', 'es'] as const).flatMap((locale) => {
+    const video = byLocale.get(locale)
+    return video ? [video] : []
+  })
+}
+
 export async function loadManagedHowItWorksVideo(
   companyId: string,
   locale: QuoteLanguage,
   defaultLocale: QuoteLanguage,
 ): Promise<PublicHowItWorksVideo | null> {
-  const rows = await listPublishedPublicMedia(companyId, 'video')
-  if (rows.length === 0) return null
-
-  const match =
-    rows.find((row) => row.entity_key === locale) ||
-    rows.find((row) => row.entity_key === defaultLocale) ||
-    rows[0]
-  if (!match?.media_url) return null
-
-  return {
-    src: match.media_url,
-    poster: match.poster_url,
-    locale: (match.entity_key as QuoteLanguage) || locale,
-  }
+  const videos = await loadManagedHowItWorksVideos(companyId)
+  return pickHowItWorksVideo(videos, locale, defaultLocale)
 }
 
 export function fallbackHowItWorksVideo(
