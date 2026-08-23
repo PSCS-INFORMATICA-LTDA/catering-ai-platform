@@ -156,47 +156,11 @@ export default function PublicQuoteSuccessScreen({
           ) : null}
         </dl>
 
-        <p data-success-zelle className="public-success-zelle">
-          {copy.zelle}
-        </p>
-
-        <div data-success-contacts className="public-success-contacts">
-          <p className="public-success-contacts-label">{copy.contacts}</p>
-          <ul>
-            {contacts.phone || contacts.whatsappUrl ? (
-              <li>
-                <a
-                  href={talkHref || undefined}
-                  target={contacts.whatsappUrl ? '_blank' : undefined}
-                  rel={contacts.whatsappUrl ? 'noreferrer' : undefined}
-                  data-success-whatsapp
-                >
-                  <WhatsAppIcon />
-                  <span>
-                    <strong>{copy.phone}</strong>
-                    <em>{phoneDisplay || companyName}</em>
-                  </span>
-                </a>
-              </li>
-            ) : null}
-            {contacts.instagramUrl ? (
-              <li>
-                <a
-                  href={contacts.instagramUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  data-success-instagram
-                >
-                  <InstagramIcon />
-                  <span>
-                    <strong>{copy.instagram}</strong>
-                    <em>{contacts.instagramHandle || companyName}</em>
-                  </span>
-                </a>
-              </li>
-            ) : null}
-          </ul>
-        </div>
+        <aside data-success-zelle className="public-success-zelle">
+          <span className="public-success-zelle-accent" aria-hidden />
+          <p className="public-success-zelle-kicker">{copy.payment}</p>
+          <p className="public-success-zelle-copy">{copy.zelle}</p>
+        </aside>
 
         <div className="public-success-actions">
           <Link
@@ -224,6 +188,39 @@ export default function PublicQuoteSuccessScreen({
       {fireLogoSrc ? (
         <PublicSuccessFireLogo src={fireLogoSrc} alt={companyName} />
       ) : null}
+
+      <div data-success-contacts className="public-success-contacts">
+        <ul>
+          {contacts.phone || contacts.whatsappUrl ? (
+            <li>
+              <a
+                href={talkHref || undefined}
+                target={contacts.whatsappUrl ? '_blank' : undefined}
+                rel={contacts.whatsappUrl ? 'noreferrer' : undefined}
+                data-success-whatsapp
+                aria-label={phoneDisplay || copy.phone}
+              >
+                <WhatsAppIcon />
+                <span>{phoneDisplay || companyName}</span>
+              </a>
+            </li>
+          ) : null}
+          {contacts.instagramUrl ? (
+            <li>
+              <a
+                href={contacts.instagramUrl}
+                target="_blank"
+                rel="noreferrer"
+                data-success-instagram
+                aria-label={contacts.instagramHandle || copy.instagram}
+              >
+                <InstagramIcon />
+                <span>{contacts.instagramHandle || companyName}</span>
+              </a>
+            </li>
+          ) : null}
+        </ul>
+      </div>
     </main>
   )
 }
