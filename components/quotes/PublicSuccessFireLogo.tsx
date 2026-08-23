@@ -3,7 +3,7 @@
 import CdlFireSignature from '@/components/quotes/CdlFireSignature'
 
 /**
- * Success closing mark. Fire is the web-native signature — never the archived MP4.
+ * Success closing mark. Official fire MP4 is treated; never raw rectangular video.
  */
 export default function PublicSuccessFireLogo({
   src,

@@ -18,6 +18,7 @@ import {
   PUBLIC_SUCCESS_CDL_FIRE_SOURCE_NAME,
   PUBLIC_SUCCESS_CDL_LOGO_SRC,
   SUCCESS_DOES_NOT_USE_CDL_MP4,
+  SUCCESS_FIRE_USES_TREATED_OFFICIAL_MP4,
   SUCCESS_HAS_CDL_FIRE_SIGNATURE,
   SUCCESS_HAS_PSCS_ONE,
   SUCCESS_VIDEO_HAS_NO_BOOK_NOW,
@@ -133,16 +134,17 @@ test('FINAL_CDL_ASSET_PATH_CORRECT', () => {
   )
 })
 
-test('SUCCESS_DOES_NOT_USE_CDL_MP4', () => {
-  assert.equal(SUCCESS_DOES_NOT_USE_CDL_MP4, true)
+test('SUCCESS_FIRE_USES_TREATED_OFFICIAL_MP4', () => {
+  assert.equal(SUCCESS_FIRE_USES_TREATED_OFFICIAL_MP4, true)
+  assert.equal(SUCCESS_DOES_NOT_USE_CDL_MP4, false)
   assert.equal(SUCCESS_HAS_CDL_FIRE_SIGNATURE, true)
   assert.match(fireLogo, /data-cdl-fire-signature/)
-  assert.match(fireLogo, /data-success-uses-final-cdl-mp4="false"/)
-  assert.doesNotMatch(fireLogo, /<video/)
+  assert.match(fireLogo, /data-success-fire-treated-mp4="true"/)
+  assert.match(fireLogo, /<video/)
+  assert.match(fireLogo, /PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC/)
+  assert.match(fireLogo, /cdl-fire-signature-video/)
   assert.doesNotMatch(successScreen, /<video/)
-  assert.doesNotMatch(fireLogo, /PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC/)
-  assert.doesNotMatch(successScreen, /CDL_LOGO_FOGO/)
-  assert.doesNotMatch(fireLogo, /CDL_LOGO_FOGO/)
+  assert.doesNotMatch(fireLogo, /cdl-fire-flames/)
 })
 
 test('SUCCESS_VIDEO_HAS_NO_BOOK_NOW', () => {

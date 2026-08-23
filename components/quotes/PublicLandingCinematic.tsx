@@ -62,7 +62,14 @@ export default function PublicLandingCinematic({
           className="public-cinematic-chapter public-cinematic-chapter--intro"
         >
           <PublicLandingReveal eager className="public-cinematic-copy">
-            <p className="public-cinematic-eyebrow">{story.hero.eyebrow}</p>
+            <p className="public-cinematic-eyebrow" data-landing-hero-kicker>
+              {story.hero.eyebrow}
+              <span
+                data-landing-brazil-accent
+                className="cdl-brazil-accent"
+                aria-hidden
+              />
+            </p>
             <PublicLandingTitle
               as="h1"
               parts={story.hero.title}

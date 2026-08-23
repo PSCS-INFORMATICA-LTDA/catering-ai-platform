@@ -11,7 +11,6 @@ export default function CdlHighlight({
   return (
     <mark
       data-cdl-highlight={tone}
-      data-landing-brazil-identity={tone === 'brazil' ? 'true' : undefined}
       className={`cdl-highlight cdl-highlight--${tone}`}
     >
       {children}

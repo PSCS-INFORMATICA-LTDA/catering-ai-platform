@@ -2001,41 +2001,21 @@ body {
   color: #111;
 }
 
-.cdl-highlight--brazil {
-  padding: 0;
-  background: none;
-  color: #f4d35e;
-}
-
-@supports ((-webkit-background-clip: text) or (background-clip: text)) {
-  .cdl-highlight--brazil {
-    background-color: transparent;
-    background-image:
-      radial-gradient(ellipse 18% 16% at 52% 48%, rgba(248, 248, 248, 0.82) 0 7%, transparent 12%),
-      radial-gradient(ellipse 42% 38% at 50% 52%, #012169 0 17%, transparent 30%),
-      repeating-linear-gradient(
-        118deg,
-        rgba(255, 255, 255, 0.08) 0 1px,
-        transparent 1px 5px
-      ),
-      linear-gradient(
-        118deg,
-        #009b3a 0%,
-        #147a36 16%,
-        #ffdf00 40%,
-        #f4c400 54%,
-        #009c3b 72%,
-        #0a5c2e 88%,
-        #002776 100%
-      );
-    background-size: 160% 150%, 140% 140%, 180% 180%, 190% 160%;
-    background-position: 50% 48%, 48% 55%, 10% 40%, 18% 42%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
-    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.45));
-  }
+.cdl-brazil-accent {
+  display: inline-block;
+  width: 0.78rem;
+  height: 0.34rem;
+  margin-left: 0.48rem;
+  vertical-align: 0.14em;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #009b3a 0 32%,
+    #ffdf00 32% 64%,
+    #002776 64% 100%
+  );
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  opacity: 0.78;
 }
 
 .public-landing-reveal {
@@ -2449,7 +2429,7 @@ body {
 .cdl-fire-signature {
   display: flex;
   justify-content: center;
-  padding: 0.2rem 0 0.45rem;
+  padding: 0.35rem 0 1.15rem;
   background: transparent;
 }
 
@@ -2459,119 +2439,48 @@ body {
   place-items: center;
   width: clamp(11.25rem, 58vw, 15rem);
   aspect-ratio: 1;
+  overflow: hidden;
   background: transparent;
 }
 
-.cdl-fire-signature-halo,
-.cdl-fire-signature-glow,
-.cdl-fire-flames,
-.cdl-fire-signature-embers {
+.cdl-fire-signature-video,
+.cdl-fire-signature-glow {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
   background: transparent;
 }
 
-.cdl-fire-signature-halo {
-  inset: -6%;
-  border-radius: 50%;
-  background: conic-gradient(
-    from 0deg,
-    #6a0b0b,
-    #e21b1b,
-    #ff6a00,
-    #ffb020,
-    #ffe36a,
-    #ff6a00,
-    #c41e1e,
-    rgba(0, 155, 58, 0.3),
-    rgba(0, 39, 118, 0.16),
-    #e21b1b,
-    #6a0b0b
+.cdl-fire-signature-video {
+  object-fit: cover;
+  object-position: 50% 42%;
+  -webkit-mask-image: radial-gradient(
+    circle at 50% 48%,
+    #000 44%,
+    rgba(0, 0, 0, 0.82) 58%,
+    rgba(0, 0, 0, 0.28) 68%,
+    transparent 78%
   );
-  filter: blur(12px);
-  opacity: 0.5;
-  -webkit-mask-image: radial-gradient(circle, transparent 50%, #000 61%, #000 76%, transparent 90%);
-  mask-image: radial-gradient(circle, transparent 50%, #000 61%, #000 76%, transparent 90%);
-  animation: cdl-fire-halo 36s linear infinite;
+  mask-image: radial-gradient(
+    circle at 50% 48%,
+    #000 44%,
+    rgba(0, 0, 0, 0.82) 58%,
+    rgba(0, 0, 0, 0.28) 68%,
+    transparent 78%
+  );
 }
 
 .cdl-fire-signature-glow {
-  inset: 20%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 176, 32, 0.22), rgba(226, 27, 27, 0.07) 58%, transparent 74%);
-  filter: blur(12px);
-  animation: cdl-fire-breathe 4.4s ease-in-out infinite;
-}
-
-.cdl-fire-flames {
-  width: 124%;
-  height: 124%;
-  inset: -12%;
-  overflow: visible;
-  mix-blend-mode: screen;
-}
-
-.cdl-fire-flame {
-  transform-box: fill-box;
-  transform-origin: center bottom;
-  animation: cdl-fire-flicker 3.2s ease-in-out infinite;
-}
-
-.cdl-fire-flame--back {
-  animation-duration: 3.8s;
-  opacity: 0.86;
-}
-
-.cdl-fire-flame--mid {
-  animation-duration: 3.1s;
-  animation-delay: -0.8s;
-  opacity: 0.92;
-}
-
-.cdl-fire-flame--crown {
-  transform-origin: center top;
-  animation-duration: 3.5s;
-  animation-delay: -1.3s;
-  opacity: 0.88;
-}
-
-.cdl-fire-brazil-hint {
-  animation: cdl-fire-breathe 5.2s ease-in-out infinite;
-}
-
-.cdl-fire-signature-embers i {
-  position: absolute;
-  width: 0.16rem;
-  height: 0.16rem;
-  border-radius: 50%;
-  background: #ffd36a;
-  opacity: 0;
-  animation: cdl-fire-ember 5.4s ease-in-out infinite;
-}
-
-.cdl-fire-signature-embers i:nth-child(1) {
-  left: 22%;
-  bottom: 28%;
-  animation-delay: -0.4s;
-}
-
-.cdl-fire-signature-embers i:nth-child(2) {
-  left: 74%;
-  bottom: 34%;
-  animation-delay: -1.6s;
-}
-
-.cdl-fire-signature-embers i:nth-child(3) {
-  left: 48%;
-  bottom: 18%;
-  animation-delay: -2.4s;
-}
-
-.cdl-fire-signature-embers i:nth-child(4) {
-  left: 64%;
-  bottom: 56%;
-  animation-delay: -3.2s;
+  background: radial-gradient(
+    circle at 50% 52%,
+    rgba(255, 176, 32, 0.16),
+    rgba(226, 27, 27, 0.04) 46%,
+    transparent 70%
+  );
+  filter: blur(10px);
 }
 
 .cdl-fire-signature-mark-wrap {
@@ -2594,71 +2503,13 @@ body {
   background: transparent;
 }
 
-@keyframes cdl-fire-halo {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes cdl-fire-breathe {
-  0%,
-  100% {
-    opacity: 0.42;
-    transform: scale(0.96);
-  }
-  50% {
-    opacity: 0.72;
-    transform: scale(1.04);
-  }
-}
-
-@keyframes cdl-fire-flicker {
-  0%,
-  100% {
-    transform: scaleY(1) scaleX(1) rotate(0deg);
-    opacity: 0.86;
-  }
-  40% {
-    transform: scaleY(1.05) scaleX(0.98) rotate(-1deg);
-    opacity: 1;
-  }
-  70% {
-    transform: scaleY(0.97) scaleX(1.02) rotate(0.9deg);
-    opacity: 0.82;
-  }
-}
-
-@keyframes cdl-fire-ember {
-  0%,
-  100% {
-    opacity: 0;
-    transform: translateY(8px) scale(0.6);
-  }
-  25% {
-    opacity: 0.7;
-  }
-  70% {
-    opacity: 0;
-    transform: translateY(-28px) scale(1);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .cdl-fire-signature-halo,
-  .cdl-fire-flames,
-  .cdl-fire-signature-embers {
+  .cdl-fire-signature-video {
     display: none;
   }
 
-  .cdl-fire-signature-glow,
-  .cdl-fire-brazil-hint,
-  .cdl-fire-flame {
-    animation: none;
-  }
-
   .cdl-fire-signature-glow {
-    opacity: 0.22;
-    transform: none;
+    opacity: 0.2;
   }
 }
 

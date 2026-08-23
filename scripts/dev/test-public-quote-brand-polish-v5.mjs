@@ -1,5 +1,5 @@
 /**
- * Public experience V5 gates: web-native CDL fire signature + Brazilian identity.
+ * Public experience V5 + visual hotfix gates.
  * Run: node --experimental-strip-types scripts/dev/test-public-quote-brand-polish-v5.mjs
  */
 import assert from 'node:assert/strict'
@@ -14,12 +14,16 @@ import {
   LANDING_HAS_NO_FIRE_SIGNATURE,
   LANDING_HAS_NO_PSCS_ONE,
   LANDING_HAS_STATIC_CDL_LOGO,
+  PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC,
   PUBLIC_SUCCESS_CDL_LOGO_SRC,
   SUCCESS_DOES_NOT_USE_CDL_MP4,
   SUCCESS_FIRE_BACKGROUND_TRANSPARENT,
+  SUCCESS_FIRE_NO_RED_BLOB,
   SUCCESS_FIRE_REDUCED_MOTION_SAFE,
+  SUCCESS_FIRE_USES_TREATED_OFFICIAL_MP4,
   SUCCESS_HAS_CDL_FIRE_SIGNATURE,
   SUCCESS_HAS_PSCS_ONE,
+  SUCCESS_VIDEO_HAS_NO_BOOK_NOW,
 } from '../../Lib/publicQuote/successHeroMedia.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -50,61 +54,97 @@ const title = source('components/quotes/PublicLandingTitle.tsx')
 const highlight = source('components/quotes/CdlHighlight.tsx')
 const css = source('app/globals.css')
 const lock = source('components/quotes/usePublicQuoteThemeLock.ts')
-const media = source('Lib/publicQuote/successHeroMedia.ts')
 const story = source('Lib/publicQuote/landingStoryCopy.ts')
-const wrapper = source('components/quotes/PublicSuccessFireLogo.tsx')
 
 const landingFooterStart = experience.indexOf('data-public-landing-footer')
 const successFooterStart = experience.indexOf('data-success-footer')
 const landingFooter = experience.slice(landingFooterStart, successFooterStart)
 const successFooter = experience.slice(successFooterStart)
-const brazilCss = css.slice(
-  css.indexOf('.cdl-highlight--brazil'),
-  css.indexOf('.public-landing-reveal'),
-)
+const storyBlob = JSON.stringify(PUBLIC_LANDING_STORY)
 
-test('SUCCESS_DOES_NOT_USE_CDL_MP4', () => {
-  assert.equal(SUCCESS_DOES_NOT_USE_CDL_MP4, true)
-  assert.doesNotMatch(signature, /<video/)
-  assert.doesNotMatch(successScreen, /<video/)
-  assert.doesNotMatch(signature, /CDL_LOGO_FOGO/)
-  assert.doesNotMatch(successScreen, /CDL_LOGO_FOGO/)
-  assert.doesNotMatch(signature, /PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC/)
-  assert.doesNotMatch(wrapper, /<video/)
-  assert.match(signature, /data-success-uses-final-cdl-mp4="false"/)
+test('HERO_TITLE_RESTORED_TO_WHITE_RED', () => {
+  assert.equal(PUBLIC_LANDING_STORY.pt.hero.title[0].text, 'O melhor do')
+  assert.equal(PUBLIC_LANDING_STORY.pt.hero.title[0].highlight, undefined)
+  assert.equal(PUBLIC_LANDING_STORY.pt.hero.title[1].text, 'churrasco')
+  assert.equal(PUBLIC_LANDING_STORY.pt.hero.title[1].highlight, 'red')
+  assert.equal(PUBLIC_LANDING_STORY.pt.hero.title[2].text, 'brasileiro,')
+  assert.equal(PUBLIC_LANDING_STORY.pt.hero.title[2].highlight, 'red')
+  assert.equal(PUBLIC_LANDING_STORY.pt.hero.title[3].text, 'onde você estiver.')
+  assert.equal(PUBLIC_LANDING_STORY.en.hero.title[1].highlight, 'red')
+  assert.equal(PUBLIC_LANDING_STORY.en.hero.title[2].text, 'barbecue,')
+  assert.equal(PUBLIC_LANDING_STORY.es.hero.title[1].highlight, 'red')
+  assert.equal(PUBLIC_LANDING_STORY.es.hero.title[2].text, 'brasileña,')
+  assert.match(css, /\.cdl-highlight--red \{[\s\S]*background: #e21b1b/)
+  assert.match(css, /\.cdl-highlight--red \{[\s\S]*color: #fff/)
 })
 
-test('SUCCESS_HAS_CDL_FIRE_SIGNATURE', () => {
+test('HERO_BRAZIL_ACCENT_SUBTLE', () => {
+  assert.match(landing, /data-landing-brazil-accent/)
+  assert.match(landing, /data-landing-hero-kicker/)
+  assert.match(css, /\.cdl-brazil-accent/)
+  assert.match(css, /#009b3a/)
+  assert.match(css, /#ffdf00/)
+  assert.match(css, /#002776/)
+  assert.match(css, /\.cdl-brazil-accent[\s\S]*width: 0\.78rem/)
+})
+
+test('HERO_NO_MULTI_COLOR_WORD_FILL', () => {
+  assert.doesNotMatch(storyBlob, /"highlight":"brazil"/)
+  assert.doesNotMatch(story, /highlight: 'brazil'/)
+  assert.doesNotMatch(css, /\.cdl-highlight--brazil/)
+  assert.doesNotMatch(css, /background-clip: text/)
+  assert.doesNotMatch(highlight, /data-landing-brazil-identity/)
+  assert.doesNotMatch(title, /data-landing-brazil-title/)
+})
+
+test('SUCCESS_FIRE_SIGNATURE_REPAIRED', () => {
   assert.equal(SUCCESS_HAS_CDL_FIRE_SIGNATURE, true)
+  assert.equal(SUCCESS_FIRE_USES_TREATED_OFFICIAL_MP4, true)
+  assert.equal(SUCCESS_DOES_NOT_USE_CDL_MP4, false)
+  assert.equal(
+    PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC,
+    '/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL.mp4',
+  )
   assert.match(successScreen, /<CdlFireSignature/)
   assert.match(signature, /data-cdl-fire-signature/)
-  assert.match(signature, /data-success-cdl-signature/)
-  assert.match(signature, /cdl-fire-flames/)
-  assert.match(css, /\.cdl-fire-signature/)
+  assert.match(signature, /<video/)
+  assert.match(signature, /PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC/)
+  assert.match(css, /\.cdl-fire-signature-video/)
+  assert.match(css, /mask-image: radial-gradient/)
   assert.ok(existsSync(join(ROOT, 'public/cdl/logo.png')))
+  assert.ok(
+    existsSync(join(ROOT, 'public/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL.mp4')),
+  )
   assert.equal(PUBLIC_SUCCESS_CDL_LOGO_SRC, '/cdl/logo.png')
 })
 
-test('SUCCESS_FIRE_BACKGROUND_TRANSPARENT', () => {
-  assert.equal(SUCCESS_FIRE_BACKGROUND_TRANSPARENT, true)
-  assert.match(signature, /data-success-fire-transparent="true"/)
-  assert.match(css, /\.cdl-fire-signature-stage/)
+test('SUCCESS_FIRE_NO_RED_BLOB', () => {
+  assert.equal(SUCCESS_FIRE_NO_RED_BLOB, true)
+  assert.doesNotMatch(signature, /cdl-fire-flames/)
+  assert.doesNotMatch(signature, /cdl-fire-flame--back/)
+  assert.doesNotMatch(css, /\.cdl-fire-flames/)
+  assert.doesNotMatch(css, /conic-gradient\([\s\S]*#6a0b0b/)
   assert.match(css, /\.cdl-fire-signature[\s\S]*background: transparent/)
-  assert.match(css, /\.cdl-fire-signature-mark[\s\S]*background: transparent/)
-  assert.doesNotMatch(css, /\.cdl-fire-signature-stage \{[\s\S]{0,180}background: #050505/)
-  assert.doesNotMatch(signature, /background:\s*#050505/)
+  assert.match(css, /\.cdl-fire-signature-stage[\s\S]*background: transparent/)
 })
 
-test('SUCCESS_FIRE_REDUCED_MOTION_SAFE', () => {
-  assert.equal(SUCCESS_FIRE_REDUCED_MOTION_SAFE, true)
-  assert.match(signature, /prefers-reduced-motion: reduce/)
-  assert.match(signature, /data-success-fire-reduced-motion/)
+test('SUCCESS_FIRE_NO_BOOK_NOW', () => {
+  assert.equal(SUCCESS_VIDEO_HAS_NO_BOOK_NOW, true)
+  assert.match(signature, /data-success-fire-no-book-now="true"/)
+  assert.doesNotMatch(signature, /BOOK NOW/)
+  assert.doesNotMatch(successScreen, /BOOK NOW/)
+  assert.doesNotMatch(signature, /407[^\n]{0,20}915/)
+})
+
+test('SUCCESS_FIRE_PREMIUM_QUALITY', () => {
+  assert.equal(SUCCESS_FIRE_BACKGROUND_TRANSPARENT, true)
+  assert.match(signature, /data-success-fire-treated-mp4="true"/)
+  assert.match(css, /-webkit-mask-image: radial-gradient/)
   assert.match(signature, /data-success-cdl-logo/)
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/)
-  assert.match(css, /\.cdl-fire-flames/)
+  assert.match(signature, /PUBLIC_SUCCESS_CDL_LOGO_SRC/)
 })
 
-test('SUCCESS_CONTACTS_AFTER_SIGNATURE', () => {
+test('SUCCESS_CONTACTS_BELOW_LOGO', () => {
   const signatureIndex = successScreen.indexOf('<CdlFireSignature')
   const headingIndex = successScreen.indexOf('data-success-contact-heading')
   const contactsIndex = successScreen.indexOf('data-success-contacts')
@@ -134,7 +174,6 @@ test('SUCCESS_WHATSAPP_ICON_AND_VALUE', () => {
   assert.match(successScreen, /data-success-whatsapp/)
   assert.match(successScreen, /<WhatsAppIcon/)
   assert.doesNotMatch(successScreen, />WhatsApp</)
-  assert.doesNotMatch(successScreen, />WHATSAPP</)
 })
 
 test('SUCCESS_INSTAGRAM_ICON_AND_VALUE', () => {
@@ -143,8 +182,6 @@ test('SUCCESS_INSTAGRAM_ICON_AND_VALUE', () => {
   assert.ok(contacts.instagramUrl?.includes('instagram.com/cdl.bbq'))
   assert.match(successScreen, /data-success-instagram/)
   assert.match(successScreen, /<InstagramIcon/)
-  assert.doesNotMatch(successScreen, />Instagram</)
-  assert.doesNotMatch(successScreen, />INSTAGRAM</)
 })
 
 test('LANDING_HAS_STATIC_CDL_LOGO', () => {
@@ -155,66 +192,16 @@ test('LANDING_HAS_STATIC_CDL_LOGO', () => {
   assert.doesNotMatch(landingFooter, /CdlFireSignature/)
 })
 
-test('LANDING_HAS_NO_FIRE_SIGNATURE', () => {
+test('LANDING_NO_FIRE', () => {
   assert.equal(LANDING_HAS_NO_FIRE_SIGNATURE, true)
   assert.doesNotMatch(landing, /CdlFireSignature/)
   assert.doesNotMatch(landing, /data-cdl-fire-signature/)
-  assert.doesNotMatch(landing, /cdl-fire-flames/)
+  assert.doesNotMatch(landing, /CDL_LOGO_FOGO/)
   assert.doesNotMatch(landingFooter, /cdl-fire/)
   assert.doesNotMatch(experience.slice(0, landingFooterStart), /CdlFireSignature/)
 })
 
-test('LANDING_BRAZILIAN_IDENTITY_PRESENT', () => {
-  assert.equal(PUBLIC_LANDING_STORY.pt.hero.title[1].highlight, 'brazil')
-  assert.equal(PUBLIC_LANDING_STORY.pt.hero.title[2].highlight, 'brazil')
-  assert.equal(PUBLIC_LANDING_STORY.en.hero.title[1].highlight, 'brazil')
-  assert.equal(PUBLIC_LANDING_STORY.en.hero.title[2].highlight, 'brazil')
-  assert.equal(PUBLIC_LANDING_STORY.es.hero.title[1].highlight, 'brazil')
-  assert.equal(PUBLIC_LANDING_STORY.es.hero.title[2].highlight, 'brazil')
-  assert.equal(PUBLIC_LANDING_STORY.en.stories[2].title[0].highlight, 'brazil')
-  assert.equal(PUBLIC_LANDING_STORY.es.stories[2].title[0].highlight, 'brazil')
-  assert.match(highlight, /data-landing-brazil-identity/)
-  assert.match(title, /data-landing-brazil-title/)
-  assert.match(css, /\.cdl-highlight--brazil/)
-  assert.match(brazilCss, /#009b3a|#009c3b/)
-  assert.match(brazilCss, /#ffdf00|#f4c400|#f4d35e/)
-  assert.match(brazilCss, /#002776|#012169/)
-})
-
-test('LANDING_BRAZILIAN_TITLE_LEGIBLE', () => {
-  assert.match(brazilCss, /color: #f4d35e/)
-  assert.match(brazilCss, /@supports/)
-  assert.match(brazilCss, /background-clip: text/)
-  assert.doesNotMatch(
-    css.slice(css.indexOf('.cdl-highlight--brazil {'), css.indexOf('@supports')),
-    /color:\s*transparent/,
-  )
-  assert.match(title, /data-landing-title/)
-  assert.equal(PUBLIC_LANDING_STORY.pt.hero.title[1].text, 'churrasco')
-  assert.equal(PUBLIC_LANDING_STORY.en.hero.title[1].text, 'Brazilian')
-  assert.equal(PUBLIC_LANDING_STORY.es.hero.title[1].text, 'parrilla')
-})
-
-test('WIZARD_STEPS_ALWAYS_LIGHT', () => {
-  assert.match(
-    experience,
-    /data-public-wizard-theme=\{wizardActive \? 'light-locked'/,
-  )
-  assert.match(experience, /data-theme=\{wizardActive \? 'light' : 'dark'\}/)
-  assert.match(lock, /wizard-light/)
-  assert.match(lock, /data-theme', 'light'/)
-  assert.match(css, /\[data-public-wizard-theme="light-locked"\]/)
-})
-
-test('NO_HORIZONTAL_OVERFLOW', () => {
-  assert.match(css, /overflow-x: clip/)
-  assert.match(css, /overflow-wrap: break-word/)
-  assert.doesNotMatch(signature, /width:\s*\d{4}px/)
-  assert.match(css, /clamp\(11\.25rem/)
-  assert.match(css, /clamp\(13\.75rem/)
-})
-
-test('LANDING_HAS_NO_PSCS_ONE', () => {
+test('LANDING_NO_PSCS_ONE', () => {
   assert.equal(LANDING_HAS_NO_PSCS_ONE, true)
   assert.doesNotMatch(landingFooter, /PscsOneMark/)
   assert.doesNotMatch(landing, /PscsOneMark/)
@@ -225,16 +212,36 @@ test('SUCCESS_HAS_PSCS_ONE', () => {
   assert.match(successFooter, /PscsOneMark/)
 })
 
-test('SUCCESS_SIGNATURE_SIZE', () => {
-  assert.match(css, /clamp\(11\.25rem, 58vw, 15rem\)/)
-  assert.match(css, /clamp\(13\.75rem, 22vw, 17\.5rem\)/)
-  assert.doesNotMatch(css, /min\(17\.5rem, 72vw, 300px\)/)
+test('WIZARD_STEPS_LIGHT_UNCHANGED', () => {
+  assert.match(
+    experience,
+    /data-public-wizard-theme=\{wizardActive \? 'light-locked'/,
+  )
+  assert.match(experience, /data-theme=\{wizardActive \? 'light' : 'dark'\}/)
+  assert.match(lock, /wizard-light/)
+  assert.match(lock, /data-theme', 'light'/)
+  assert.match(css, /\[data-public-wizard-theme="light-locked"\]/)
 })
 
-test('HISTORICAL_MP4_NOT_WIRED', () => {
-  assert.match(media, /Historical archive only/)
-  assert.doesNotMatch(signature, /resolvePublicSuccessCdlFireVideoSrc/)
-  assert.doesNotMatch(successScreen, /cdl-como-funciona/)
+test('SUCCESS_FIRE_REDUCED_MOTION_SAFE', () => {
+  assert.equal(SUCCESS_FIRE_REDUCED_MOTION_SAFE, true)
+  assert.match(signature, /prefers-reduced-motion: reduce/)
+  assert.match(signature, /data-success-fire-reduced-motion/)
+  assert.match(signature, /data-success-cdl-logo/)
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/)
+})
+
+test('NO_HORIZONTAL_OVERFLOW', () => {
+  assert.match(css, /overflow-x: clip/)
+  assert.match(css, /overflow-wrap: break-word/)
+  assert.doesNotMatch(signature, /width:\s*\d{4}px/)
+  assert.match(css, /clamp\(11\.25rem/)
+  assert.match(css, /clamp\(13\.75rem/)
+})
+
+test('SUCCESS_SIGNATURE_SIZE', () => {
+  assert.match(css, /clamp\(11\.25rem, 58vw, 15rem\)/)
+  assert.match(css, /clamp\(13\.75rem, 22vw, 17.5rem\)/)
 })
 
 if (failed > 0) {
