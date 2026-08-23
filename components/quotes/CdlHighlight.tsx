@@ -9,7 +9,11 @@ export default function CdlHighlight({
   children: ReactNode
 }) {
   return (
-    <mark data-cdl-highlight={tone} className={`cdl-highlight cdl-highlight--${tone}`}>
+    <mark
+      data-cdl-highlight={tone}
+      data-landing-brazil-identity={tone === 'brazil' ? 'true' : undefined}
+      className={`cdl-highlight cdl-highlight--${tone}`}
+    >
       {children}
     </mark>
   )

@@ -9,8 +9,8 @@ import { scrollPublicQuoteToTop } from '@/Lib/publicQuote/scrollPublicQuoteToTop
 import { publicSuccessCopy } from '@/Lib/publicQuote/successCopy'
 import { resolvePublicSuccessFireLogoSrc } from '@/Lib/publicQuote/successHeroMedia'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import CdlFireSignature from '@/components/quotes/CdlFireSignature'
 import PublicLandingTitle from '@/components/quotes/PublicLandingTitle'
-import PublicSuccessFireLogo from '@/components/quotes/PublicSuccessFireLogo'
 
 function formatSuccessMoney(
   value: number,
@@ -185,41 +185,44 @@ export default function PublicQuoteSuccessScreen({
         </div>
       </section>
 
-      {fireLogoSrc ? (
-        <PublicSuccessFireLogo src={fireLogoSrc} alt={companyName} />
-      ) : null}
+      <div data-success-signature-cluster className="public-success-signature-cluster">
+        {fireLogoSrc ? <CdlFireSignature src={fireLogoSrc} alt={companyName} /> : null}
 
-      <div data-success-contacts className="public-success-contacts">
-        <ul>
-          {contacts.phone || contacts.whatsappUrl ? (
-            <li>
-              <a
-                href={talkHref || undefined}
-                target={contacts.whatsappUrl ? '_blank' : undefined}
-                rel={contacts.whatsappUrl ? 'noreferrer' : undefined}
-                data-success-whatsapp
-                aria-label={phoneDisplay || copy.phone}
-              >
-                <WhatsAppIcon />
-                <span>{phoneDisplay || companyName}</span>
-              </a>
-            </li>
-          ) : null}
-          {contacts.instagramUrl ? (
-            <li>
-              <a
-                href={contacts.instagramUrl}
-                target="_blank"
-                rel="noreferrer"
-                data-success-instagram
-                aria-label={contacts.instagramHandle || copy.instagram}
-              >
-                <InstagramIcon />
-                <span>{contacts.instagramHandle || companyName}</span>
-              </a>
-            </li>
-          ) : null}
-        </ul>
+        <div data-success-contacts className="public-success-contacts">
+          <p data-success-contact-heading className="public-success-contact-heading">
+            {copy.contactTeam}
+          </p>
+          <ul>
+            {contacts.phone || contacts.whatsappUrl ? (
+              <li>
+                <a
+                  href={talkHref || undefined}
+                  target={contacts.whatsappUrl ? '_blank' : undefined}
+                  rel={contacts.whatsappUrl ? 'noreferrer' : undefined}
+                  data-success-whatsapp
+                  aria-label={phoneDisplay || copy.phone}
+                >
+                  <WhatsAppIcon />
+                  <span>{phoneDisplay || companyName}</span>
+                </a>
+              </li>
+            ) : null}
+            {contacts.instagramUrl ? (
+              <li>
+                <a
+                  href={contacts.instagramUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  data-success-instagram
+                  aria-label={contacts.instagramHandle || copy.instagram}
+                >
+                  <InstagramIcon />
+                  <span>{contacts.instagramHandle || companyName}</span>
+                </a>
+              </li>
+            ) : null}
+          </ul>
+        </div>
       </div>
     </main>
   )

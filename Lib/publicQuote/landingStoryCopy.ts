@@ -1,6 +1,6 @@
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
-export type LandingHighlightTone = 'red' | 'yellow'
+export type LandingHighlightTone = 'red' | 'yellow' | 'brazil'
 
 export type LandingTitlePart = {
   text: string
@@ -48,8 +48,8 @@ export const PUBLIC_LANDING_STORY = {
       eyebrow: 'ORÇAMENTO ONLINE',
       title: [
         { text: 'O melhor do', breakAfter: true },
-        { text: 'churrasco', highlight: 'red', breakAfter: true },
-        { text: 'brasileiro', highlight: 'red' },
+        { text: 'churrasco', highlight: 'brazil', breakAfter: true },
+        { text: 'brasileiro', highlight: 'brazil' },
         { text: ',', breakAfter: true },
         { text: 'onde você estiver.' },
       ],
@@ -136,8 +136,8 @@ export const PUBLIC_LANDING_STORY = {
       eyebrow: 'ONLINE QUOTE',
       title: [
         { text: 'The best of', breakAfter: true },
-        { text: 'Brazilian', highlight: 'red', breakAfter: true },
-        { text: 'barbecue', highlight: 'red' },
+        { text: 'Brazilian', highlight: 'brazil', breakAfter: true },
+        { text: 'barbecue', highlight: 'brazil' },
         { text: ',', breakAfter: true },
         { text: 'wherever you are.' },
       ],
@@ -176,8 +176,8 @@ export const PUBLIC_LANDING_STORY = {
         id: 'live-bbq',
         kicker: '03 — PREPARED LIVE',
         title: [
-          { text: 'Brazilian BBQ,', breakAfter: true },
-          { text: 'PREPARED LIVE.', highlight: 'red' },
+        { text: 'Brazilian BBQ,', highlight: 'brazil', breakAfter: true },
+        { text: 'PREPARED LIVE.', highlight: 'red' },
         ],
         body: 'Your grill chef remains available throughout the service, preparing the barbecue in real time for you and your guests.',
       },
@@ -205,7 +205,7 @@ export const PUBLIC_LANDING_STORY = {
       eyebrow: 'READY FOR YOUR EVENT?',
       title: [
         { text: 'Now build your', breakAfter: true },
-        { text: 'Brazilian BBQ.', highlight: 'red' },
+        { text: 'Brazilian BBQ.', highlight: 'brazil' },
       ],
       body: 'Choose the details of your event and get your online estimate.',
       button: 'START MY QUOTE',
@@ -224,8 +224,8 @@ export const PUBLIC_LANDING_STORY = {
       eyebrow: 'COTIZACIÓN ONLINE',
       title: [
         { text: 'Lo mejor de la', breakAfter: true },
-        { text: 'parrilla', highlight: 'red', breakAfter: true },
-        { text: 'brasileña', highlight: 'red' },
+        { text: 'parrilla', highlight: 'brazil', breakAfter: true },
+        { text: 'brasileña', highlight: 'brazil' },
         { text: ',', breakAfter: true },
         { text: 'donde tú estés.' },
       ],
@@ -264,8 +264,8 @@ export const PUBLIC_LANDING_STORY = {
         id: 'live-bbq',
         kicker: '03 — PREPARADO EN VIVO',
         title: [
-          { text: 'Parrilla brasileña,', breakAfter: true },
-          { text: 'PREPARADA EN VIVO.', highlight: 'red' },
+        { text: 'Parrilla brasileña,', highlight: 'brazil', breakAfter: true },
+        { text: 'PREPARADA EN VIVO.', highlight: 'red' },
         ],
         body: 'El chef parrillero permanece disponible durante el servicio, preparando la parrilla en tiempo real para ti y tus invitados.',
       },

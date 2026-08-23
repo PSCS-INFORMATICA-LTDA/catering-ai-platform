@@ -14,9 +14,14 @@ export default function PublicLandingTitle({
   className: string
 }) {
   const lines = groupLandingTitleLines(parts)
+  const hasBrazilIdentity = parts.some((part) => part.highlight === 'brazil')
 
   return (
-    <Tag data-landing-title className={className}>
+    <Tag
+      data-landing-title
+      data-landing-brazil-title={hasBrazilIdentity ? 'true' : undefined}
+      className={className}
+    >
       {lines.map((line, lineIndex) => (
         <span
           key={`line-${lineIndex}-${line.map((part) => part.text).join('')}`}
