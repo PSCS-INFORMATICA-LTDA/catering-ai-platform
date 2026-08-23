@@ -37,6 +37,7 @@ import {
   PublicQuoteBrandLockup,
 } from '@/components/quotes/PublicQuoteBrandLockup'
 import { collectPublicHeroImages } from '@/Lib/publicQuote/heroMedia'
+import { scrollPublicQuoteToTop } from '@/Lib/publicQuote/scrollPublicQuoteToTop'
 import {
   clearPublicQuoteSuccess,
   getPublicQuoteSuccessSnapshot,
@@ -425,7 +426,13 @@ export default function PublicQuoteExperience({
     } catch {
       /* ignore quota / private mode */
     }
+    autoResumeAttemptedRef.current = true
+    setRestoredDraft(null)
+    setRestoredStep(0)
     setLiveSuccess(null)
+    setStarted(false)
+    scrollPublicQuoteToTop()
+    window.requestAnimationFrame(() => scrollPublicQuoteToTop())
   }
 
   useEffect(() => {
