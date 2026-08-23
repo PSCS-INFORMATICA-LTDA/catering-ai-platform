@@ -18,6 +18,7 @@ export type PublicCompanyContacts = {
  */
 const COMPANY_CONTACT_FALLBACKS: Record<string, Partial<PublicCompanyContacts>> = {
   cdl: {
+    phone: '+14079152242',
     instagramUrl: 'https://www.instagram.com/cdl.bbq/',
     instagramHandle: '@cdl.bbq',
   },
