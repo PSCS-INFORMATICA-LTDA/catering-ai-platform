@@ -110,7 +110,7 @@ test('TEST 6 Package groups start collapsed', () => {
 
 test('TEST 7 Compact with-sides selector has no inner count', () => {
   assert.match(catalog, /data-package-group=\{group\}/)
-  assert.match(catalog, /inline-flex w-fit/)
+  assert.match(catalog, /public-package-group/)
   assert.doesNotMatch(catalog, /t\.packagesAvailableCount\(packagesWithSides\.length\)/)
   assert.doesNotMatch(catalog, /5 pacotes disponíveis/)
 })
@@ -138,7 +138,9 @@ test('TEST 9 Premium copy lives above the selectors', () => {
   assert.equal(tw('en', 'withoutSidesGroupTitle'), 'WITHOUT SIDES')
   assert.equal(tw('es', 'withSidesGroupTitle'), 'CON ACOMPAÑAMIENTOS')
   assert.equal(tw('es', 'withoutSidesGroupTitle'), 'SIN ACOMPAÑAMIENTOS')
-  assert.match(catalog, /Playfair_Display/)
+  assert.doesNotMatch(catalog, /Playfair_Display/)
+  assert.match(catalog, /public-package-group/)
+  assert.match(catalog, /PACOTES CDL/)
 })
 
 test('TEST 10 Package name canonical', () => {

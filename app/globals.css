@@ -1786,11 +1786,13 @@ body {
 }
 
 .public-quote-shell {
-  --public-header-h: 3.5rem;
+  --public-header-h: calc(3.5rem + env(safe-area-inset-top, 0px));
+  overflow-x: clip;
 }
 
 .public-quote-header {
   min-height: var(--public-header-h);
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .public-cinematic {
@@ -1833,11 +1835,11 @@ body {
 }
 
 .public-cinematic-chapter {
-  min-height: 78svh;
+  min-height: 66svh;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 2rem 1.15rem calc(3.4rem + env(safe-area-inset-bottom));
+  padding: 1.9rem 1.1rem calc(1.75rem + env(safe-area-inset-bottom));
   background: linear-gradient(
     180deg,
     rgba(7, 7, 7, 0) 0%,
@@ -1849,6 +1851,11 @@ body {
 
 .public-cinematic-chapter--intro {
   min-height: calc(100svh - var(--public-header-h));
+}
+
+.public-cinematic-chapter--editorial,
+.public-cinematic-chapter--video {
+  min-height: 56svh;
 }
 
 .public-cinematic-copy {
@@ -1872,10 +1879,10 @@ body {
 .public-cinematic-display {
   margin: 0;
   color: #fff;
-  font-size: clamp(2.5rem, 12vw, 4.4rem);
+  font-size: clamp(2.35rem, 10.4vw, 4rem);
   font-weight: 900;
-  line-height: 0.94;
-  letter-spacing: -0.045em;
+  line-height: 1.06;
+  letter-spacing: -0.03em;
   text-wrap: balance;
 }
 
@@ -1883,20 +1890,31 @@ body {
 .public-cinematic-story-title {
   margin: 0;
   color: #fff;
-  font-size: clamp(2rem, 10vw, 3.6rem);
+  font-size: clamp(2.1rem, 9vw, 3.35rem);
   font-weight: 900;
-  line-height: 0.94;
-  letter-spacing: -0.04em;
+  line-height: 1.08;
+  letter-spacing: -0.028em;
+  text-wrap: balance;
+}
+
+.public-landing-title-line {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: normal;
+  padding-block: 0.07em;
+  text-wrap: balance;
 }
 
 .public-cinematic-lead,
 .public-cinematic-body,
 .public-cinematic-micro {
-  margin: 1rem 0 0;
+  margin: 1.2rem 0 0;
   max-width: 36rem;
   color: rgba(255, 255, 255, 0.86);
   font-size: 1.05rem;
   line-height: 1.55;
+  text-wrap: pretty;
 }
 
 .public-cinematic-micro {
@@ -1953,8 +1971,8 @@ body {
 
 .cdl-highlight {
   display: inline;
-  padding: 0.05em 0.22em;
-  border-radius: 0.12em;
+  padding: 0.04em 0.16em;
+  border-radius: 0.08em;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
@@ -1990,7 +2008,146 @@ body {
   backdrop-filter: blur(10px);
 }
 
+@media (max-width: 360px) {
+  .public-cinematic-display {
+    font-size: clamp(2.15rem, 10vw, 3.2rem);
+  }
+
+  .public-cinematic-editorial,
+  .public-cinematic-story-title {
+    font-size: clamp(1.95rem, 8.8vw, 2.85rem);
+  }
+}
+
+.public-package-intro {
+  width: 100%;
+  max-width: 40rem;
+  margin-inline: auto;
+  text-align: left;
+}
+
+.public-package-kicker {
+  margin: 0 0 0.45rem;
+  color: #111;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.public-package-headline {
+  margin: 0;
+  color: #111;
+  font-size: clamp(1.85rem, 7vw, 2.6rem);
+  font-weight: 900;
+  line-height: 1.06;
+  letter-spacing: -0.03em;
+}
+
+.public-package-headline-mark {
+  background: #e21b1b;
+  color: #fff;
+  padding: 0.04em 0.16em;
+  border-radius: 0.08em;
+}
+
+.public-package-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.public-package-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 60px;
+  padding: 0.8rem 1rem;
+  border-radius: 0.95rem;
+  font-size: 1.08rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.public-package-group.is-open {
+  background: #e21b1b;
+  border: 2px solid #e21b1b;
+  color: #fff;
+}
+
+.public-package-group:not(.is-open) {
+  background: #fff;
+  border: 2px solid #e21b1b;
+  color: #e21b1b;
+}
+
+.public-package-group-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.public-package-group-accent {
+  width: 2.2rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: #f6d000;
+}
+
+.public-package-group-label {
+  min-width: 0;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+
+.public-package-card.is-selected {
+  border-color: #e21b1b;
+  box-shadow: 0 0 0 2px rgba(226, 27, 27, 0.22);
+}
+
+.public-package-selected-badge {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.75rem;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 1.85rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #e21b1b;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.public-package-price-unit {
+  white-space: nowrap;
+}
+
+@media (max-width: 340px) {
+  .public-package-price-unit {
+    white-space: normal;
+  }
+}
+
 @media (min-width: 1024px) {
+  .public-package-groups {
+    flex-direction: row;
+  }
+
   .public-cinematic-read-veil {
     background:
       linear-gradient(
@@ -2014,12 +2171,14 @@ body {
   }
 
   .public-cinematic-display {
-    font-size: clamp(3.4rem, 6vw, 5.4rem);
+    font-size: clamp(3.2rem, 5.6vw, 5.2rem);
+    line-height: 1.05;
   }
 
   .public-cinematic-editorial,
   .public-cinematic-story-title {
-    font-size: clamp(3rem, 5vw, 4.6rem);
+    font-size: clamp(2.8rem, 4.6vw, 4.4rem);
+    line-height: 1.06;
   }
 
   .public-cinematic-cta:hover {

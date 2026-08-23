@@ -89,7 +89,7 @@ export default function PublicLandingCinematic({
 
         <section
           data-landing-chapter="how-it-works"
-          className="public-cinematic-chapter"
+          className="public-cinematic-chapter public-cinematic-chapter--editorial"
         >
           <PublicLandingReveal className="public-cinematic-copy">
             <PublicLandingTitle

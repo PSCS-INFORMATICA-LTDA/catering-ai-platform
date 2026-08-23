@@ -1,5 +1,8 @@
 import CdlHighlight from '@/components/quotes/CdlHighlight'
-import type { LandingTitlePart } from '@/Lib/publicQuote/landingStoryCopy'
+import {
+  groupLandingTitleLines,
+  type LandingTitlePart,
+} from '@/Lib/publicQuote/landingStoryCopy'
 
 export default function PublicLandingTitle({
   parts,
@@ -10,21 +13,27 @@ export default function PublicLandingTitle({
   as?: 'h1' | 'h2'
   className: string
 }) {
+  const lines = groupLandingTitleLines(parts)
+
   return (
-    <Tag className={className}>
-      {parts.map((part, index) => {
-        const node = part.highlight ? (
-          <CdlHighlight tone={part.highlight}>{part.text}</CdlHighlight>
-        ) : (
-          part.text
-        )
-        return (
-          <span key={`${part.text}-${index}`}>
-            {node}
-            {part.breakAfter ? <br /> : null}
-          </span>
-        )
-      })}
+    <Tag data-landing-title className={className}>
+      {lines.map((line, lineIndex) => (
+        <span
+          key={`line-${lineIndex}-${line.map((part) => part.text).join('')}`}
+          data-landing-title-line
+          className="public-landing-title-line"
+        >
+          {line.map((part, partIndex) =>
+            part.highlight ? (
+              <CdlHighlight key={`${part.text}-${partIndex}`} tone={part.highlight}>
+                {part.text}
+              </CdlHighlight>
+            ) : (
+              <span key={`${part.text}-${partIndex}`}>{part.text}</span>
+            ),
+          )}
+        </span>
+      ))}
     </Tag>
   )
 }
