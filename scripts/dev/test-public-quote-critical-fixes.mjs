@@ -139,7 +139,7 @@ test('TEST 14 Pricing snapshot is server-side', () => {
 test('TEST 15 Success only after persisted quote id', () => {
   assert.match(wizard, /!result\.quote\?\.id/)
   assert.match(wizard, /onPublicSuccess\?\.\(result\)/)
-  assert.match(experience, /onPublicSuccess=\{setSuccess\}/)
+  assert.match(experience, /onPublicSuccess=\{handlePublicSuccess\}/)
   assert.match(experience, /success \? \(/)
 })
 

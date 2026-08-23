@@ -37,6 +37,10 @@ const confirm = source(
 const experience = source(
   'app/quote/[companySlug]/[locale]/PublicQuoteExperience.tsx',
 )
+const successScreen = source(
+  'components/quotes/PublicQuoteSuccessScreen.tsx',
+)
+const successCopy = source('Lib/publicQuote/successCopy.ts')
 const submitRoute = source('app/api/public/quote-intake/submit/route.ts')
 const validation = source('Lib/publicQuote/validation.ts')
 const stepStatus = source('app/quotes/new/wizardStepStatus.ts')
@@ -98,23 +102,23 @@ test('TEST 15 Double submit protection', () => {
 test('TEST 16 Success screen only after persisted quote', () => {
   assert.match(wizard, /onPublicSuccess\?\.\(result\)/)
   assert.match(experience, /success \? \(/)
-  assert.match(experience, /success\.quote\.number/)
-  assert.match(experience, /data-success-screen/)
+  assert.match(successScreen, /success\.quote\.number/)
+  assert.match(successScreen, /data-success-screen/)
 })
 
 test('TEST 17 Success localized PT', () => {
-  assert.match(experience, /successEyebrow: 'Solicitação recebida'/)
-  assert.match(experience, /entrará em contato/)
+  assert.match(successCopy, /kicker: 'SOLICITAÇÃO RECEBIDA'/)
+  assert.match(successCopy, /entrar em contato/)
 })
 
 test('TEST 18 Success localized EN', () => {
-  assert.match(experience, /successEyebrow: 'Request received'/)
-  assert.match(experience, /get in touch/)
+  assert.match(successCopy, /kicker: 'REQUEST RECEIVED'/)
+  assert.match(successCopy, /get in touch/)
 })
 
 test('TEST 19 Success localized ES', () => {
-  assert.match(experience, /successEyebrow: 'Solicitud recibida'/)
-  assert.match(experience, /pondrá en contacto/)
+  assert.match(successCopy, /kicker: 'SOLICITUD RECIBIDA'/)
+  assert.match(successCopy, /pondrá en contacto/)
 })
 
 test('TEST 20 Past event date is the submit blocker', () => {
@@ -131,8 +135,8 @@ test('TEST 20 Past event date is the submit blocker', () => {
 })
 
 test('Success uses official CDL emblem CSS flame, not generated art', () => {
-  assert.match(experience, /data-success-flame-art/)
-  assert.match(experience, /cdl-success-emblem/)
+  assert.match(successScreen, /data-success-flame-art/)
+  assert.match(successScreen, /cdl-success-emblem/)
   assert.match(source('app/globals.css'), /cdl-success-turn/)
   assert.match(source('components/quotes/PublicQuoteBrandLockup.tsx'), /CDL_FLAME_EMBLEM_SRC/)
 })

@@ -324,8 +324,8 @@ await test('T10 event address is address-first and retains canonical/manual stat
 
   assertTokensInOrder(
     addressUi,
-    /<FieldLabel>\{copy\.search\}<\/FieldLabel>/,
-    /<FieldLabel>\{tCommon\(loc,\s*['"]postalCode['"]\)\}<\/FieldLabel>/,
+    /<FieldLabel[^>]*>\s*\{\s*copy\.search\s*\}/,
+    /<FieldLabel[^>]*>\s*\{\s*tCommon\(loc,\s*['"]postalCode['"]\)\s*\}/,
     'full address must render before ZIP/postal code',
   )
   assertContains(corpus, /placeId|place_id/i, 'canonical Google Place id is missing')
