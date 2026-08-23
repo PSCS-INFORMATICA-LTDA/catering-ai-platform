@@ -92,7 +92,18 @@ test('SUBTLE_HALO_ONLY', () => {
 
 test('MOBILE_PLATE_SIZE', () => {
   const stage = rule('.cdl-fire-signature-stage')
-  assert.match(stage, /width: clamp\(9\.5rem, 48vw, 12\.5rem\)/)
+  assert.match(stage, /width: clamp\(12\.5rem, 63vw, 16\.5rem\)/)
+  // Desktop picks up where the mobile clamp tops out, so the plate does not
+  // jump size across the breakpoint.
+  assert.match(css, /width: clamp\(16\.5rem, 20vw, 17\.5rem\)/)
+})
+
+test('MATTE_NEUTRALISED', () => {
+  // The matte is black at every radius, so a radial mask cannot remove it.
+  const video = rule('.cdl-fire-signature-video')
+  assert.match(video, /mix-blend-mode: screen/)
+  const success = rule('.public-success')
+  assert.match(success, /isolation: isolate/)
 })
 
 test('STATIC_LARGE_LOGO_REMOVED', () => {

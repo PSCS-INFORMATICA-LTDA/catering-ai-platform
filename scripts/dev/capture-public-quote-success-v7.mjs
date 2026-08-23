@@ -184,6 +184,85 @@ async function plateEdges(page, label) {
   return { stats, clip }
 }
 
+/**
+ * Median rendered luminance per radius ring around the plate centre. The plate's
+ * matte is black at every radius, so if it is not neutralised the whole footprint
+ * sits under the page level and reads as a faint dark disc — which no edge test
+ * catches. Median, so flames do not mask the floor.
+ */
+async function radialProfile(page) {
+  const box = await page.evaluate(() => {
+    const el = document.querySelector('.cdl-fire-signature-stage')
+    el.scrollIntoView({ block: 'center' })
+    const r = el.getBoundingClientRect()
+    return { x: r.x, y: r.y, w: r.width, h: r.height }
+  })
+  await new Promise((r) => setTimeout(r, 250))
+  const pad = 40
+  const clip = {
+    x: Math.max(0, Math.round(box.x - pad)),
+    y: Math.max(0, Math.round(box.y - pad)),
+    width: Math.round(box.w + pad * 2),
+    height: Math.round(box.h + pad * 2),
+  }
+  const b64 = await page.screenshot({ clip, encoding: 'base64' })
+  return page.evaluate(
+    async (data, padPx) => {
+      const img = new Image()
+      img.src = `data:image/png;base64,${data}`
+      await img.decode()
+      const c = document.createElement('canvas')
+      c.width = img.width
+      c.height = img.height
+      const ctx = c.getContext('2d', { willReadFrequently: true })
+      ctx.drawImage(img, 0, 0)
+      const px = ctx.getImageData(0, 0, c.width, c.height).data
+      const scale = window.devicePixelRatio || 1
+      const p = padPx * scale
+      const half = (c.width - p * 2) / 2
+      const cx = c.width / 2
+      const cy = c.height / 2
+      const rings = new Map()
+      for (let y = 0; y < c.height; y += 1) {
+        for (let x = 0; x < c.width; x += 1) {
+          const dx = x - cx
+          const dy = y - cy
+          const r = Math.sqrt(dx * dx + dy * dy) / half
+          if (r > 1.3) continue
+          const key = Math.round(r * 20) / 20
+          const i = (y * c.width + x) * 4
+          const l = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]
+          if (!rings.has(key)) rings.set(key, [])
+          rings.get(key).push(l)
+        }
+      }
+      // Page level, read well outside the plate.
+      const outer = []
+      for (const [r, vals] of rings) if (r >= 1.2) outer.push(...vals)
+      outer.sort((a, b) => a - b)
+      const pageLevel = outer[Math.floor(outer.length / 2)]
+      let dip = 0
+      let dipAt = 0
+      for (const [r, vals] of rings) {
+        if (r < 0.3) continue
+        const sorted = [...vals].sort((a, b) => a - b)
+        const median = sorted[Math.floor(sorted.length / 2)]
+        if (pageLevel - median > dip) {
+          dip = pageLevel - median
+          dipAt = r
+        }
+      }
+      return {
+        pageLevel: Math.round(pageLevel * 10) / 10,
+        dip: Math.round(dip * 100) / 100,
+        dipAt: Math.round(dipAt * 100) / 100,
+      }
+    },
+    b64,
+    pad,
+  )
+}
+
 /** Ring bounding box of the current frame, in percent of the plate canvas. */
 const ringMargins = (page) =>
   page.evaluate(() => {
@@ -331,6 +410,7 @@ try {
             radius: videoStyle.borderTopLeftRadius,
             shadow: videoStyle.boxShadow,
             backgroundColor: videoStyle.backgroundColor,
+            mixBlendMode: videoStyle.mixBlendMode,
             intrinsic: `${video.videoWidth}x${video.videoHeight}`,
             paused: video.paused,
           }
@@ -338,6 +418,7 @@ try {
       signatureBg: sigStyle?.backgroundColor,
       clusterBg: clusterStyle?.backgroundColor,
       successBg: cs(success).backgroundColor,
+      successIsolation: cs(success).isolation,
       bodyBg: cs(document.body).backgroundColor,
       bigMarks,
       staticFallbackPresent: !!success.querySelector('[data-success-fire-logo-mark]'),
@@ -411,8 +492,14 @@ try {
 
   record(
     'MOBILE_PLATE_SIZE',
-    dom.stage.width >= 150 && dom.stage.width <= 205,
-    `${dom.stage.width}px at 393 (was 206.3px)`,
+    dom.stage.width >= 235 && dom.stage.width <= 270,
+    `${dom.stage.width}px at 393 (grown from 188.6px)`,
+  )
+
+  record(
+    'MATTE_NEUTRALISED',
+    dom.video.mixBlendMode === 'screen' && dom.successIsolation === 'isolate',
+    `mix-blend-mode: ${dom.video.mixBlendMode} over an isolated ${dom.successBg}`,
   )
 
   record(
@@ -510,6 +597,20 @@ try {
     'FIRE_NOT_CROPPED',
     samples.length === 12 && worstRing >= 15,
     `tightest ring margin over ${samples.length} frames: ${worstRing}% of canvas`,
+  )
+
+  // Same sweep, this time looking for the plate footprint sitting under the page.
+  const profiles = []
+  for (let i = 0; i < 12; i += 1) {
+    await seekFire(page, (duration / 12) * i + 0.02)
+    profiles.push(await radialProfile(page))
+  }
+  const worstDip = Math.max(...profiles.map((p) => p.dip))
+  const dipFrame = profiles.find((p) => p.dip === worstDip)
+  record(
+    'NO_DARK_HALO',
+    worstDip <= 0.6,
+    `deepest dip below page level over ${profiles.length} frames: ${worstDip} of 255 at r=${dipFrame.dipAt} (page ${dipFrame.pageLevel})`,
   )
   await page.evaluate(() => document.querySelector('.cdl-fire-signature-video').play())
 
