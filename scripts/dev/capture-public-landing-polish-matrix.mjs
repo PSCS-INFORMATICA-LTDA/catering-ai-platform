@@ -120,94 +120,48 @@ async function jumpToPackages(page) {
   await page.waitForSelector('[data-public-wizard-theme="light-locked"]', {
     timeout: 45_000,
   })
-  const unique = String(Date.now()).slice(-6)
-  const firstName = await page.$('input[autocomplete="given-name"]')
-  const lastName = await page.$('input[autocomplete="family-name"]')
-  if (!firstName || !lastName) throw new Error('name fields missing')
-  await firstName.click({ clickCount: 3 })
-  await firstName.type('Philippe', { delay: 15 })
-  await lastName.click({ clickCount: 3 })
-  await lastName.type('Polish', { delay: 15 })
-  const phone = await page.$('input[type="tel"]')
-  if (!phone) throw new Error('phone field missing')
-  await phone.click({ clickCount: 3 })
-  await phone.type(`+1407555${unique.slice(-4)}`, { delay: 20 })
-  await clickNext(page)
-  await page.waitForFunction(
-    () => document.body.innerText.includes('ETAPA 2') || document.body.innerText.includes('STEP 2') || document.body.innerText.includes('PASO 2'),
-    { timeout: 20_000 },
-  )
-
-  const dateButton = await page.evaluateHandle(() => {
-    const labels = [...document.querySelectorAll('span.cdl-eyebrow')]
-    const dateLabel = labels.find((node) =>
-      /data do evento|event date|fecha del evento/i.test(node.textContent || ''),
-    )
-    return dateLabel?.parentElement?.querySelector('button') || null
-  })
-  const dateEl = dateButton.asElement()
-  if (!dateEl) throw new Error('date picker missing')
-  await dateEl.click()
-  await page.waitForSelector('[role="dialog"] button:not([disabled])')
-  await page.evaluate(() => {
-    const dialog = document.querySelector('[role="dialog"]')
-    const days = [...(dialog?.querySelectorAll('button') || [])].filter(
-      (button) => !button.disabled && /^\d+$/.test(button.textContent?.trim() || ''),
-    )
-    days.at(-1)?.click()
-  })
-
-  const timeButton = await page.evaluateHandle(() => {
-    const labels = [...document.querySelectorAll('span.cdl-eyebrow')]
-    const timeLabel = labels.find((node) =>
-      /início|start time|hora de inicio/i.test(node.textContent || ''),
-    )
-    return timeLabel?.parentElement?.querySelector('button') || null
-  })
-  const timeEl = timeButton.asElement()
-  if (!timeEl) throw new Error('time picker missing')
-  await timeEl.click()
-  await page.evaluate(() => {
-    const hour = [...document.querySelectorAll('button')].find((button) => button.textContent?.trim() === '18')
-    hour?.click()
-  })
-  await page.evaluate(() => {
-    const minute = [...document.querySelectorAll('button')].find((button) => button.textContent?.trim() === '00')
-    minute?.click()
-  })
-
-  await fillLabeledInput(page, 'adult', '25')
-
-  const address = await page.evaluateHandle(() => {
-    const labels = [...document.querySelectorAll('label')]
-    const match = labels.find((node) =>
-      /endereço|address|dirección/i.test(node.textContent || ''),
-    )
-    return match?.querySelector('input') || null
-  })
-  const addressEl = address.asElement()
-  if (!addressEl) throw new Error('address field missing')
-  await addressEl.click()
-  await addressEl.type('8500 Vineland Avenue, Orlando', { delay: 40 })
-  await new Promise((resolve) => setTimeout(resolve, 1800))
-  await addressEl.press('ArrowDown')
-  await addressEl.press('Enter')
-  await new Promise((resolve) => setTimeout(resolve, 1200))
-  const confirmed = await page.evaluate(() =>
-    /confirmado|confirmed|confirmada/i.test(document.body.innerText),
-  )
-  if (!confirmed) {
-    const pac = await page.$('.pac-item')
-    if (pac) {
-      await pac.click()
-      await page.waitForFunction(
-        () => /confirmado|confirmed|confirmada/i.test(document.body.innerText),
-        { timeout: 10_000 },
-      )
-    }
-  }
-
-  await clickNext(page)
+  const unique = String(Date.now()).slice(-4)
+  const locale = await page.evaluate(() => location.pathname.split('/').pop() || 'pt')
+  const patched = await page.evaluate(async (draftLocale, phoneTail) => {
+    const response = await fetch('/api/public/quote-intake/session', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        website: '',
+        currentStep: 2,
+        draft: {
+          locale: draftLocale,
+          contact: {
+            firstName: 'Philippe',
+            lastName: 'Polish',
+            phone: `+1407555${phoneTail}`,
+          },
+          event: {
+            eventName: 'Philippe Polish',
+            eventDate: '2026-08-30',
+            startTime: '18:00',
+            endTime: '22:00',
+            adultCount: 25,
+            address: {
+              route: 'Vineland Avenue',
+              number: '8500',
+              city: 'Orlando',
+              region: 'FL',
+              postalCode: '32821',
+              country: 'US',
+              formattedAddress: '8500 Vineland Avenue, Orlando, FL 32821, USA',
+              source: 'manual',
+            },
+          },
+        },
+      }),
+    })
+    const body = await response.json().catch(() => null)
+    return { ok: response.ok, status: response.status, step: body?.session?.currentStep }
+  }, locale, unique)
+  if (!patched.ok) throw new Error(`session patch ${patched.status}`)
+  await page.reload({ waitUntil: 'networkidle2' })
   await page.waitForSelector('[data-package-experience-intro]', { timeout: 45_000 })
 }
 
