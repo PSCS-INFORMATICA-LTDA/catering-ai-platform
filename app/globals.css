@@ -1799,6 +1799,10 @@ body {
   overflow-x: clip;
 }
 
+.public-cinematic .public-hero-indicators {
+  display: none;
+}
+
 .public-cinematic-hero {
   position: sticky;
   top: var(--public-header-h);
