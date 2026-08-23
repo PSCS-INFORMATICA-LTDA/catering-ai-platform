@@ -49,7 +49,9 @@ test('FINAL_SCREEN_PREMIUM_DARK', () => {
   assert.match(successScreen, /public-cinematic-display/)
   assert.match(successScreen, /public-cinematic-eyebrow/)
   assert.match(css, /\.public-success \{/)
-  assert.match(css, /background: #050505/)
+  // One dark surface for the whole confirmation, on the --cdl-bg tone.
+  assert.match(css, /\.public-success \{[^}]*--success-bg: #070707/)
+  assert.match(css, /\.public-success \{[^}]*background: var\(--success-bg\)/)
   assert.doesNotMatch(successScreen, /min-h-\[calc\(100vh-4rem\)\]/)
   assert.match(successScreen, /className="public-success"/)
   assert.doesNotMatch(experience, /min-h-\[calc\(100vh-4rem\)\]/)
