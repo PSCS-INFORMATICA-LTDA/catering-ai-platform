@@ -66,7 +66,8 @@ report('TEST 18: Public quote routes remain listed as public', read('Lib/publicR
 report(
   'TEST 19: Proxy skips auth for public mp4 assets',
   read('proxy.ts').includes('mp4') &&
-    read('Lib/publicRoutes.ts').includes("'/cdl/video'"),
+    read('Lib/publicRoutes.ts').includes("'/cdl/video'") &&
+    read('Lib/publicRoutes.ts').includes("'/cdl/brand'"),
 );
 
 console.log('');

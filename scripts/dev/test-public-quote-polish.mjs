@@ -102,10 +102,7 @@ test('TEST 6 Package groups start collapsed', () => {
   assert.match(catalog, /if \(!selectedPackageId\) return null/)
   assert.doesNotMatch(catalog, /setOpenGroup\(['\"]with_sides['\"]\)/)
   assert.doesNotMatch(catalog, /setOpenGroup\(['\"]without_sides['\"]\)/)
-  assert.doesNotMatch(
-    catalog,
-    /setOpenGroup\(getPublicPackageSidesGroup/,
-  )
+  assert.match(catalog, /expandedPackageId/)
 })
 
 test('TEST 7 Compact with-sides selector has no inner count', () => {
@@ -181,7 +178,7 @@ test('TEST 12 Package pricing unchanged', () => {
 
 test('TEST 13 Package options inline unchanged', () => {
   assert.match(catalog, /data-public-package-options/)
-  assert.match(catalog, /active && selectableGroups\.length > 0/)
+  assert.match(catalog, /active && expanded && selectableGroups\.length > 0/)
   assert.match(catalog, /lg:col-span-2/)
 })
 
