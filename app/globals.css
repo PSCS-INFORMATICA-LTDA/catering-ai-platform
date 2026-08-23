@@ -1893,7 +1893,7 @@ body {
   font-weight: 900;
   line-height: 1.06;
   letter-spacing: -0.03em;
-  text-wrap: balance;
+  text-wrap: pretty;
 }
 
 .public-cinematic-editorial,
@@ -1913,11 +1913,21 @@ body {
   overflow-wrap: break-word;
   word-break: normal;
   padding-block: 0.12em;
-  text-wrap: balance;
+  text-wrap: pretty;
 }
 
 .public-landing-title-line + .public-landing-title-line {
   margin-top: 0.22em;
+}
+
+/* Keep the approved 4-line hero; balance was forcing the last line to split. */
+[data-landing-chapter='intro']
+  .public-cinematic-display
+  > .public-landing-title-line:last-child {
+  overflow-wrap: normal;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+  text-wrap: nowrap;
 }
 
 .public-cinematic-lead,
@@ -2041,7 +2051,7 @@ body {
 
 @media (max-width: 360px) {
   .public-cinematic-display {
-    font-size: clamp(2.15rem, 10vw, 3.2rem);
+    font-size: clamp(2rem, 9.8vw, 3.1rem);
   }
 
   .public-cinematic-editorial,
@@ -2204,6 +2214,10 @@ body {
     justify-content: safe center;
     padding: 4.5rem 4rem 5rem;
     background: transparent;
+  }
+
+  .public-cinematic-chapter--intro .public-cinematic-copy {
+    max-width: 46rem;
   }
 
   .public-cinematic-display {

@@ -65,6 +65,19 @@ test('HERO_NO_MULTI_COLOR_WORD_FILL', () => {
   assert.doesNotMatch(css, /\.cdl-highlight--brazil/)
 })
 
+test('HERO_LAST_LINE_SINGLE', () => {
+  const displayRule = css.match(
+    /\.public-cinematic-display \{([^}]+)\}/,
+  )?.[1]
+  assert.ok(displayRule, 'missing .public-cinematic-display rule')
+  assert.match(displayRule, /text-wrap: pretty/)
+  assert.doesNotMatch(displayRule, /text-wrap: balance/)
+  assert.match(
+    css,
+    /\[data-landing-chapter='intro'\][\s\S]*?\.public-landing-title-line:last-child \{[\s\S]*?white-space: nowrap/,
+  )
+})
+
 test('SUCCESS_FIRE_SIGNATURE_REPAIRED', () => {
   assert.equal(SUCCESS_FIRE_USES_TREATED_OFFICIAL_MP4, true)
   assert.match(signature, /<video/)
