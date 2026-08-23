@@ -422,7 +422,10 @@ try {
   )
   const badNet = report.network.filter((item) => {
     const url = item.url || ''
-    if (url.includes('cdl-logo-fire-spin.mp4') && item.status === 404) return true
+    if (url.includes('CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL.mp4') && item.status >= 400) {
+      return true
+    }
+    if (url.includes('cdl-logo-fire-spin.mp4')) return true
     return item.status >= 400 && !url.includes('favicon')
   })
   check('NETWORK', badNet.length === 0, JSON.stringify(badNet.slice(0, 8)))

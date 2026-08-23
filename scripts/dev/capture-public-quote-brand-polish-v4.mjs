@@ -1,8 +1,8 @@
 /**
- * Screenshot matrix for public experience polish V4.
+ * Screenshot matrix for public experience polish V4 — Git asset edition.
  *
  *   node scripts/dev/capture-public-quote-brand-polish-v4.mjs \
- *     --url http://127.0.0.1:3000 --out /opt/cursor/artifacts/v4
+ *     --url http://127.0.0.1:3000 --out /opt/cursor/artifacts
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -14,8 +14,9 @@ const arg = (name, fallback = '') => {
 }
 
 const BASE = (arg('--url') || process.env.PUBLIC_LAYOUT_URL || '').replace(/\/$/, '')
-const OUT = arg('--out', '/opt/cursor/artifacts/v4')
+const OUT = arg('--out', '/opt/cursor/artifacts')
 const CHROME = process.env.CHROME_PATH || '/usr/bin/google-chrome-stable'
+const FINAL_MP4 = 'CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL'
 
 if (!BASE) {
   console.error('Need --url')
@@ -123,8 +124,8 @@ async function jumpToStep(page, currentStep, extraDraft = {}) {
   await page.reload({ waitUntil: 'networkidle2' })
 }
 
-async function injectSuccess(page, locale) {
-  await page.evaluate((lang) => {
+async function injectSuccess(page) {
+  await page.evaluate(() => {
     const payload = {
       quote: {
         id: '00000000-0000-4000-8000-000000000062',
@@ -138,9 +139,41 @@ async function injectSuccess(page, locale) {
     sessionStorage.setItem('public-quote-success:cdl', JSON.stringify(payload))
     sessionStorage.removeItem('public-quote-active:cdl')
     window.dispatchEvent(new Event('public-quote-success-change'))
-  }, locale)
+  })
   await page.reload({ waitUntil: 'networkidle2' })
   await page.waitForSelector('[data-public-success]', { timeout: 20_000 })
+}
+
+async function seekSuccessVideo(page, seconds) {
+  await page.waitForSelector(`video[src*="${FINAL_MP4}"]`, { timeout: 20_000 })
+  await page.evaluate(async (time, name) => {
+    const el = document.querySelector(`video[src*="${name}"]`)
+    if (!(el instanceof HTMLVideoElement)) throw new Error('success video missing')
+    el.muted = true
+    el.controls = false
+    if (el.readyState < 1) {
+      await new Promise((resolve, reject) => {
+        el.addEventListener('loadedmetadata', resolve, { once: true })
+        el.addEventListener('error', () => reject(new Error('video error')), { once: true })
+      })
+    }
+    el.pause()
+    if (Math.abs(el.currentTime - time) > 0.02) {
+      await new Promise((resolve, reject) => {
+        const timer = window.setTimeout(() => reject(new Error(`seek ${time} timeout`)), 8000)
+        el.addEventListener(
+          'seeked',
+          () => {
+            window.clearTimeout(timer)
+            resolve()
+          },
+          { once: true },
+        )
+        el.currentTime = time
+      })
+    }
+  }, seconds, FINAL_MP4)
+  await new Promise((r) => setTimeout(r, 180))
 }
 
 let overflowFailed = 0
@@ -154,6 +187,11 @@ try {
   })
   await new Promise((r) => setTimeout(r, 300))
   await shot(landing, '01_landing_footer_390')
+  await landing.evaluate(() => {
+    document.querySelector('[data-landing-chapter="video"]')?.scrollIntoView({ block: 'start' })
+  })
+  await new Promise((r) => setTimeout(r, 300))
+  await shot(landing, '02_landing_video_order_390')
   await landing.close()
 
   const packages = await browser.newPage()
@@ -172,31 +210,43 @@ try {
   await packages.waitForSelector('[data-package-sides-group="with_sides"]', { timeout: 15_000 })
   await packages.click('[data-package-sides-group="with_sides"]')
   await packages.waitForSelector('[data-public-package-options]', { timeout: 10_000 })
+  await packages.evaluate(() => {
+    document.querySelector('[data-public-package-options]')?.scrollIntoView({ block: 'center' })
+  })
   await new Promise((r) => setTimeout(r, 400))
-  await shot(packages, '02_package_open_390')
+  await shot(packages, '03_package_open_390')
 
   await packages.click('[data-package-selected="true"]')
   await packages.waitForFunction(
     () => !document.querySelector('[data-public-package-options]'),
     { timeout: 10_000 },
   )
+  const stillSelected = await packages.$('[data-package-selected="true"]')
+  if (!stillSelected) throw new Error('selection lost after collapse')
+  await packages.evaluate(() => {
+    document.querySelector('[data-package-selected="true"]')?.scrollIntoView({ block: 'center' })
+  })
   await new Promise((r) => setTimeout(r, 250))
-  await shot(packages, '03_package_closed_selected_390')
+  await shot(packages, '04_package_closed_selected_390')
 
   await packages.click('[data-package-selected="true"]')
   await packages.waitForSelector('[data-public-package-options]', { timeout: 10_000 })
-  await new Promise((r) => setTimeout(r, 250))
-  await shot(packages, '04_package_reopened_390')
-
-  const packageId = await packages.$eval(
-    '[data-package-selected="true"]',
-    (node) => node.getAttribute('data-package-key') || '',
-  )
-  const selectedId = await packages.evaluate(() => {
-    const card = document.querySelector('[data-package-selected="true"]')
-    return card?.getAttribute('data-package-key') || ''
+  await packages.evaluate(() => {
+    document.querySelector('[data-public-package-options]')?.scrollIntoView({
+      block: 'center',
+    })
   })
-  writeFileSync(join(OUT, 'package-selected.json'), JSON.stringify({ packageId, selectedId }))
+  await new Promise((r) => setTimeout(r, 250))
+  await shot(packages, '05_package_reopened_390')
+  const packageState = await packages.evaluate(() => ({
+    theme: document.querySelector('[data-public-quote-shell]')?.getAttribute('data-theme'),
+    lock: document
+      .querySelector('[data-public-quote-shell]')
+      ?.getAttribute('data-public-wizard-theme'),
+    selected: document.querySelector('[data-package-selected="true"]') != null,
+    options: document.querySelector('[data-public-package-options]') != null,
+  }))
+  writeFileSync(join(OUT, 'package-selected.json'), JSON.stringify(packageState))
   await packages.close()
 
   const extras = await browser.newPage()
@@ -206,79 +256,97 @@ try {
     timeout: 45_000,
   })
   if (!(await overflow(extras, 'ADDITIONALS_390'))) overflowFailed += 1
-  const firstHeader = await extras.$('[data-additional-category-header], [data-additional-category-hitarea]')
+  const firstHeader = await extras.$(
+    '[data-additional-category-header], [data-additional-category-hitarea]',
+  )
   if (firstHeader) await firstHeader.click()
   await extras.waitForSelector('[data-additional-item-card]', { timeout: 15_000 })
   await extras.evaluate(() => {
     document.querySelector('[data-additional-item-card]')?.scrollIntoView({ block: 'center' })
   })
   await new Promise((r) => setTimeout(r, 300))
-  await shot(extras, '05_additionals_390')
-  const qtyPlus = await extras.$('[data-additional-item-card] .public-additional-qty-btn:last-of-type, [data-additional-item-card] button[aria-label]')
-  if (qtyPlus) await qtyPlus.click()
-  else {
-    const selectBtn = await extras.$('[data-additional-item-card] button')
-    if (selectBtn) await selectBtn.click()
-  }
-  await extras.waitForSelector('[data-additional-item-card].is-selected, .public-additional-card.is-selected', {
-    timeout: 8_000,
-  }).catch(() => {})
+  await shot(extras, '06_additionals_390')
+  await extras.evaluate(() => {
+    const card = document.querySelector('[data-additional-item-card]')
+    const plus = card?.querySelector('.public-additional-qty-btn:last-of-type')
+    const select = card?.querySelector('.public-additional-card-select')
+    ;(plus || select)?.click()
+  })
+  await extras
+    .waitForSelector(
+      '[data-additional-item-card].is-selected, .public-additional-card.is-selected',
+      { timeout: 8_000 },
+    )
+    .catch(() => {})
+  await extras.evaluate(() => {
+    document.querySelector('[data-additional-item-card]')?.scrollIntoView({ block: 'center' })
+  })
   await new Promise((r) => setTimeout(r, 250))
-  await shot(extras, '06_additional_selected_390')
+  await shot(extras, '07_additional_selected_390')
   await extras.close()
 
-  for (const [locale, prefix] of [
-    ['pt', ''],
-    ['en', 'en_'],
-    ['es', 'es_'],
-  ]) {
+  for (const locale of ['pt', 'en', 'es']) {
     const success = await browser.newPage()
     await openLanding(success, locale, 390, 844)
-    await injectSuccess(success, locale)
+    await injectSuccess(success)
     if (!(await overflow(success, `SUCCESS_${locale.toUpperCase()}_390`))) overflowFailed += 1
     await success.evaluate(() => window.scrollTo(0, 0))
     await new Promise((r) => setTimeout(r, 250))
-    const topName =
-      locale === 'pt' ? '07_success_top_390' : `${prefix}success_top_390`
-    await shot(success, topName)
+    if (locale === 'pt') await shot(success, '08_success_top_390')
+    if (locale === 'en') await shot(success, '15_success_en')
+    if (locale === 'es') await shot(success, '16_success_es')
     if (locale === 'pt') {
       await success.evaluate(() => {
         document.querySelector('[data-success-zelle]')?.scrollIntoView({ block: 'center' })
       })
-      await shot(success, '08_success_zelle_390')
+      await shot(success, '09_success_zelle_390')
       await success.evaluate(() => {
-        document.querySelector('[data-success-cdl-signature], [data-success-fire-logo]')
+        document
+          .querySelector('[data-success-cdl-signature], [data-success-fire-logo]')
           ?.scrollIntoView({ block: 'center' })
       })
-      await new Promise((r) => setTimeout(r, 400))
-      await shot(success, '09_success_fire_video_START_390')
-      await new Promise((r) => setTimeout(r, 2200))
-      await shot(success, '10_success_fire_video_END_390')
+      await seekSuccessVideo(success, 0)
+      await shot(success, '10_success_video_0s')
+      await seekSuccessVideo(success, 2)
+      await shot(success, '11_success_video_2s')
+      await seekSuccessVideo(success, 4.9)
+      await shot(success, '12_success_video_4_9s')
       await success.evaluate(() => {
         document.querySelector('[data-success-contacts]')?.scrollIntoView({ block: 'center' })
       })
-      await shot(success, '11_success_contacts_390')
+      await shot(success, '13_success_contacts_after_video')
       await success.evaluate(() => {
-        document.querySelector('[data-success-footer], [data-powered-by]')
-          ?.scrollIntoView({ block: 'end' })
+        document.querySelector('[data-success-footer], [data-powered-by]')?.scrollIntoView({
+          block: 'end',
+        })
       })
-      await shot(success, '12_success_pscs_footer_390')
+      await shot(success, '14_success_pscs_footer')
     }
     await success.close()
   }
 
+  const landingDesktop = await browser.newPage()
+  await openLanding(landingDesktop, 'pt', 1440, 900)
+  if (!(await overflow(landingDesktop, 'LANDING_DESKTOP_1440'))) overflowFailed += 1
+  await landingDesktop.evaluate(() => window.scrollTo(0, 0))
+  await shot(landingDesktop, '17_landing_desktop')
+  await landingDesktop.close()
+
   const desktop = await browser.newPage()
   await openLanding(desktop, 'pt', 1440, 900)
-  await injectSuccess(desktop, 'pt')
+  await injectSuccess(desktop)
   if (!(await overflow(desktop, 'SUCCESS_DESKTOP_1440'))) overflowFailed += 1
   await desktop.evaluate(() => window.scrollTo(0, 0))
-  await shot(desktop, 'success_desktop_1440_top')
-  await desktop.evaluate(() => {
-    document.querySelector('[data-success-cdl-signature], [data-success-fire-logo]')
-      ?.scrollIntoView({ block: 'center' })
-  })
-  await shot(desktop, 'success_desktop_1440_fire')
+  await shot(desktop, '18_success_desktop')
   await desktop.close()
+
+  const widths = [320, 360, 375, 390, 393, 414, 430]
+  for (const width of widths) {
+    const page = await browser.newPage()
+    await openLanding(page, 'pt', width, width <= 360 ? 568 : 844)
+    if (!(await overflow(page, `LANDING_${width}`))) overflowFailed += 1
+    await page.close()
+  }
 } finally {
   await browser.close()
 }

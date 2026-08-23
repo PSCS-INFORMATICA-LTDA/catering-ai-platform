@@ -87,13 +87,18 @@ test('LANDING_HAS_CDL_LOGO', () => {
   assert.ok(existsSync(join(ROOT, 'public/cdl/logo.png')))
 })
 
-test('LANDING_USES_STATIC_CDL_LOGO', () => {
+test('LANDING_HAS_STATIC_CDL_LOGO', () => {
   assert.match(landingFooter, /<img/)
   assert.doesNotMatch(landingFooter, /<video/)
-  assert.doesNotMatch(landingFooter, /cdl-logo-fire-spin/)
-  assert.doesNotMatch(landing, /cdl-logo-fire-spin/)
-  assert.doesNotMatch(landing, /CDL_LOGO_FOGO/)
   assert.equal(PUBLIC_SUCCESS_CDL_LOGO_SRC, '/cdl/logo.png')
+})
+
+test('LANDING_DOES_NOT_USE_FIRE_MP4', () => {
+  assert.doesNotMatch(landingFooter, /CDL_LOGO_FOGO/)
+  assert.doesNotMatch(landingFooter, /cdl-logo-fire-spin/)
+  assert.doesNotMatch(landing, /CDL_LOGO_FOGO/)
+  assert.doesNotMatch(landing, /cdl-logo-fire-spin/)
+  assert.doesNotMatch(landing, /PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC/)
 })
 
 test('SUCCESS_HAS_PSCS_ONE', () => {
@@ -103,13 +108,29 @@ test('SUCCESS_HAS_PSCS_ONE', () => {
   assert.match(successFooter, /copy\.poweredBy/)
 })
 
-test('SUCCESS_HAS_REAL_CDL_MP4', () => {
-  assert.equal(PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC, '/cdl/brand/cdl-logo-fire-spin.mp4')
+test('FINAL_CDL_ASSET_EXISTS_IN_GIT', () => {
+  assert.ok(existsSync(fireMp4Abs), `missing ${fireMp4Rel}`)
+  assert.ok(statSync(fireMp4Abs).size > 10_000, 'MP4 too small to be the approved video')
+})
+
+test('FINAL_CDL_ASSET_PATH_CORRECT', () => {
+  assert.equal(
+    PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC,
+    '/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL.mp4',
+  )
   assert.equal(
     PUBLIC_SUCCESS_CDL_FIRE_SOURCE_NAME,
     'CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL.mp4',
   )
+  assert.equal(
+    fireMp4Rel.replace(/\\/g, '/'),
+    'public/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL.mp4',
+  )
+})
+
+test('SUCCESS_USES_FINAL_CDL_MP4', () => {
   assert.match(fireLogo, /data-success-cdl-fire-video/)
+  assert.match(fireLogo, /data-success-uses-final-cdl-mp4="true"/)
   assert.match(fireLogo, /PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC/)
   assert.match(fireLogo, /autoPlay/)
   assert.match(fireLogo, /loop/)
@@ -122,7 +143,6 @@ test('SUCCESS_HAS_REAL_CDL_MP4', () => {
   assert.doesNotMatch(css, /@keyframes public-success-fire/)
   assert.doesNotMatch(fireLogo, /animation:/)
   assert.ok(existsSync(fireMp4Abs), `missing ${fireMp4Rel}`)
-  assert.ok(statSync(fireMp4Abs).size > 10_000, 'MP4 too small to be the approved video')
 })
 
 test('SUCCESS_VIDEO_HAS_NO_BOOK_NOW', () => {
@@ -139,7 +159,16 @@ test('SUCCESS_VIDEO_HAS_NO_BOOK_NOW', () => {
   }
 })
 
-test('SUCCESS_VIDEO_FALLBACK', () => {
+test('OLD_CDL_VIDEO_NOT_REFERENCED', () => {
+  assert.doesNotMatch(fireLogo, /cdl-logo-fire-spin/)
+  assert.doesNotMatch(successScreen, /cdl-logo-fire-spin/)
+  assert.doesNotMatch(media, /cdl-logo-fire-spin/)
+  assert.doesNotMatch(fireLogo, /cdl-como-funciona/)
+  assert.doesNotMatch(successScreen, /cdl-como-funciona/)
+  assert.doesNotMatch(media, /cdl-como-funciona/)
+})
+
+test('SUCCESS_VIDEO_HAS_STATIC_FALLBACK', () => {
   assert.match(fireLogo, /onError=\{\(\) => setVideoFailed\(true\)\}/)
   assert.match(fireLogo, /prefers-reduced-motion: reduce/)
   assert.match(fireLogo, /data-success-cdl-logo/)
@@ -159,7 +188,7 @@ test('SUCCESS_CONTACTS_AFTER_VIDEO', () => {
   assert.ok(contactsIndex > logoIndex)
 })
 
-test('SUCCESS_CONTACT_LABELS_HIDDEN', () => {
+test('SUCCESS_CONTACT_LABELS_REMOVED', () => {
   assert.match(successScreen, /aria-label=\{phoneDisplay/)
   assert.match(successScreen, /aria-label=\{contacts\.instagramHandle/)
   assert.doesNotMatch(successScreen, />WhatsApp</)
@@ -220,7 +249,7 @@ test('SELECT_OTHER_PACKAGE_SWITCHES_PANEL', () => {
   assert.match(packages, /data-expanded-package-id=\{expandedPackageId/)
 })
 
-test('PACKAGE_PRICE_UNCHANGED', () => {
+test('WITH_SIDES_PRICE_UNCHANGED', () => {
   const withSides = { package_key: 'BBQCHO+', price_per_person: 52 }
   const withoutSides = { package_key: 'BBQCHO', price_per_person: 40 }
   const breakdown = resolvePackageSidesPricing(withSides, withoutSides, 12)
@@ -232,6 +261,16 @@ test('PACKAGE_PRICE_UNCHANGED', () => {
   assert.match(packages, /resolvePackageSidesPricing/)
   assert.doesNotMatch(packages, /function resolvePackageSidesPricing/)
   assert.match(visual, /não altera o valor salvo na cotação/)
+})
+
+test('WITHOUT_SIDES_PRICE_UNCHANGED', () => {
+  const noSides = resolvePackageSidesPricing(
+    { package_key: 'BBQCHO', price_per_person: 40 },
+    null,
+    12,
+  )
+  assert.equal(noSides, null)
+  assert.equal(getPackageCatalogPrice({ package_key: 'BBQCHO', price_per_person: 40 }), 40)
 })
 
 test('WITHOUT_SIDES_NO_GARNISH_LINE', () => {
@@ -301,7 +340,7 @@ test('WIZARD_LIGHT_LOCK', () => {
   assert.match(css, /\[data-public-wizard-theme="light-locked"\]/)
 })
 
-test('PT_EN_ES_PUBLIC_COPY', () => {
+test('ADDITIONAL_PT_EN_ES', () => {
   assert.equal(getQuoteStrings('pt').wizard.publicAdditionalsKicker, 'Adicionais')
   assert.equal(getQuoteStrings('en').wizard.publicAdditionalsKicker, 'Add-ons')
   assert.equal(getQuoteStrings('es').wizard.publicAdditionalsKicker, 'Adicionales')
@@ -321,8 +360,8 @@ test('LANDING_VIDEO_BEFORE_FINAL_CTA', () => {
 })
 
 test('PUBLIC_BRAND_PREFIX', () => {
-  assert.match(source('Lib/publicRoutes.ts'), /\/cdl\/brand/)
-  assert.match(media, /CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL\.mp4/)
+  assert.match(source('Lib/publicRoutes.ts'), /\/cdl\/video/)
+  assert.match(media, /\/cdl\/video\/CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL\.mp4/)
 })
 
 if (failed > 0) {
