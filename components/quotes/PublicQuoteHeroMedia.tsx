@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   PUBLIC_HERO_FADE_MS,
   PUBLIC_HERO_HOLD_MS,
+  PUBLIC_HERO_KENBURNS_MS,
+  PUBLIC_HERO_REDUCED_FADE_MS,
   type PublicHeroMediaItem,
 } from '@/Lib/publicQuote/companyPublicHeroMedia'
 import { publicHeroUrlKind } from '@/Lib/media/publicHeroSrc'
@@ -61,8 +63,10 @@ export default function PublicQuoteHeroMedia({
   const [rawFallbackIds, setRawFallbackIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   )
+  const [hasBooted, setHasBooted] = useState(false)
   const reducedMotion = usePrefersReducedMotion()
   const pageVisible = usePageIsVisible()
+  const fadeMs = reducedMotion ? PUBLIC_HERO_REDUCED_FADE_MS : PUBLIC_HERO_FADE_MS
   const activeVideo = videos[videoIndex] || null
   const playable = useMemo(
     () => media.filter((item) => !failedIds.has(item.id)),
@@ -76,6 +80,7 @@ export default function PublicQuoteHeroMedia({
     setOutgoing(null)
     setFailedIds(new Set())
     setRawFallbackIds(new Set())
+    setHasBooted(false)
   }
   const safeIndex =
     playable.length === 0 ? 0 : Math.min(activeIndex, playable.length - 1)
@@ -100,7 +105,19 @@ export default function PublicQuoteHeroMedia({
   }, [activeVideo])
 
   useEffect(() => {
-    if (activeVideo || reducedMotion || !pageVisible || paused) return
+    let frame = 0
+    let nested = 0
+    frame = window.requestAnimationFrame(() => {
+      nested = window.requestAnimationFrame(() => setHasBooted(true))
+    })
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.cancelAnimationFrame(nested)
+    }
+  }, [mediaKey])
+
+  useEffect(() => {
+    if (activeVideo || !pageVisible || paused) return
     if (playable.length < 2) return
 
     const timer = window.setTimeout(() => {
@@ -114,20 +131,13 @@ export default function PublicQuoteHeroMedia({
     }, PUBLIC_HERO_HOLD_MS)
 
     return () => window.clearTimeout(timer)
-  }, [
-    activeVideo,
-    pageVisible,
-    paused,
-    playable,
-    reducedMotion,
-    safeIndex,
-  ])
+  }, [activeVideo, pageVisible, paused, playable, safeIndex])
 
   useEffect(() => {
     if (!outgoing) return
-    const timer = window.setTimeout(() => setOutgoing(null), PUBLIC_HERO_FADE_MS)
+    const timer = window.setTimeout(() => setOutgoing(null), fadeMs)
     return () => window.clearTimeout(timer)
-  }, [outgoing])
+  }, [fadeMs, outgoing])
 
   useEffect(() => {
     if (!nextPhoto?.src) return
@@ -156,8 +166,11 @@ export default function PublicQuoteHeroMedia({
     if (outgoing && outgoing.id !== activePhoto?.id) {
       byId.set(outgoing.id, outgoing)
     }
+    if (nextPhoto && nextPhoto.id !== activePhoto?.id) {
+      byId.set(nextPhoto.id, nextPhoto)
+    }
     return [...byId.values()]
-  }, [activePhoto, outgoing])
+  }, [activePhoto, nextPhoto, outgoing])
 
   return (
     <div
@@ -165,6 +178,9 @@ export default function PublicQuoteHeroMedia({
       data-hero-photo-count={media.length}
       data-hero-active-id={activePhoto?.id ?? ''}
       data-hero-paused={paused ? 'true' : 'false'}
+      data-hero-transition="crossfade"
+      data-hero-hold-ms={PUBLIC_HERO_HOLD_MS}
+      data-hero-fade-ms={fadeMs}
       aria-roledescription="carousel"
       aria-label="Event photography"
       className="absolute inset-0 overflow-hidden bg-[#0b1220]"
@@ -204,6 +220,8 @@ export default function PublicQuoteHeroMedia({
       ) : hasPhotos ? (
         renderedPhotos.map((item) => {
           const isActive = item.id === activePhoto?.id
+          const isLeaving = Boolean(outgoing && item.id === outgoing.id && !isActive)
+          const isBoot = isActive && !hasBooted
           return (
             <div
               key={item.id}
@@ -212,12 +230,13 @@ export default function PublicQuoteHeroMedia({
               data-hero-mobile-pos={item.mobilePosition}
               data-hero-tablet-pos={item.tabletPosition || item.mobilePosition}
               data-hero-desktop-pos={item.desktopPosition}
-              className={`public-hero-slide ${isActive ? 'is-active' : ''}`}
+              className={`public-hero-slide${isActive ? ' is-active' : ''}${isLeaving ? ' is-leaving' : ''}${isBoot ? ' is-boot' : ''}`}
               style={{
                 ['--hero-pos-mobile' as string]: item.mobilePosition,
                 ['--hero-pos-tablet' as string]: item.tabletPosition || item.mobilePosition,
                 ['--hero-pos-desktop' as string]: item.desktopPosition,
-                transitionDuration: `${PUBLIC_HERO_FADE_MS}ms`,
+                ['--hero-kenburns-ms' as string]: `${PUBLIC_HERO_KENBURNS_MS}ms`,
+                transitionDuration: `${fadeMs}ms`,
               }}
             >
               <Image

@@ -32,8 +32,10 @@ export type PublicHeroMediaItem = {
   caption?: PublicHeroCaptionCopy
 }
 
-export const PUBLIC_HERO_HOLD_MS = 6500
-export const PUBLIC_HERO_FADE_MS = 1400
+export const PUBLIC_HERO_HOLD_MS = 4200
+export const PUBLIC_HERO_FADE_MS = 800
+export const PUBLIC_HERO_REDUCED_FADE_MS = 350
+export const PUBLIC_HERO_KENBURNS_MS = 5000
 
 const CDL_PUBLIC_HERO_PHOTOS: readonly PublicHeroMediaItem[] = [
   {
