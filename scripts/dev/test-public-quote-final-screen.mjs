@@ -76,16 +76,19 @@ test('SCROLL_CONTAINER_RESET', () => {
 test('CDL_FIRE_LOGO_CLOSING', () => {
   assert.match(successScreen, /PublicSuccessFireLogo/)
   assert.match(fireLogo, /data-success-fire-logo/)
+  assert.match(fireLogo, /data-success-cdl-fire-video/)
   assert.doesNotMatch(successScreen, /data-success-fire-poster/)
   assert.doesNotMatch(successScreen, /cdl-grill-flames/)
   assert.doesNotMatch(css, /public-success-hero-photo/)
+  assert.doesNotMatch(css, /public-success-fire-flicker/)
   assert.equal(PUBLIC_SUCCESS_FIRE_LOGO_SRC, '/cdl/logo.png')
   assert.ok(existsSync(join(ROOT, 'public', PUBLIC_SUCCESS_FIRE_LOGO_SRC)))
-  assert.match(css, /public-success-fire-logo/)
-  assert.match(css, /public-success-fire-flicker/)
+  assert.match(css, /public-success-cdl-signature/)
   const logoIndex = successScreen.indexOf('<PublicSuccessFireLogo')
   const summaryIndex = successScreen.indexOf('data-success-summary')
+  const contactsIndex = successScreen.indexOf('data-success-contacts')
   assert.ok(logoIndex > summaryIndex)
+  assert.ok(contactsIndex > logoIndex)
 })
 
 test('FINAL_SUMMARY', () => {
