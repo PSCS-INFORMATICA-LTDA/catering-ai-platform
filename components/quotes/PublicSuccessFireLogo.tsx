@@ -41,6 +41,7 @@ export default function PublicSuccessFireLogo({
       {showVideo ? (
         <video
           data-success-cdl-fire-video
+          data-success-uses-final-cdl-mp4="true"
           data-success-video-has-no-book-now="true"
           className="public-success-cdl-fire-video"
           src={PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC}
