@@ -44,6 +44,8 @@ export default function CdlFireSignature({
       data-success-video-has-no-book-now="true"
       data-success-fire-contain="true"
       data-success-fire-safe-area="true"
+      data-success-fire-fixed-viewport="true"
+      data-success-fire-no-scale="true"
       data-success-fire-reduced-motion={reduceMotion ? 'true' : 'false'}
       className={`cdl-fire-signature public-success-cdl-signature${showVideo ? '' : ' is-static'}`}
       aria-label={alt}
