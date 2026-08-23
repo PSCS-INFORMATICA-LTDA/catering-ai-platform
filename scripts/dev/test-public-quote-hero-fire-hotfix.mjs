@@ -116,19 +116,20 @@ test('SUCCESS_FIRE_CONTAIN', () => {
 
 test('SUCCESS_FIRE_SAFE_AREA', () => {
   assert.match(signature, /data-success-fire-safe-area="true"/)
-  assert.match(css, /clamp\(9\.9rem, 50\.5vw, 13\.15rem\)/)
+  assert.match(css, /clamp\(10rem, 52\.5vw, 13\.5rem\)/)
 })
 
 test('SUCCESS_CONTACT_SIGNATURE_COMPACT', () => {
   assert.match(css, /\.public-success-contacts \{[\s\S]*max-width: 18\.75rem/)
   assert.match(css, /\.public-success-contacts a \{[\s\S]*display: inline-flex/)
-  assert.match(css, /\.public-success-contact-heading \{[\s\S]*font-size: 1\.02rem/)
+  assert.match(css, /\.public-success-contact-heading \{[\s\S]*font-size: 1\.08rem/)
   assert.doesNotMatch(css, /\.public-success-contacts ul \{[\s\S]*flex-direction: row/)
 })
 
 test('SUCCESS_CONTACTS_BELOW_LOGO', () => {
   const logo = successScreen.indexOf('<CdlFireSignature')
   const heading = successScreen.indexOf('data-success-contact-heading')
+  assert.ok(logo > -1)
   assert.ok(heading > logo)
 })
 

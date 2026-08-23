@@ -120,9 +120,10 @@ test('FINAL_CDL_ASSET_EXISTS_IN_GIT', () => {
 })
 
 test('FINAL_CDL_ASSET_PATH_CORRECT', () => {
+  // V6 ships the safe-area re-frame of the very same official plate.
   assert.equal(
     PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC,
-    '/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL.mp4',
+    '/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_SAFE_V6.mp4',
   )
   assert.equal(
     PUBLIC_SUCCESS_CDL_FIRE_SOURCE_NAME,
@@ -130,7 +131,11 @@ test('FINAL_CDL_ASSET_PATH_CORRECT', () => {
   )
   assert.equal(
     fireMp4Rel.replace(/\\/g, '/'),
-    'public/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL.mp4',
+    'public/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_SAFE_V6.mp4',
+  )
+  assert.ok(
+    existsSync(join(ROOT, 'public/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL.mp4')),
+    'official source plate must stay in the repo',
   )
 })
 
@@ -172,18 +177,17 @@ test('SUCCESS_VIDEO_HAS_STATIC_FALLBACK', () => {
 })
 
 test('SUCCESS_CONTACTS_AFTER_VIDEO', () => {
+  // V6 order: fire signature first, contacts close the screen.
   const logoIndex = successScreen.indexOf('<CdlFireSignature')
   const contactsIndex = successScreen.indexOf('data-success-contacts')
   const headingIndex = successScreen.indexOf('data-success-contact-heading')
-  const zelleIndex = successScreen.indexOf('data-success-zelle')
   const restartIndex = successScreen.indexOf('data-success-restart')
   const summaryIndex = successScreen.indexOf('data-success-summary')
-  assert.ok(summaryIndex > -1)
-  assert.ok(zelleIndex > summaryIndex)
-  assert.ok(restartIndex > zelleIndex)
-  assert.ok(logoIndex > restartIndex)
-  assert.ok(headingIndex > logoIndex)
-  assert.ok(contactsIndex > logoIndex)
+  assert.ok(logoIndex > -1)
+  assert.ok(summaryIndex > logoIndex)
+  assert.ok(restartIndex > summaryIndex)
+  assert.ok(headingIndex > restartIndex)
+  assert.ok(contactsIndex > restartIndex)
 })
 
 test('SUCCESS_CONTACT_LABELS_REMOVED', () => {
@@ -196,13 +200,14 @@ test('SUCCESS_CONTACT_LABELS_REMOVED', () => {
   assert.doesNotMatch(successScreen, />TELEFONE/)
 })
 
-test('SUCCESS_ZELLE_COPY', () => {
-  assert.equal(PUBLIC_SUCCESS_COPY.pt.payment, 'Pagamento')
-  assert.equal(PUBLIC_SUCCESS_COPY.pt.zelle, 'Pagamento disponível via Zelle.')
-  assert.equal(PUBLIC_SUCCESS_COPY.en.payment, 'Payment')
-  assert.equal(PUBLIC_SUCCESS_COPY.en.zelle, 'Payment available via Zelle.')
-  assert.equal(PUBLIC_SUCCESS_COPY.es.payment, 'Pago')
-  assert.equal(PUBLIC_SUCCESS_COPY.es.zelle, 'Pago disponible vía Zelle.')
+test('SUCCESS_HAS_NO_PAYMENT_COPY', () => {
+  // Product owner removed payment from the Final Confirmation in V6.
+  for (const locale of ['pt', 'en', 'es']) {
+    const values = Object.values(PUBLIC_SUCCESS_COPY[locale]).join(' ').toLowerCase()
+    assert.doesNotMatch(values, /zelle/)
+    assert.doesNotMatch(values, /pagamento|payment|pago/)
+  }
+  assert.doesNotMatch(successScreen, /data-success-zelle/)
   assert.doesNotMatch(successScreen, /QR/)
   assert.doesNotMatch(successScreen.toLowerCase(), /bank transfer/)
   assert.doesNotMatch(successScreen.toLowerCase(), /cash/)

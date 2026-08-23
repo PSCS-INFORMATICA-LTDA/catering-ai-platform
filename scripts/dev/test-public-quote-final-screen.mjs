@@ -87,11 +87,13 @@ test('CDL_FIRE_LOGO_CLOSING', () => {
   assert.equal(PUBLIC_SUCCESS_FIRE_LOGO_SRC, '/cdl/logo.png')
   assert.ok(existsSync(join(ROOT, 'public', PUBLIC_SUCCESS_FIRE_LOGO_SRC)))
   assert.match(css, /public-success-cdl-signature/)
+  // V6 opens the Final Confirmation with the fire signature.
   const logoIndex = successScreen.indexOf('<CdlFireSignature')
   const summaryIndex = successScreen.indexOf('data-success-summary')
   const contactsIndex = successScreen.indexOf('data-success-contacts')
-  assert.ok(logoIndex > summaryIndex)
-  assert.ok(contactsIndex > logoIndex)
+  assert.ok(logoIndex > -1)
+  assert.ok(summaryIndex > logoIndex)
+  assert.ok(contactsIndex > summaryIndex)
 })
 
 test('FINAL_SUMMARY', () => {
@@ -105,18 +107,21 @@ test('FINAL_SUMMARY', () => {
 test('CTA_FINAL', () => {
   assert.match(successScreen, /data-success-restart/)
   assert.match(successScreen, /public-cinematic-cta/)
-  assert.match(successScreen, /data-success-talk/)
+  // The loose "talk to the team" link was folded into the contact block in V6.
+  assert.doesNotMatch(successScreen, /data-success-talk/)
   assert.match(experience, /setStarted\(false\)/)
   assert.equal(PUBLIC_SUCCESS_COPY.pt.restart, 'Criar outra solicitação')
   assert.equal(PUBLIC_SUCCESS_COPY.en.restart, 'Create another request')
   assert.equal(PUBLIC_SUCCESS_COPY.es.restart, 'Crear otra solicitud')
 })
 
-test('ZELLE_INFO', () => {
-  assert.match(successScreen, /data-success-zelle/)
-  assert.match(PUBLIC_SUCCESS_COPY.pt.zelle, /Zelle/)
-  assert.match(PUBLIC_SUCCESS_COPY.en.zelle, /Zelle/)
-  assert.match(PUBLIC_SUCCESS_COPY.es.zelle, /Zelle/)
+test('NO_PAYMENT_BLOCK', () => {
+  assert.doesNotMatch(successScreen, /data-success-zelle/)
+  assert.doesNotMatch(successScreen.toLowerCase(), /zelle/)
+  for (const locale of ['pt', 'en', 'es']) {
+    const values = Object.values(PUBLIC_SUCCESS_COPY[locale]).join(' ').toLowerCase()
+    assert.doesNotMatch(values, /zelle/)
+  }
   assert.doesNotMatch(landing.toLowerCase(), /zelle/)
   assert.doesNotMatch(experience.toLowerCase(), /zelle/)
 })

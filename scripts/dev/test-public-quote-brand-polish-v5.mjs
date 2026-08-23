@@ -103,7 +103,7 @@ test('SUCCESS_FIRE_SIGNATURE_REPAIRED', () => {
   assert.equal(SUCCESS_DOES_NOT_USE_CDL_MP4, false)
   assert.equal(
     PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC,
-    '/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL.mp4',
+    '/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_SAFE_V6.mp4',
   )
   assert.match(successScreen, /<CdlFireSignature/)
   assert.match(signature, /data-cdl-fire-signature/)
@@ -151,8 +151,9 @@ test('SUCCESS_CONTACTS_BELOW_LOGO', () => {
   const whatsappIndex = successScreen.indexOf('data-success-whatsapp')
   const instagramIndex = successScreen.indexOf('data-success-instagram')
   const restartIndex = successScreen.indexOf('data-success-restart')
-  assert.ok(signatureIndex > restartIndex)
-  assert.ok(contactsIndex > signatureIndex)
+  // V6 lifted the signature to the top, contacts still close the screen.
+  assert.ok(signatureIndex > -1 && signatureIndex < restartIndex)
+  assert.ok(contactsIndex > restartIndex)
   assert.ok(headingIndex > signatureIndex)
   assert.ok(whatsappIndex > headingIndex)
   assert.ok(instagramIndex > whatsappIndex)
@@ -235,13 +236,13 @@ test('NO_HORIZONTAL_OVERFLOW', () => {
   assert.match(css, /overflow-x: clip/)
   assert.match(css, /overflow-wrap: break-word/)
   assert.doesNotMatch(signature, /width:\s*\d{4}px/)
-  assert.match(css, /clamp\(9\.9rem/)
-  assert.match(css, /clamp\(12\.1rem/)
+  assert.match(css, /clamp\(10rem/)
+  assert.match(css, /clamp\(12\.5rem/)
 })
 
 test('SUCCESS_SIGNATURE_SIZE', () => {
-  assert.match(css, /clamp\(9\.9rem, 50\.5vw, 13\.15rem\)/)
-  assert.match(css, /clamp\(12\.1rem, 19\.4vw, 15\.4rem\)/)
+  assert.match(css, /clamp\(10rem, 52\.5vw, 13\.5rem\)/)
+  assert.match(css, /clamp\(12\.5rem, 20vw, 15\.75rem\)/)
 })
 
 if (failed > 0) {
