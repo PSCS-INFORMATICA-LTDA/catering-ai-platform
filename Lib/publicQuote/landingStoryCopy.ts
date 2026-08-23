@@ -48,7 +48,8 @@ export const PUBLIC_LANDING_STORY = {
       eyebrow: 'ORÇAMENTO ONLINE',
       title: [
         { text: 'O melhor do', breakAfter: true },
-        { text: 'churrasco brasileiro', highlight: 'red' },
+        { text: 'churrasco', highlight: 'red', breakAfter: true },
+        { text: 'brasileiro', highlight: 'red' },
         { text: ',', breakAfter: true },
         { text: 'onde você estiver.' },
       ],
@@ -135,7 +136,8 @@ export const PUBLIC_LANDING_STORY = {
       eyebrow: 'ONLINE QUOTE',
       title: [
         { text: 'The best of', breakAfter: true },
-        { text: 'Brazilian barbecue', highlight: 'red' },
+        { text: 'Brazilian', highlight: 'red', breakAfter: true },
+        { text: 'barbecue', highlight: 'red' },
         { text: ',', breakAfter: true },
         { text: 'wherever you are.' },
       ],
@@ -222,7 +224,8 @@ export const PUBLIC_LANDING_STORY = {
       eyebrow: 'COTIZACIÓN ONLINE',
       title: [
         { text: 'Lo mejor de la', breakAfter: true },
-        { text: 'parrilla brasileña', highlight: 'red' },
+        { text: 'parrilla', highlight: 'red', breakAfter: true },
+        { text: 'brasileña', highlight: 'red' },
         { text: ',', breakAfter: true },
         { text: 'donde tú estés.' },
       ],

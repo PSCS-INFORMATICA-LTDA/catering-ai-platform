@@ -1838,7 +1838,7 @@ body {
   min-height: 66svh;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: safe flex-end;
   padding: 1.9rem 1.1rem calc(1.75rem + env(safe-area-inset-bottom));
   background: linear-gradient(
     180deg,
@@ -1902,8 +1902,12 @@ body {
   max-width: 100%;
   overflow-wrap: break-word;
   word-break: normal;
-  padding-block: 0.07em;
+  padding-block: 0.12em;
   text-wrap: balance;
+}
+
+.public-landing-title-line + .public-landing-title-line {
+  margin-top: 0.22em;
 }
 
 .public-cinematic-lead,
@@ -2165,7 +2169,7 @@ body {
   }
 
   .public-cinematic-chapter {
-    justify-content: center;
+    justify-content: safe center;
     padding: 4.5rem 4rem 5rem;
     background: transparent;
   }

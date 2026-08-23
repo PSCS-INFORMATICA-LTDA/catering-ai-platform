@@ -161,7 +161,7 @@ report(
     !highlightCss.includes('position: absolute') &&
     !highlightCss.includes('transform:') &&
     css.includes('public-landing-title-line') &&
-    css.includes('padding-block: 0.07em') &&
+    css.includes('padding-block: 0.12em') &&
     titleSource.includes('groupLandingTitleLines') &&
     titleSource.includes('data-landing-title-line'),
 )
@@ -179,7 +179,7 @@ report(
   highlightCss.includes('box-decoration-break: clone') &&
     highlightCss.includes('padding: 0.04em 0.16em') &&
     titleSource.includes('data-landing-title-line') &&
-    heroLines.length === 3,
+    heroLines.length === 4,
 )
 
 report(

@@ -70,40 +70,144 @@ async function captureLanding(locale, width, height, prefix, ids) {
   await openLanding(page, locale, width, height)
   for (const id of ids) {
     await page.evaluate((chapterId) => {
-      document
-        .querySelector(`[data-landing-chapter="${chapterId}"]`)
-        ?.scrollIntoView({ block: 'end' })
+      const chapter = document.querySelector(`[data-landing-chapter="${chapterId}"]`)
+      if (!chapter) return
+      if (chapterId === 'intro') {
+        window.scrollTo(0, 0)
+        return
+      }
+      chapter.scrollIntoView({ block: 'center' })
     }, id)
-    await new Promise((resolve) => setTimeout(resolve, 350))
+    await page.waitForFunction(
+      (chapterId) => {
+        const chapter = document.querySelector(`[data-landing-chapter="${chapterId}"]`)
+        const reveal = chapter?.querySelector('[data-landing-reveal]')
+        return !reveal || reveal.getAttribute('data-visible') === 'true'
+      },
+      { timeout: 10_000 },
+      id,
+    )
+    await new Promise((resolve) => setTimeout(resolve, 200))
     const slug = CHAPTERS[id] || id
     await shot(page, `${prefix}_${slug}`)
   }
   await page.close()
 }
 
+async function fillLabeledInput(page, labelPart, value) {
+  const handle = await page.evaluateHandle((label) => {
+    const needle = label.toLowerCase()
+    const labels = [...document.querySelectorAll('label')]
+    const match = labels.find((node) => node.textContent?.toLowerCase().includes(needle))
+    return match?.querySelector('input, textarea') || null
+  }, labelPart)
+  const element = handle.asElement()
+  if (!element) throw new Error(`input not found: ${labelPart}`)
+  await element.click({ clickCount: 3 })
+  await element.type(value, { delay: 20 })
+  await page.evaluate((node) => node.blur(), element)
+}
+
+async function clickNext(page) {
+  await page.click('[data-testid="wizard-global-next"]')
+}
+
 async function jumpToPackages(page) {
-  const started = await page.$('[data-landing-start-quote]')
-  if (started) {
-    await page.click('[data-landing-quick-cta], [data-landing-start-quote]')
-  }
-  await page.waitForFunction(
-    () =>
-      document.querySelector('[data-public-wizard-theme="light-locked"]') ||
-      document.querySelector('[data-package-experience-intro]'),
-    { timeout: 45_000 },
-  )
-  const already = await page.$('[data-package-experience-intro]')
-  if (already) return
-  await page.evaluate(async () => {
-    const response = await fetch('/api/public/quote-intake/session', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify({ currentStep: 2, website: '' }),
-    })
-    if (!response.ok) throw new Error(`session patch ${response.status}`)
+  await page.waitForSelector('[data-landing-quick-cta]:not([disabled])', {
+    timeout: 15_000,
   })
-  await page.reload({ waitUntil: 'networkidle2' })
+  await page.click('[data-landing-quick-cta]')
+  await page.waitForSelector('[data-public-wizard-theme="light-locked"]', {
+    timeout: 45_000,
+  })
+  const unique = String(Date.now()).slice(-6)
+  const firstName = await page.$('input[autocomplete="given-name"]')
+  const lastName = await page.$('input[autocomplete="family-name"]')
+  if (!firstName || !lastName) throw new Error('name fields missing')
+  await firstName.click({ clickCount: 3 })
+  await firstName.type('Philippe', { delay: 15 })
+  await lastName.click({ clickCount: 3 })
+  await lastName.type('Polish', { delay: 15 })
+  const phone = await page.$('input[type="tel"]')
+  if (!phone) throw new Error('phone field missing')
+  await phone.click({ clickCount: 3 })
+  await phone.type(`+1407555${unique.slice(-4)}`, { delay: 20 })
+  await clickNext(page)
+  await page.waitForFunction(
+    () => document.body.innerText.includes('ETAPA 2') || document.body.innerText.includes('STEP 2') || document.body.innerText.includes('PASO 2'),
+    { timeout: 20_000 },
+  )
+
+  const dateButton = await page.evaluateHandle(() => {
+    const labels = [...document.querySelectorAll('span.cdl-eyebrow')]
+    const dateLabel = labels.find((node) =>
+      /data do evento|event date|fecha del evento/i.test(node.textContent || ''),
+    )
+    return dateLabel?.parentElement?.querySelector('button') || null
+  })
+  const dateEl = dateButton.asElement()
+  if (!dateEl) throw new Error('date picker missing')
+  await dateEl.click()
+  await page.waitForSelector('[role="dialog"] button:not([disabled])')
+  await page.evaluate(() => {
+    const dialog = document.querySelector('[role="dialog"]')
+    const days = [...(dialog?.querySelectorAll('button') || [])].filter(
+      (button) => !button.disabled && /^\d+$/.test(button.textContent?.trim() || ''),
+    )
+    days.at(-1)?.click()
+  })
+
+  const timeButton = await page.evaluateHandle(() => {
+    const labels = [...document.querySelectorAll('span.cdl-eyebrow')]
+    const timeLabel = labels.find((node) =>
+      /início|start time|hora de inicio/i.test(node.textContent || ''),
+    )
+    return timeLabel?.parentElement?.querySelector('button') || null
+  })
+  const timeEl = timeButton.asElement()
+  if (!timeEl) throw new Error('time picker missing')
+  await timeEl.click()
+  await page.evaluate(() => {
+    const hour = [...document.querySelectorAll('button')].find((button) => button.textContent?.trim() === '18')
+    hour?.click()
+  })
+  await page.evaluate(() => {
+    const minute = [...document.querySelectorAll('button')].find((button) => button.textContent?.trim() === '00')
+    minute?.click()
+  })
+
+  await fillLabeledInput(page, 'adult', '25')
+
+  const address = await page.evaluateHandle(() => {
+    const labels = [...document.querySelectorAll('label')]
+    const match = labels.find((node) =>
+      /endereço|address|dirección/i.test(node.textContent || ''),
+    )
+    return match?.querySelector('input') || null
+  })
+  const addressEl = address.asElement()
+  if (!addressEl) throw new Error('address field missing')
+  await addressEl.click()
+  await addressEl.type('8500 Vineland Avenue, Orlando', { delay: 40 })
+  await new Promise((resolve) => setTimeout(resolve, 1800))
+  await addressEl.press('ArrowDown')
+  await addressEl.press('Enter')
+  await new Promise((resolve) => setTimeout(resolve, 1200))
+  const confirmed = await page.evaluate(() =>
+    /confirmado|confirmed|confirmada/i.test(document.body.innerText),
+  )
+  if (!confirmed) {
+    const pac = await page.$('.pac-item')
+    if (pac) {
+      await pac.click()
+      await page.waitForFunction(
+        () => /confirmado|confirmed|confirmada/i.test(document.body.innerText),
+        { timeout: 10_000 },
+      )
+    }
+  }
+
+  await clickNext(page)
   await page.waitForSelector('[data-package-experience-intro]', { timeout: 45_000 })
 }
 
