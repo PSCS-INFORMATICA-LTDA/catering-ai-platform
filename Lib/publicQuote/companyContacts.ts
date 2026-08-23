@@ -29,14 +29,23 @@ function clean(value?: string | null) {
   return trimmed || null
 }
 
+export function publicWhatsAppHrefFromPhone(phone?: string | null) {
+  const digits = phone?.replace(/\D/g, '') ?? ''
+  return digits.length >= 10 ? `https://wa.me/${digits}` : null
+}
+
 export function resolvePublicCompanyContacts(
   support: PublicSupportContacts | null | undefined,
   companySlug?: string | null,
 ): PublicCompanyContacts {
   const fallback = COMPANY_CONTACT_FALLBACKS[companySlug?.trim() || ''] ?? {}
+  const phone = clean(support?.phone) ?? clean(fallback.phone)
   return {
-    phone: clean(support?.phone) ?? clean(fallback.phone),
-    whatsappUrl: clean(support?.whatsappUrl) ?? clean(fallback.whatsappUrl),
+    phone,
+    whatsappUrl:
+      clean(support?.whatsappUrl) ??
+      clean(fallback.whatsappUrl) ??
+      publicWhatsAppHrefFromPhone(phone),
     instagramUrl: clean(support?.instagramUrl) ?? clean(fallback.instagramUrl),
     instagramHandle:
       clean(support?.instagramHandle) ?? clean(fallback.instagramHandle),

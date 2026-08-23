@@ -1,13 +1,10 @@
 /**
- * Closing hero for the public confirmation screen.
- * Prefer a short muted fire clip when present; otherwise a still of the
- * CDL grill in flames. Do not reuse the how-it-works explainer video.
+ * Closing signature for the public confirmation screen.
+ * The CDL circular emblem is the only fire art on this screen.
+ * Do not reuse grill photography or the how-it-works explainer video.
  */
-export const PUBLIC_SUCCESS_FIRE_VIDEO_SRC: string | null = null
-export const PUBLIC_SUCCESS_FIRE_VIDEO_CANDIDATE = '/cdl/video/cdl-fire-hero.mp4'
-export const PUBLIC_SUCCESS_FIRE_POSTER_SRC = '/cdl/hero/cdl-grill-flames-steaks.webp'
-export const PUBLIC_SUCCESS_FIRE_FALLBACK_SRC = '/cdl/hero/cdl-grill-corn-flames.webp'
+export const PUBLIC_SUCCESS_FIRE_LOGO_SRC = '/cdl/logo.png'
 
-export function resolvePublicSuccessFireVideoSrc() {
-  return PUBLIC_SUCCESS_FIRE_VIDEO_SRC
+export function resolvePublicSuccessFireLogoSrc() {
+  return PUBLIC_SUCCESS_FIRE_LOGO_SRC
 }
