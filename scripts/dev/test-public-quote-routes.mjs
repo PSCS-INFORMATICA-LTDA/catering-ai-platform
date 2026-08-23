@@ -60,6 +60,12 @@ test('/cdl/video how-it-works file is public', () => {
     isPublicRoutePathname('/cdl/video/cdl-como-funciona.mp4'),
     true,
   )
+  assert.equal(
+    isPublicRoutePathname(
+      '/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL.mp4',
+    ),
+    true,
+  )
   assert.equal(isPublicRoutePathname('/quotes'), false)
 })
 

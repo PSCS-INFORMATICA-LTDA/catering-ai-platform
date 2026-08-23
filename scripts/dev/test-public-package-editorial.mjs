@@ -82,7 +82,8 @@ report(
   'PACKAGE_TOGGLE_PRESERVES_SELECTION',
   catalog.includes("current === 'with_sides' ? null : 'with_sides'") &&
     catalog.includes("current === 'without_sides' ? null : 'without_sides'") &&
-    catalog.includes('onClick={() => onSelect(pkg.id)}') &&
+    catalog.includes('handlePackageClick') &&
+    catalog.includes('expandedPackageId') &&
     !catalog.includes('onSelect(null)') &&
     !/data-package-group-toggle[\s\S]{0,400}onSelect\(/.test(catalog),
 )

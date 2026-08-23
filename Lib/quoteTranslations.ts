@@ -202,6 +202,8 @@ type QuoteStrings = {
     publicPackageExperienceTitle: string
     publicPackageExperienceBody: string
     footerSincePioneer: string
+    publicAdditionalsKicker: string
+    additionalPriceKicker: string
     withSidesGroupTitle: string
     withoutSidesGroupTitle: string
     withSidesGroupHint: string
@@ -615,6 +617,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicPackageExperienceBody:
         'Escolha o estilo do seu churrasco: com ou sem guarnições. Explore os pacotes, encontre o que combina com o seu evento e personalize só o que fizer sentido. O valor atualiza na hora.',
       footerSincePioneer: 'Desde 2017 · Pioneira em Orlando, Flórida',
+      publicAdditionalsKicker: 'Adicionais',
+      additionalPriceKicker: 'Preço',
       withSidesGroupTitle: 'COM GUARNIÇÕES',
       withoutSidesGroupTitle: 'SEM GUARNIÇÕES',
       withSidesGroupHint:
@@ -1051,6 +1055,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicPackageExperienceBody:
         'Choose the style of your barbecue: with or without sides. Explore the packages, find what fits your event, and customize only what applies. Pricing updates as you go.',
       footerSincePioneer: 'Since 2017 · Pioneer in Orlando, Florida',
+      publicAdditionalsKicker: 'Add-ons',
+      additionalPriceKicker: 'Price',
       withSidesGroupTitle: 'WITH SIDES',
       withoutSidesGroupTitle: 'WITHOUT SIDES',
       withSidesGroupHint:
@@ -1487,6 +1493,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicPackageExperienceBody:
         'Elige el estilo de tu asado: con o sin acompañamientos. Explora los paquetes, encuentra lo que combina con tu evento y personaliza solo lo que aplique. El precio se actualiza al momento.',
       footerSincePioneer: 'Desde 2017 · Pionera en Orlando, Florida',
+      publicAdditionalsKicker: 'Adicionales',
+      additionalPriceKicker: 'Precio',
       withSidesGroupTitle: 'CON ACOMPAÑAMIENTOS',
       withoutSidesGroupTitle: 'SIN ACOMPAÑAMIENTOS',
       withSidesGroupHint:
