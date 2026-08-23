@@ -11,6 +11,7 @@ import QuoteStepper from '../../../components/quotes/QuoteStepper'
 import QuotePackageStepExplorer from '../../../components/quotes/QuotePackageStepExplorer'
 import PublicPackageCatalog from '../../../components/quotes/PublicPackageCatalog'
 import PublicPhoneField from '../../../components/quotes/PublicPhoneField'
+import PublicRequiredMark from '../../../components/quotes/PublicRequiredMark'
 import QuoteWizardStepNav from '../../../components/quotes/QuoteWizardStepNav'
 import AdditionalCategorySection from '../../../components/quotes/additionals/AdditionalCategorySection'
 import { useAutoEventDistance } from '@/Lib/hooks/useAutoEventDistance'
@@ -380,6 +381,23 @@ function FieldCheck({ show }: { show: boolean }) {
   )
 }
 
+function WizardFieldLabel({
+  children,
+  required,
+  requiredLabel,
+}: {
+  children: string
+  required?: boolean
+  requiredLabel?: string
+}) {
+  return (
+    <span className="cdl-eyebrow">
+      {children}
+      {required ? <PublicRequiredMark label={requiredLabel || ''} /> : null}
+    </span>
+  )
+}
+
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => hour)
 const MINUTE_OPTIONS = [0, 15, 30, 45]
 
@@ -418,6 +436,8 @@ function DatePickerField({
   completion,
   language = 'pt',
   minDate,
+  required,
+  requiredLabel,
 }: {
   label: string
   value: string
@@ -426,6 +446,8 @@ function DatePickerField({
   completion?: FieldCompletion
   language?: QuoteLanguage | string | null
   minDate?: string
+  required?: boolean
+  requiredLabel?: string
 }) {
   const [open, setOpen] = useState(false)
   const [viewDate, setViewDate] = useState(() => parseDateValue(value) ?? new Date())
@@ -484,7 +506,9 @@ function DatePickerField({
 
   return (
     <div ref={containerRef} className={`relative flex flex-col gap-2 ${className}`}>
-      <span className="cdl-eyebrow">{label}</span>
+      <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
+        {label}
+      </WizardFieldLabel>
       <div className="relative">
         <button
           type="button"
@@ -612,6 +636,8 @@ function TimePickerField({
   completion,
   language = 'pt',
   readOnly = false,
+  required,
+  requiredLabel,
 }: {
   label: string
   value: string
@@ -620,6 +646,8 @@ function TimePickerField({
   completion?: FieldCompletion
   language?: QuoteLanguage | string | null
   readOnly?: boolean
+  required?: boolean
+  requiredLabel?: string
 }) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -661,7 +689,9 @@ function TimePickerField({
 
   return (
     <div ref={containerRef} className={`relative flex flex-col gap-2 ${className}`}>
-      <span className="cdl-eyebrow">{label}</span>
+      <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
+        {label}
+      </WizardFieldLabel>
       <div className="relative">
         <button
           type="button"
@@ -831,6 +861,8 @@ function InputField({
   inputRef,
   onFocus,
   autoComplete,
+  required,
+  requiredLabel,
 }: {
   label: string
   type?: string
@@ -845,10 +877,14 @@ function InputField({
   inputRef?: React.RefObject<HTMLInputElement | null>
   onFocus?: () => void
   autoComplete?: string
+  required?: boolean
+  requiredLabel?: string
 }) {
   return (
     <label className={`flex flex-col gap-2 ${className}`}>
-      <span className="cdl-eyebrow">{label}</span>
+      <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
+        {label}
+      </WizardFieldLabel>
       <div className="relative">
         <input
           ref={inputRef}
@@ -874,10 +910,13 @@ function QuantityField({
   value,
   onChange,
   className = '',
-  placeholder = '0',
+  placeholder = '',
   min = 0,
   disabled = false,
   completion,
+  blankZero = false,
+  required,
+  requiredLabel,
 }: {
   label: string
   value: number
@@ -887,17 +926,27 @@ function QuantityField({
   min?: number
   disabled?: boolean
   completion?: FieldCompletion
+  blankZero?: boolean
+  required?: boolean
+  requiredLabel?: string
 }) {
-  const [draft, setDraft] = useState(String(value))
+  const displayValue = (next: number) =>
+    blankZero && next === 0 ? '' : String(next)
+  const [draft, setDraft] = useState(() => displayValue(value))
   const [focused, setFocused] = useState(false)
-
-  useEffect(() => {
-    if (!focused) setDraft(String(value))
-  }, [value, focused])
+  const [seenValue, setSeenValue] = useState(value)
+  const [seenBlankZero, setSeenBlankZero] = useState(blankZero)
+  if (!focused && (seenValue !== value || seenBlankZero !== blankZero)) {
+    setSeenValue(value)
+    setSeenBlankZero(blankZero)
+    setDraft(displayValue(value))
+  }
 
   return (
     <label className={`flex flex-col gap-2 ${className}`}>
-      <span className="cdl-eyebrow">{label}</span>
+      <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
+        {label}
+      </WizardFieldLabel>
       <div className="relative">
         <input
           type="text"
@@ -913,7 +962,7 @@ function QuantityField({
                 ? min
                 : Math.max(min, Number.parseInt(draft, 10) || min)
             onChange(next)
-            setDraft(String(next))
+            setDraft(displayValue(next))
           }}
           onChange={(e) => {
             const raw = e.target.value.replace(/\D/g, '')
@@ -1157,6 +1206,7 @@ export default function QuoteWizardCore({
   )
   const wizardSteps = quoteStrings.wizardSteps
   const w = quoteStrings.wizard
+  const requiredLabel = tCommon(uiLocale, 'required')
 
   const debugCompanyId =
     publicContext?.companyId?.trim() ||
@@ -2814,6 +2864,8 @@ export default function QuoteWizardCore({
                 }
                 autoComplete="given-name"
                 completion={getFieldCompletion(state.customerFirstName)}
+                required={isPublicMode}
+                requiredLabel={requiredLabel}
               />
               <InputField
                 label={w.lastName}
@@ -2823,11 +2875,15 @@ export default function QuoteWizardCore({
                 }
                 autoComplete="family-name"
                 completion={getFieldCompletion(state.customerLastName)}
+                required={isPublicMode}
+                requiredLabel={requiredLabel}
               />
               {isPublicMode ? (
                 <PublicPhoneField
                   value={state.customerDraftPhone}
                   language={uiLocale}
+                  required
+                  requiredLabel={requiredLabel}
                   onChange={(value) =>
                     updateState({
                       customerDraftPhone: value,
@@ -2919,6 +2975,8 @@ export default function QuoteWizardCore({
                   minDate={
                     isPublicMode ? calendarDateInTimeZone() : undefined
                   }
+                  required={isPublicMode}
+                  requiredLabel={requiredLabel}
                 />
                 <TimePickerField
                   label={w.startTime}
@@ -2935,6 +2993,8 @@ export default function QuoteWizardCore({
                     }))
                   }
                   completion={getFieldCompletion(state.startTime)}
+                  required={isPublicMode}
+                  requiredLabel={requiredLabel}
                 />
                 <div>
                   <TimePickerField
@@ -2960,16 +3020,24 @@ export default function QuoteWizardCore({
                   value={state.adultCount}
                   onChange={(v) => updateState({ adultCount: v })}
                   completion={getFieldCompletion(state.adultCount)}
+                  blankZero={isPublicMode}
+                  placeholder={isPublicMode ? w.publicAdultsPlaceholder : ''}
+                  required={isPublicMode}
+                  requiredLabel={requiredLabel}
                 />
                 <QuantityField
                   label={w.childrenUnder3}
                   value={state.childrenUnder3Count}
                   onChange={(v) => updateState({ childrenUnder3Count: v })}
+                  blankZero={isPublicMode}
+                  placeholder={isPublicMode ? w.publicChildrenPlaceholder : ''}
                 />
                 <QuantityField
                   label={w.children4to12}
                   value={state.children4To12Count}
                   onChange={(v) => updateState({ children4To12Count: v })}
+                  blankZero={isPublicMode}
+                  placeholder={isPublicMode ? w.publicChildrenPlaceholder : ''}
                 />
               </div>
               <AddressAutocompleteFields
@@ -2998,6 +3066,19 @@ export default function QuoteWizardCore({
                 allowedCountries={publicContext?.allowedCountries}
                 locationBias={
                   isPublicMode ? publicContext?.locationBias ?? null : null
+                }
+                markRequired={isPublicMode}
+                requiredLabel={requiredLabel}
+                placeholders={
+                  isPublicMode
+                    ? {
+                        search: w.publicAddressPlaceholder,
+                        number: w.publicAddressNumberPlaceholder,
+                        city: w.publicCityPlaceholder,
+                        state: w.publicStatePlaceholder,
+                        postal: w.publicPostalPlaceholder,
+                      }
+                    : undefined
                 }
               />
             </div>

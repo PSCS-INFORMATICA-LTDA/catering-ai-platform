@@ -187,6 +187,13 @@ type QuoteStrings = {
     endTimeHintPublic: string
     publicPhoneHint: string
     publicPhonePlaceholder: string
+    publicAddressPlaceholder: string
+    publicAddressNumberPlaceholder: string
+    publicCityPlaceholder: string
+    publicStatePlaceholder: string
+    publicPostalPlaceholder: string
+    publicAdultsPlaceholder: string
+    publicChildrenPlaceholder: string
     firstName: string
     lastName: string
     contactPrivacyHint: string
@@ -589,7 +596,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Calculado automaticamente a partir do horário de início. Não é possível editar.',
       publicPhoneHint:
         'Comece pelo código do país. Estados Unidos é +1; para outro país use o DDI, por exemplo +55.',
-      publicPhonePlaceholder: 'Ex.: +1 407 555 0123',
+      publicPhonePlaceholder: 'Ex.: +1 407 555 1234',
+      publicAddressPlaceholder: 'Ex.: 123 Example Ave',
+      publicAddressNumberPlaceholder: 'Ex.: 250',
+      publicCityPlaceholder: 'Ex.: Orlando',
+      publicStatePlaceholder: 'Ex.: FL',
+      publicPostalPlaceholder: 'Ex.: 32801',
+      publicAdultsPlaceholder: 'Ex.: 20',
+      publicChildrenPlaceholder: 'Ex.: 4',
       firstName: 'Primeiro nome',
       lastName: 'Sobrenome',
       contactPrivacyHint:
@@ -1018,7 +1032,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Calculated automatically from the start time. This field cannot be edited.',
       publicPhoneHint:
         'Start with the country code. United States is +1; for another country use its code, for example +55.',
-      publicPhonePlaceholder: 'e.g. +1 407 555 0123',
+      publicPhonePlaceholder: 'Ex.: +1 407 555 1234',
+      publicAddressPlaceholder: 'Ex.: 123 Example Ave',
+      publicAddressNumberPlaceholder: 'Ex.: 250',
+      publicCityPlaceholder: 'Ex.: Orlando',
+      publicStatePlaceholder: 'Ex.: FL',
+      publicPostalPlaceholder: 'Ex.: 32801',
+      publicAdultsPlaceholder: 'Ex.: 20',
+      publicChildrenPlaceholder: 'Ex.: 4',
       firstName: 'First name',
       lastName: 'Last name',
       contactPrivacyHint:
@@ -1447,7 +1468,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Calculado automáticamente a partir del horario de inicio. No se puede editar.',
       publicPhoneHint:
         'Empiece por el código del país. Estados Unidos es +1; para otro país use su código, por ejemplo +55.',
-      publicPhonePlaceholder: 'Ej.: +1 407 555 0123',
+      publicPhonePlaceholder: 'Ej.: +1 407 555 1234',
+      publicAddressPlaceholder: 'Ej.: 123 Example Ave',
+      publicAddressNumberPlaceholder: 'Ej.: 250',
+      publicCityPlaceholder: 'Ej.: Orlando',
+      publicStatePlaceholder: 'Ej.: FL',
+      publicPostalPlaceholder: 'Ej.: 32801',
+      publicAdultsPlaceholder: 'Ej.: 20',
+      publicChildrenPlaceholder: 'Ej.: 4',
       firstName: 'Nombre',
       lastName: 'Apellido',
       contactPrivacyHint:
