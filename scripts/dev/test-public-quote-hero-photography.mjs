@@ -95,8 +95,8 @@ test('TEST 3 Ordered cinematic loop, not a shuffled carnival', () => {
   assert.doesNotMatch(hero, /shuffleHeroPlaylist\(/)
   assert.match(hero, /PUBLIC_HERO_HOLD_MS/)
   assert.match(hero, /\(base \+ 1\) % playable.length/)
-  assert.ok(PUBLIC_HERO_HOLD_MS >= 5000 && PUBLIC_HERO_HOLD_MS <= 7000)
-  assert.ok(PUBLIC_HERO_FADE_MS >= 1200 && PUBLIC_HERO_FADE_MS <= 1800)
+  assert.ok(PUBLIC_HERO_HOLD_MS >= 3800 && PUBLIC_HERO_HOLD_MS <= 4500)
+  assert.ok(PUBLIC_HERO_FADE_MS >= 700 && PUBLIC_HERO_FADE_MS <= 900)
 })
 
 test('TEST 4 Hero keeps CTA clickable', () => {
@@ -187,7 +187,12 @@ test('TEST 15 Starting quote still works', () => {
 
 test('Hero is a live crossfade with discreet mobile indicators', () => {
   assert.match(hero, /public-hero-slide/)
+  assert.match(hero, /data-hero-transition="crossfade"/)
+  assert.match(hero, /is-leaving/)
+  assert.match(hero, /is-boot/)
   assert.match(css, /public-hero-kenburns/)
+  assert.match(css, /scale\(1\.02\)/)
+  assert.match(css, /cubic-bezier\(0\.33, 0, 0\.2, 1\)/)
   assert.match(hero, /data-hero-indicators/)
   assert.match(hero, /onTouchEnd/)
   assert.doesNotMatch(hero, /data-hero-arrows/)
