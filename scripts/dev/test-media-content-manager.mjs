@@ -64,7 +64,7 @@ report(
 report('TEST 09: Catalog image API does not update price fields', !catalogApi.includes('sale_price') && !catalogApi.includes('charge_type'))
 report('TEST 10: Public landing keeps hardcoded fallback', hero.includes('getCompanyPublicHeroMedia') && hero.includes('managed'))
 report('TEST 11: Bootstrap loads managed hero/video', bootstrap.includes('loadManagedPublicHero') && bootstrap.includes('fallbackHowItWorksVideo'))
-report('TEST 12: How-it-works button still exists', experience.includes('PublicQuoteHowItWorks') && how.includes('data-landing-how-it-works'))
+report('TEST 12: How-it-works button still exists', read('components/quotes/PublicLandingCinematic.tsx').includes('PublicQuoteHowItWorks') && how.includes('data-landing-how-it-works'))
 report('TEST 13: Video is not in hero carousel', hero.includes('PUBLIC_QUOTE_HERO_VIDEO_SRCS') && /PUBLIC_QUOTE_HERO_VIDEO_SRCS[^=]*=\s*\[\s*\]/.test(hero))
 report('TEST 14: Public /quote remains public and /quotes private', publicRoutes.includes("'/quote'") && publicRoutes.includes('isBackofficeQuotesPathname'))
 report('TEST 15: Quote wizard file was not rewritten for dark theme', wizard.includes('entryMode') && !wizard.includes('data-media-content-manager'))

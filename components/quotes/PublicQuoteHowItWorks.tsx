@@ -1,6 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import type { PublicHowItWorksVideo } from '@/Lib/media/types'
+import { pickHowItWorksVideo } from '@/Lib/publicQuote/howItWorksVideos'
 
 export const PUBLIC_QUOTE_HOW_IT_WORKS_VIDEO_SRC =
   '/cdl/video/cdl-como-funciona.mp4'
@@ -13,6 +16,9 @@ type PublicQuoteHowItWorksProps = {
   title: string
   src?: string | null
   poster?: string | null
+  videos?: readonly PublicHowItWorksVideo[]
+  routeLocale?: QuoteLanguage
+  localeLabels?: Partial<Record<QuoteLanguage, string>>
 }
 
 export default function PublicQuoteHowItWorks({
@@ -21,9 +27,27 @@ export default function PublicQuoteHowItWorks({
   title,
   src,
   poster,
+  videos = [],
+  routeLocale = 'pt',
+  localeLabels,
 }: PublicQuoteHowItWorksProps) {
-  const videoSrc = src?.trim() || PUBLIC_QUOTE_HOW_IT_WORKS_VIDEO_SRC
-  const posterSrc = poster?.trim() || PUBLIC_QUOTE_HOW_IT_WORKS_POSTER_SRC
+  const available = useMemo(
+    () => videos.filter((video) => Boolean(video.src)),
+    [videos],
+  )
+  const initial = pickHowItWorksVideo(available, routeLocale, 'pt')
+  const [selectedLocale, setSelectedLocale] = useState<QuoteLanguage>(
+    initial?.locale || routeLocale,
+  )
+  const selected =
+    pickHowItWorksVideo(available, selectedLocale, routeLocale) || initial
+  const videoSrc =
+    selected?.src?.trim() || src?.trim() || PUBLIC_QUOTE_HOW_IT_WORKS_VIDEO_SRC
+  const posterSrc =
+    selected?.poster?.trim() ||
+    poster?.trim() ||
+    PUBLIC_QUOTE_HOW_IT_WORKS_POSTER_SRC
+  const showLocaleSwitch = available.length > 1
   const titleId = useId()
   const closeRef = useRef<HTMLButtonElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -67,7 +91,7 @@ export default function PublicQuoteHowItWorks({
         data-landing-how-it-works
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
-        className="mt-3 inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-2xl border border-white/22 bg-white/5 px-5 text-sm font-semibold tracking-wide text-white/88 transition hover:bg-white/10 sm:w-auto"
+        className="inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-2xl border border-white/22 bg-white/8 px-5 text-sm font-semibold tracking-wide text-white/92 backdrop-blur-sm transition hover:bg-white/12 sm:w-auto"
       >
         <svg
           viewBox="0 0 20 20"
@@ -112,8 +136,41 @@ export default function PublicQuoteHowItWorks({
                 ×
               </button>
             </div>
+            {showLocaleSwitch ? (
+              <div
+                data-how-it-works-locales
+                className="flex flex-wrap gap-2 px-4 pb-3"
+                role="tablist"
+                aria-label="Video language"
+              >
+                {available.map((video) => {
+                  const selectedTab = video.locale === selected?.locale
+                  return (
+                    <button
+                      key={video.locale}
+                      type="button"
+                      role="tab"
+                      aria-selected={selectedTab}
+                      data-how-it-works-locale={video.locale}
+                      className={`rounded-full px-3 py-1.5 text-xs font-bold tracking-wide ${
+                        selectedTab
+                          ? 'bg-white text-[#0b1220]'
+                          : 'bg-white/10 text-white/80'
+                      }`}
+                      onClick={() => {
+                        pauseAndReset()
+                        setSelectedLocale(video.locale)
+                      }}
+                    >
+                      {localeLabels?.[video.locale] || video.locale.toUpperCase()}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : null}
             <video
               ref={videoRef}
+              key={videoSrc}
               data-how-it-works-video
               className="mx-auto block h-auto max-h-[min(72dvh,38rem)] w-full bg-black object-contain"
               src={videoSrc}

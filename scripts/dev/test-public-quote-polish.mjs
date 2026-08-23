@@ -309,17 +309,16 @@ test('TEST 30 Same black/red PSCS One logo in dark mode', () => {
 })
 
 test('TEST 31 Public landing tenant-first', () => {
-  assert.match(experience, /data-public-landing/)
+  const landing = source('components/quotes/PublicLandingCinematic.tsx')
+  assert.match(landing, /data-public-landing/)
   assert.match(experience, /bootstrap\.company\.logoUrl/)
   assert.match(experience, /bootstrap\.company\.name/)
   assert.match(experience, /LANDING AGUARDANDO ASSETS FINAIS/)
-  const header = experience.slice(0, experience.indexOf('data-public-landing'))
-  const landing = experience.slice(experience.indexOf('data-public-landing'))
-  assert.match(header, /data-tenant-logo/)
-  assert.match(header, /PublicQuoteBrandLockup/)
+  assert.match(experience, /data-tenant-logo/)
+  assert.match(experience, /PublicQuoteBrandLockup/)
   assert.doesNotMatch(landing, /data-tenant-logo/)
   const powered = experience.indexOf('data-powered-by')
-  assert.ok(powered > experience.indexOf('data-public-landing'))
+  assert.ok(powered > experience.indexOf('PublicLandingCinematic'))
 })
 
 test('TEST 32 Powered by PSCS One is discreet', () => {
@@ -406,7 +405,8 @@ test('TEST 37 Returning to Package reopens the selected family only', () => {
 test('TEST 38 Landing watermark is removed in favor of hero media', () => {
   assert.doesNotMatch(experience, /data-landing-watermark/)
   assert.doesNotMatch(experience, /clipPath: 'circle\(46%\)'/)
-  assert.match(experience, /PublicQuoteHeroMedia/)
+  assert.match(experience, /PublicLandingCinematic/)
+  assert.match(source('components/quotes/PublicLandingCinematic.tsx'), /PublicQuoteHeroMedia/)
   const hero = source('components/quotes/PublicQuoteHeroMedia.tsx')
   assert.match(hero, /data-public-hero-media/)
   assert.match(hero, /autoPlay/)

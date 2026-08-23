@@ -57,7 +57,7 @@ report(
     !heroMedia.includes('cdl-como-funciona.mp4'),
 );
 
-report('TEST 13: Experience mounts HowItWorks under the primary CTA', experience.includes('<PublicQuoteHowItWorks') && experience.includes('data-landing-start-quote'));
+report('TEST 13: Experience mounts HowItWorks under the primary CTA', read('components/quotes/PublicLandingCinematic.tsx').includes('<PublicQuoteHowItWorks') && read('components/quotes/PublicLandingCinematic.tsx').includes('data-landing-start-quote'));
 report('TEST 14: PT copy is Conheça como funciona', experience.includes("howItWorks: 'Conheça como funciona'"));
 report('TEST 15: EN copy is See how it works', experience.includes("howItWorks: 'See how it works'"));
 report('TEST 16: ES copy is Conoce cómo funciona', experience.includes("howItWorks: 'Conoce cómo funciona'"));

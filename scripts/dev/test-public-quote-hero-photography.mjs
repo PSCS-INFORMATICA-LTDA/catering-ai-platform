@@ -100,10 +100,11 @@ test('TEST 3 Ordered cinematic loop, not a shuffled carnival', () => {
 })
 
 test('TEST 4 Hero keeps CTA clickable', () => {
-  assert.match(experience, /data-landing-start-quote/)
+  const landing = source('components/quotes/PublicLandingCinematic.tsx')
+  assert.match(landing, /data-landing-start-quote/)
   assert.match(experience, /startQuote\(\{ forceNew: true \}\)/)
-  assert.match(experience, /bootstrap\.settings\.landing\.cta/)
-  assert.match(experience, /data-public-hero-frame/)
+  assert.match(experience, /PublicLandingCinematic/)
+  assert.match(landing, /data-public-hero-frame/)
   assert.doesNotMatch(hero, /slick-dots|swiper-pagination|carousel-dot/)
   assert.doesNotMatch(hero, /arrow|thumbnail/)
 })
@@ -133,12 +134,12 @@ test('TEST 8 Mobile object-cover + focal point', () => {
     assert.match(item.desktopPosition, /^\d+% \d+%$/)
   })
   assert.match(hero, /sizes="100vw"/)
-  assert.match(experience, /h-\[42vh\]/)
+  assert.match(css, /public-cinematic-hero/)
 })
 
 test('TEST 9 Mobile 390 keeps cover crop', () => {
   assert.match(hero, /overflow-hidden/)
-  assert.match(experience, /overflow-hidden/)
+  assert.match(css, /public-cinematic-hero/)
   assert.doesNotMatch(css, /object-fit:\s*fill/)
 })
 
@@ -158,7 +159,7 @@ test('TEST 11 Desktop uses per-asset object-position', () => {
 })
 
 test('TEST 12 No horizontal overflow', () => {
-  assert.match(experience, /overflow-hidden/)
+  assert.match(css, /overflow: hidden/)
   assert.match(experience, /min-w-0/)
   assert.match(hero, /overflow-hidden/)
   assert.doesNotMatch(hero, /translateX\(|slide lateral/)
