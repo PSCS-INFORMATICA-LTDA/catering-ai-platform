@@ -98,6 +98,8 @@
     "test:dev:public-quote-brand-v4": "node --experimental-strip-types scripts/dev/test-public-quote-brand-polish-v4.mjs",
     "test:dev:public-quote-brand-v5": "node --experimental-strip-types scripts/dev/test-public-quote-brand-polish-v5.mjs",
     "test:dev:public-quote-hero-fire-hotfix": "node --experimental-strip-types scripts/dev/test-public-quote-hero-fire-hotfix.mjs",
+    "test:dev:public-quote-success-v6": "node --experimental-strip-types scripts/dev/test-public-quote-success-v6.mjs",
+    "build:dev:cdl-fire-safe-asset": "node scripts/dev/build-cdl-fire-safe-asset.mjs",
     "configure:dev:public-quote": "node scripts/dev/configure-public-self-service-quote.mjs",
     "test:dev:extras-category-accordion": "node scripts/dev/test-extras-category-accordion.mjs",
     "test:dev:package-selection-cards": "node scripts/dev/test-package-selection-cards.mjs",
