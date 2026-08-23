@@ -77,7 +77,8 @@ export default function PublicQuoteSuccessScreen({
   const rootRef = useRef<HTMLElement>(null)
   const fireLogoSrc = emblemSrc || resolvePublicSuccessFireLogoSrc()
   const phoneDisplay = displayPublicPhone(contacts.phone) || contacts.phone
-  const talkHref = contacts.whatsappUrl || (contacts.phone ? `tel:${contacts.phone}` : null)
+  const whatsappHref =
+    contacts.whatsappUrl || (contacts.phone ? `tel:${contacts.phone}` : null)
 
   useLayoutEffect(() => {
     const previous = window.history.scrollRestoration
@@ -113,8 +114,13 @@ export default function PublicQuoteSuccessScreen({
       data-success-screen
       data-public-success
       data-success-hero-mode="clean"
+      data-success-logo-first="true"
       className="public-success"
     >
+      <div data-success-signature-cluster className="public-success-signature-cluster">
+        {fireLogoSrc ? <CdlFireSignature src={fireLogoSrc} alt={companyName} /> : null}
+      </div>
+
       <section className="public-success-confirm" data-success-confirm>
         <p className="public-cinematic-eyebrow public-success-kicker">{copy.kicker}</p>
         <PublicLandingTitle
@@ -156,12 +162,6 @@ export default function PublicQuoteSuccessScreen({
           ) : null}
         </dl>
 
-        <aside data-success-zelle className="public-success-zelle">
-          <span className="public-success-zelle-accent" aria-hidden />
-          <p className="public-success-zelle-kicker">{copy.payment}</p>
-          <p className="public-success-zelle-copy">{copy.zelle}</p>
-        </aside>
-
         <div className="public-success-actions">
           <Link
             href={restartHref}
@@ -171,23 +171,10 @@ export default function PublicQuoteSuccessScreen({
           >
             {copy.restart}
           </Link>
-          {talkHref ? (
-            <a
-              href={talkHref}
-              target={contacts.whatsappUrl ? '_blank' : undefined}
-              rel={contacts.whatsappUrl ? 'noreferrer' : undefined}
-              data-success-talk
-              className="public-success-cta-secondary"
-            >
-              {copy.talk}
-            </a>
-          ) : null}
         </div>
       </section>
 
-      <div data-success-signature-cluster className="public-success-signature-cluster">
-        {fireLogoSrc ? <CdlFireSignature src={fireLogoSrc} alt={companyName} /> : null}
-
+      <section className="public-success-contact-block">
         <div data-success-contacts className="public-success-contacts">
           <p data-success-contact-heading className="public-success-contact-heading">
             {copy.contactTeam}
@@ -196,7 +183,7 @@ export default function PublicQuoteSuccessScreen({
             {contacts.phone || contacts.whatsappUrl ? (
               <li>
                 <a
-                  href={talkHref || undefined}
+                  href={whatsappHref || undefined}
                   target={contacts.whatsappUrl ? '_blank' : undefined}
                   rel={contacts.whatsappUrl ? 'noreferrer' : undefined}
                   data-success-whatsapp
@@ -223,7 +210,7 @@ export default function PublicQuoteSuccessScreen({
             ) : null}
           </ul>
         </div>
-      </div>
+      </section>
     </main>
   )
 }
