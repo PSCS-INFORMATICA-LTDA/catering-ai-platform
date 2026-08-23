@@ -6,17 +6,19 @@ import assert from 'node:assert/strict'
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { spawnSync } from 'node:child_process'
 import {
   getPackageCatalogPrice,
   resolvePackageSidesPricing,
 } from '../../Lib/packageCatalogVisual.ts'
 import { PUBLIC_SUCCESS_COPY } from '../../Lib/publicQuote/successCopy.ts'
 import {
+  LANDING_HAS_NO_FIRE_SIGNATURE,
   LANDING_HAS_NO_PSCS_ONE,
   PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC,
   PUBLIC_SUCCESS_CDL_FIRE_SOURCE_NAME,
   PUBLIC_SUCCESS_CDL_LOGO_SRC,
+  SUCCESS_DOES_NOT_USE_CDL_MP4,
+  SUCCESS_HAS_CDL_FIRE_SIGNATURE,
   SUCCESS_HAS_PSCS_ONE,
   SUCCESS_VIDEO_HAS_NO_BOOK_NOW,
 } from '../../Lib/publicQuote/successHeroMedia.ts'
@@ -45,7 +47,7 @@ const experience = source(
   'app/quote/[companySlug]/[locale]/PublicQuoteExperience.tsx',
 )
 const successScreen = source('components/quotes/PublicQuoteSuccessScreen.tsx')
-const fireLogo = source('components/quotes/PublicSuccessFireLogo.tsx')
+const fireLogo = source('components/quotes/CdlFireSignature.tsx')
 const landing = source('components/quotes/PublicLandingCinematic.tsx')
 const packages = source('components/quotes/PublicPackageCatalog.tsx')
 const card = source('components/quotes/additionals/AdditionalItemCard.tsx')
@@ -94,11 +96,14 @@ test('LANDING_HAS_STATIC_CDL_LOGO', () => {
 })
 
 test('LANDING_DOES_NOT_USE_FIRE_MP4', () => {
+  assert.equal(LANDING_HAS_NO_FIRE_SIGNATURE, true)
   assert.doesNotMatch(landingFooter, /CDL_LOGO_FOGO/)
   assert.doesNotMatch(landingFooter, /cdl-logo-fire-spin/)
   assert.doesNotMatch(landing, /CDL_LOGO_FOGO/)
   assert.doesNotMatch(landing, /cdl-logo-fire-spin/)
   assert.doesNotMatch(landing, /PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC/)
+  assert.doesNotMatch(landing, /CdlFireSignature/)
+  assert.doesNotMatch(landing, /data-cdl-fire-signature/)
 })
 
 test('SUCCESS_HAS_PSCS_ONE', () => {
@@ -128,35 +133,24 @@ test('FINAL_CDL_ASSET_PATH_CORRECT', () => {
   )
 })
 
-test('SUCCESS_USES_FINAL_CDL_MP4', () => {
-  assert.match(fireLogo, /data-success-cdl-fire-video/)
-  assert.match(fireLogo, /data-success-uses-final-cdl-mp4="true"/)
-  assert.match(fireLogo, /PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC/)
-  assert.match(fireLogo, /autoPlay/)
-  assert.match(fireLogo, /loop/)
-  assert.match(fireLogo, /muted/)
-  assert.match(fireLogo, /playsInline/)
-  assert.match(fireLogo, /preload="metadata"/)
-  assert.match(fireLogo, /controls=\{false\}/)
-  assert.doesNotMatch(fireLogo, /controls(?!=\{false\})/)
-  assert.doesNotMatch(css, /public-success-fire-flicker/)
-  assert.doesNotMatch(css, /@keyframes public-success-fire/)
-  assert.doesNotMatch(fireLogo, /animation:/)
-  assert.ok(existsSync(fireMp4Abs), `missing ${fireMp4Rel}`)
+test('SUCCESS_DOES_NOT_USE_CDL_MP4', () => {
+  assert.equal(SUCCESS_DOES_NOT_USE_CDL_MP4, true)
+  assert.equal(SUCCESS_HAS_CDL_FIRE_SIGNATURE, true)
+  assert.match(fireLogo, /data-cdl-fire-signature/)
+  assert.match(fireLogo, /data-success-uses-final-cdl-mp4="false"/)
+  assert.doesNotMatch(fireLogo, /<video/)
+  assert.doesNotMatch(successScreen, /<video/)
+  assert.doesNotMatch(fireLogo, /PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC/)
+  assert.doesNotMatch(successScreen, /CDL_LOGO_FOGO/)
+  assert.doesNotMatch(fireLogo, /CDL_LOGO_FOGO/)
 })
 
 test('SUCCESS_VIDEO_HAS_NO_BOOK_NOW', () => {
   assert.equal(SUCCESS_VIDEO_HAS_NO_BOOK_NOW, true)
   assert.match(PUBLIC_SUCCESS_CDL_FIRE_SOURCE_NAME, /SEM_BOOK_NOW/)
-  assert.match(fireLogo, /data-success-video-has-no-book-now="true"/)
   assert.doesNotMatch(successScreen, /BOOK NOW/)
   assert.doesNotMatch(fireLogo, /BOOK NOW/)
   assert.doesNotMatch(successScreen, /407[^\n]{0,20}915/)
-  assert.ok(existsSync(fireMp4Abs), `missing ${fireMp4Rel}`)
-  const strings = spawnSync('strings', [fireMp4Abs], { encoding: 'utf8' })
-  if (strings.status === 0) {
-    assert.doesNotMatch(strings.stdout, /BOOK NOW/i)
-  }
 })
 
 test('OLD_CDL_VIDEO_NOT_REFERENCED', () => {
@@ -169,15 +163,16 @@ test('OLD_CDL_VIDEO_NOT_REFERENCED', () => {
 })
 
 test('SUCCESS_VIDEO_HAS_STATIC_FALLBACK', () => {
-  assert.match(fireLogo, /onError=\{\(\) => setVideoFailed\(true\)\}/)
   assert.match(fireLogo, /prefers-reduced-motion: reduce/)
   assert.match(fireLogo, /data-success-cdl-logo/)
   assert.match(fireLogo, /PUBLIC_SUCCESS_CDL_LOGO_SRC/)
+  assert.match(css, /prefers-reduced-motion: reduce/)
 })
 
 test('SUCCESS_CONTACTS_AFTER_VIDEO', () => {
-  const logoIndex = successScreen.indexOf('<PublicSuccessFireLogo')
+  const logoIndex = successScreen.indexOf('<CdlFireSignature')
   const contactsIndex = successScreen.indexOf('data-success-contacts')
+  const headingIndex = successScreen.indexOf('data-success-contact-heading')
   const zelleIndex = successScreen.indexOf('data-success-zelle')
   const restartIndex = successScreen.indexOf('data-success-restart')
   const summaryIndex = successScreen.indexOf('data-success-summary')
@@ -185,6 +180,7 @@ test('SUCCESS_CONTACTS_AFTER_VIDEO', () => {
   assert.ok(zelleIndex > summaryIndex)
   assert.ok(restartIndex > zelleIndex)
   assert.ok(logoIndex > restartIndex)
+  assert.ok(headingIndex > logoIndex)
   assert.ok(contactsIndex > logoIndex)
 })
 

@@ -96,6 +96,7 @@
     "test:dev:public-quote-submit-gate": "node --experimental-strip-types scripts/dev/test-public-quote-submit-gate.mjs",
     "test:dev:public-quote-final-screen": "node --experimental-strip-types scripts/dev/test-public-quote-final-screen.mjs",
     "test:dev:public-quote-brand-v4": "node --experimental-strip-types scripts/dev/test-public-quote-brand-polish-v4.mjs",
+    "test:dev:public-quote-brand-v5": "node --experimental-strip-types scripts/dev/test-public-quote-brand-polish-v5.mjs",
     "configure:dev:public-quote": "node scripts/dev/configure-public-self-service-quote.mjs",
     "test:dev:extras-category-accordion": "node scripts/dev/test-extras-category-accordion.mjs",
     "test:dev:package-selection-cards": "node scripts/dev/test-package-selection-cards.mjs",

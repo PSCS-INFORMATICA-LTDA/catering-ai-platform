@@ -135,8 +135,8 @@ test('TEST 20 Past event date is the submit blocker', () => {
 })
 
 test('Success uses official CDL fire logo, not grill photography', () => {
-  assert.match(successScreen, /PublicSuccessFireLogo/)
-  assert.match(source('components/quotes/PublicSuccessFireLogo.tsx'), /data-success-fire-logo/)
+  assert.match(successScreen, /CdlFireSignature/)
+  assert.match(source('components/quotes/CdlFireSignature.tsx'), /data-success-fire-logo/)
   assert.doesNotMatch(successScreen, /cdl-grill-flames/)
   assert.match(source('app/globals.css'), /public-success-cdl-signature/)
   assert.match(source('components/quotes/PublicQuoteBrandLockup.tsx'), /CDL_FLAME_EMBLEM_SRC/)

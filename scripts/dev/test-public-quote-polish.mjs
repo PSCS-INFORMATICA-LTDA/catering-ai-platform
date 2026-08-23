@@ -490,10 +490,10 @@ test('TEST 43 CDL flame emblem and discreet PSCS One footer', () => {
   assert.match(experience, /publicQuoteEmblemSrc/)
   assert.match(
     source('components/quotes/PublicQuoteSuccessScreen.tsx'),
-    /PublicSuccessFireLogo/,
+    /CdlFireSignature/,
   )
   assert.match(
-    source('components/quotes/PublicSuccessFireLogo.tsx'),
+    source('components/quotes/CdlFireSignature.tsx'),
     /data-success-fire-logo/,
   )
   assert.match(experience, /data-public-wizard-product/)
