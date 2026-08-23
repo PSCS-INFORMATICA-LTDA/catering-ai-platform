@@ -15,6 +15,8 @@ export type PackageCatalogFields = {
   price?: number | null
   base_price?: number | null
   image_url?: string | null
+  currency_code?: string | null
+  card_theme_key?: string | null
 }
 
 export type PackageSidesPricingMode = 'breakdown' | 'total_included'
@@ -35,6 +37,44 @@ export function getPackageCatalogVariant(
   if (key.includes('PERS')) return 'custom'
   if (key.endsWith('+')) return 'with_sides'
   return 'without_sides'
+}
+
+/** Structured Com/Sem guarnição group from the package_key suffix, not the label. */
+export function getPublicPackageSidesGroup(
+  pkg: PackageCatalogFields,
+): 'with_sides' | 'without_sides' {
+  return (pkg.package_key ?? '').trim().endsWith('+')
+    ? 'with_sides'
+    : 'without_sides'
+}
+
+const FAMILY_EXAMPLE_ORDER = ['PRI', 'CHO', 'SEL', 'TRAD'] as const
+
+const FAMILY_EXAMPLE_NAMES: Record<
+  (typeof FAMILY_EXAMPLE_ORDER)[number],
+  Record<QuoteLanguage, string>
+> = {
+  PRI: { pt: 'Prime', en: 'Prime', es: 'Prime' },
+  CHO: { pt: 'Choice', en: 'Choice', es: 'Choice' },
+  SEL: { pt: 'Select', en: 'Select', es: 'Select' },
+  TRAD: { pt: 'Tradicional', en: 'Traditional', es: 'Tradicional' },
+}
+
+/** Commercial short names actually present in an active family — never invented. */
+export function getPublicPackageFamilyExampleNames(
+  packages: ReadonlyArray<Pick<PackageCatalogFields, 'package_key'>>,
+  language: QuoteLanguage = 'pt',
+): string[] {
+  const present = new Set<string>()
+  for (const pkg of packages) {
+    const key = (pkg.package_key ?? '').trim().toUpperCase().replace(/\+$/, '')
+    for (const code of FAMILY_EXAMPLE_ORDER) {
+      if (key.endsWith(code)) present.add(code)
+    }
+  }
+  return FAMILY_EXAMPLE_ORDER.filter((code) => present.has(code)).map(
+    (code) => FAMILY_EXAMPLE_NAMES[code][language],
+  )
 }
 
 export function getPackageCatalogName(
@@ -194,10 +234,14 @@ export function isPackageCatalogPriceOnRequest(
   return !Number.isFinite(price) || price <= 0
 }
 
-function perPersonSuffix(language: QuoteLanguage): string {
+export function getPackagePerPersonUnitLabel(language: QuoteLanguage): string {
   if (language === 'en') return 'person'
   if (language === 'es') return 'persona'
   return 'pessoa'
+}
+
+function perPersonSuffix(language: QuoteLanguage): string {
+  return getPackagePerPersonUnitLabel(language)
 }
 
 export function getPackageCatalogPriceOnRequestLabel(
@@ -222,12 +266,12 @@ export function formatPackageCatalogPriceLabel(
 
 export function getPackageSidesDescription(language: QuoteLanguage): string {
   if (language === 'en') {
-    return 'Sides: rice, tropeiro beans, vinaigrette, farofa and cassava.'
+    return 'Sides: white rice, black beans, vinaigrette, farofa and cassava.'
   }
   if (language === 'es') {
-    return 'Guarniciones: arroz, feijão tropeiro, vinagrete, farofa y mandioca.'
+    return 'Guarniciones: arroz blanco, frijoles negros, vinagreta, farofa y yuca.'
   }
-  return 'Guarnições: arroz, feijão tropeiro, vinagrete, farofa e mandioca.'
+  return 'Guarnições: arroz branco, feijão preto, vinagrete, farofa e mandioca.'
 }
 
 export function getPackageSidesIncludedLabel(language: QuoteLanguage): string {
@@ -253,4 +297,173 @@ export function getPackagePriceLineLabel(
   if (kind === 'package') return 'Pacote'
   if (kind === 'sides') return 'Guarnições'
   return 'Total'
+}
+
+export function getPackagePriceCaption(language: QuoteLanguage): string {
+  if (language === 'en') return 'DOLLARS PER PERSON'
+  if (language === 'es') return 'DÓLARES POR PERSONA'
+  return 'DÓLARES POR PESSOA'
+}
+
+export function getPackageHeroAccompanimentHeading(
+  language: QuoteLanguage,
+): string {
+  if (language === 'en') return 'Accompaniments'
+  if (language === 'es') return 'Acompañamientos'
+  return 'Acompanhamentos'
+}
+
+/**
+ * Flyer item lists keyed by the unsuffixed commercial package key.
+ * Keep in sync with `CDL_PACKAGES` in `Lib/cdlCommercialRules.ts`.
+ * Local copy avoids Node ESM pulling that module (and `@/` aliases) into
+ * `test:dev:public-quote-v2-nav`.
+ */
+const PACKAGE_HERO_ITEMS_PT: Record<string, readonly string[]> = {
+  BBQTRAD: [
+    'Picanha Angus',
+    'Linguiça tradicional',
+    'Frango sobrecoxa desossada',
+    'Pão de alho',
+    'Queijo coalho',
+    'Milho',
+  ],
+  BBQSEL: [
+    'Picanha Angus',
+    'Costela de porco ou boi',
+    'Linguiça tradicional',
+    'Frango sobrecoxa desossada',
+    'Pão de alho',
+    'Queijo',
+    'Milho',
+  ],
+  BBQCHO: [
+    'Picanha Angus',
+    'Salmão ou camarão',
+    'Costela de porco ou boi',
+    'Linguiça',
+    'Frango sobrecoxa desossada',
+    'Pão de alho',
+    'Queijo',
+    'Milho',
+  ],
+  BBQPRI: [
+    'Picanha Angus',
+    'Salmão ou camarão',
+    'Costela de porco ou boi',
+    'Carré de cordeiro',
+    'Linguiça',
+    'Frango sobrecoxa desossada',
+    'Pão de alho',
+    'Queijo',
+    'Milho',
+  ],
+}
+
+const PACKAGE_HERO_COMMON_PT = [
+  'Chimichurri',
+  'Farofa',
+  'Mel',
+  'Goiabada',
+  'Pimenta de bico',
+  'Geleia de pimenta',
+] as const
+
+const PACKAGE_HERO_ITEM_I18N: Record<string, { en: string; es: string }> = {
+  'Picanha Angus': { en: 'Angus picanha', es: 'Picaña Angus' },
+  'Linguiça tradicional': {
+    en: 'Traditional sausage',
+    es: 'Salchicha tradicional',
+  },
+  Linguiça: { en: 'Sausage', es: 'Salchicha' },
+  'Frango sobrecoxa desossada': {
+    en: 'Boneless chicken thigh',
+    es: 'Muslo de pollo deshuesado',
+  },
+  'Pão de alho': { en: 'Garlic bread', es: 'Pan de ajo' },
+  'Queijo coalho': {
+    en: 'Grilled coalho cheese',
+    es: 'Queso coalho a la parrilla',
+  },
+  Queijo: { en: 'Cheese', es: 'Queso' },
+  Milho: { en: 'Corn', es: 'Maíz' },
+  'Costela de porco ou boi': {
+    en: 'Pork or beef ribs',
+    es: 'Costilla de cerdo o res',
+  },
+  'Salmão ou camarão': { en: 'Salmon or shrimp', es: 'Salmón o camarón' },
+  'Carré de cordeiro': { en: 'Rack of lamb', es: 'Costillar de cordero' },
+  Chimichurri: { en: 'Chimichurri', es: 'Chimichurri' },
+  Farofa: { en: 'Farofa', es: 'Farofa' },
+  Mel: { en: 'Honey', es: 'Miel' },
+  Goiabada: { en: 'Guava paste', es: 'Dulce de guayaba' },
+  'Pimenta de bico': { en: "Bird's eye pepper", es: 'Ají de bico' },
+  'Geleia de pimenta': { en: 'Pepper jelly', es: 'Jalea de pimiento' },
+}
+
+function translateHeroItem(
+  label: string,
+  language: QuoteLanguage,
+): string {
+  if (language === 'pt') return label
+  const translation = PACKAGE_HERO_ITEM_I18N[label]
+  if (!translation) return label
+  return language === 'es' ? translation.es : translation.en
+}
+
+/**
+ * Localized flyer menu. PT keeps the baked art. EN/ES overlay the same
+ * commercial items so the JPG is not the language source.
+ */
+export function getPackageHeroMenuLines(
+  pkg: PackageCatalogFields,
+  language: QuoteLanguage,
+): string[] {
+  if (language === 'pt') return []
+  if (getPackageCatalogVariant(pkg) === 'custom') return []
+  const key = getBasePackageKey(pkg.package_key ?? '').toUpperCase()
+  const items = PACKAGE_HERO_ITEMS_PT[key]
+  if (!items?.length) return []
+  return items.map((item) => translateHeroItem(item, language))
+}
+
+export function getPackageHeroAccompanimentLines(
+  language: QuoteLanguage,
+): string[] {
+  if (language === 'pt') return []
+  return PACKAGE_HERO_COMMON_PT.map((item) => translateHeroItem(item, language))
+}
+
+export function formatPackageHeroPrice(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return ''
+  const rounded = Math.round(value * 100) / 100
+  if (Number.isInteger(rounded)) return `$${rounded}`
+  return `$${rounded.toFixed(2)}`
+}
+
+export function packageSidesMathHolds(
+  pkg: PackageCatalogFields,
+  basePackage: PackageCatalogFields | null,
+  sidesPricePerPerson: number,
+): boolean {
+  const pricing = resolvePackageSidesPricing(
+    pkg,
+    basePackage,
+    sidesPricePerPerson,
+  )
+  if (!pricing) return true
+  if (pricing.basePricePerPerson == null) return false
+  if (pricing.sidesPricePerPerson <= 0) {
+    return (
+      Math.abs(pricing.basePricePerPerson - pricing.totalPerPerson) <
+      PRICE_TOLERANCE
+    )
+  }
+  return (
+    Math.abs(
+      pricing.basePricePerPerson +
+        pricing.sidesPricePerPerson -
+        pricing.totalPerPerson,
+    ) < PRICE_TOLERANCE
+  )
 }

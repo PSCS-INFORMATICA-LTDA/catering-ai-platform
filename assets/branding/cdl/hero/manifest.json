@@ -1,0 +1,305 @@
+{
+  "generatedAt": "2026-08-20T14:43:31.170Z",
+  "photos": [
+    {
+      "id": "cdl-canape-sausage-crostini",
+      "sourceFilename": "WhatsApp Image 2026-08-19 at 21.43.21 (2).jpeg",
+      "found": true,
+      "originalPath": "assets/branding/cdl/hero/originals/cdl-canape-sausage-crostini-original.jpeg",
+      "optimizedPath": "public/cdl/hero/cdl-canape-sausage-crostini.webp",
+      "original": {
+        "width": 576,
+        "height": 1024,
+        "bytes": 100222
+      },
+      "optimized": {
+        "width": 1080,
+        "height": 1920,
+        "bytes": 160090
+      },
+      "alt": "CDL sausage crostini canapés on a branded wooden board",
+      "mobilePosition": "50% 42%",
+      "desktopPosition": "50% 38%"
+    },
+    {
+      "id": "cdl-sliced-beef-rosemary",
+      "sourceFilename": "WhatsApp Image 2026-08-19 at 21.43.21 (1).jpeg",
+      "found": true,
+      "originalPath": "assets/branding/cdl/hero/originals/cdl-sliced-beef-rosemary-original.jpeg",
+      "optimizedPath": "public/cdl/hero/cdl-sliced-beef-rosemary.webp",
+      "original": {
+        "width": 1182,
+        "height": 2048,
+        "bytes": 291540
+      },
+      "optimized": {
+        "width": 1108,
+        "height": 1920,
+        "bytes": 208154
+      },
+      "alt": "Sliced grilled beef with rosemary served on a wooden platter",
+      "mobilePosition": "50% 40%",
+      "desktopPosition": "50% 36%"
+    },
+    {
+      "id": "cdl-grill-flames-steaks",
+      "sourceFilename": "WhatsApp Image 2026-08-19 at 21.43.21.jpeg",
+      "found": true,
+      "originalPath": "assets/branding/cdl/hero/originals/cdl-grill-flames-steaks-original.jpeg",
+      "optimizedPath": "public/cdl/hero/cdl-grill-flames-steaks.webp",
+      "original": {
+        "width": 1170,
+        "height": 2048,
+        "bytes": 323066
+      },
+      "optimized": {
+        "width": 1097,
+        "height": 1920,
+        "bytes": 220208
+      },
+      "alt": "Steaks and sausages searing over live flames",
+      "mobilePosition": "50% 48%",
+      "desktopPosition": "50% 42%"
+    },
+    {
+      "id": "cdl-platter-picanha-farofa-pool",
+      "sourceFilename": "WhatsApp Image 2026-08-19 at 21.43.24 (2).jpeg",
+      "found": true,
+      "originalPath": "assets/branding/cdl/hero/originals/cdl-platter-picanha-farofa-pool-original.jpeg",
+      "optimizedPath": "public/cdl/hero/cdl-platter-picanha-farofa-pool.webp",
+      "original": {
+        "width": 768,
+        "height": 1024,
+        "bytes": 148048
+      },
+      "optimized": {
+        "width": 1440,
+        "height": 1920,
+        "bytes": 254248
+      },
+      "alt": "Picanha slices around farofa served poolside",
+      "mobilePosition": "50% 40%",
+      "desktopPosition": "48% 36%"
+    },
+    {
+      "id": "cdl-bacon-scallops",
+      "sourceFilename": "WhatsApp Image 2026-08-19 at 21.43.24 (3).jpeg",
+      "found": true,
+      "originalPath": "assets/branding/cdl/hero/originals/cdl-bacon-scallops-original.jpeg",
+      "optimizedPath": "public/cdl/hero/cdl-bacon-scallops.webp",
+      "original": {
+        "width": 768,
+        "height": 1024,
+        "bytes": 170310
+      },
+      "optimized": {
+        "width": 1440,
+        "height": 1920,
+        "bytes": 289582
+      },
+      "alt": "Bacon-wrapped scallops on a wooden catering plate",
+      "mobilePosition": "50% 42%",
+      "desktopPosition": "50% 38%"
+    },
+    {
+      "id": "cdl-sunset-waterfront-grill",
+      "sourceFilename": "WhatsApp Image 2026-08-19 at 21.43.24.jpeg",
+      "found": true,
+      "originalPath": "assets/branding/cdl/hero/originals/cdl-sunset-waterfront-grill-original.jpeg",
+      "optimizedPath": "public/cdl/hero/cdl-sunset-waterfront-grill.webp",
+      "original": {
+        "width": 768,
+        "height": 1024,
+        "bytes": 150952
+      },
+      "optimized": {
+        "width": 1440,
+        "height": 1920,
+        "bytes": 248752
+      },
+      "alt": "Picanha grilling over flames at a waterfront sunset",
+      "mobilePosition": "50% 62%",
+      "desktopPosition": "50% 58%"
+    },
+    {
+      "id": "cdl-mixed-platter-bull-grill",
+      "sourceFilename": "WhatsApp Image 2026-08-19 at 21.43.23 (1).jpeg",
+      "found": true,
+      "originalPath": "assets/branding/cdl/hero/originals/cdl-mixed-platter-bull-grill-original.jpeg",
+      "optimizedPath": "public/cdl/hero/cdl-mixed-platter-bull-grill.webp",
+      "original": {
+        "width": 576,
+        "height": 1024,
+        "bytes": 110934
+      },
+      "optimized": {
+        "width": 1080,
+        "height": 1920,
+        "bytes": 180406
+      },
+      "alt": "Mixed grilled meats, corn and garlic bread on a serving board",
+      "mobilePosition": "50% 42%",
+      "desktopPosition": "50% 38%"
+    },
+    {
+      "id": "cdl-event-pool-station",
+      "sourceFilename": "cdl-event-pool-station.jpeg",
+      "found": true,
+      "originalPath": "assets/branding/cdl/hero/originals/cdl-event-pool-station-original.jpeg",
+      "optimizedPath": "public/cdl/hero/cdl-event-pool-station.webp",
+      "original": {
+        "width": 3840,
+        "height": 2160,
+        "bytes": 5020004
+      },
+      "optimized": {
+        "width": 1920,
+        "height": 1080,
+        "bytes": 584566
+      },
+      "alt": "CDL Brazilian BBQ station under a branded tent beside a luxury pool",
+      "mobilePosition": "50% 42%",
+      "desktopPosition": "48% 38%"
+    },
+    {
+      "id": "cdl-board-steak-zucchini",
+      "sourceFilename": "WhatsApp Image 2026-08-19 at 21.43.22 (1).jpeg",
+      "found": true,
+      "originalPath": "assets/branding/cdl/hero/originals/cdl-board-steak-zucchini-original.jpeg",
+      "optimizedPath": "public/cdl/hero/cdl-board-steak-zucchini.webp",
+      "original": {
+        "width": 768,
+        "height": 1024,
+        "bytes": 158553
+      },
+      "optimized": {
+        "width": 1440,
+        "height": 1920,
+        "bytes": 257966
+      },
+      "alt": "CDL branded board with steak, chicken and grilled vegetables",
+      "mobilePosition": "50% 48%",
+      "desktopPosition": "50% 42%"
+    },
+    {
+      "id": "cdl-grill-lamb-hearts",
+      "sourceFilename": "WhatsApp Image 2026-08-19 at 21.43.20 (1).jpeg",
+      "found": true,
+      "originalPath": "assets/branding/cdl/hero/originals/cdl-grill-lamb-hearts-original.jpeg",
+      "optimizedPath": "public/cdl/hero/cdl-grill-lamb-hearts.webp",
+      "original": {
+        "width": 1168,
+        "height": 2048,
+        "bytes": 317635
+      },
+      "optimized": {
+        "width": 1095,
+        "height": 1920,
+        "bytes": 238554
+      },
+      "alt": "Lamb chops, chicken hearts and spiral sausage on a commercial grill",
+      "mobilePosition": "50% 52%",
+      "desktopPosition": "50% 46%"
+    },
+    {
+      "id": "cdl-poolside-brazilian-spread",
+      "sourceFilename": "WhatsApp Image 2026-08-19 at 21.43.23.jpeg",
+      "found": true,
+      "originalPath": "assets/branding/cdl/hero/originals/cdl-poolside-brazilian-spread-original.jpeg",
+      "optimizedPath": "public/cdl/hero/cdl-poolside-brazilian-spread.webp",
+      "original": {
+        "width": 576,
+        "height": 1024,
+        "bytes": 119643
+      },
+      "optimized": {
+        "width": 1080,
+        "height": 1920,
+        "bytes": 184526
+      },
+      "alt": "Brazilian BBQ platters and sauces beside a swimming pool",
+      "mobilePosition": "50% 42%",
+      "desktopPosition": "48% 38%"
+    },
+    {
+      "id": "cdl-grill-corn-flames",
+      "sourceFilename": "WhatsApp Image 2026-08-19 at 21.43.20.jpeg",
+      "found": true,
+      "originalPath": "assets/branding/cdl/hero/originals/cdl-grill-corn-flames-original.jpeg",
+      "optimizedPath": "public/cdl/hero/cdl-grill-corn-flames.webp",
+      "original": {
+        "width": 1039,
+        "height": 1514,
+        "bytes": 346493
+      },
+      "optimized": {
+        "width": 1318,
+        "height": 1920,
+        "bytes": 371574
+      },
+      "alt": "Corn, steaks and sausages cooking over grill flames",
+      "mobilePosition": "50% 48%",
+      "desktopPosition": "50% 42%"
+    },
+    {
+      "id": "cdl-fleet-neighborhood",
+      "sourceFilename": "cdl-fleet-neighborhood.jpeg",
+      "found": true,
+      "originalPath": "assets/branding/cdl/hero/originals/cdl-fleet-neighborhood-original.jpeg",
+      "optimizedPath": "public/cdl/hero/cdl-fleet-neighborhood.webp",
+      "original": {
+        "width": 3840,
+        "height": 2160,
+        "bytes": 3673145
+      },
+      "optimized": {
+        "width": 1920,
+        "height": 1080,
+        "bytes": 376772
+      },
+      "alt": "CDL Services branded catering van at a residential event",
+      "mobilePosition": "50% 55%",
+      "desktopPosition": "46% 52%"
+    },
+    {
+      "id": "cdl-raw-tomahawk-wolf",
+      "sourceFilename": "WhatsApp Image 2026-08-19 at 21.43.21 (3).jpeg",
+      "found": true,
+      "originalPath": "assets/branding/cdl/hero/originals/cdl-raw-tomahawk-wolf-original.jpeg",
+      "optimizedPath": "public/cdl/hero/cdl-raw-tomahawk-wolf.webp",
+      "original": {
+        "width": 768,
+        "height": 1024,
+        "bytes": 106427
+      },
+      "optimized": {
+        "width": 1440,
+        "height": 1920,
+        "bytes": 157002
+      },
+      "alt": "Raw tomahawk steak held in front of an outdoor grill",
+      "mobilePosition": "50% 40%",
+      "desktopPosition": "50% 36%"
+    },
+    {
+      "id": "cdl-vacuum-premium-meats",
+      "sourceFilename": "WhatsApp Image 2026-08-19 at 21.43.22.jpeg",
+      "found": true,
+      "originalPath": "assets/branding/cdl/hero/originals/cdl-vacuum-premium-meats-original.jpeg",
+      "optimizedPath": "public/cdl/hero/cdl-vacuum-premium-meats.webp",
+      "original": {
+        "width": 768,
+        "height": 1024,
+        "bytes": 153024
+      },
+      "optimized": {
+        "width": 1440,
+        "height": 1920,
+        "bytes": 252192
+      },
+      "alt": "Premium vacuum-sealed meats prepared poolside for churrasco",
+      "mobilePosition": "50% 55%",
+      "desktopPosition": "50% 48%"
+    }
+  ]
+}

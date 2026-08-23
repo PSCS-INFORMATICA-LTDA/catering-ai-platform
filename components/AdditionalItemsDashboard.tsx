@@ -23,6 +23,7 @@ import {
   BackofficeCascadePanel,
   BackofficeInventoryButton,
 } from '@/components/backoffice/BackofficeSectionPrimitives'
+import OperationalMaterialsBomPanel from '@/components/materials/OperationalMaterialsBomPanel'
 import CatalogImageFrame from '@/components/CatalogImageFrame'
 import {
   groupAdditionalItemsByCategory,
@@ -40,6 +41,10 @@ import type { CatalogItemListItem } from '@/Lib/fetchCatalogItems'
 import { formatUsd } from '@/Lib/backofficeFinance'
 import { getAdditionalItemPrice } from '@/Lib/getAdditionalItemPrice'
 import type { CatalogItemsInsertPayload } from '@/Lib/catalogItemsTableSchema'
+import type { AuthLocale } from '@/Lib/i18n/authUsers'
+import { tCommon } from '@/Lib/i18n/common'
+import { tPackages } from '@/Lib/i18n/packages'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 type ActiveFilter = 'active' | 'all'
 type MobileStep = 'categories' | 'items' | 'detail'
@@ -54,6 +59,7 @@ const ACCEPTED_IMAGE_TYPES = new Set([
 async function fetchItemsFromApi(
   query: string,
   activeFilter: ActiveFilter,
+  locale: AuthLocale,
 ): Promise<CatalogItemListItem[]> {
   const params = new URLSearchParams({ _: String(Date.now()) })
   if (query.trim()) params.set('q', query.trim())
@@ -68,32 +74,41 @@ async function fetchItemsFromApi(
     error?: string
   }
   if (!response.ok) {
-    throw new Error(result.error ?? 'Não foi possível buscar itens.')
+    throw new Error(result.error ?? tPackages(locale, 'fetchItemsError'))
   }
   return result.data ?? []
 }
 
-function formatFlag(value: boolean | null | undefined): string {
-  if (value === true) return 'Sim'
-  if (value === false) return 'Não'
+function formatFlag(
+  value: boolean | null | undefined,
+  locale: AuthLocale,
+): string {
+  if (value === true) return tCommon(locale, 'yes')
+  if (value === false) return tCommon(locale, 'no')
   return '—'
 }
 
-function formatCatalogUsageFlags(item: CatalogItemListItem): string {
+function formatCatalogUsageFlags(
+  item: CatalogItemListItem,
+  locale: AuthLocale,
+): string {
   const parts: string[] = []
-  if (item.can_be_package_item !== false) parts.push('Pacote')
-  if (item.can_be_side_item) parts.push('Guarnição')
-  if (item.can_be_additional !== false) parts.push('Adicional')
-  if (item.can_be_option_choice !== false) parts.push('Escolha')
-  if (item.inventory_enabled) parts.push('Estoque')
+  if (item.can_be_package_item !== false) parts.push(tPackages(locale, 'usagePackage'))
+  if (item.can_be_side_item) parts.push(tPackages(locale, 'usageSide'))
+  if (item.can_be_additional !== false) parts.push(tPackages(locale, 'usageAdditional'))
+  if (item.can_be_option_choice !== false) parts.push(tPackages(locale, 'usageChoice'))
+  if (item.inventory_enabled) parts.push(tPackages(locale, 'usageStock'))
   return parts.length > 0 ? parts.join(' · ') : '—'
 }
 
-function chargeLabel(item: CatalogItemListItem | CatalogItemsInsertPayload) {
+function chargeLabel(
+  item: CatalogItemListItem | CatalogItemsInsertPayload,
+  locale: AuthLocale,
+) {
   if (item.pricing_type === 'PER_PERSON' || item.charge_type === 'PERSON') {
-    return 'por pessoa'
+    return tCommon(locale, 'perPerson')
   }
-  return 'por unidade'
+  return tCommon(locale, 'perUnit')
 }
 
 export default function AdditionalItemsDashboard({
@@ -101,6 +116,7 @@ export default function AdditionalItemsDashboard({
 }: {
   initialItems: CatalogItemListItem[]
 }) {
+  const locale = useAuthLocaleFromMe()
   const [items, setItems] = useState<CatalogItemListItem[]>(initialItems)
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('active')
@@ -125,21 +141,25 @@ export default function AdditionalItemsDashboard({
         item.item_key,
         item.item_name,
         item.label_pt,
+        item.label_en,
+        item.label_es,
         item.category_pt,
+        item.category_en,
+        item.category_es,
         item.category_key,
-        getAdditionalItemCategoryLabel(item),
-        getAdditionalItemLabel(item),
+        getAdditionalItemCategoryLabel(item, locale),
+        getAdditionalItemLabel(item, locale),
       ]
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
         .includes(q),
     )
-  }, [items, search])
+  }, [items, search, locale])
 
   const grouped = useMemo(
-    () => groupAdditionalItemsByCategory(filteredItems),
-    [filteredItems],
+    () => groupAdditionalItemsByCategory(filteredItems, locale),
+    [filteredItems, locale],
   )
 
   const selectedGroup = useMemo(
@@ -182,17 +202,17 @@ export default function AdditionalItemsDashboard({
     setLoading(true)
     setError(null)
     try {
-      setItems(await fetchItemsFromApi(search, activeFilter))
+      setItems(await fetchItemsFromApi(search, activeFilter, locale))
     } catch (refreshError) {
       setError(
         refreshError instanceof Error
           ? refreshError.message
-          : 'Erro ao atualizar itens.',
+          : tPackages(locale, 'refreshItemsError'),
       )
     } finally {
       setLoading(false)
     }
-  }, [search, activeFilter])
+  }, [search, activeFilter, locale])
 
   useEffect(() => {
     void refreshItems()
@@ -237,7 +257,7 @@ export default function AdditionalItemsDashboard({
     if (!file || !itemId) return
 
     if (!ACCEPTED_IMAGE_TYPES.has(file.type.toLowerCase())) {
-      const message = 'Formato inválido. Use PNG, JPG, JPEG ou WebP.'
+      const message = tPackages(locale, 'invalidImageFormat')
       setUploadErrors((current) => ({ ...current, [itemId]: message }))
       setError(message)
       uploadTargetIdRef.current = null
@@ -268,7 +288,7 @@ export default function AdditionalItemsDashboard({
       }
 
       if (!response.ok || !result.success || !result.item) {
-        throw new Error(result.error ?? 'Falha no upload da imagem.')
+        throw new Error(result.error ?? tPackages(locale, 'uploadError'))
       }
 
       setItems((current) =>
@@ -282,14 +302,14 @@ export default function AdditionalItemsDashboard({
           image_status: result.item?.image_status ?? 'ready',
           image_notes:
             result.item?.image_notes ??
-            'Imagem atualizada pelo cadastro de itens.',
+            tPackages(locale, 'imageUpdatedNotes'),
         }))
       }
     } catch (uploadError) {
       const message =
         uploadError instanceof Error
           ? uploadError.message
-          : 'Erro ao enviar imagem.'
+          : tPackages(locale, 'uploadErrorGeneric')
       setUploadErrors((current) => ({ ...current, [itemId]: message }))
       setError(message)
     } finally {
@@ -326,13 +346,15 @@ export default function AdditionalItemsDashboard({
       })
       const result = (await response.json()) as { error?: string }
       if (!response.ok) {
-        throw new Error(result.error ?? 'Não foi possível salvar item.')
+        throw new Error(result.error ?? tPackages(locale, 'saveItemError'))
       }
       cancelEdit()
       await refreshItems()
     } catch (saveError) {
       setError(
-        saveError instanceof Error ? saveError.message : 'Erro ao salvar item.',
+        saveError instanceof Error
+          ? saveError.message
+          : tPackages(locale, 'saveItemErrorGeneric'),
       )
     } finally {
       setSaving(false)
@@ -340,8 +362,8 @@ export default function AdditionalItemsDashboard({
   }
 
   async function deactivate(item: CatalogItemListItem) {
-    const label = getAdditionalItemLabel(item)
-    if (!window.confirm(`Inativar "${label}"?`)) return
+    const label = getAdditionalItemLabel(item, locale)
+    if (!window.confirm(tPackages(locale, 'deactivateConfirm', { label }))) return
     const response = await fetch(`/api/additional-items/${item.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -349,7 +371,7 @@ export default function AdditionalItemsDashboard({
     })
     const result = (await response.json()) as { error?: string }
     if (!response.ok) {
-      setError(result.error ?? 'Não foi possível inativar item.')
+      setError(result.error ?? tPackages(locale, 'deactivateItemError'))
       return
     }
     setItems((current) => current.filter((row) => row.id !== item.id))
@@ -360,7 +382,7 @@ export default function AdditionalItemsDashboard({
     if (editingId === 'new') {
       return (
         <BackofficeCascadePanel
-          title="Novo item"
+          title={tPackages(locale, 'newItem')}
           className="lg:col-span-5"
           onBack={() => {
             cancelEdit()
@@ -368,17 +390,17 @@ export default function AdditionalItemsDashboard({
           }}
         >
           <BackofficeFormCard
-            title="Cadastro"
+            title={tPackages(locale, 'register')}
             actions={
               <>
                 <BackofficeBtnPrimary
                   onClick={() => void saveRow()}
                   disabled={saving}
                 >
-                  {saving ? 'Salvando…' : 'Salvar'}
+                  {saving ? tCommon(locale, 'saving') : tCommon(locale, 'save')}
                 </BackofficeBtnPrimary>
                 <BackofficeBtnSecondary onClick={cancelEdit}>
-                  Cancelar
+                  {tCommon(locale, 'cancel')}
                 </BackofficeBtnSecondary>
               </>
             }
@@ -392,13 +414,13 @@ export default function AdditionalItemsDashboard({
     if (!selectedItem) {
       return (
         <BackofficeCascadePanel
-          title="Detalhe"
-          subtitle="Selecione um item"
+          title={tCommon(locale, 'detail')}
+          subtitle={tPackages(locale, 'selectItem')}
           className="lg:col-span-5"
           onBack={() => setMobileStep('items')}
         >
           <p className="text-sm text-neutral-500">
-            Escolha uma categoria e um item para ver os detalhes.
+            {tPackages(locale, 'selectItemHint')}
           </p>
         </BackofficeCascadePanel>
       )
@@ -406,19 +428,19 @@ export default function AdditionalItemsDashboard({
 
     const isEditing = editingId === selectedItem.id
     const itemKey = selectedItem.item_key ?? '—'
-    const displayName = getAdditionalItemLabel(selectedItem)
+    const displayName = getAdditionalItemLabel(selectedItem, locale)
     const imageUrl = isEditing
       ? String(draft.image_url ?? '').trim() || null
       : getAdditionalItemImageUrl(selectedItem)
     const price = getAdditionalItemPrice(isEditing ? draft : selectedItem)
     const uploadError = uploadErrors[selectedItem.id]
-    const categoryLabel = getAdditionalItemCategoryLabel(selectedItem)
+    const categoryLabel = getAdditionalItemCategoryLabel(selectedItem, locale)
     const currency = getAdditionalItemCurrencyCode(selectedItem)
 
     if (isEditing) {
       return (
         <BackofficeCascadePanel
-          title={`Editar · ${itemKey}`}
+          title={tPackages(locale, 'editItemTitle', { key: itemKey })}
           className="lg:col-span-5"
           onBack={() => {
             cancelEdit()
@@ -443,35 +465,44 @@ export default function AdditionalItemsDashboard({
               imageStatus={
                 isEditing ? String(draft.image_status ?? '') : selectedItem.image_status
               }
-              fallbackLabel="Sem imagem cadastrada"
+              fallbackLabel={tCommon(locale, 'noImageRegistered')}
               rounded="all"
               className="!aspect-square !min-h-0 !max-h-none"
             />
           </div>
           <BackofficeFormCard
-            title="Editar item"
+            title={tPackages(locale, 'editItem')}
             actions={
               <>
                 <BackofficeBtnPrimary
                   onClick={() => void saveRow()}
                   disabled={saving}
                 >
-                  {saving ? 'Salvando…' : 'Salvar'}
+                  {saving ? tCommon(locale, 'saving') : tCommon(locale, 'save')}
                 </BackofficeBtnPrimary>
                 <BackofficeBtnSecondary onClick={cancelEdit}>
-                  Cancelar
+                  {tCommon(locale, 'cancel')}
                 </BackofficeBtnSecondary>
                 <BackofficeBtnOutline
                   accent
                   onClick={() => triggerUpload(selectedItem.id)}
                   disabled={uploadingId === selectedItem.id}
                 >
-                  {uploadingId === selectedItem.id ? 'Enviando…' : 'Enviar imagem'}
+                  {uploadingId === selectedItem.id
+                    ? tCommon(locale, 'uploading')
+                    : tPackages(locale, 'sendImage')}
                 </BackofficeBtnOutline>
               </>
             }
           >
             <AdditionalItemAdminFormFields draft={draft} setDraft={setDraft} />
+            {selectedItem.id !== 'new' ? (
+              <OperationalMaterialsBomPanel
+                sourceType="additional"
+                sourceId={selectedItem.id}
+                canManage
+              />
+            ) : null}
           </BackofficeFormCard>
         </BackofficeCascadePanel>
       )
@@ -492,7 +523,7 @@ export default function AdditionalItemsDashboard({
             itemType={selectedItem.item_type}
             categoryPt={selectedItem.category_pt}
             imageStatus={selectedItem.image_status}
-            fallbackLabel="Sem imagem cadastrada"
+            fallbackLabel={tCommon(locale, 'noImageRegistered')}
             rounded="none"
             className="!h-full !min-h-0 !max-h-none !w-full !rounded-none"
           />
@@ -505,13 +536,13 @@ export default function AdditionalItemsDashboard({
             <BackofficeStatusBadge active={selectedItem.active !== false} />
           </div>
           <h3 className="text-2xl font-bold text-neutral-900">{displayName}</h3>
-          <BackofficeMetaRow label="Categoria" value={categoryLabel} />
+          <BackofficeMetaRow label={tCommon(locale, 'category')} value={categoryLabel} />
           <BackofficeMetaRow
-            label="Tipo"
+            label={tCommon(locale, 'type')}
             value={selectedItem.item_type ?? 'PRODUCT'}
           />
           <BackofficeMetaRow
-            label="Preço vigente"
+            label={tPackages(locale, 'currentPrice')}
             value={formatUsd(getAdditionalItemPrice(selectedItem))}
           />
           <BackofficeMetaRow
@@ -523,7 +554,7 @@ export default function AdditionalItemsDashboard({
             }
           />
           <BackofficeMetaRow
-            label="price (legado)"
+            label={tPackages(locale, 'priceLegacy')}
             value={
               selectedItem.price != null
                 ? formatUsd(Number(selectedItem.price))
@@ -531,33 +562,44 @@ export default function AdditionalItemsDashboard({
             }
           />
           <BackofficeMetaRow
-            label="Uso no sistema"
-            value={formatCatalogUsageFlags(selectedItem)}
+            label={tPackages(locale, 'systemUsage')}
+            value={formatCatalogUsageFlags(selectedItem, locale)}
           />
           <BackofficeMetaRow
-            label="Visível ao cliente"
-            value={formatFlag(selectedItem.customer_visible !== false)}
+            label={tCommon(locale, 'visibleToCustomer')}
+            value={formatFlag(selectedItem.customer_visible !== false, locale)}
           />
-          <BackofficeMetaRow label="Ativo" value={formatFlag(selectedItem.active !== false)} />
-          <BackofficeMetaRow label="Cobrança" value={chargeLabel(selectedItem)} />
+          <BackofficeMetaRow
+            label={tCommon(locale, 'active')}
+            value={formatFlag(selectedItem.active !== false, locale)}
+          />
+          <BackofficeMetaRow
+            label={tPackages(locale, 'charge')}
+            value={chargeLabel(selectedItem, locale)}
+          />
           <BackofficeMetaRow label="pricing_type" value={selectedItem.pricing_type ?? '—'} />
           <BackofficeMetaRow label="charge_type" value={selectedItem.charge_type ?? '—'} />
           <BackofficeMetaRow label="unit_label" value={selectedItem.unit_label ?? '—'} />
-          <BackofficeMetaRow label="Moeda" value={currency} />
-          <BackofficeMetaRow label="Ordem" value={getAdditionalItemDisplayOrder(selectedItem)} />
+          <BackofficeMetaRow label={tCommon(locale, 'currency')} value={currency} />
+          <BackofficeMetaRow
+            label={tCommon(locale, 'displayOrder')}
+            value={getAdditionalItemDisplayOrder(selectedItem)}
+          />
           {uploadError ? (
             <p className="text-xs text-red-600">{uploadError}</p>
           ) : null}
           <div className="flex flex-wrap gap-2 pt-2">
             <BackofficeBtnSecondary onClick={() => startEdit(selectedItem)}>
-              Editar
+              {tCommon(locale, 'edit')}
             </BackofficeBtnSecondary>
             <BackofficeBtnOutline
               accent
               onClick={() => triggerUpload(selectedItem.id)}
               disabled={uploadingId === selectedItem.id}
             >
-              {uploadingId === selectedItem.id ? 'Enviando…' : 'Imagem'}
+              {uploadingId === selectedItem.id
+                ? tCommon(locale, 'uploading')
+                : tCommon(locale, 'image')}
             </BackofficeBtnOutline>
             <BackofficeInventoryButton
               source="additional_item"
@@ -565,10 +607,15 @@ export default function AdditionalItemsDashboard({
             />
             {selectedItem.active !== false ? (
               <BackofficeBtnDanger onClick={() => void deactivate(selectedItem)}>
-                Inativar
+                {tCommon(locale, 'deactivate')}
               </BackofficeBtnDanger>
             ) : null}
           </div>
+          <OperationalMaterialsBomPanel
+            sourceType="additional"
+            sourceId={selectedItem.id}
+            canManage
+          />
         </div>
       </BackofficeCascadePanel>
     )
@@ -580,11 +627,11 @@ export default function AdditionalItemsDashboard({
 
   return (
     <BackofficeTableShell
-      title="Cadastro de itens"
-      subtitle="Catálogo mestre · Catering AI"
+      title={tPackages(locale, 'itemsTitle')}
+      subtitle={tPackages(locale, 'itemsSubtitle')}
       search={search}
       onSearchChange={setSearch}
-      searchPlaceholder="Nome, chave ou categoria"
+      searchPlaceholder={tPackages(locale, 'itemsSearchPlaceholder')}
       activeFilter={activeFilter}
       onActiveFilterChange={setActiveFilter}
       onRefresh={() => void refreshItems()}
@@ -597,13 +644,13 @@ export default function AdditionalItemsDashboard({
             onClick={startNew}
             className="cdl-btn-primary inline-flex min-h-[44px] items-center justify-center rounded-xl px-5 py-3 text-sm font-bold"
           >
-            Novo item
+            {tPackages(locale, 'newItem')}
           </button>
           <Link
             href="/packages/images#catalogo-itens"
             className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-bold text-neutral-800 shadow-sm"
           >
-            Imagens
+            {tCommon(locale, 'images')}
           </Link>
         </>
       }
@@ -618,7 +665,7 @@ export default function AdditionalItemsDashboard({
 
       {filteredItems.length === 0 ? (
         <p className="rounded-2xl border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-500 shadow-sm">
-          {loading ? 'Carregando…' : 'Nenhum item encontrado.'}
+          {loading ? tCommon(locale, 'loading') : tPackages(locale, 'emptyItems')}
         </p>
       ) : (
         <BackofficeCascadeLayout>
@@ -630,8 +677,10 @@ export default function AdditionalItemsDashboard({
             }
           >
             <BackofficeCascadePanel
-              title="Categorias"
-              subtitle={`${grouped.length} categorias`}
+              title={tCommon(locale, 'categories')}
+              subtitle={tPackages(locale, 'categoriesCount', {
+                count: grouped.length,
+              })}
             >
               <div className="space-y-2">
                 {grouped.map(({ categoryKey, categoryLabel, items: catItems }) => (
@@ -656,11 +705,13 @@ export default function AdditionalItemsDashboard({
             }
           >
             <BackofficeCascadePanel
-              title={selectedGroup?.categoryLabel ?? 'Itens'}
+              title={selectedGroup?.categoryLabel ?? tCommon(locale, 'items')}
               subtitle={
                 selectedGroup
-                  ? `${categoryItems.length} itens`
-                  : 'Selecione uma categoria'
+                  ? tPackages(locale, 'itemsCount', {
+                      count: categoryItems.length,
+                    })
+                  : tPackages(locale, 'selectCategory')
               }
               onBack={() => setMobileStep('categories')}
             >
@@ -674,7 +725,7 @@ export default function AdditionalItemsDashboard({
                     <div className="flex min-w-0 flex-1 items-center gap-3">
                       <CatalogImageFrame
                         src={getAdditionalItemImageUrl(item)}
-                        alt={getAdditionalItemLabel(item)}
+                        alt={getAdditionalItemLabel(item, locale)}
                         variant="catalogItem"
                         itemType={item.item_type}
                         categoryPt={item.category_pt}
@@ -684,7 +735,7 @@ export default function AdditionalItemsDashboard({
                         className="!h-12 !w-12"
                       />
                       <div className="min-w-0">
-                        <span className="block truncate">{getAdditionalItemLabel(item)}</span>
+                        <span className="block truncate">{getAdditionalItemLabel(item, locale)}</span>
                         <span className="text-xs text-neutral-400">
                           {item.item_type ?? 'PRODUCT'} · {formatUsd(getAdditionalItemPrice(item))}
                         </span>

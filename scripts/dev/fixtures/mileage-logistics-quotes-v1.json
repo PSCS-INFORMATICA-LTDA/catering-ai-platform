@@ -1,0 +1,89 @@
+{
+  "fixtureId": "mileage-logistics-quotes-v1",
+  "environment": "DEV_ONLY",
+  "projectRefRequired": "yasprgtlqclwsjcshtls",
+  "projectRefForbidden": "eapwtirhevxrqinytans",
+  "notes": [
+    "Base de teste — milhagem / logística CDL.",
+    "Cortesia: 20 mi a partir da base Orlando Eye; acima disso $2/mi.",
+    "Distâncias de referência rodoviária típica (não API ao vivo).",
+    "Reutiliza company/customer/package do fixture funcional (TEST-DEV-*).",
+    "Dados 100% fictícios."
+  ],
+  "rules": {
+    "minOrderWeekday": 800,
+    "minOrderWeekend": 1000,
+    "minOrderDecJan": 900,
+    "holidaySurchargePercent": 100,
+    "holidayMinOrder": 2000,
+    "reservationPercentage": 30,
+    "mileageBaseLocation": "Orlando Eye",
+    "mileageFreeLimit": 20,
+    "mileageRate": 2
+  },
+  "shared": {
+    "companyId": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+    "customerId": "f2000000-0000-4000-8000-000000000001",
+    "packageId": "c2000000-0000-4000-8000-000000000001",
+    "packagePricePerPerson": 45,
+    "startTime": "12:00",
+    "endTime": "16:00",
+    "state": "FL",
+    "country": "US"
+  },
+  "profiles": {
+    "MID": {
+      "label": "Base média (30 adultos × $45 = $1350)",
+      "adults": 30,
+      "packagePricePerPerson": 45,
+      "expectedPackageTotal": 1350
+    }
+  },
+  "cases": [
+    {
+      "key": "ctrl-within-free",
+      "quoteNumber": "TEST-DEV-QUOTE-MI-CTRL-20",
+      "eventId": "e4100000-0000-4000-8000-000000000001",
+      "quoteId": "e4200000-0000-4000-8000-000000000001",
+      "eventDate": "2026-09-16",
+      "weekdayNote": "Wednesday — controle ≤20 mi",
+      "profile": "MID",
+      "label": "Controle — Orlando (8 mi · cortesia)",
+      "addressLine": "400 W Church St, Orlando, FL 32801",
+      "city": "Orlando",
+      "postalCode": "32801",
+      "mileageDistance": 8,
+      "distanceNote": "Centro de Orlando ≈ 8 mi do Orlando Eye (dentro da cortesia de 20 mi)"
+    },
+    {
+      "key": "tampa-over-free",
+      "quoteNumber": "TEST-DEV-QUOTE-MI-TAMPA-84",
+      "eventId": "e4100000-0000-4000-8000-000000000002",
+      "quoteId": "e4200000-0000-4000-8000-000000000002",
+      "eventDate": "2026-09-16",
+      "weekdayNote": "Wednesday — acima da cortesia",
+      "profile": "MID",
+      "label": "Tampa — 84 mi (64 mi cobradas)",
+      "addressLine": "401 Channelside Dr, Tampa, FL 33602",
+      "city": "Tampa",
+      "postalCode": "33602",
+      "mileageDistance": 84,
+      "distanceNote": "Orlando Eye → Channelside Tampa ≈ 84 mi via I-4; cobradas = 84 − 20 = 64 mi × $2 = $128"
+    },
+    {
+      "key": "kissimmee-over-free",
+      "quoteNumber": "TEST-DEV-QUOTE-MI-KISS-35",
+      "eventId": "e4100000-0000-4000-8000-000000000003",
+      "quoteId": "e4200000-0000-4000-8000-000000000003",
+      "eventDate": "2026-09-17",
+      "weekdayNote": "Thursday — acima da cortesia (caso médio)",
+      "profile": "MID",
+      "label": "Kissimmee — 35 mi (15 mi cobradas)",
+      "addressLine": "7501 W Irlo Bronson Memorial Hwy, Kissimmee, FL 34747",
+      "city": "Kissimmee",
+      "postalCode": "34747",
+      "mileageDistance": 35,
+      "distanceNote": "Orlando Eye → Kissimmee/Irlo Bronson ≈ 35 mi; cobradas = 35 − 20 = 15 mi × $2 = $30"
+    }
+  ]
+}

@@ -1,30 +1,28 @@
 'use client'
 
+import { getAdditionalItemCategoryKey } from '@/Lib/additionalItemFieldAccess'
 import {
   calcAdditionalLineTotalForItem,
+  formatAdditionalPrice,
+  getAdditionalChargeUnitLabel,
   getAdditionalImage,
   getAdditionalPackLabel,
+  getAdditionalPriceLabel,
   getAdditionalTotalWeight,
-  getAdditionalUnitPrice,
   getLocalizedAdditionalLabel,
   isPerPersonAdditional,
   normalizeAdditionalQuantity,
   type QuoteAdditionalItem,
 } from '@/Lib/quoteAdditionalDisplay'
-import { getQuoteStrings } from '@/Lib/quoteTranslations'
+import { getCategoryLabel, getQuoteStrings } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
-function formatCurrency(value: number) {
-  return `$${value.toFixed(2)}`
-}
+const formatCurrency = formatAdditionalPrice
 
 function formatWeightUom(uom: string) {
   if (uom === 'LB') return 'lb'
   return uom.toLowerCase()
 }
-
-const SELECTED_CARD =
-  'border-[var(--brand-primary-2)] bg-[color-mix(in_srgb,var(--brand-primary)_10%,white)] ring-1 ring-[color-mix(in_srgb,var(--brand-primary-2)_30%,transparent)]'
 
 export default function AdditionalItemCard({
   item,
@@ -42,7 +40,8 @@ export default function AdditionalItemCard({
   const t = getQuoteStrings(language)
   const image = getAdditionalImage(item)
   const label = getLocalizedAdditionalLabel(item, language)
-  const unitPrice = getAdditionalUnitPrice(item)
+  const priceLabel = getAdditionalPriceLabel(item, language)
+  const chargeUnitLabel = getAdditionalChargeUnitLabel(item, language)
   const perPerson = isPerPersonAdditional(item)
   const normalizedQty = normalizeAdditionalQuantity(item, quantity)
   const lineTotal = calcAdditionalLineTotalForItem(
@@ -55,13 +54,17 @@ export default function AdditionalItemCard({
   const packLabel = !perPerson ? getAdditionalPackLabel(item) : null
   const showPending =
     !image && item.image_status?.trim().toLowerCase() === 'missing'
+  const categoryKey = getAdditionalItemCategoryKey(item)
+  const categoryKicker = categoryKey
+    ? getCategoryLabel(categoryKey, language)
+    : null
 
-  const cardClass = `flex h-full flex-col rounded-2xl border bg-white p-2 shadow-sm transition ${
-    isSelected ? SELECTED_CARD : 'border-neutral-200'
+  const cardClass = `public-additional-card grid grid-cols-[7.5rem_minmax(0,1fr)] ${
+    isSelected ? 'is-selected' : ''
   }`
 
   const media = (
-    <div className="relative aspect-square overflow-hidden rounded-xl bg-neutral-100">
+    <div className="public-additional-card-media bg-neutral-100">
       {image ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -80,7 +83,7 @@ export default function AdditionalItemCard({
       )}
       {isSelected ? (
         <span
-          className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--brand-primary)] text-[10px] font-bold text-white"
+          className="public-additional-card-check"
           aria-hidden
         >
           ✓
@@ -89,88 +92,95 @@ export default function AdditionalItemCard({
     </div>
   )
 
+  const copy = (
+    <>
+      {categoryKicker ? (
+        <p className="public-additional-card-kicker">{categoryKicker}</p>
+      ) : null}
+      <p className="public-additional-card-name">{label}</p>
+      <div className="public-additional-card-price">
+        <span className="public-additional-card-price-kicker">
+          {t.wizard.additionalPriceKicker}
+        </span>
+        <span className="public-additional-card-price-value">{priceLabel}</span>
+        <span className="public-additional-card-price-unit">
+          {packLabel ?? chargeUnitLabel}
+        </span>
+      </div>
+    </>
+  )
+
   if (perPerson) {
     return (
-      <div className={cardClass}>
+      <article data-additional-item-card className={cardClass}>
         {media}
-        <p className="mt-2 line-clamp-3 text-sm font-bold leading-tight text-neutral-900">
-          {label}
-        </p>
-        <p className="mt-1 text-xs text-neutral-500">
-          {formatCurrency(unitPrice)} / {t.perPerson}
-        </p>
-        {isSelected && billableGuestCount > 0 ? (
-          <p className="mt-0.5 text-[11px] font-semibold text-[var(--brand-primary)]">
-            {formatCurrency(lineTotal)}
-          </p>
-        ) : null}
-        <button
-          type="button"
-          onClick={() => onChangeQty(isSelected ? 0 : 1)}
-          className={`mt-2 w-full rounded-xl px-2 py-2 text-xs font-bold transition ${
-            isSelected
-              ? 'bg-[var(--brand-primary)] text-white'
-              : 'border border-neutral-200 bg-neutral-50 text-neutral-800 hover:border-neutral-300'
-          }`}
-        >
-          {isSelected ? t.selected : t.select}
-        </button>
-      </div>
+        <div className="public-additional-card-body">
+          {copy}
+          {isSelected && billableGuestCount > 0 ? (
+            <p className="public-additional-card-line-total">
+              {formatCurrency(lineTotal)}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => onChangeQty(isSelected ? 0 : 1)}
+            className={`public-additional-card-select ${
+              isSelected ? 'is-on' : ''
+            }`}
+          >
+            {isSelected ? t.selected : t.select}
+          </button>
+        </div>
+      </article>
     )
   }
 
   return (
-    <article className={cardClass}>
+    <article data-additional-item-card className={cardClass}>
       {media}
-      <p className="mt-2 line-clamp-3 text-sm font-bold leading-tight text-neutral-900">
-        {label}
-      </p>
-      <p className="mt-1 text-xs text-neutral-500">
-        {formatCurrency(unitPrice)}
-        {packLabel ? ` / ${packLabel}` : ''}
-      </p>
-      <div className="mt-2 flex items-center justify-between gap-1">
-        <button
-          type="button"
-          onClick={() => onChangeQty(normalizedQty - 1)}
-          disabled={normalizedQty === 0}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-base font-bold disabled:opacity-30"
-          aria-label={t.removeUnit}
-        >
-          −
-        </button>
-        <div className="min-w-0 flex-1 text-center">
-          <span className="text-sm font-bold text-neutral-900">
-            {normalizedQty}
-          </span>
-          <p className="truncate text-[9px] font-semibold uppercase text-neutral-500">
-            {item.unit_label ?? item.unit ?? 'UN'}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => onChangeQty(normalizedQty + 1)}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-base font-bold"
-          aria-label={t.addUnit}
-        >
-          +
-        </button>
-      </div>
-      {isSelected ? (
-        <div className="mt-1 text-center">
-          <p className="text-[11px] font-bold text-[var(--brand-primary)]">
-            {formatCurrency(lineTotal)}
-          </p>
-          {totalWeight ? (
-            <p className="text-[10px] text-neutral-500">
-              {t.totalWeight(
-                totalWeight.amount,
-                formatWeightUom(totalWeight.uom),
-              )}
+      <div className="public-additional-card-body">
+        {copy}
+        <div className="public-additional-qty">
+          <button
+            type="button"
+            onClick={() => onChangeQty(normalizedQty - 1)}
+            disabled={normalizedQty === 0}
+            className="public-additional-qty-btn"
+            aria-label={t.removeUnit}
+          >
+            −
+          </button>
+          <div className="min-w-0 flex-1 text-center">
+            <span className="text-sm font-black text-[#111]">{normalizedQty}</span>
+            <p className="truncate text-[9px] font-semibold uppercase text-neutral-500">
+              {item.unit_label ?? item.unit ?? 'UN'}
             </p>
-          ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={() => onChangeQty(normalizedQty + 1)}
+            className="public-additional-qty-btn"
+            aria-label={t.addUnit}
+          >
+            +
+          </button>
         </div>
-      ) : null}
+        {isSelected ? (
+          <div className="mt-1 text-center">
+            <p className="public-additional-card-line-total">
+              {formatCurrency(lineTotal)}
+            </p>
+            {totalWeight ? (
+              <p className="text-[10px] text-neutral-500">
+                {t.totalWeight(
+                  totalWeight.amount,
+                  formatWeightUom(totalWeight.uom),
+                )}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
     </article>
   )
 }

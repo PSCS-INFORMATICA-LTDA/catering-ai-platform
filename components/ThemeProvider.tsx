@@ -37,18 +37,27 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('dark')
 
   useEffect(() => {
+    if (window.location.pathname.startsWith('/quote/')) return
     const initial = getPreferredTheme()
     setThemeState(initial)
     applyTheme(initial)
   }, [])
 
   const setTheme = useCallback((next: Theme) => {
+    if (document.documentElement.getAttribute('data-public-wizard-theme') === 'light-locked') {
+      return
+    }
+    if (window.location.pathname.startsWith('/quote/')) return
     setThemeState(next)
     window.localStorage.setItem(STORAGE_KEY, next)
     applyTheme(next)
   }, [])
 
   const toggleTheme = useCallback(() => {
+    if (document.documentElement.getAttribute('data-public-wizard-theme') === 'light-locked') {
+      return
+    }
+    if (window.location.pathname.startsWith('/quote/')) return
     setThemeState((current) => {
       const next: Theme = current === 'dark' ? 'light' : 'dark'
       window.localStorage.setItem(STORAGE_KEY, next)

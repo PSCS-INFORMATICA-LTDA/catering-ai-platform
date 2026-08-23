@@ -1,8 +1,13 @@
 import {
+  GRILL_RENTAL_FEE,
   MILEAGE_FREE_LIMIT,
   MILEAGE_RATE,
   RESERVATION_PERCENTAGE,
 } from './cdlCommercialRules'
+import {
+  applyCommercialMinimums,
+  type CommercialMinimumRules,
+} from './quotes/applyCommercialMinimums'
 import {
   calcBillableGuestCount,
   calcPhysicalGuestCount,
@@ -26,9 +31,15 @@ export type CalculateQuoteTotalsInput = {
   mileageFreeLimit?: number
   mileageRate?: number
   mileageFeeOverride?: number | null
+  grillRentalRequired?: boolean
+  grillRentalQty?: number
+  grillRentalFeeOverride?: number | null
   reservationPercentage?: number
   reservationAmountOverride?: number | null
   useCustomReservation?: boolean
+  /** Data do evento (YYYY-MM-DD) — necessária para mínimo/feriado. */
+  eventDate?: string | null
+  commercialMinimums?: CommercialMinimumRules | null
 }
 
 export type QuoteTotals = {
@@ -42,7 +53,15 @@ export type QuoteTotals = {
   packageTotal: number
   additionalTotal: number
   mileageFee: number
+  /** Aluguel de churrasqueira (qty × taxa). */
+  grillRentalTotal: number
+  /** Pacote + adicionais + milhagem + churrasqueira (antes de regras comerciais). */
   quoteSubtotal: number
+  holidaySurchargeAmount: number
+  holidaySurchargePercent: number
+  minimumOrderAmount: number
+  minimumOrderApplied: boolean
+  minimumOrderAdjustment: number
   reservationAmount: number
   balanceDue: number
   quoteTotal: number
@@ -63,6 +82,15 @@ export function calcMileageFee(
 ) {
   const billableMiles = Math.max(0, toNumber(distance) - toNumber(freeLimit))
   return roundMoney(billableMiles * toNumber(rate))
+}
+
+export function calcGrillRentalFee(
+  required: boolean,
+  qty: number,
+  feePerUnit: number = GRILL_RENTAL_FEE,
+) {
+  if (!required) return 0
+  return roundMoney(Math.max(0, toNumber(qty)) * toNumber(feePerUnit))
 }
 
 export function calcAdditionalLineTotal(
@@ -117,16 +145,43 @@ export function calculateQuoteTotals(
           input.mileageRate ?? MILEAGE_RATE,
         )
 
-  const quoteSubtotal = roundMoney(packageTotal + additionalTotal + mileageFee)
+  const grillRentalTotal =
+    input.grillRentalFeeOverride != null
+      ? roundMoney(toNumber(input.grillRentalFeeOverride))
+      : calcGrillRentalFee(
+          Boolean(input.grillRentalRequired),
+          input.grillRentalQty ?? 0,
+        )
+
+  const quoteSubtotal = roundMoney(
+    packageTotal + additionalTotal + mileageFee + grillRentalTotal,
+  )
+
+  const commercial = input.commercialMinimums
+    ? applyCommercialMinimums(
+        quoteSubtotal,
+        input.eventDate,
+        input.commercialMinimums,
+      )
+    : {
+        holidaySurchargeAmount: 0,
+        holidaySurchargePercent: 0,
+        minimumOrderAmount: 0,
+        minimumOrderApplied: false,
+        minimumOrderAdjustment: 0,
+        quoteTotal: quoteSubtotal,
+      }
+
+  const quoteTotal = commercial.quoteTotal
 
   const reservationPercentage =
     input.reservationPercentage ?? RESERVATION_PERCENTAGE
 
   const reservationAmount = input.useCustomReservation
     ? roundMoney(toNumber(input.reservationAmountOverride))
-    : roundMoney(quoteSubtotal * (reservationPercentage / 100))
+    : roundMoney(quoteTotal * (reservationPercentage / 100))
 
-  const balanceDue = roundMoney(quoteSubtotal - reservationAmount)
+  const balanceDue = roundMoney(quoteTotal - reservationAmount)
 
   return {
     billableAdults,
@@ -137,10 +192,16 @@ export function calculateQuoteTotals(
     packageTotal,
     additionalTotal,
     mileageFee,
+    grillRentalTotal,
     quoteSubtotal,
+    holidaySurchargeAmount: commercial.holidaySurchargeAmount,
+    holidaySurchargePercent: commercial.holidaySurchargePercent,
+    minimumOrderAmount: commercial.minimumOrderAmount,
+    minimumOrderApplied: commercial.minimumOrderApplied,
+    minimumOrderAdjustment: commercial.minimumOrderAdjustment,
     reservationAmount,
     balanceDue,
-    quoteTotal: quoteSubtotal,
+    quoteTotal,
   }
 }
 

@@ -1,0 +1,273 @@
+{
+  "fixtureId": "commemorative-dates-quotes-v1",
+  "environment": "DEV_ONLY",
+  "projectRefRequired": "yasprgtlqclwsjcshtls",
+  "projectRefForbidden": "eapwtirhevxrqinytans",
+  "notes": [
+    "Base de teste para acréscimo 100% em feriados federais dos EUA + extras CDL (24/31 dez).",
+    "Observância federal: sábado→sexta, domingo→segunda também recebem acréscimo.",
+    "Reutiliza company/customer/package do fixture funcional (TEST-DEV-*).",
+    "Dados 100% fictícios."
+  ],
+  "rules": {
+    "minOrderWeekday": 800,
+    "minOrderWeekend": 1000,
+    "minOrderDecJan": 900,
+    "holidaySurchargePercent": 100,
+    "holidayMinOrder": 2000,
+    "reservationPercentage": 30
+  },
+  "shared": {
+    "companyId": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+    "customerId": "f2000000-0000-4000-8000-000000000001",
+    "packageId": "c2000000-0000-4000-8000-000000000001",
+    "packagePricePerPerson": 45,
+    "adults": 8,
+    "childrenUnder3": 0,
+    "children4To12": 0,
+    "mileageDistance": 0,
+    "mileageFreeLimit": 20,
+    "mileageRate": 2,
+    "startTime": "12:00",
+    "endTime": "16:00",
+    "city": "Orlando",
+    "state": "FL",
+    "postalCode": "32801",
+    "country": "US"
+  },
+  "profiles": {
+    "LOW": {
+      "label": "Base baixa (8 adultos × $45 = $360)",
+      "adults": 8,
+      "packagePricePerPerson": 45,
+      "expectedBaseSubtotal": 360
+    },
+    "MID": {
+      "label": "Base média (30 adultos × $45 = $1350)",
+      "adults": 30,
+      "packagePricePerPerson": 45,
+      "expectedBaseSubtotal": 1350
+    }
+  },
+  "cases": [
+    {
+      "key": "ctrl-weekday",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-CTRL-WD",
+      "eventId": "e3100000-0000-4000-8000-000000000001",
+      "quoteId": "e3200000-0000-4000-8000-000000000001",
+      "eventDate": "2026-08-05",
+      "weekdayNote": "Wednesday",
+      "profile": "LOW",
+      "label": "Controle — dia útil (qua)",
+      "category": "control",
+      "expectCdlHolidaySurcharge": false,
+      "expectMinKey": "weekday"
+    },
+    {
+      "key": "dec-non-holiday",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-DEC-REG",
+      "eventId": "e3100000-0000-4000-8000-000000000003",
+      "quoteId": "e3200000-0000-4000-8000-000000000003",
+      "eventDate": "2026-12-10",
+      "weekdayNote": "Thursday — December regular",
+      "profile": "LOW",
+      "label": "Dezembro regular (não feriado)",
+      "category": "dec_jan",
+      "expectCdlHolidaySurcharge": false,
+      "expectMinKey": "dec_jan"
+    },
+    {
+      "key": "us-new-year",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-JAN1",
+      "eventId": "e3100000-0000-4000-8000-000000000007",
+      "quoteId": "e3200000-0000-4000-8000-000000000007",
+      "eventDate": "2027-01-01",
+      "profile": "LOW",
+      "label": "US — New Year's Day",
+      "category": "us_holiday",
+      "expectCdlHolidaySurcharge": true,
+      "expectMinKey": "us_holiday"
+    },
+    {
+      "key": "us-mlk",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-MLK",
+      "eventId": "e3100000-0000-4000-8000-000000000008",
+      "quoteId": "e3200000-0000-4000-8000-000000000008",
+      "eventDate": "2026-01-19",
+      "profile": "LOW",
+      "label": "US — MLK Day",
+      "category": "us_holiday",
+      "expectCdlHolidaySurcharge": true,
+      "expectMinKey": "us_holiday"
+    },
+    {
+      "key": "us-presidents",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-PRES",
+      "eventId": "e3100000-0000-4000-8000-000000000009",
+      "quoteId": "e3200000-0000-4000-8000-000000000009",
+      "eventDate": "2026-02-16",
+      "profile": "LOW",
+      "label": "US — Presidents' Day",
+      "category": "us_holiday",
+      "expectCdlHolidaySurcharge": true,
+      "expectMinKey": "us_holiday"
+    },
+    {
+      "key": "us-memorial",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-MEM",
+      "eventId": "e3100000-0000-4000-8000-000000000010",
+      "quoteId": "e3200000-0000-4000-8000-000000000010",
+      "eventDate": "2026-05-25",
+      "profile": "LOW",
+      "label": "US — Memorial Day",
+      "category": "us_holiday",
+      "expectCdlHolidaySurcharge": true,
+      "expectMinKey": "us_holiday"
+    },
+    {
+      "key": "us-juneteenth",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-JUNE",
+      "eventId": "e3100000-0000-4000-8000-000000000011",
+      "quoteId": "e3200000-0000-4000-8000-000000000011",
+      "eventDate": "2026-06-19",
+      "profile": "LOW",
+      "label": "US — Juneteenth",
+      "category": "us_holiday",
+      "expectCdlHolidaySurcharge": true,
+      "expectMinKey": "us_holiday"
+    },
+    {
+      "key": "us-july4",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-US-JUL4",
+      "eventId": "e3100000-0000-4000-8000-000000000002",
+      "quoteId": "e3200000-0000-4000-8000-000000000002",
+      "eventDate": "2026-07-04",
+      "profile": "LOW",
+      "label": "US — Independence Day (4/jul)",
+      "category": "us_holiday",
+      "expectCdlHolidaySurcharge": true,
+      "expectMinKey": "us_holiday"
+    },
+    {
+      "key": "us-july4-observed",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-JUL4-OBS",
+      "eventId": "e3100000-0000-4000-8000-000000000016",
+      "quoteId": "e3200000-0000-4000-8000-000000000016",
+      "eventDate": "2026-07-03",
+      "profile": "LOW",
+      "label": "US — 4/jul observado (sex)",
+      "category": "us_holiday",
+      "expectCdlHolidaySurcharge": true,
+      "expectMinKey": "us_holiday",
+      "note": "2026-07-04 cai sábado → sexta 03/07 também recebe acréscimo."
+    },
+    {
+      "key": "us-labor",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-LABOR",
+      "eventId": "e3100000-0000-4000-8000-000000000012",
+      "quoteId": "e3200000-0000-4000-8000-000000000012",
+      "eventDate": "2026-09-07",
+      "profile": "LOW",
+      "label": "US — Labor Day",
+      "category": "us_holiday",
+      "expectCdlHolidaySurcharge": true,
+      "expectMinKey": "us_holiday"
+    },
+    {
+      "key": "us-columbus",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-COL",
+      "eventId": "e3100000-0000-4000-8000-000000000013",
+      "quoteId": "e3200000-0000-4000-8000-000000000013",
+      "eventDate": "2026-10-12",
+      "profile": "LOW",
+      "label": "US — Columbus / Indigenous Peoples' Day",
+      "category": "us_holiday",
+      "expectCdlHolidaySurcharge": true,
+      "expectMinKey": "us_holiday"
+    },
+    {
+      "key": "us-veterans",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-VET",
+      "eventId": "e3100000-0000-4000-8000-000000000017",
+      "quoteId": "e3200000-0000-4000-8000-000000000017",
+      "eventDate": "2026-11-11",
+      "profile": "LOW",
+      "label": "US — Veterans Day",
+      "category": "us_holiday",
+      "expectCdlHolidaySurcharge": true,
+      "expectMinKey": "us_holiday"
+    },
+    {
+      "key": "us-thanksgiving",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-TG",
+      "eventId": "e3100000-0000-4000-8000-000000000018",
+      "quoteId": "e3200000-0000-4000-8000-000000000018",
+      "eventDate": "2026-11-26",
+      "profile": "LOW",
+      "label": "US — Thanksgiving",
+      "category": "us_holiday",
+      "expectCdlHolidaySurcharge": true,
+      "expectMinKey": "us_holiday"
+    },
+    {
+      "key": "cdl-dec24",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-DEC24",
+      "eventId": "e3100000-0000-4000-8000-000000000004",
+      "quoteId": "e3200000-0000-4000-8000-000000000004",
+      "eventDate": "2026-12-24",
+      "profile": "LOW",
+      "label": "CDL — 24 de dezembro",
+      "category": "cdl_holiday",
+      "expectCdlHolidaySurcharge": true,
+      "expectMinKey": "cdl_holiday"
+    },
+    {
+      "key": "us-christmas",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-DEC25",
+      "eventId": "e3100000-0000-4000-8000-000000000005",
+      "quoteId": "e3200000-0000-4000-8000-000000000005",
+      "eventDate": "2026-12-25",
+      "profile": "LOW",
+      "label": "US — Christmas Day",
+      "category": "us_holiday",
+      "expectCdlHolidaySurcharge": true,
+      "expectMinKey": "us_holiday"
+    },
+    {
+      "key": "cdl-dec31",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-DEC31",
+      "eventId": "e3100000-0000-4000-8000-000000000006",
+      "quoteId": "e3200000-0000-4000-8000-000000000006",
+      "eventDate": "2026-12-31",
+      "profile": "LOW",
+      "label": "CDL — 31 de dezembro",
+      "category": "cdl_holiday",
+      "expectCdlHolidaySurcharge": true,
+      "expectMinKey": "cdl_holiday"
+    },
+    {
+      "key": "us-july4-mid",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-JUL4-MID",
+      "eventId": "e3100000-0000-4000-8000-000000000015",
+      "quoteId": "e3200000-0000-4000-8000-000000000015",
+      "eventDate": "2026-07-04",
+      "profile": "MID",
+      "label": "US — 4/jul (base média $1350 → $2700)",
+      "category": "us_holiday",
+      "expectCdlHolidaySurcharge": true,
+      "expectMinKey": "us_holiday"
+    },
+    {
+      "key": "cdl-dec24-mid",
+      "quoteNumber": "TEST-DEV-QUOTE-HOL-DEC24-MID",
+      "eventId": "e3100000-0000-4000-8000-000000000014",
+      "quoteId": "e3200000-0000-4000-8000-000000000014",
+      "eventDate": "2026-12-24",
+      "profile": "MID",
+      "label": "CDL — 24/dez (base média $1350 → $2700)",
+      "category": "cdl_holiday",
+      "expectCdlHolidaySurcharge": true,
+      "expectMinKey": "cdl_holiday"
+    }
+  ]
+}

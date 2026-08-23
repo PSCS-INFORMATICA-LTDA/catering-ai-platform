@@ -22,5 +22,8 @@ export function getSupabaseServerClient(): SupabaseClient {
     return adminClient
   }
 
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('[supabaseServer] service role missing; using anon client')
+  }
   return supabase
 }

@@ -1,16 +1,9 @@
 import {
   deriveGrillPhotoStatus,
   getGrillPhotoBadgeLabel,
-  getGrillPhotoStatusLabel,
 } from '@/Lib/grillPhotoStatus'
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: 'Rascunho',
-  sent: 'Enviado',
-  approved: 'Aprovado',
-  cancelled: 'Cancelado',
-  canceled: 'Cancelado',
-}
+import { quoteStatusLabel, tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import { tw } from '@/Lib/quoteTranslations'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'border-cdl-border bg-cdl-inset text-cdl-text-secondary',
@@ -24,15 +17,19 @@ function normalizeStatus(status: string | null | undefined) {
   return (status ?? 'draft').trim().toLowerCase()
 }
 
-export function getQuoteStatusLabel(status: string | null | undefined) {
-  const key = normalizeStatus(status)
-  return STATUS_LABELS[key] ?? status ?? 'Rascunho'
+export function getQuoteStatusLabel(
+  status: string | null | undefined,
+  locale: string | null | undefined = 'pt',
+) {
+  return quoteStatusLabel(status, locale)
 }
 
 export default function QuoteStatusBadge({
   status,
+  locale = 'pt',
 }: {
   status: string | null | undefined
+  locale?: string | null
 }) {
   const key = normalizeStatus(status)
   const className =
@@ -42,7 +39,7 @@ export default function QuoteStatusBadge({
     <span
       className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wider ${className}`}
     >
-      {getQuoteStatusLabel(status)}
+      {getQuoteStatusLabel(status, locale)}
     </span>
   )
 }
@@ -52,34 +49,36 @@ export function QuoteBoolBadge({
   value,
   variant = 'default',
   hasGrill,
+  locale = 'pt',
 }: {
   label: string
   value: boolean | null | undefined
   variant?: 'default' | 'photo'
   hasGrill?: boolean | null
+  locale?: string | null
 }) {
   let text = '—'
   let className = 'border-cdl-border bg-cdl-inset text-cdl-muted'
 
   if (variant === 'photo') {
     if (hasGrill === false) {
-      text = 'Não aplica'
+      text = tQuotesOrders(locale, 'grillPhotoNotApplicable')
       className = 'border-cdl-border bg-cdl-inset text-cdl-text-secondary'
     } else if (value === true) {
-      text = 'Pendente'
+      text = tQuotesOrders(locale, 'grillPhotoPending')
       className = 'border-cdl-warning-border bg-cdl-warning-soft text-cdl-warning'
     } else if (value === false && hasGrill === true) {
-      text = 'Recebida'
+      text = tQuotesOrders(locale, 'grillPhotoReceived')
       className = 'border-cdl-success-border bg-cdl-success-soft text-cdl-success'
     } else if (value === false) {
-      text = 'Não aplica'
+      text = tQuotesOrders(locale, 'grillPhotoNotApplicable')
       className = 'border-cdl-border bg-cdl-inset text-cdl-text-secondary'
     }
   } else if (value === true) {
-    text = 'Sim'
+    text = tw(locale, 'yes')
     className = 'border-cdl-success-border bg-cdl-success-soft text-cdl-success'
   } else if (value === false) {
-    text = 'Não'
+    text = tw(locale, 'no')
     className = 'border-cdl-border bg-cdl-inset text-cdl-text-secondary'
   }
 
@@ -97,11 +96,13 @@ export function QuoteGrillPhotoBadge({
   grillPhotoRequired,
   grillPhotoUrl,
   grillPhotoMediaId,
+  locale = 'pt',
 }: {
   hasGrill?: boolean | null
   grillPhotoRequired?: boolean | null
   grillPhotoUrl?: string | null
   grillPhotoMediaId?: string | null
+  locale?: string | null
 }) {
   const status = deriveGrillPhotoStatus({
     hasGrill,
@@ -109,7 +110,7 @@ export function QuoteGrillPhotoBadge({
     grillPhotoUrl,
     grillPhotoMediaId,
   })
-  const text = getGrillPhotoBadgeLabel(status)
+  const text = getGrillPhotoBadgeLabel(status, locale)
 
   let className = 'border-cdl-border bg-cdl-inset text-cdl-text-secondary'
   if (status === 'pending') {
@@ -122,7 +123,7 @@ export function QuoteGrillPhotoBadge({
     <span
       className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wider ${className}`}
     >
-      Foto: {text}
+      {tw(locale, 'photoShort')}: {text}
     </span>
   )
 }

@@ -22,6 +22,9 @@ import {
   groupCommercialRulesByCategory,
 } from '@/Lib/commercialRuleGroups'
 import type { CommercialRulesSnapshot } from '@/Lib/supabaseCommercialRules'
+import { tCommon } from '@/Lib/i18n/common'
+import { tCommercialRules } from '@/Lib/i18n/commercialRules'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 type ActiveFilter = 'active' | 'all'
 
@@ -56,6 +59,7 @@ export default function CommercialRulesDashboard({
 }: {
   initialData: RulesApiResponse
 }) {
+  const locale = useAuthLocaleFromMe()
   const [data, setData] = useState(initialData)
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('active')
@@ -125,19 +129,19 @@ export default function CommercialRulesDashboard({
       })
       const result = (await response.json()) as RulesApiResponse & { error?: string }
       if (!response.ok) {
-        throw new Error(result.error ?? 'Não foi possível carregar regras.')
+        throw new Error(result.error ?? tCommercialRules(locale, 'fetchError'))
       }
       setData(result)
     } catch (refreshError) {
       setError(
         refreshError instanceof Error
           ? refreshError.message
-          : 'Erro ao atualizar regras.',
+          : tCommercialRules(locale, 'refreshError'),
       )
     } finally {
       setLoading(false)
     }
-  }, [activeFilter])
+  }, [activeFilter, locale])
 
   function startNew() {
     setEditingId('new')
@@ -191,13 +195,15 @@ export default function CommercialRulesDashboard({
       })
       const result = (await response.json()) as { error?: string }
       if (!response.ok) {
-        throw new Error(result.error ?? 'Não foi possível salvar regra.')
+        throw new Error(result.error ?? tCommercialRules(locale, 'saveError'))
       }
       cancelEdit()
       await refresh()
     } catch (saveError) {
       setError(
-        saveError instanceof Error ? saveError.message : 'Erro ao salvar regra.',
+        saveError instanceof Error
+          ? saveError.message
+          : tCommercialRules(locale, 'saveErrorGeneric'),
       )
     } finally {
       setSaving(false)
@@ -213,14 +219,14 @@ export default function CommercialRulesDashboard({
       })
       const result = (await response.json()) as { error?: string }
       if (!response.ok) {
-        throw new Error(result.error ?? 'Não foi possível criar regras padrão.')
+        throw new Error(result.error ?? tCommercialRules(locale, 'seedError'))
       }
       await refresh()
     } catch (seedError) {
       setError(
         seedError instanceof Error
           ? seedError.message
-          : 'Erro ao criar regras padrão.',
+          : tCommercialRules(locale, 'seedErrorGeneric'),
       )
     } finally {
       setSeeding(false)
@@ -228,7 +234,7 @@ export default function CommercialRulesDashboard({
   }
 
   async function deactivate(row: CommercialRuleRow) {
-    if (!window.confirm(`Inativar regra "${row.rule_key}"?`)) return
+    if (!window.confirm(tCommercialRules(locale, 'deactivateConfirm', { key: row.rule_key }))) return
     const response = await fetch('/api/commercial-rules', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -236,7 +242,7 @@ export default function CommercialRulesDashboard({
     })
     const result = (await response.json()) as { error?: string }
     if (!response.ok) {
-      setError(result.error ?? 'Não foi possível inativar regra.')
+      setError(result.error ?? tCommercialRules(locale, 'deactivateError'))
       return
     }
     await refresh()
@@ -249,11 +255,11 @@ export default function CommercialRulesDashboard({
 
   return (
     <BackofficeTableShell
-      title="Regras comerciais"
-      subtitle="Dashboard operacional · Catering AI"
+      title={tCommercialRules(locale, 'title')}
+      subtitle={tCommercialRules(locale, 'subtitle')}
       search={search}
       onSearchChange={setSearch}
-      searchPlaceholder="rule_key, rótulo ou valor"
+      searchPlaceholder={tCommercialRules(locale, 'searchPlaceholder')}
       activeFilter={activeFilter}
       onActiveFilterChange={setActiveFilter}
       onRefresh={() => void refresh()}
@@ -268,7 +274,9 @@ export default function CommercialRulesDashboard({
               disabled={seeding}
               className="cdl-btn-primary inline-flex min-h-[44px] items-center justify-center rounded-xl px-5 py-3 text-sm font-bold disabled:opacity-50"
             >
-              {seeding ? 'Criando…' : 'Criar regras padrão'}
+              {seeding
+                ? tCommon(locale, 'creating')
+                : tCommercialRules(locale, 'seedButton')}
             </button>
           ) : null}
           <button
@@ -277,24 +285,40 @@ export default function CommercialRulesDashboard({
             disabled={!data.editable}
             className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-bold text-neutral-800 shadow-sm disabled:opacity-50"
           >
-            Nova regra
+            {tCommercialRules(locale, 'newRule')}
           </button>
         </>
       }
     >
       {!data.editable ? (
         <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600 shadow-sm">
-          Tabela <code className="text-neutral-900">commercial_rules</code> não encontrada.
-          Execute <code className="text-neutral-900">scripts/sql/commercial-rules-key-value.sql</code> no
-          Supabase. Valores atuais vêm do fallback em código.
+          {tCommercialRules(locale, 'tableMissing', {
+            table: 'commercial_rules',
+            script: 'scripts/sql/commercial-rules-key-value.sql',
+          })}
         </div>
       ) : null}
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <PremiumMetricCard label="Total de regras" value={metrics.total} accent="red" />
-        <PremiumMetricCard label="Ativas" value={metrics.active} accent="green" />
-        <PremiumMetricCard label="Inativas" value={metrics.inactive} />
-        <PremiumMetricCard label="Categorias" value={metrics.categories} accent="gold" />
+        <PremiumMetricCard
+          label={tCommercialRules(locale, 'metricTotal')}
+          value={metrics.total}
+          accent="red"
+        />
+        <PremiumMetricCard
+          label={tCommercialRules(locale, 'metricActive')}
+          value={metrics.active}
+          accent="green"
+        />
+        <PremiumMetricCard
+          label={tCommercialRules(locale, 'metricInactive')}
+          value={metrics.inactive}
+        />
+        <PremiumMetricCard
+          label={tCommon(locale, 'categories')}
+          value={metrics.categories}
+          accent="gold"
+        />
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2">
@@ -303,7 +327,7 @@ export default function CommercialRulesDashboard({
           onChange={(e) => setCategoryFilter(e.target.value)}
           className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-800"
         >
-          <option value="all">Todas as categorias</option>
+          <option value="all">{tCommercialRules(locale, 'allCategories')}</option>
           {categories.map((category) => (
             <option key={category} value={category}>
               {category}
@@ -315,10 +339,11 @@ export default function CommercialRulesDashboard({
           onChange={(e) => setTypeFilter(e.target.value)}
           className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-800"
         >
-          <option value="all">Todos os tipos</option>
+          <option value="all">{tCommercialRules(locale, 'allTypes')}</option>
           <option value="text">text</option>
           <option value="number">number</option>
           <option value="long_text">long_text</option>
+          <option value="json">json</option>
           <option value="boolean">boolean</option>
         </select>
       </div>
@@ -326,14 +351,14 @@ export default function CommercialRulesDashboard({
       {editingId === 'new' ? (
         <div className="mb-6">
           <BackofficeFormCard
-            title="Nova regra"
+            title={tCommercialRules(locale, 'newRule')}
             actions={
               <>
                 <BackofficeBtnPrimary onClick={() => void saveRow()} disabled={saving}>
-                  {saving ? 'Salvando…' : 'Salvar'}
+                  {saving ? tCommon(locale, 'saving') : tCommon(locale, 'save')}
                 </BackofficeBtnPrimary>
                 <BackofficeBtnSecondary onClick={cancelEdit}>
-                  Cancelar
+                  {tCommon(locale, 'cancel')}
                 </BackofficeBtnSecondary>
               </>
             }
@@ -355,13 +380,15 @@ export default function CommercialRulesDashboard({
       ) : null}
 
       <SectionHeader
-        title="Regras por categoria"
-        subtitle="Cards expansíveis para leitura e manutenção"
+        title={tCommercialRules(locale, 'rulesByCategory')}
+        subtitle={tCommercialRules(locale, 'rulesByCategorySubtitle')}
       />
 
       {filteredRows.length === 0 ? (
         <p className="rounded-2xl border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-500 shadow-sm">
-          {loading ? 'Carregando…' : 'Nenhuma regra encontrada.'}
+          {loading
+            ? tCommon(locale, 'loading')
+            : tCommercialRules(locale, 'empty')}
         </p>
       ) : (
         <div className="space-y-6">
@@ -407,8 +434,14 @@ export default function CommercialRulesDashboard({
       )}
 
       <p className="mt-6 text-xs text-neutral-500">
-        Fonte: {data.rules.source === 'supabase' ? 'Supabase' : 'fallback em código'} · Reserva{' '}
-        {data.rules.reservationPercentage}% · Base {data.rules.mileageBaseLocation}
+        {tCommercialRules(locale, 'sourceMeta', {
+          source:
+            data.rules.source === 'supabase'
+              ? tCommercialRules(locale, 'sourceSupabase')
+              : tCommercialRules(locale, 'sourceFallback'),
+          reservation: data.rules.reservationPercentage,
+          base: data.rules.mileageBaseLocation,
+        })}
       </p>
     </BackofficeTableShell>
   )

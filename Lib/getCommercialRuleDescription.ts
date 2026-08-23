@@ -16,6 +16,7 @@ const RULE_DESCRIPTIONS: Record<string, string> = {
   child_free_age_max: 'Idade máxima criança grátis',
   child_half_age_max: 'Idade máxima meia criança',
   sides_price_per_person: 'Guarnições por pessoa',
+  distance_display_unit: 'Unidade de distância na interface (miles, km ou both)',
   min_order_weekday: 'Pedido mínimo seg–qui',
   min_order_weekend: 'Pedido mínimo sex–dom',
   min_order_dec_jan: 'Pedido mínimo dez/jan',

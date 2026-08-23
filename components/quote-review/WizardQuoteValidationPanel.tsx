@@ -1,18 +1,24 @@
 'use client'
 
 import type { PendingStepIssue } from '@/app/quotes/new/wizardStepStatus'
+import { tw } from '@/Lib/quoteTranslations'
+import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 export default function WizardQuoteValidationPanel({
   pendingSteps,
   optionalWarnings = [],
   ready,
   onGoToStep,
+  language = 'pt',
 }: {
   pendingSteps: PendingStepIssue[]
   optionalWarnings?: PendingStepIssue[]
   ready: boolean
   onGoToStep: (stepIndex: number) => void
+  language?: QuoteLanguage | string | null
 }) {
+  const loc: QuoteLanguage =
+    language === 'en' || language === 'es' ? language : 'pt'
   const hasWarnings = optionalWarnings.length > 0
 
   return (
@@ -28,12 +34,12 @@ export default function WizardQuoteValidationPanel({
           ready ? 'text-cdl-success' : 'text-cdl-action'
         }`}
       >
-        Pendências da cotação
+        {tw(loc, 'pendingTitle')}
       </h2>
 
       {ready ? (
         <p className="mt-4 text-sm font-semibold text-cdl-success sm:text-base">
-          Cotação pronta para salvar e gerar PDF.
+          {tw(loc, 'quoteReadyToSave')}
         </p>
       ) : (
         <ul className="mt-5 space-y-4">
@@ -63,7 +69,7 @@ export default function WizardQuoteValidationPanel({
                   onClick={() => onGoToStep(pending.stepIndex)}
                   className="shrink-0 rounded-xl border border-cdl-action bg-cdl-red-soft px-4 py-2 text-xs font-bold uppercase tracking-wider text-cdl-action transition-colors hover:bg-cdl-action hover:text-white"
                 >
-                  Ir para etapa
+                  {tw(loc, 'goToStep')}
                 </button>
               </div>
             </li>
@@ -81,7 +87,7 @@ export default function WizardQuoteValidationPanel({
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-sm font-bold uppercase tracking-wider text-cdl-warning">
-                    Aviso — {warning.label}
+                    {tw(loc, 'warningPrefix', { label: warning.label })}
                   </p>
                   <ul className="mt-2 space-y-1 text-sm text-cdl-text-secondary">
                     {warning.issues.map((issue) => (
@@ -99,7 +105,7 @@ export default function WizardQuoteValidationPanel({
                   onClick={() => onGoToStep(warning.stepIndex)}
                   className="shrink-0 rounded-xl border border-cdl-warning-border bg-cdl-surface px-4 py-2 text-xs font-bold uppercase tracking-wider text-cdl-warning transition-colors hover:bg-cdl-warning hover:text-[#070707]"
                 >
-                  Ir para etapa
+                  {tw(loc, 'goToStep')}
                 </button>
               </div>
             </li>

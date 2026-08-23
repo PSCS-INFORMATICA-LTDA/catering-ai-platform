@@ -24,6 +24,31 @@ function resolveLogoFilePath(): string | null {
   return null
 }
 
+export function resolvePublicImageForPdf(relFromPublic: string): PdfLogoSource {
+  const filePath = path.join(
+    /* turbopackIgnore: true */ process.cwd(),
+    'public',
+    ...relFromPublic.split('/'),
+  )
+
+  if (!fs.existsSync(filePath) || fs.statSync(filePath).size === 0) {
+    return { filePath: null, src: null }
+  }
+
+  try {
+    const ext = path.extname(filePath).slice(1).toLowerCase()
+    const mime = MIME_BY_EXT[ext] ?? 'image/png'
+    const data = fs.readFileSync(filePath)
+    return {
+      filePath,
+      src: `data:${mime};base64,${data.toString('base64')}`,
+    }
+  } catch (error) {
+    console.error(`[PDF] Failed to read ${relFromPublic}:`, error)
+    return { filePath: null, src: null }
+  }
+}
+
 export function resolveCdlLogoForPdf(): PdfLogoSource {
   const filePath = resolveLogoFilePath()
 

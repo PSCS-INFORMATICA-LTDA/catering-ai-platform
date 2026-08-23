@@ -54,6 +54,7 @@ export default function QuoteWizardSummaryStep({
   onGoToStep,
   onBack,
   onSave,
+  uiLanguage,
 }: {
   state: WizardState
   quoteTotals: QuoteTotals
@@ -81,6 +82,8 @@ export default function QuoteWizardSummaryStep({
   onGoToStep: (stepIndex: number) => void
   onBack: () => void
   onSave: (openReview: boolean) => void | Promise<void>
+  /** Idioma da UI do operador. O preview do documento usa state.language. */
+  uiLanguage?: WizardState['language']
 }) {
   const reviewData = useMemo(
     () =>
@@ -101,6 +104,7 @@ export default function QuoteWizardSummaryStep({
         additionals,
         billableGuestCount,
         commercialRules,
+        displayLanguage: uiLanguage ?? state.language,
       }),
     [
       state,
@@ -119,6 +123,7 @@ export default function QuoteWizardSummaryStep({
       additionals,
       billableGuestCount,
       commercialRules,
+      uiLanguage,
     ],
   )
 
@@ -128,8 +133,8 @@ export default function QuoteWizardSummaryStep({
     [stepStatusCtx],
   )
   const saveDisabled = saving || hasMandatoryPending
-  const quoteStrings = getQuoteStrings(state.language)
-  const savingLabel = isEditMode ? quoteStrings.review.saving : quoteStrings.review.creating
+  const chrome = getQuoteStrings(uiLanguage ?? state.language)
+  const savingLabel = isEditMode ? chrome.review.saving : chrome.review.creating
 
   return (
     <div className="space-y-8">
@@ -140,12 +145,14 @@ export default function QuoteWizardSummaryStep({
         optionalWarnings={optionalWarnings}
         ready={quoteReady}
         onGoToStep={onGoToStep}
+        language={uiLanguage ?? state.language}
       />
 
       {saveErrorInfo ? (
         <SaveQuoteTechnicalError
           errorInfo={saveErrorInfo}
           isEditMode={isEditMode}
+          language={uiLanguage ?? state.language}
         />
       ) : null}
 
@@ -159,14 +166,14 @@ export default function QuoteWizardSummaryStep({
             href={`/quotes/${quoteId}`}
             className="rounded-xl border border-cdl-border bg-cdl-surface px-6 py-3 text-center text-sm font-bold uppercase tracking-wider text-cdl-fg transition-colors hover:border-cdl-accent-border"
           >
-            {quoteStrings.backToQuote}
+            {chrome.backToQuote}
           </Link>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link
               href={`/quotes/${quoteId}`}
               className="rounded-xl border border-cdl-border bg-cdl-surface px-6 py-3 text-center text-sm font-bold uppercase tracking-wider text-cdl-fg transition-colors hover:border-cdl-accent-border"
             >
-              {quoteStrings.review.cancel}
+              {chrome.review.cancel}
             </Link>
             <button
               type="button"
@@ -174,7 +181,7 @@ export default function QuoteWizardSummaryStep({
               disabled={saveDisabled}
               className="cdl-btn-primary disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {saving ? savingLabel : quoteStrings.review.saveChanges}
+              {saving ? savingLabel : chrome.review.saveChanges}
             </button>
           </div>
         </div>
@@ -186,7 +193,7 @@ export default function QuoteWizardSummaryStep({
             disabled={saving}
             className="rounded-xl border border-cdl-border bg-cdl-surface px-6 py-3 text-sm font-bold uppercase tracking-wider text-cdl-fg transition-colors hover:border-cdl-accent-border disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {quoteStrings.back}
+            {chrome.back}
           </button>
           <button
             type="button"
@@ -194,7 +201,7 @@ export default function QuoteWizardSummaryStep({
             disabled={saveDisabled}
             className="cdl-btn-primary disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {saving ? savingLabel : quoteStrings.review.createQuote}
+            {saving ? savingLabel : chrome.review.createQuote}
           </button>
           <button
             type="button"
@@ -202,7 +209,7 @@ export default function QuoteWizardSummaryStep({
             disabled={saveDisabled}
             className="rounded-xl border border-cdl-accent-border bg-cdl-surface px-6 py-3 text-sm font-bold uppercase tracking-wider text-cdl-fg transition-colors hover:bg-cdl-muted-bg disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {saving ? savingLabel : 'Criar cotação e abrir revisão'}
+            {saving ? savingLabel : chrome.review.createQuote}
           </button>
         </div>
       )}

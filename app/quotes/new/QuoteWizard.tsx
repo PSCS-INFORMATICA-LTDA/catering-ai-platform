@@ -9,7 +9,12 @@ import CatalogImageFrame from '../../../components/CatalogImageFrame'
 import QuoteStepHeader from '../../../components/quotes/QuoteStepHeader'
 import QuoteStepper from '../../../components/quotes/QuoteStepper'
 import QuotePackageStepExplorer from '../../../components/quotes/QuotePackageStepExplorer'
+import PublicPackageCatalog from '../../../components/quotes/PublicPackageCatalog'
+import PublicPhoneField from '../../../components/quotes/PublicPhoneField'
+import PublicRequiredMark from '../../../components/quotes/PublicRequiredMark'
+import QuoteWizardStepNav from '../../../components/quotes/QuoteWizardStepNav'
 import AdditionalCategorySection from '../../../components/quotes/additionals/AdditionalCategorySection'
+import { useAutoEventDistance } from '@/Lib/hooks/useAutoEventDistance'
 import {
   calcAdditionalLineTotalForItem,
   getAdditionalUnitPrice,
@@ -18,23 +23,47 @@ import {
   isPerPersonAdditional,
   normalizeAdditionalQuantity,
 } from '../../../Lib/quoteAdditionalDisplay'
-import { getQuoteStrings } from '../../../Lib/quoteTranslations'
+import { getAdditionalItemCategoryKey } from '@/Lib/additionalItemFieldAccess'
+import {
+  buildAdditionalCategoryDisplayLabels,
+  getUnvisitedAdditionalCategoryKeys,
+  getVisibleAdditionalCategoryKeys,
+  pruneVisitedAdditionalCategories,
+} from '@/Lib/wizardAdditionalCategories'
+import { resolveNextWizardStep, WIZARD_STEP_COUNT } from '@/Lib/wizardStepAdvance'
+import {
+  ADDITIONAL_CATEGORY_EXPOSE_FALLBACK_BOTTOM_PX,
+  isExtrasExposeScrollJump,
+} from '@/Lib/additionalCategoryExposure'
+import { getQuoteStrings, tw } from '../../../Lib/quoteTranslations'
+import { useAuthLocaleFromMe } from '../../../Lib/i18n/useAuthLocaleFromMe'
+import {
+  formatUiDate,
+  toBcp47Locale,
+} from '../../../Lib/i18n/locales'
+import { tCommon } from '../../../Lib/i18n/common'
 import PackageOptionsDebugPanel from '../../../components/quotes/PackageOptionsDebugPanel'
 import { CDL_DEFAULT_COMPANY_ID } from '../../../Lib/cdlCompany'
 import type { PackageOptionQueryDebug } from '../../../Lib/fetchPackageOptionGroups'
 import {
-  getPackageDetailTitle,
   sortPackagesByCommercialTier,
 } from '../../../Lib/packageDisplay'
-import QuoteWizardSummaryStep from '../../../components/quote-review/QuoteWizardSummaryStep'
-import { RESERVATION_PAYMENT_TEXT } from '../../../Lib/cdlCommercialRules'
-import { resolvePackageCatalogImageUrl } from '../../../Lib/packageCatalogVisual'
+import {
+  getPackageDescription as catalogPackageDescription,
+  getPackageLabel,
+} from '../../../Lib/packageFieldAccess'
+import QuoteWizardConfirmationStep from '../../../components/quote-review/QuoteWizardConfirmationStep'
+import PublicQuoteConfirmationStep from '../../../components/quote-review/PublicQuoteConfirmationStep'
+import {
+  getPublicPackageSidesGroup,
+  resolvePackageCatalogImageUrl,
+} from '../../../Lib/packageCatalogVisual'
 import { calcAdditionalLineTotal } from '../../../Lib/calculateQuoteTotals'
 import type { CommercialRulesSnapshot } from '../../../Lib/supabaseCommercialRules'
-import { calculateQuoteDraftFromSupabasePricing } from '../../../Lib/calculateQuoteDraftFromSupabasePricing'
+import type { PricingBreakdown } from '@/Lib/pricing/pricingBreakdownTypes'
+import { useQuotePricingPreview } from '@/Lib/hooks/useQuotePricingPreview'
 import type { QuoteSaveInput } from '../../../Lib/buildQuoteSavePayload'
-import { createQuote } from '../../../Lib/createQuote'
-import { updateQuote } from '../../../Lib/updateQuote'
+import { saveQuoteViaApi } from '../../../Lib/saveQuoteViaApi'
 import {
   buildSaveQuoteError,
   logSaveQuoteError,
@@ -46,8 +75,26 @@ import {
   getCustomerDisplayName,
 } from '../../../Lib/getCustomerDisplayName'
 import { getCatalogItemImageUrl } from '../../../Lib/catalogItemVisual'
-import { filterCatalogItems } from '../../../Lib/itemCatalog'
+import { isUsablePostalCode } from '../../../Lib/cep'
 import { isUsablePhone, normalizePhone } from '../../../Lib/normalizePhone'
+import {
+  deriveEventEndTime,
+  resolveServiceDurationMinutes,
+} from '@/Lib/publicQuote/eventDuration'
+import {
+  calendarDateInTimeZone,
+  isPublicEventDateBookable,
+} from '@/Lib/publicQuote/eventDate'
+import {
+  findPackageByIdOrKey,
+  resolvePackageIdForPersistence,
+} from '@/Lib/publicQuote/packageLookup'
+import {
+  isUsablePublicPhone,
+  sanitizeStoredPublicPhone,
+  toPublicPhoneE164,
+} from '@/Lib/publicQuote/phone'
+import type { PublicLocationBias } from '@/Lib/publicQuote/locationBias'
 import {
   dedupeCustomersList,
   filterCustomersBySearch,
@@ -63,6 +110,10 @@ import type {
   PackageItem,
   PackageSideItem,
 } from '../../../Lib/packageConfiguration'
+import {
+  getVisiblePublicExtraItems,
+  pruneBlockedAdditionalSelections,
+} from '../../../Lib/publicQuote/extrasEligibility.ts'
 import {
   flattenPackageOptionGroupItems,
   getBlockedCatalogItemIds,
@@ -84,8 +135,12 @@ import {
 } from '../../../Lib/quoteWizardTypes'
 import AddressAutocompleteFields from './AddressAutocompleteFields'
 import {
+  canNavigateToStep,
   getMandatoryPendingSteps,
+  getMaxReachableStep,
+  getStepIssues,
   getStepVisualStatus,
+  isGrillPhotoRequiredAndMissing,
   isQuoteReadyToSave,
   type StepStatusContext,
 } from './wizardStepStatus'
@@ -108,6 +163,7 @@ export type Customer = {
   zip_code?: string | null
   postal_code?: string | null
   venue_name?: string | null
+  is_supplier?: boolean | null
   updated_at?: string | null
   created_at?: string | null
 }
@@ -132,6 +188,33 @@ export type Package = {
   image_url?: string | null
   item_type?: string | null
   category_pt?: string | null
+  card_theme_key?: string | null
+}
+
+export type PublicQuoteWizardContext = {
+  companyId: string
+  companySlug: string
+  branchId?: string | null
+  allowedCountries: string[]
+  consentVersion: string
+  consentLabel: string
+  privacyUrl?: string | null
+  supportWhatsappUrl?: string | null
+  currencyCode?: string
+  serviceDurationMinutes?: number
+  locationBias?: PublicLocationBias | null
+}
+
+export type PublicQuoteSubmissionResult = {
+  quote: {
+    id: string
+    number?: string | null
+    eventName: string
+    eventDate: string
+    total?: number | null
+    currency?: string | null
+  }
+  alreadySubmitted?: boolean
 }
 
 export type AdditionalItem = {
@@ -156,48 +239,93 @@ export type AdditionalItem = {
   image_url?: string | null
   image_status?: string | null
   item_type?: string | null
+  operational_item?: boolean | null
+  can_be_additional?: boolean | null
+  can_be_package_item?: boolean | null
+  can_be_side_item?: boolean | null
+  can_be_option_choice?: boolean | null
   active?: boolean | null
+  customer_visible?: boolean | null
 }
 
 /** Item do catálogo mestre (`catalog_items`). */
 export type CatalogItem = AdditionalItem
 
-const WIZARD_STEP_COUNT = 8
-
-function formatCurrency(value: number) {
-  return `$${value.toFixed(2)}`
-}
-
-function roundMoney(value: number) {
-  return Math.round(value * 100) / 100
-}
-
-function roundPercentage(value: number) {
-  return Math.round(value * 1000) / 1000
-}
-
-function formatPercentage(value: number) {
-  const rounded = roundPercentage(Math.min(100, Math.max(0, value)))
-  const formatted = rounded.toFixed(3).replace(/\.?0+$/, '')
-  return `${formatted}%`
-}
-
-function formatReservationSummary(
-  percentage: number,
-  amount: number,
-  amountCustomized: boolean,
+function buildPublicIntakeDraft(
+  state: WizardState,
+  persistedPackageId?: string | null,
+  reviewedCategoryKeys: string[] = [],
 ) {
-  const pct = formatPercentage(percentage)
-  const abs = formatCurrency(amount)
-  return amountCustomized ? `${abs} (${pct})` : `${pct} (${abs})`
+  return {
+    locale: state.language,
+    contact: {
+      firstName: state.customerFirstName.trim(),
+      lastName: state.customerLastName.trim(),
+      phone:
+        toPublicPhoneE164(state.customerDraftPhone) ||
+        state.customerDraftPhone.trim(),
+      email: state.customerDraftEmail.trim() || null,
+    },
+    event: {
+      eventName:
+        state.eventName.trim() ||
+        [state.customerFirstName, state.customerLastName]
+          .map((value) => value.trim())
+          .filter(Boolean)
+          .join(' '),
+      eventDate: state.eventDate,
+      startTime: state.startTime,
+      endTime: state.endTime,
+      adultCount: state.adultCount,
+      childrenUnder3Count: state.childrenUnder3Count,
+      children4To12Count: state.children4To12Count,
+      address: {
+        route: state.address,
+        number: state.addressNumber,
+        city: state.city,
+        region: state.state,
+        postalCode: state.zipCode,
+        country: state.addressCountry,
+        formattedAddress: state.addressFormatted,
+        placeId: state.addressPlaceId,
+        latitude: state.addressLatitude,
+        longitude: state.addressLongitude,
+        source: state.addressSource,
+      },
+    },
+    selection: {
+      packageId: persistedPackageId || state.packageId,
+      packageSelections: state.packageSelections,
+      additionals: Object.entries(state.additionals)
+        .filter(([, quantity]) => quantity > 0)
+        .map(([itemId, quantity]) => ({ itemId, quantity })),
+      reviewedCategoryKeys,
+    },
+    grill: {
+      setupAnswered: state.grillSetupAnswered,
+      hasGrill: state.hasGrill,
+      photoReference: state.grillPhotoReference,
+      rentalRequired: state.grillRentalRequired,
+      rentalQty: state.grillRentalQty,
+      notes: state.grillNotes.trim() || null,
+    },
+  }
 }
 
-function formatDate(value: string) {
-  if (!value) return '—'
-  return new Date(value + 'T00:00:00').toLocaleDateString('pt-BR', {
+
+function formatDate(value: string, locale: string | null | undefined = 'pt') {
+  return formatUiDate(value, locale, {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
+  })
+}
+
+function getCalendarWeekdays(locale: string | null | undefined) {
+  const bcp = toBcp47Locale(locale)
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(Date.UTC(2024, 0, 1 + i))
+    return new Intl.DateTimeFormat(bcp, { weekday: 'short' }).format(date)
   })
 }
 
@@ -227,7 +355,6 @@ function toDateValue(date: Date) {
   return `${year}-${month}-${day}`
 }
 
-const CALENDAR_WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 
 type FieldCompletion = 'filled' | 'empty'
 
@@ -254,6 +381,23 @@ function FieldCheck({ show }: { show: boolean }) {
   )
 }
 
+function WizardFieldLabel({
+  children,
+  required,
+  requiredLabel,
+}: {
+  children: string
+  required?: boolean
+  requiredLabel?: string
+}) {
+  return (
+    <span className="cdl-eyebrow">
+      {children}
+      {required ? <PublicRequiredMark label={requiredLabel || ''} /> : null}
+    </span>
+  )
+}
+
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => hour)
 const MINUTE_OPTIONS = [0, 15, 30, 45]
 
@@ -266,21 +410,6 @@ function parseTimeParts(value: string) {
 
 function toTimeValue(hours: number, minutes: number) {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
-}
-
-function addHoursToTime(time: string, hoursToAdd: number) {
-  const parsed = parseTimeParts(time)
-  if (!parsed) return ''
-
-  const totalMinutes =
-    parsed.hours * 60 + parsed.minutes + hoursToAdd * 60
-  const normalized =
-    ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60)
-
-  return toTimeValue(
-    Math.floor(normalized / 60),
-    normalized % 60,
-  )
 }
 
 function CalendarIcon() {
@@ -305,12 +434,20 @@ function DatePickerField({
   onChange,
   className = '',
   completion,
+  language = 'pt',
+  minDate,
+  required,
+  requiredLabel,
 }: {
   label: string
   value: string
   onChange: (value: string) => void
   className?: string
   completion?: FieldCompletion
+  language?: QuoteLanguage | string | null
+  minDate?: string
+  required?: boolean
+  requiredLabel?: string
 }) {
   const [open, setOpen] = useState(false)
   const [viewDate, setViewDate] = useState(() => parseDateValue(value) ?? new Date())
@@ -361,14 +498,17 @@ function DatePickerField({
     )
   }
 
-  const monthLabel = viewDate.toLocaleDateString('pt-BR', {
+  const monthLabel = viewDate.toLocaleDateString(toBcp47Locale(language), {
     month: 'long',
     year: 'numeric',
   })
+  const weekdays = getCalendarWeekdays(language)
 
   return (
     <div ref={containerRef} className={`relative flex flex-col gap-2 ${className}`}>
-      <span className="cdl-eyebrow">{label}</span>
+      <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
+        {label}
+      </WizardFieldLabel>
       <div className="relative">
         <button
           type="button"
@@ -378,7 +518,7 @@ function DatePickerField({
           aria-haspopup="dialog"
         >
           <span className={selectedDate ? 'text-cdl-fg' : 'text-cdl-faint'}>
-            {selectedDate ? formatDate(value) : 'Selecione a data'}
+            {selectedDate ? formatDate(value, language) : tw(language, 'selectDate')}
           </span>
           <CalendarIcon />
         </button>
@@ -388,7 +528,7 @@ function DatePickerField({
       {open && (
         <div
           role="dialog"
-          aria-label={`Calendário de ${label}`}
+          aria-label={tw(language, 'calendarOf', { label })}
           className="absolute left-0 top-full z-30 mt-2 w-full min-w-[300px] rounded-2xl border border-cdl-border bg-cdl-surface p-4 shadow-cdl-popup sm:w-[320px]"
         >
           <div className="mb-4 flex items-center justify-between gap-2">
@@ -396,7 +536,7 @@ function DatePickerField({
               type="button"
               onClick={() => shiftMonth(-1)}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-cdl-border bg-cdl-inset text-cdl-fg transition-colors hover:border-cdl-accent-border"
-              aria-label="Mês anterior"
+              aria-label={tw(language, 'prevMonth')}
             >
               ‹
             </button>
@@ -407,14 +547,14 @@ function DatePickerField({
               type="button"
               onClick={() => shiftMonth(1)}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-cdl-border bg-cdl-inset text-cdl-fg transition-colors hover:border-cdl-accent-border"
-              aria-label="Próximo mês"
+              aria-label={tw(language, 'nextMonth')}
             >
               ›
             </button>
           </div>
 
           <div className="mb-2 grid grid-cols-7 gap-1">
-            {CALENDAR_WEEKDAYS.map((weekday) => (
+            {weekdays.map((weekday) => (
               <span
                 key={weekday}
                 className="py-1 text-center text-[10px] font-semibold uppercase tracking-wider text-cdl-muted"
@@ -440,13 +580,21 @@ function DatePickerField({
                 new Date().getMonth() === calendarDays.month &&
                 new Date().getDate() === day
 
+              const cellDate = toDateValue(
+                new Date(calendarDays.year, calendarDays.month, day),
+              )
+              const isDisabled = Boolean(minDate && cellDate < minDate)
+
               return (
                 <button
                   key={`${calendarDays.year}-${calendarDays.month}-${day}`}
                   type="button"
+                  disabled={isDisabled}
                   onClick={() => selectDay(day)}
                   className={`flex h-10 items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
-                    isSelected
+                    isDisabled
+                      ? 'cursor-not-allowed text-cdl-faint opacity-40'
+                      : isSelected
                       ? 'bg-cdl-accent text-cdl-on-accent'
                       : isToday
                         ? 'border border-cdl-accent-border bg-cdl-accent-soft text-cdl-accent'
@@ -486,12 +634,20 @@ function TimePickerField({
   onChange,
   className = '',
   completion,
+  language = 'pt',
+  readOnly = false,
+  required,
+  requiredLabel,
 }: {
   label: string
   value: string
   onChange: (value: string) => void
   className?: string
   completion?: FieldCompletion
+  language?: QuoteLanguage | string | null
+  readOnly?: boolean
+  required?: boolean
+  requiredLabel?: string
 }) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -533,27 +689,38 @@ function TimePickerField({
 
   return (
     <div ref={containerRef} className={`relative flex flex-col gap-2 ${className}`}>
-      <span className="cdl-eyebrow">{label}</span>
+      <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
+        {label}
+      </WizardFieldLabel>
       <div className="relative">
         <button
           type="button"
-          onClick={() => setOpen((current) => !current)}
-          className={`flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3.5 pr-10 text-left text-base outline-none transition-colors hover:border-cdl-accent-border focus:border-cdl-accent-border ${fieldCompletionClass(completion)}`}
-          aria-expanded={open}
-          aria-haspopup="dialog"
+          onClick={() => {
+            if (readOnly) return
+            setOpen((current) => !current)
+          }}
+          disabled={readOnly}
+          className={`flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3.5 pr-10 text-left text-base outline-none transition-colors ${
+            readOnly
+              ? 'cursor-not-allowed bg-cdl-inset text-cdl-muted'
+              : 'hover:border-cdl-accent-border focus:border-cdl-accent-border'
+          } ${fieldCompletionClass(completion)}`}
+          aria-expanded={readOnly ? undefined : open}
+          aria-haspopup={readOnly ? undefined : 'dialog'}
+          aria-readonly={readOnly || undefined}
         >
           <span className={selected ? 'text-cdl-fg' : 'text-cdl-faint'}>
-            {selected ? formatTime(value) : 'Selecione o horário'}
+            {selected ? formatTime(value) : tw(language, 'selectTime')}
           </span>
           <ClockIcon />
         </button>
         <FieldCheck show={completion === 'filled'} />
       </div>
 
-      {open && (
+      {open && !readOnly && (
         <div
           role="dialog"
-          aria-label={`Seletor de ${label}`}
+          aria-label={tw(language, 'timePickerOf', { label })}
           className="absolute left-0 top-full z-30 mt-2 w-full min-w-[300px] rounded-2xl border border-cdl-border bg-cdl-surface p-4 shadow-cdl-popup sm:w-[320px]"
         >
           <p className="mb-3 text-center text-sm font-bold text-cdl-accent">
@@ -561,7 +728,7 @@ function TimePickerField({
           </p>
 
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-cdl-muted">
-            Hora
+            {tw(language, 'hour')}
           </p>
           <div className="mb-4 grid max-h-40 grid-cols-6 gap-1 overflow-y-auto pr-1">
             {HOUR_OPTIONS.map((hour) => {
@@ -584,7 +751,7 @@ function TimePickerField({
           </div>
 
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-cdl-muted">
-            Minutos
+            {tw(language, 'minutes')}
           </p>
           <div className="grid grid-cols-4 gap-1">
             {MINUTE_OPTIONS.map((minute) => {
@@ -628,24 +795,12 @@ function getEventDefaultsFromCustomer(customer: Customer) {
   }
 }
 
-function getPackageName(pkg: Package) {
-  return (
-    pkg.label_pt ??
-    pkg.package_name ??
-    pkg.label_en ??
-    pkg.label_es ??
-    '—'
-  )
+function getPackageName(pkg: Package, language?: string | null) {
+  return getPackageLabel(pkg, language)
 }
 
-function getPackageDescription(pkg: Package) {
-  return (
-    pkg.description_pt ??
-    pkg.description_en ??
-    pkg.description_es ??
-    pkg.description ??
-    ''
-  )
+function getPackageDescription(pkg: Package, language?: string | null) {
+  return catalogPackageDescription(pkg, language)
 }
 
 function getPackagePrice(pkg: Package) {
@@ -671,26 +826,6 @@ function mapSelectedAdditionalRow(
   }
 }
 
-function WizardStepButton({
-  label,
-  onClick,
-  className = '',
-}: {
-  label: string
-  onClick: () => void
-  className?: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`cdl-btn-primary ${className}`}
-    >
-      {label}
-    </button>
-  )
-}
-
 // mileage + quote totals: see Lib/calculateQuoteTotals.ts
 
 function SectionCard({
@@ -712,60 +847,6 @@ function SectionCard({
   )
 }
 
-function Field({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs font-bold uppercase tracking-wider text-cdl-muted">
-        {label}
-      </span>
-      <span className="text-sm text-cdl-fg">{value ?? '—'}</span>
-    </div>
-  )
-}
-
-function MileageSummaryPanel({
-  distance,
-  freeLimit,
-  rate,
-  mileageFee,
-}: {
-  distance: number
-  freeLimit: number
-  rate: number
-  mileageFee: number
-}) {
-  const chargedMiles = Math.max(0, distance - freeLimit)
-
-  return (
-    <div className="sm:col-span-2 rounded-xl border border-cdl-border bg-cdl-inset px-6 py-5 shadow-cdl">
-      <p className="cdl-eyebrow">Resumo de milhagem</p>
-      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div>
-          <p className="cdl-eyebrow">Milhas totais</p>
-          <p className="mt-2 text-xl font-bold text-cdl-fg">{distance} mi</p>
-        </div>
-        <div>
-          <p className="cdl-eyebrow">Milhas inclusas</p>
-          <p className="mt-2 text-xl font-bold text-cdl-fg">{freeLimit} mi</p>
-        </div>
-        <div>
-          <p className="cdl-eyebrow">Milhas cobradas</p>
-          <p className="mt-2 text-xl font-bold text-cdl-price">{chargedMiles} mi</p>
-        </div>
-        <div>
-          <p className="cdl-eyebrow">Taxa calculada</p>
-          <p className="mt-2 text-xl font-bold text-cdl-price">
-            {formatCurrency(mileageFee)}
-          </p>
-        </div>
-      </div>
-      <p className="mt-4 text-xs text-cdl-text-secondary">
-        {chargedMiles} mi × {formatCurrency(rate)}/mi
-      </p>
-    </div>
-  )
-}
-
 function InputField({
   label,
   type = 'text',
@@ -779,6 +860,9 @@ function InputField({
   completion,
   inputRef,
   onFocus,
+  autoComplete,
+  required,
+  requiredLabel,
 }: {
   label: string
   type?: string
@@ -792,10 +876,15 @@ function InputField({
   completion?: FieldCompletion
   inputRef?: React.RefObject<HTMLInputElement | null>
   onFocus?: () => void
+  autoComplete?: string
+  required?: boolean
+  requiredLabel?: string
 }) {
   return (
     <label className={`flex flex-col gap-2 ${className}`}>
-      <span className="cdl-eyebrow">{label}</span>
+      <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
+        {label}
+      </WizardFieldLabel>
       <div className="relative">
         <input
           ref={inputRef}
@@ -806,6 +895,7 @@ function InputField({
           min={min}
           max={max}
           onFocus={onFocus}
+          autoComplete={autoComplete}
           onChange={(e) => onChange(e.target.value)}
           className={`w-full rounded-xl border px-4 py-3.5 pr-10 text-base text-cdl-fg shadow-cdl outline-none transition-colors placeholder:text-cdl-faint focus:border-cdl-accent-border ${fieldCompletionClass(completion)}`}
         />
@@ -820,10 +910,13 @@ function QuantityField({
   value,
   onChange,
   className = '',
-  placeholder = '0',
+  placeholder = '',
   min = 0,
   disabled = false,
   completion,
+  blankZero = false,
+  required,
+  requiredLabel,
 }: {
   label: string
   value: number
@@ -833,17 +926,27 @@ function QuantityField({
   min?: number
   disabled?: boolean
   completion?: FieldCompletion
+  blankZero?: boolean
+  required?: boolean
+  requiredLabel?: string
 }) {
-  const [draft, setDraft] = useState(String(value))
+  const displayValue = (next: number) =>
+    blankZero && next === 0 ? '' : String(next)
+  const [draft, setDraft] = useState(() => displayValue(value))
   const [focused, setFocused] = useState(false)
-
-  useEffect(() => {
-    if (!focused) setDraft(String(value))
-  }, [value, focused])
+  const [seenValue, setSeenValue] = useState(value)
+  const [seenBlankZero, setSeenBlankZero] = useState(blankZero)
+  if (!focused && (seenValue !== value || seenBlankZero !== blankZero)) {
+    setSeenValue(value)
+    setSeenBlankZero(blankZero)
+    setDraft(displayValue(value))
+  }
 
   return (
     <label className={`flex flex-col gap-2 ${className}`}>
-      <span className="cdl-eyebrow">{label}</span>
+      <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
+        {label}
+      </WizardFieldLabel>
       <div className="relative">
         <input
           type="text"
@@ -859,7 +962,7 @@ function QuantityField({
                 ? min
                 : Math.max(min, Number.parseInt(draft, 10) || min)
             onChange(next)
-            setDraft(String(next))
+            setDraft(displayValue(next))
           }}
           onChange={(e) => {
             const raw = e.target.value.replace(/\D/g, '')
@@ -904,20 +1007,22 @@ function GrillPhotoStatusField({
   value,
   disabled,
   onChange,
+  language = 'pt',
 }: {
   value: GrillPhotoStatus
   disabled?: boolean
   onChange: (value: GrillPhotoStatus) => void
+  language?: QuoteLanguage | string | null
 }) {
   const options: { value: GrillPhotoStatus; label: string }[] = [
-    { value: 'received', label: 'Sim' },
-    { value: 'pending', label: 'Não' },
-    { value: 'not_applicable', label: 'Não se aplica' },
+    { value: 'received', label: tw(language, 'yes') },
+    { value: 'pending', label: tw(language, 'no') },
+    { value: 'not_applicable', label: tw(language, 'notApplicable') },
   ]
 
   return (
     <fieldset className="sm:col-span-2">
-      <legend className="cdl-eyebrow">Foto da churrasqueira recebida?</legend>
+      <legend className="cdl-eyebrow">{tw(language, 'grillPhotoReceived')}</legend>
       <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         {options.map((option) => {
           const selected = value === option.value
@@ -946,12 +1051,12 @@ function GrillPhotoStatusField({
       </div>
       {value === 'received' ? (
         <p className="mt-2 text-xs text-cdl-success">
-          Foto confirmada como recebida.
+          {tw(language, 'photoConfirmed')}
         </p>
       ) : null}
       {value === 'pending' ? (
         <p className="mt-2 text-xs text-cdl-warning">
-          Foto ainda pendente para validação.
+          {tw(language, 'photoPendingHint')}
         </p>
       ) : null}
     </fieldset>
@@ -960,7 +1065,7 @@ function GrillPhotoStatusField({
 
 export { getStepVisualStatus } from './wizardStepStatus'
 
-export default function QuoteWizard({
+export default function QuoteWizardCore({
   customers,
   packages,
   catalogItems,
@@ -979,6 +1084,11 @@ export default function QuoteWizard({
   existingSnapshot,
   linkedCustomer = null,
   initialStep = 0,
+  initialUiLocale,
+  entryMode = 'authenticated',
+  publicContext,
+  onPublicSuccess,
+  initialReviewedCategoryKeys,
 }: {
   customers: Customer[]
   packages: Package[]
@@ -999,23 +1109,54 @@ export default function QuoteWizard({
   existingSnapshot?: QuoteSnapshotRecord
   linkedCustomer?: Customer | null
   initialStep?: number
+  initialUiLocale?: string | null
+  entryMode?: 'authenticated' | 'public'
+  publicContext?: PublicQuoteWizardContext
+  onPublicSuccess?: (result: PublicQuoteSubmissionResult) => void
+  initialReviewedCategoryKeys?: string[]
 }) {
   const itemCatalog = catalogItems ?? additionalItems ?? []
   const isEditMode = mode === 'edit' && Boolean(quoteId)
+  const isPublicMode = entryMode === 'public'
   const { branchId: tenantBranchId, companyId: tenantCompanyId } = useTenant()
   const [step, setStep] = useState(() =>
     Math.min(Math.max(initialStep, 0), WIZARD_STEP_COUNT - 1),
   )
-  const [state, setState] = useState<WizardState>(
-    () => initialState ?? createInitialWizardState(commercialRules),
-  )
+  const [state, setState] = useState<WizardState>(() => {
+    const base = initialState ?? createInitialWizardState(commercialRules)
+    if (!isPublicMode) return base
+    const language: QuoteLanguage =
+      initialUiLocale === 'en' || initialUiLocale === 'es' ? initialUiLocale : 'pt'
+    return {
+      ...base,
+      language,
+      branchId: publicContext?.branchId ?? base.branchId,
+      publicConsentVersion:
+        publicContext?.consentVersion ?? base.publicConsentVersion,
+      customerDraftPhone: sanitizeStoredPublicPhone(base.customerDraftPhone),
+    }
+  })
   const [customerSearch, setCustomerSearch] = useState('')
+  const [customerSearchOpen, setCustomerSearchOpen] = useState(false)
+  const customerSearchRef = useRef<HTMLDivElement>(null)
   const [endTimeCustomized, setEndTimeCustomized] = useState(false)
   const [openAdditionalCategories, setOpenAdditionalCategories] = useState<
     Set<string>
   >(() => new Set())
-  const [reservationAmountCustomized, setReservationAmountCustomized] =
-    useState(false)
+  const [visitedAdditionalCategories, setVisitedAdditionalCategories] =
+    useState<Set<string>>(
+      () => new Set(initialReviewedCategoryKeys?.filter(Boolean) ?? []),
+    )
+  const visitedAdditionalCategoriesRef = useRef(visitedAdditionalCategories)
+  const additionalCategoryKeysRef = useRef<string[]>([])
+  const extrasExposeArmedRef = useRef(true)
+  const [extrasExposeEpoch, setExtrasExposeEpoch] = useState(0)
+  const stepNavRef = useRef<HTMLDivElement>(null)
+  const [ctaReservePx, setCtaReservePx] = useState(
+    ADDITIONAL_CATEGORY_EXPOSE_FALLBACK_BOTTOM_PX,
+  )
+  visitedAdditionalCategoriesRef.current = visitedAdditionalCategories
+  const grillPhotoInputRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [saveErrorInfo, setSaveErrorInfo] = useState<SaveQuoteErrorInfo | null>(
     null,
@@ -1030,6 +1171,17 @@ export default function QuoteWizard({
   const [packageStepMessage, setPackageStepMessage] = useState<string | null>(
     null,
   )
+  const [navigationIssues, setNavigationIssues] = useState<string[]>([])
+  const [publicUploadError, setPublicUploadError] = useState<string | null>(null)
+  const [publicUploading, setPublicUploading] = useState(false)
+  const [publicAutosaveStatus, setPublicAutosaveStatus] = useState<
+    'idle' | 'saving' | 'saved' | 'error'
+  >('idle')
+  const [emphasizedAdditionalCategory, setEmphasizedAdditionalCategory] =
+    useState<string | null>(null)
+  const [additionalsReviewPrompt, setAdditionalsReviewPrompt] = useState(false)
+  const publicIdempotencyKeyRef = useRef<string | null>(null)
+  const publicSubmitLockRef = useRef(false)
 
   useEffect(() => {
     if (!tenantBranchId || state.branchId) return
@@ -1045,23 +1197,64 @@ export default function QuoteWizard({
   >(() => packageOptionGroupItems)
   const [packageOptionQueryDebugState, setPackageOptionQueryDebugState] =
     useState<PackageOptionQueryDebug | null>(() => packageOptionQueryDebug)
+  const uiLocale = useAuthLocaleFromMe(initialUiLocale, {
+    disabled: isPublicMode,
+  })
   const quoteStrings = useMemo(
-    () => getQuoteStrings(state.language),
-    [state.language],
+    () => getQuoteStrings(uiLocale),
+    [uiLocale],
   )
   const wizardSteps = quoteStrings.wizardSteps
+  const w = quoteStrings.wizard
+  const requiredLabel = tCommon(uiLocale, 'required')
 
   const debugCompanyId =
-    tenantCompanyId?.trim() || CDL_DEFAULT_COMPANY_ID
+    publicContext?.companyId?.trim() ||
+    tenantCompanyId?.trim() ||
+    CDL_DEFAULT_COMPANY_ID
   const debugBranchId =
-    state.branchId?.trim() || tenantBranchId?.trim() || null
+    state.branchId?.trim() ||
+    publicContext?.branchId?.trim() ||
+    tenantBranchId?.trim() ||
+    null
   const queryPackageIds = useMemo(
     () => packages.map((pkg) => pkg.id).filter(Boolean),
     [packages],
   )
   const router = useRouter()
   const distanceInputRef = useRef<HTMLInputElement>(null)
+  const distanceManualRef = useRef(false)
   const previousStepRef = useRef(step)
+
+  useEffect(() => {
+    distanceManualRef.current = false
+    // A new destination invalidates the previous route: never show the mileage
+    // of an address the customer already replaced.
+    if (!isPublicMode) return
+    setState((prev) => (prev.distance === 0 ? prev : { ...prev, distance: 0 }))
+  }, [
+    isPublicMode,
+    state.address,
+    state.addressNumber,
+    state.city,
+    state.state,
+    state.zipCode,
+  ])
+
+  useAutoEventDistance({
+    origin: state.baseLocation,
+    address: state.address,
+    addressNumber: state.addressNumber,
+    city: state.city,
+    state: state.state,
+    zipCode: state.zipCode,
+    enabled: !distanceManualRef.current,
+    onDistance: (miles) => {
+      setState((prev) =>
+        prev.distance === miles ? prev : { ...prev, distance: miles },
+      )
+    },
+  })
 
   useEffect(() => {
     setFlatOptionGroups(packageOptionGroups)
@@ -1100,6 +1293,7 @@ export default function QuoteWizard({
   ])
 
   useEffect(() => {
+    if (isPublicMode) return
     const packageId = state.packageId?.trim()
     if (!packageId) return
 
@@ -1171,7 +1365,7 @@ export default function QuoteWizard({
     return () => {
       cancelled = true
     }
-  }, [state.packageId, debugBranchId])
+  }, [state.packageId, debugBranchId, isPublicMode])
 
   useEffect(() => {
     setLocalCustomers((current) => {
@@ -1199,7 +1393,7 @@ export default function QuoteWizard({
         error?: string
       }
       if (!response.ok || !result.data) {
-        throw new Error(result.error ?? 'Não foi possível atualizar clientes.')
+        throw new Error(result.error ?? w.refreshCustomersError)
       }
       setLocalCustomers((current) => {
         const merged = sortCustomersByRecency(result.data ?? [])
@@ -1215,7 +1409,7 @@ export default function QuoteWizard({
         customerPhoneLinkError:
           refreshError instanceof Error
             ? refreshError.message
-            : 'Erro ao atualizar lista de clientes.',
+            : w.refreshCustomersListError,
       })
     } finally {
       setCustomersRefreshing(false)
@@ -1230,9 +1424,20 @@ export default function QuoteWizard({
   const editCustomerDisplayName = linkedCustomer
     ? getCustomerDisplayName(linkedCustomer)
     : state.customerId
-      ? 'Cliente vinculado não encontrado'
+      ? w.linkedCustomerNotFound
       : CUSTOMER_DISPLAY_NAME_EMPTY
-  const selectedPackage = packages.find((p) => p.id === state.packageId) ?? null
+  const selectedPackageRef = useRef<Package | null>(null)
+  const selectedPackage =
+    findPackageByIdOrKey(packages, state.packageId) ??
+    selectedPackageRef.current
+  useEffect(() => {
+    const found = findPackageByIdOrKey(packages, state.packageId)
+    if (found) selectedPackageRef.current = found
+  }, [packages, state.packageId])
+
+  const serviceDurationMinutes = resolveServiceDurationMinutes(
+    publicContext?.serviceDurationMinutes,
+  )
 
   const packageImageUrl = useMemo(
     () =>
@@ -1244,15 +1449,37 @@ export default function QuoteWizard({
     [selectedPackage, packages, state.packageId],
   )
 
-  const filteredCustomers = useMemo(
-    () => filterCustomersBySearch(localCustomers, customerSearch),
-    [localCustomers, customerSearch],
-  )
+  const filteredCustomers = useMemo(() => {
+    const quoteClients = localCustomers.filter(
+      (row) => row.is_supplier !== true,
+    )
+    return filterCustomersBySearch(quoteClients, customerSearch)
+  }, [localCustomers, customerSearch])
+
+  const customerSuggestions = useMemo(() => {
+    if (customerSearch.trim().length < 1) return []
+    return filteredCustomers.slice(0, 12)
+  }, [filteredCustomers, customerSearch])
+
+  useEffect(() => {
+    if (!customerSearchOpen) return
+    const onPointerDown = (event: MouseEvent) => {
+      const root = customerSearchRef.current
+      if (!root) return
+      if (event.target instanceof Node && !root.contains(event.target)) {
+        setCustomerSearchOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [customerSearchOpen])
 
   const packagesWithoutSides = useMemo(
     () =>
       sortPackagesByCommercialTier(
-        packages.filter((p) => !p.package_key?.trim().endsWith('+')),
+        packages.filter(
+          (p) => getPublicPackageSidesGroup(p) === 'without_sides',
+        ),
       ),
     [packages],
   )
@@ -1260,7 +1487,7 @@ export default function QuoteWizard({
   const packagesWithSides = useMemo(
     () =>
       sortPackagesByCommercialTier(
-        packages.filter((p) => p.package_key?.trim().endsWith('+')),
+        packages.filter((p) => getPublicPackageSidesGroup(p) === 'with_sides'),
       ),
     [packages],
   )
@@ -1327,16 +1554,13 @@ export default function QuoteWizard({
   ])
 
   const visibleAdditionalItems = useMemo(
-    () =>
-      filterCatalogItems(itemCatalog, 'additional', 'customer').filter(
-        (item) => !blockedCatalogItemIds.includes(item.id),
-      ),
+    () => getVisiblePublicExtraItems(itemCatalog, blockedCatalogItemIds),
     [itemCatalog, blockedCatalogItemIds],
   )
 
   const additionalItemsByCategory = useMemo(
-    () => groupAdditionalItemsByCategory(visibleAdditionalItems, state.language),
-    [visibleAdditionalItems, state.language],
+    () => groupAdditionalItemsByCategory(visibleAdditionalItems, uiLocale),
+    [visibleAdditionalItems, uiLocale],
   )
 
   const selectedCountByCategory = useMemo(() => {
@@ -1353,24 +1577,24 @@ export default function QuoteWizard({
   useEffect(() => {
     if (blockedCatalogItemIds.length === 0) return
     setState((prev) => {
-      let changed = false
-      const nextAdditionals = { ...prev.additionals }
-      for (const itemId of blockedCatalogItemIds) {
-        if (nextAdditionals[itemId]) {
-          delete nextAdditionals[itemId]
-          changed = true
-        }
-      }
-      if (!changed) return prev
-      return { ...prev, additionals: nextAdditionals }
+      const { additionals, removedIds } = pruneBlockedAdditionalSelections(
+        prev.additionals,
+        blockedCatalogItemIds,
+      )
+      if (removedIds.length === 0) return prev
+      return { ...prev, additionals }
     })
   }, [blockedCatalogItemIds])
 
-  useEffect(() => {
-    if (step !== 4) {
-      setOpenAdditionalCategories(new Set())
-    }
-  }, [step])
+  function markAdditionalCategoryVisited(categoryKey: string) {
+    if (!categoryKey) return
+    setVisitedAdditionalCategories((prev) => {
+      if (prev.has(categoryKey)) return prev
+      const next = new Set(prev)
+      next.add(categoryKey)
+      return next
+    })
+  }
 
   function toggleAdditionalCategory(category: string) {
     setOpenAdditionalCategories((prev) => {
@@ -1384,52 +1608,115 @@ export default function QuoteWizard({
     })
   }
 
-  const quoteTotals = useMemo(() => {
-    const additionals = Object.entries(state.additionals)
-      .filter(([, quantity]) => quantity > 0)
-      .map(([itemId, quantity]) => {
-        const item = itemCatalog.find((row) => row.id === itemId)
-        if (!item) return null
-        const normalizedQty = normalizeAdditionalQuantity(item, quantity)
-        return {
-          quantity: normalizedQty,
-          unitPrice: getAdditionalUnitPrice(item),
-          perPerson: isPerPersonAdditional(item),
-        }
-      })
-      .filter((line): line is NonNullable<typeof line> => line !== null)
+  function handleAdditionalCategoryExpose(categoryKey: string) {
+    if (!extrasExposeArmedRef.current) return
+    markAdditionalCategoryVisited(categoryKey)
+  }
 
-    return calculateQuoteDraftFromSupabasePricing({
-      guestCounts: {
-        adultCount: state.adultCount,
-        childrenUnder3Count: state.childrenUnder3Count,
-        children4To12Count: state.children4To12Count,
-      },
-      packagePricePerPerson: selectedPackage ? getPackagePrice(selectedPackage) : 0,
-      additionals,
-      mileageDistance: state.distance,
-      pricing: commercialRules,
-      reservationPercentage: state.reservationPercentage,
-      reservationAmountOverride: state.reservationAmount,
-      useCustomReservation: reservationAmountCustomized,
-    })
-  }, [
-    state.adultCount,
-    state.childrenUnder3Count,
-    state.children4To12Count,
-    state.additionals,
-    state.distance,
-    state.reservationPercentage,
-    state.reservationAmount,
-    selectedPackage,
-    itemCatalog,
-    reservationAmountCustomized,
-    commercialRules,
-  ])
+  /**
+   * A programmatic scroll must not mark every category it flies over. Exposure
+   * is muted until the customer scrolls again, and the epoch then rebuilds the
+   * observers so a summary already on screen is still counted.
+   */
+  function armExtrasExposeAfterUserScroll() {
+    extrasExposeArmedRef.current = false
+    const arm = () => {
+      extrasExposeArmedRef.current = true
+      setExtrasExposeEpoch((epoch) => epoch + 1)
+    }
+    window.addEventListener('wheel', arm, { once: true, passive: true })
+    window.addEventListener('touchmove', arm, { once: true, passive: true })
+    window.addEventListener('keydown', arm, { once: true })
+  }
 
-  const billableGuestCount = quoteTotals.billableGuestCount
-  const packageUnitPrice = selectedPackage ? getPackagePrice(selectedPackage) : 0
-  const packageTotal = quoteTotals.packageTotal
+  const previewAdditionals = useMemo(
+    () =>
+      Object.entries(state.additionals)
+        .filter(([, quantity]) => quantity > 0)
+        .map(([itemId, quantity]) => ({ itemId, quantity })),
+    [state.additionals],
+  )
+
+  const publicPreviewEvent = useMemo(
+    () =>
+      isPublicMode
+        ? {
+            eventDate: state.eventDate,
+            startTime: state.startTime,
+            endTime: state.endTime,
+            address: {
+              route: state.address,
+              number: state.addressNumber,
+              city: state.city,
+              region: state.state,
+              postalCode: state.zipCode,
+              country: state.addressCountry,
+              formattedAddress: state.addressFormatted,
+              placeId: state.addressPlaceId,
+              latitude: state.addressLatitude,
+              longitude: state.addressLongitude,
+              source: state.addressSource,
+            },
+          }
+        : undefined,
+    [
+      isPublicMode,
+      state.eventDate,
+      state.startTime,
+      state.endTime,
+      state.address,
+      state.addressNumber,
+      state.city,
+      state.state,
+      state.zipCode,
+      state.addressCountry,
+      state.addressFormatted,
+      state.addressPlaceId,
+      state.addressLatitude,
+      state.addressLongitude,
+      state.addressSource,
+    ],
+  )
+
+  const pricingPreview = useQuotePricingPreview({
+    packageId: state.packageId,
+    additionals: previewAdditionals,
+    adultCount: state.adultCount,
+    childrenUnder3Count: state.childrenUnder3Count,
+    children4To12Count: state.children4To12Count,
+    eventDate: state.eventDate,
+    mileageDistance: isPublicMode ? 0 : state.distance,
+    grillRentalRequired: state.grillRentalRequired,
+    grillRentalQty: state.grillRentalQty,
+    reservationPercentage: isPublicMode ? null : state.reservationPercentage,
+    language: state.language,
+    enabled:
+      Boolean(state.packageId?.trim()) &&
+      (!isPublicMode || step === 5),
+    endpoint: isPublicMode
+      ? '/api/public/quote-intake/preview'
+      : '/api/quotes/preview',
+    event: publicPreviewEvent,
+  })
+
+  const pricingBreakdown: PricingBreakdown | null =
+    pricingPreview.data?.breakdown ?? null
+
+  useEffect(() => {
+    if (!pricingBreakdown) return
+    setState((prev) => ({
+      ...prev,
+      reservationPercentage:
+        pricingBreakdown.rules_applied.reservationPercentage,
+      reservationAmount: pricingBreakdown.deposit,
+    }))
+  }, [pricingBreakdown?.computed_at, pricingBreakdown?.deposit, pricingBreakdown?.rules_applied.reservationPercentage])
+
+  const billableGuestCount =
+    pricingBreakdown?.guest_counts.billable_guest_count ??
+    pricingPreview.data?.totals.billableGuestCount ??
+    0
+  const reservationAmount = pricingBreakdown?.deposit ?? 0
 
   const selectedAdditionalsByCategory = useMemo(() => {
     return additionalItemsByCategory
@@ -1443,7 +1730,7 @@ export default function QuoteWizard({
               item,
               state.additionals[item.id] ?? 0,
               billableGuestCount,
-              state.language,
+              uiLocale,
             ),
           ),
       }))
@@ -1452,7 +1739,7 @@ export default function QuoteWizard({
     additionalItemsByCategory,
     state.additionals,
     billableGuestCount,
-    state.language,
+    uiLocale,
   ])
 
   const selectedAdditionals = useMemo(
@@ -1465,7 +1752,7 @@ export default function QuoteWizard({
       selectedAdditionalsByCategory.flatMap(({ categoryLabel, items }) =>
         items.map(({ item, quantity, unitPrice, perPerson, totalPrice }) => ({
           id: item.id,
-          label: getLocalizedAdditionalLabel(item, state.language),
+          label: getLocalizedAdditionalLabel(item, uiLocale),
           category: categoryLabel,
           quantity,
           unitPrice,
@@ -1476,20 +1763,128 @@ export default function QuoteWizard({
           perPerson,
         })),
       ),
-    [selectedAdditionalsByCategory, state.language],
+    [selectedAdditionalsByCategory, uiLocale],
   )
 
-  const additionalTotal = quoteTotals.additionalTotal
-
-  const mileageFee = quoteTotals.mileageFee
-
-  const quoteTotal = quoteTotals.quoteTotal
-
-  const reservationAmount = quoteTotals.reservationAmount
-
-  const balanceDue = quoteTotals.balanceDue
-
   const additionalsCount = selectedAdditionals.length
+
+  const additionalCategoryKeys = useMemo(
+    () => getVisibleAdditionalCategoryKeys(additionalItemsByCategory),
+    [additionalItemsByCategory],
+  )
+  additionalCategoryKeysRef.current = additionalCategoryKeys
+
+  const additionalCategoryDisplayLabels = useMemo(
+    () =>
+      buildAdditionalCategoryDisplayLabels(
+        additionalItemsByCategory.map(({ categoryKey, categoryLabel }) => ({
+          categoryKey,
+          categoryLabel,
+        })),
+      ),
+    [additionalItemsByCategory],
+  )
+
+  const pendingAdditionalCategories = useMemo(() => {
+    const pendingKeys = getUnvisitedAdditionalCategoryKeys(
+      additionalCategoryKeys,
+      visitedAdditionalCategories,
+    )
+    return pendingKeys.map((key) => ({
+      categoryKey: key,
+      label: additionalCategoryDisplayLabels.get(key) ?? key,
+    }))
+  }, [
+    additionalCategoryKeys,
+    visitedAdditionalCategories,
+    additionalCategoryDisplayLabels,
+  ])
+
+  function scrollToAdditionalCategory(categoryKey: string) {
+    const target = document.getElementById(`additional-category-${categoryKey}`)
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  /** Takes the customer to the first pending summary — never expands it. */
+  function handleAdditionalsNextBlockedClick() {
+    const firstPending = pendingAdditionalCategories[0]
+    if (!firstPending) return
+    setAdditionalsReviewPrompt(true)
+    setEmphasizedAdditionalCategory(firstPending.categoryKey)
+    armExtrasExposeAfterUserScroll()
+    window.setTimeout(() => {
+      scrollToAdditionalCategory(firstPending.categoryKey)
+    }, 50)
+  }
+
+  useEffect(() => {
+    if (step !== 3) {
+      setOpenAdditionalCategories(new Set())
+      setAdditionalsReviewPrompt(false)
+    }
+  }, [step])
+
+  useEffect(() => {
+    // Every step starts at its own beginning: landing mid-page would count
+    // extras summaries the customer never saw.
+    if (!isPublicMode || typeof window === 'undefined') return
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [isPublicMode, step])
+
+  useEffect(() => {
+    if (!isPublicMode) return
+    const node = stepNavRef.current
+    if (!node) return
+
+    const updateReserve = () => {
+      const height = Math.ceil(node.getBoundingClientRect().height)
+      if (height > 0) setCtaReservePx(height)
+    }
+    updateReserve()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const observer = new ResizeObserver(updateReserve)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [isPublicMode, step])
+
+  useEffect(() => {
+    if (!isPublicMode || step !== 3) return
+    let lastY = window.scrollY
+    let lastT = performance.now()
+    let settleTimer = 0
+    const onScroll = () => {
+      const now = performance.now()
+      const y = window.scrollY
+      const delta = Math.abs(y - lastY)
+      const speed = delta / Math.max(now - lastT, 1)
+      lastY = y
+      lastT = now
+      if (
+        !isExtrasExposeScrollJump(delta, window.innerHeight) &&
+        speed < 2
+      ) {
+        return
+      }
+      extrasExposeArmedRef.current = false
+      window.clearTimeout(settleTimer)
+      settleTimer = window.setTimeout(() => {
+        extrasExposeArmedRef.current = true
+        setExtrasExposeEpoch((epoch) => epoch + 1)
+      }, 160)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.clearTimeout(settleTimer)
+    }
+  }, [isPublicMode, step])
+
+  useEffect(() => {
+    if (step !== 3) return
+    setVisitedAdditionalCategories((prev) =>
+      pruneVisitedAdditionalCategories(prev, additionalCategoryKeys),
+    )
+  }, [step, additionalCategoryKeys])
 
   const stepStatusCtx = useMemo<StepStatusContext>(
     () => ({
@@ -1503,6 +1898,11 @@ export default function QuoteWizard({
       packageOptionGroupItems: flatOptionGroupItems,
       commercialRules,
       isEditMode,
+      language: uiLocale,
+      additionalCategoryKeys,
+      visitedAdditionalCategories,
+      pricingPreviewReady: Boolean(pricingBreakdown) && !pricingPreview.loading,
+      isPublicMode,
     }),
     [
       state,
@@ -1515,56 +1915,146 @@ export default function QuoteWizard({
       flatOptionGroupItems,
       commercialRules,
       isEditMode,
+      uiLocale,
+      additionalCategoryKeys,
+      visitedAdditionalCategories,
+      pricingPreview.loading,
+      pricingBreakdown,
+      isPublicMode,
     ],
   )
 
   useEffect(() => {
-    if (!reservationAmountCustomized) return
-    setState((prev) => ({
-      ...prev,
-      reservationPercentage:
-        quoteTotal > 0
-          ? roundPercentage(
-              Math.min(
-                100,
-                Math.max(0, (prev.reservationAmount / quoteTotal) * 100),
-              ),
-            )
-          : prev.reservationPercentage,
-    }))
-  }, [quoteTotal, reservationAmountCustomized])
+    const maxReachable = getMaxReachableStep(stepStatusCtx)
+    if (step > maxReachable) {
+      setStep(maxReachable)
+    }
+  }, [step, stepStatusCtx])
 
-  function updateReservationPercentage(raw: string) {
-    const percentage = roundPercentage(
-      Math.min(100, Math.max(0, Number(raw) || 0)),
-    )
-    const amount = roundMoney(quoteTotal * (percentage / 100))
-    setReservationAmountCustomized(false)
-    updateState({
-      reservationPercentage: percentage,
-      reservationAmount: amount,
-    })
-  }
+  const publicDraftSerialized = useMemo(
+    () =>
+      JSON.stringify(
+        buildPublicIntakeDraft(
+          state,
+          resolvePackageIdForPersistence(packages, state.packageId),
+          [...visitedAdditionalCategories],
+        ),
+      ),
+    [state, packages, visitedAdditionalCategories],
+  )
 
-  function updateReservationAmount(raw: string) {
-    const amount = roundMoney(
-      Math.min(quoteTotal, Math.max(0, Number.parseFloat(raw) || 0)),
-    )
-    const percentage =
-      quoteTotal > 0
-        ? roundPercentage(
-            Math.min(100, Math.max(0, (amount / quoteTotal) * 100)),
-          )
-        : 0
-    setReservationAmountCustomized(true)
+  useEffect(() => {
+    if (!isPublicMode) return
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => {
+      setPublicAutosaveStatus('saving')
+      void fetch('/api/public/quote-intake/session', {
+        method: 'PATCH',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          draft: JSON.parse(publicDraftSerialized) as unknown,
+          currentStep: step,
+          website: '',
+        }),
+        signal: controller.signal,
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error('autosave_failed')
+          setPublicAutosaveStatus('saved')
+        })
+        .catch((error: unknown) => {
+          if (error instanceof DOMException && error.name === 'AbortError') return
+          setPublicAutosaveStatus('error')
+        })
+    }, 750)
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [isPublicMode, publicDraftSerialized, step])
+
+  async function handleGrillPhotoSelected(file: File | null) {
+    if (!file) return
+    if (isPublicMode) {
+      const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
+      if (!allowedTypes.has(file.type) || file.size > 5 * 1024 * 1024) {
+        setPublicUploadError(
+          uiLocale === 'en'
+            ? 'Use a JPG, PNG or WebP image up to 5 MB.'
+            : uiLocale === 'es'
+              ? 'Usa una imagen JPG, PNG o WebP de hasta 5 MB.'
+              : 'Use uma imagem JPG, PNG ou WebP de até 5 MB.',
+        )
+        return
+      }
+      setPublicUploading(true)
+      setPublicUploadError(null)
+      try {
+        const body = new FormData()
+        body.set('photo', file)
+        body.set('website', '')
+        const response = await fetch('/api/public/quote-intake/upload', {
+          method: 'POST',
+          body,
+        })
+        const result = (await response.json().catch(() => null)) as
+          | { photo?: { reference?: string; previewUrl?: string }; error?: string }
+          | null
+        if (!response.ok || !result?.photo?.reference) {
+          throw new Error(result?.error || 'upload_failed')
+        }
+        updateState({
+          grillPhotoUrl: result.photo.previewUrl || null,
+          grillPhotoReference: result.photo.reference,
+          grillPhotoStatus: 'received',
+          grillPhotoRequired: true,
+          grillPhotoAnswered: true,
+        })
+      } catch {
+        setPublicUploadError(
+          uiLocale === 'en'
+            ? 'We could not upload the photo. Please try again.'
+            : uiLocale === 'es'
+              ? 'No pudimos subir la foto. Inténtalo de nuevo.'
+              : 'Não foi possível enviar a foto. Tente novamente.',
+        )
+      } finally {
+        setPublicUploading(false)
+      }
+      return
+    }
+    const url = URL.createObjectURL(file)
     updateState({
-      reservationAmount: amount,
-      reservationPercentage: percentage,
+      grillPhotoUrl: url,
+      grillPhotoStatus: 'received',
+      grillPhotoRequired: true,
+      grillPhotoAnswered: true,
     })
   }
 
   function updateState(patch: Partial<WizardState>) {
+    setNavigationIssues([])
     setState((prev) => ({ ...prev, ...patch }))
+  }
+
+  function updateContactIdentity(
+    field: 'customerFirstName' | 'customerLastName',
+    value: string,
+  ) {
+    setNavigationIssues([])
+    setState((prev) => {
+      const next = { ...prev, [field]: value }
+      const fullName = [next.customerFirstName, next.customerLastName]
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .join(' ')
+      return {
+        ...next,
+        customerDraftName: fullName,
+        eventName: isEditMode ? prev.eventName : fullName,
+      }
+    })
   }
 
   function selectCustomer(customerId: string) {
@@ -1612,7 +2102,7 @@ export default function QuoteWizard({
         updateState({
           customerPhoneLinking: false,
           customerPhoneLinkError:
-            result.error ?? 'Não foi possível buscar cliente pelo telefone.',
+            result.error ?? w.lookupByPhoneError,
         })
         return null
       }
@@ -1620,7 +2110,7 @@ export default function QuoteWizard({
       if (result.customer) {
         const customer = result.customer
         setLocalCustomers((current) => mergeCustomerIntoList(current, customer))
-        setCustomerLinkSuccess('Cliente existente vinculado.')
+        setCustomerLinkSuccess(w.existingCustomerLinked)
 
         const eventDefaults = getEventDefaultsFromCustomer(customer)
         setState((prev) => ({
@@ -1643,20 +2133,22 @@ export default function QuoteWizard({
         customerPhoneLinkError: null,
       }))
       setCustomerLinkSuccess(
-        'Novo cliente — será cadastrado ao finalizar a cotação.',
+        w.newCustomerDraft,
       )
       return null
     } catch {
       updateState({
         customerPhoneLinking: false,
-        customerPhoneLinkError: 'Erro de rede ao buscar cliente.',
+        customerPhoneLinkError: w.networkLookupError,
       })
       return null
     }
   }
 
   useEffect(() => {
-    if (isEditMode) return
+    // Customer matching is deliberately server-side on submit. The browser
+    // never receives search results or confirmation that a phone already exists.
+    if (isEditMode || entryMode === 'authenticated' || isPublicMode) return
     if (!isUsablePhone(state.customerDraftPhone)) return
     if (
       state.customerId &&
@@ -1674,6 +2166,8 @@ export default function QuoteWizard({
     return () => window.clearTimeout(timer)
   }, [
     isEditMode,
+    entryMode,
+    isPublicMode,
     state.customerDraftPhone,
     state.customerDraftName,
     state.customerDraftEmail,
@@ -1709,6 +2203,10 @@ export default function QuoteWizard({
       ? normalizeAdditionalQuantity(item, quantity)
       : Math.max(0, quantity)
 
+    if (item) {
+      markAdditionalCategoryVisited(getAdditionalItemCategoryKey(item))
+    }
+
     setState((prev) => {
       const next = { ...prev.additionals }
       if (normalizedQty <= 0) {
@@ -1738,6 +2236,7 @@ export default function QuoteWizard({
   function handlePackageSelect(packageId: string | null) {
     if (!packageId) {
       updateState({ packageId: null, packageSelections: {} })
+      setVisitedAdditionalCategories(new Set())
       return
     }
 
@@ -1747,12 +2246,28 @@ export default function QuoteWizard({
       flatOptionGroups,
       flatOptionGroupItems,
     )
-    updateState({ packageId, packageSelections: prunedSelections })
+    const found = findPackageByIdOrKey(packages, packageId)
+    if (found) selectedPackageRef.current = found
+    if (found?.id !== state.packageId) {
+      setVisitedAdditionalCategories(new Set())
+    }
+    updateState({ packageId: found?.id ?? packageId, packageSelections: prunedSelections })
   }
 
   function goNext() {
+    const categoryKeys = additionalCategoryKeysRef.current
+    const visitedCategories = visitedAdditionalCategoriesRef.current
+
+    if (step === 0 || step === 1 || step === 4) {
+      const issues = getStepIssues(step, stepStatusCtx)
+      if (issues.length > 0) {
+        setNavigationIssues(issues)
+        return
+      }
+    }
+
     if (step === 2 && !state.packageId) {
-      setPackageStepMessage('Selecione um pacote para continuar.')
+      setPackageStepMessage(w.selectPackageToContinue)
       return
     }
     if (step === 2 && state.packageId && selectedPackage) {
@@ -1760,6 +2275,7 @@ export default function QuoteWizard({
         const issues = validatePackageSelections(
           selectableActivePackageOptionGroups,
           state.packageSelections,
+          uiLocale,
         )
         if (issues.length > 0) {
           setPackageSelectionAttempted(true)
@@ -1768,12 +2284,25 @@ export default function QuoteWizard({
         }
       }
     }
+    const nextStep = resolveNextWizardStep({
+      step,
+      packageId: state.packageId,
+      selectedPackage,
+      packageSelections: state.packageSelections,
+      selectableActivePackageOptionGroups,
+      additionalCategoryKeys: categoryKeys,
+      visitedAdditionalCategories: visitedCategories,
+      state,
+      uiLocale,
+    })
+
+    if (nextStep === step) {
+      return
+    }
+
     setPackageSelectionAttempted(false)
     setPackageStepMessage(null)
-    if (step === 4 && !state.grillSetupAnswered) {
-      updateState({ grillSetupAnswered: true })
-    }
-    if (step < WIZARD_STEP_COUNT - 1) setStep((s) => s + 1)
+    setStep(nextStep)
   }
 
   useEffect(() => {
@@ -1864,6 +2393,27 @@ export default function QuoteWizard({
     state.packageSelections,
   ])
 
+  const additionalsStepNextDisabled = false
+
+  const grillStepPendingIssues = useMemo(() => {
+    const issues: string[] = []
+    if (isGrillPhotoRequiredAndMissing(state)) {
+      issues.push(tw(uiLocale, 'grillPendingPhoto'))
+    }
+    if (state.grillRentalRequired && state.grillRentalQty <= 0) {
+      issues.push(tw(uiLocale, 'grillPendingRentalQty'))
+    }
+    return issues
+  }, [
+    state.hasGrill,
+    state.grillPhotoStatus,
+    state.grillPhotoUrl,
+    state.grillPhotoReference,
+    state.grillRentalRequired,
+    state.grillRentalQty,
+    uiLocale,
+  ])
+
   useEffect(() => {
     const previousStep = previousStepRef.current
     previousStepRef.current = step
@@ -1880,12 +2430,19 @@ export default function QuoteWizard({
   const quoteReady = isQuoteReadyToSave(stepStatusCtx)
 
   async function handleSaveQuote(openReview = false) {
-    if (saving) return
+    if (saving || publicSubmitLockRef.current) return
+
+    if (isPublicMode && !isPublicEventDateBookable(state.eventDate)) {
+      setSaveErrorInfo(
+        buildSaveQuoteError('validation', new Error(w.publicEventDatePast)),
+      )
+      return
+    }
 
     if (mandatoryPendingSteps.length > 0) {
       const errorInfo = buildSaveQuoteError(
         'validation',
-        new Error('Existem pendências obrigatórias nas etapas anteriores.'),
+        new Error(w.pendingPreviousSteps),
       )
       setSaveErrorInfo(errorInfo)
       return
@@ -1901,7 +2458,7 @@ export default function QuoteWizard({
     if (!state.packageId) {
       const errorInfo = buildSaveQuoteError(
         'validation',
-        new Error('Pacote não selecionado.'),
+        new Error(w.packageNotSelected),
       )
       setSaveErrorInfo(errorInfo)
       return
@@ -1909,15 +2466,88 @@ export default function QuoteWizard({
 
     const packageForSave =
       selectedPackage ??
-      packages.find((pkg) => pkg.id === state.packageId) ??
+      findPackageByIdOrKey(packages, state.packageId) ??
       null
 
     if (!packageForSave) {
       const errorInfo = buildSaveQuoteError(
         'validation',
-        new Error('Pacote selecionado não encontrado no catálogo.'),
+        new Error(w.packageNotInCatalog),
       )
       setSaveErrorInfo(errorInfo)
+      return
+    }
+
+    if (isPublicMode) {
+      if (!state.publicConsentAccepted || !publicContext?.consentVersion) {
+        setSaveErrorInfo(
+          buildSaveQuoteError('validation', new Error(w.consentRequired)),
+        )
+        return
+      }
+      if (!pricingBreakdown) {
+        setSaveErrorInfo(
+          buildSaveQuoteError('validation', new Error(w.pricingCalcError)),
+        )
+        return
+      }
+
+      publicSubmitLockRef.current = true
+      setSaving(true)
+      setSaveErrorInfo(null)
+      try {
+        publicIdempotencyKeyRef.current ??= crypto.randomUUID()
+        const response = await fetch('/api/public/quote-intake/submit', {
+          method: 'POST',
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            idempotencyKey: publicIdempotencyKeyRef.current,
+            submission: buildPublicIntakeDraft({
+              ...state,
+              eventName:
+                state.eventName.trim() ||
+                [state.customerFirstName, state.customerLastName]
+                  .map((value) => value.trim())
+                  .filter(Boolean)
+                  .join(' '),
+            }),
+            consent: {
+              accepted: true,
+              version: publicContext.consentVersion,
+            },
+            website: '',
+          }),
+        })
+        const result = (await response.json().catch(() => null)) as
+          | PublicQuoteSubmissionResult
+          | { error?: string; code?: string }
+          | null
+        if (
+          !response.ok ||
+          !result ||
+          !('quote' in result) ||
+          !result.quote?.id
+        ) {
+          const code =
+            result && 'code' in result && typeof result.code === 'string'
+              ? result.code
+              : ''
+          throw new Error(
+            code === 'invalid_event_date'
+              ? w.publicEventDatePast
+              : result && 'error' in result && result.error
+                ? result.error
+                : 'public_submit_failed',
+          )
+        }
+        onPublicSuccess?.(result)
+      } catch (error) {
+        setSaveErrorInfo(buildSaveQuoteError('quote', error))
+      } finally {
+        publicSubmitLockRef.current = false
+        setSaving(false)
+      }
       return
     }
 
@@ -1931,6 +2561,7 @@ export default function QuoteWizard({
 
     const payload: QuoteSaveInput = {
       language: state.language,
+      source: 'assisted_self_service',
       customerId: customerIdToSave,
       customerDraft:
         !isEditMode && !customerIdToSave && isUsablePhone(state.customerDraftPhone)
@@ -1950,6 +2581,7 @@ export default function QuoteWizard({
       childrenUnder3Count: state.childrenUnder3Count,
       children4To12Count: state.children4To12Count,
       address: state.address,
+      addressNumber: state.addressNumber,
       city: state.city,
       state: state.state,
       zipCode: state.zipCode,
@@ -1999,14 +2631,15 @@ export default function QuoteWizard({
     }
 
     try {
-      const result = isEditMode
-        ? await updateQuote(quoteId!, payload)
-        : await createQuote(payload)
+      const result = await saveQuoteViaApi(
+        payload,
+        isEditMode ? { quoteId: quoteId! } : undefined,
+      )
 
       if (result.error || !result.data?.id) {
         const errorInfo = normalizeSaveQuoteError(
           result.error ??
-            new Error('Cotação não foi criada — resposta sem id do Supabase.'),
+            new Error(w.quoteNotCreated),
           isEditMode ? 'quote' : 'quote',
         )
         logSaveQuoteError(errorInfo, result.error)
@@ -2031,46 +2664,131 @@ export default function QuoteWizard({
   }
 
   return (
-    <main className="quotes-pscs min-h-screen bg-cdl-bg px-4 py-4 pb-28 text-cdl-fg sm:px-8 sm:py-6 sm:pb-28">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-3 flex flex-col gap-2">
-          <AdminCompactMenu language={state.language} />
-          <Link
-            href={isEditMode && quoteId ? `/quotes/${quoteId}` : '/quotes'}
-            className="inline-flex items-center text-sm text-cdl-muted transition-colors hover:text-cdl-brand"
-          >
-            {isEditMode ? quoteStrings.backToQuote : quoteStrings.backToQuotes}
-          </Link>
-        </div>
-
-        <QuoteStepHeader
-          step={step}
-          language={state.language}
-          isEditMode={isEditMode}
-        />
+    <main
+      className={`quotes-pscs min-h-screen min-w-0 max-w-full bg-cdl-bg px-4 pb-28 text-cdl-fg sm:px-8 sm:pb-28 ${
+        isPublicMode ? 'py-6 sm:py-10' : 'py-4 sm:py-6'
+      }`}
+    >
+      <div className="mx-auto min-w-0 max-w-6xl">
+        {isPublicMode ? (
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--brand-primary)]">
+                {uiLocale === 'en'
+                  ? `Step ${step + 1} of ${WIZARD_STEP_COUNT}`
+                  : uiLocale === 'es'
+                    ? `Paso ${step + 1} de ${WIZARD_STEP_COUNT}`
+                    : `Etapa ${step + 1} de ${WIZARD_STEP_COUNT}`}
+              </p>
+              <h1 className="mt-1 text-2xl font-black tracking-tight text-cdl-title sm:text-3xl">
+                {wizardSteps[step]}
+              </h1>
+            </div>
+            <p
+              className={`text-xs ${
+                publicAutosaveStatus === 'error'
+                  ? 'text-amber-700'
+                  : 'text-cdl-muted'
+              }`}
+              aria-live="polite"
+            >
+              {publicAutosaveStatus === 'saving'
+                ? uiLocale === 'en'
+                  ? 'Saving…'
+                  : uiLocale === 'es'
+                    ? 'Guardando…'
+                    : 'Salvando…'
+                : publicAutosaveStatus === 'saved'
+                  ? uiLocale === 'en'
+                    ? 'Saved'
+                    : uiLocale === 'es'
+                      ? 'Guardado'
+                      : 'Salvo'
+                  : publicAutosaveStatus === 'error'
+                    ? uiLocale === 'en'
+                      ? 'Will retry'
+                      : uiLocale === 'es'
+                        ? 'Reintentaremos'
+                        : 'Tentaremos novamente'
+                    : ''}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="mb-3 flex flex-col gap-2">
+              <AdminCompactMenu language={uiLocale} />
+              <Link
+                href={isEditMode && quoteId ? `/quotes/${quoteId}` : '/quotes'}
+                className="inline-flex items-center text-sm text-cdl-muted transition-colors hover:text-cdl-brand"
+              >
+                {isEditMode
+                  ? quoteStrings.backToQuote
+                  : quoteStrings.backToQuotes}
+              </Link>
+            </div>
+            <QuoteStepHeader
+              step={step}
+              language={uiLocale}
+              isEditMode={isEditMode}
+            />
+          </>
+        )}
 
         <QuoteStepper
           steps={wizardSteps}
+          shortSteps={quoteStrings.wizardStepsShort}
           currentStep={step}
           additionalsCount={additionalsCount}
-          language={state.language}
+          language={uiLocale}
           getStepStatus={(index) => getStepVisualStatus(index, stepStatusCtx)}
-          onStepClick={setStep}
+          onStepClick={(nextStep) => {
+            if (!canNavigateToStep(nextStep, stepStatusCtx)) return
+            setNavigationIssues([])
+            setStep(nextStep)
+          }}
         />
 
         {fetchErrors.length > 0 && (
           <div className="mb-6 rounded-3xl border border-red-500/40 bg-cdl-surface p-4 text-sm text-red-400">
-            {fetchErrors.map((msg) => (
-              <p key={msg}>{msg}</p>
-            ))}
+            {isPublicMode ? (
+              <p>
+                {uiLocale === 'en'
+                  ? 'Some options could not be loaded. Refresh and try again.'
+                  : uiLocale === 'es'
+                    ? 'No se pudieron cargar algunas opciones. Actualiza e inténtalo de nuevo.'
+                    : 'Algumas opções não puderam ser carregadas. Atualize e tente novamente.'}
+              </p>
+            ) : (
+              fetchErrors.map((msg) => <p key={msg}>{msg}</p>)
+            )}
           </div>
         )}
+
+        {navigationIssues.length > 0 ? (
+          <div
+            role="alert"
+            className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+          >
+            <p className="font-bold">
+              {uiLocale === 'en'
+                ? 'Complete the highlighted information:'
+                : uiLocale === 'es'
+                  ? 'Completa la información destacada:'
+                  : 'Complete as informações destacadas:'}
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {navigationIssues.map((issue) => (
+                <li key={issue}>{issue}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         {step === 0 && isEditMode ? (
           <SectionCard>
             <div className="sm:col-span-2">
               <label className="flex flex-col gap-2">
-                <span className="cdl-eyebrow">Idioma da cotação</span>
+                <span className="cdl-eyebrow">{quoteStrings.documentLanguage}</span>
                 <select
                   value={state.language}
                   onChange={(e) =>
@@ -2080,15 +2798,15 @@ export default function QuoteWizard({
                   }
                   className="rounded-xl border border-cdl-border bg-cdl-inset px-4 py-3 text-sm text-cdl-fg outline-none focus:border-cdl-accent-border"
                 >
-                  <option value="pt">Português (PT)</option>
-                  <option value="en">English (EN)</option>
-                  <option value="es">Español (ES)</option>
+                  <option value="pt">{w.langPt}</option>
+                  <option value="en">{w.langEn}</option>
+                  <option value="es">{w.langEs}</option>
                 </select>
               </label>
             </div>
             <div className="sm:col-span-2 rounded-xl border border-cdl-border bg-cdl-inset p-5">
               <p className="text-xs font-bold uppercase tracking-wider text-cdl-muted">
-                Cliente atual
+                {quoteStrings.currentCustomer}
               </p>
               <p className="mt-2 text-xl font-black text-cdl-title">
                 {editCustomerDisplayName}
@@ -2105,7 +2823,7 @@ export default function QuoteWizard({
                 </p>
               ) : null}
               <p className="mt-4 text-sm text-cdl-text-secondary">
-                O cliente não pode ser alterado nesta tela.
+                {quoteStrings.customerLocked}
               </p>
             </div>
           </SectionCard>
@@ -2113,9 +2831,10 @@ export default function QuoteWizard({
 
         {step === 0 && !isEditMode && (
           <SectionCard>
-            <div className="sm:col-span-2">
+            {!isPublicMode ? (
+              <div className="sm:col-span-2">
               <label className="flex flex-col gap-2">
-                <span className="cdl-eyebrow">Idioma da cotação</span>
+                <span className="cdl-eyebrow">{quoteStrings.documentLanguage}</span>
                 <select
                   value={state.language}
                   onChange={(e) =>
@@ -2125,242 +2844,242 @@ export default function QuoteWizard({
                   }
                   className="rounded-xl border border-cdl-border bg-cdl-inset px-4 py-3 text-sm text-cdl-fg outline-none focus:border-cdl-accent-border"
                 >
-                  <option value="pt">Português (PT)</option>
-                  <option value="en">English (EN)</option>
-                  <option value="es">Español (ES)</option>
+                  <option value="pt">{w.langPt}</option>
+                  <option value="en">{w.langEn}</option>
+                  <option value="es">{w.langEs}</option>
                 </select>
                 <p className="text-xs text-cdl-muted">
-                  Usado no PDF, visualização pública e comunicações futuras.
+                  {quoteStrings.documentLanguageHint}
                 </p>
               </label>
-            </div>
-            {!selectedCustomer ? (
-              <div className="sm:col-span-2 rounded-xl border border-cdl-warning-border bg-cdl-warning-soft px-4 py-3">
-                <p className="text-sm leading-relaxed text-cdl-text-secondary">
-                  Cliente ainda não vinculado. A cotação pode ser criada, mas
-                  deverá ser revisada antes do envio final.
-                </p>
               </div>
             ) : null}
 
             <div className="grid grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-2">
               <InputField
-                label="Telefone do cliente"
-                value={state.customerDraftPhone}
-                onChange={(v) =>
-                  updateState({
-                    customerDraftPhone: v,
-                    customerPhoneLinkError: null,
-                  })
+                label={w.firstName}
+                value={state.customerFirstName}
+                onChange={(value) =>
+                  updateContactIdentity('customerFirstName', value)
                 }
-                placeholder="(555) 123-4567"
-                completion={
-                  selectedCustomer || isUsablePhone(state.customerDraftPhone)
-                    ? 'filled'
-                    : 'empty'
-                }
+                autoComplete="given-name"
+                completion={getFieldCompletion(state.customerFirstName)}
+                required={isPublicMode}
+                requiredLabel={requiredLabel}
               />
               <InputField
-                label="Nome do cliente"
-                value={state.customerDraftName}
-                onChange={(v) => updateState({ customerDraftName: v })}
-                placeholder="Nome para contato"
-                completion={getFieldCompletion(state.customerDraftName)}
+                label={w.lastName}
+                value={state.customerLastName}
+                onChange={(value) =>
+                  updateContactIdentity('customerLastName', value)
+                }
+                autoComplete="family-name"
+                completion={getFieldCompletion(state.customerLastName)}
+                required={isPublicMode}
+                requiredLabel={requiredLabel}
               />
+              {isPublicMode ? (
+                <PublicPhoneField
+                  value={state.customerDraftPhone}
+                  language={uiLocale}
+                  required
+                  requiredLabel={requiredLabel}
+                  onChange={(value) =>
+                    updateState({
+                      customerDraftPhone: value,
+                      customerId: null,
+                      customerPhoneLinkError: null,
+                    })
+                  }
+                />
+              ) : (
+                <InputField
+                  label={w.customerPhone}
+                  type="tel"
+                  value={state.customerDraftPhone}
+                  onChange={(value) =>
+                    updateState({
+                      customerDraftPhone: value,
+                      customerId: null,
+                      customerPhoneLinkError: null,
+                    })
+                  }
+                  placeholder={tCommon(uiLocale, 'phonePlaceholder')}
+                  autoComplete="tel"
+                  completion={
+                    isUsablePhone(state.customerDraftPhone) ? 'filled' : 'empty'
+                  }
+                />
+              )}
               <InputField
-                label="E-mail"
+                label={`${w.customerEmail} (${
+                  uiLocale === 'en'
+                    ? 'optional'
+                    : uiLocale === 'es'
+                      ? 'opcional'
+                      : 'opcional'
+                })`}
                 value={state.customerDraftEmail}
-                onChange={(v) => updateState({ customerDraftEmail: v })}
+                type="email"
+                onChange={(value) =>
+                  updateState({ customerDraftEmail: value })
+                }
                 placeholder="email@exemplo.com"
-                className="sm:col-span-2"
+                autoComplete="email"
                 completion={getFieldCompletion(state.customerDraftEmail)}
               />
             </div>
 
-            {state.customerPhoneLinking ? (
-              <p className="sm:col-span-2 text-sm text-cdl-muted">
-                Buscando ou criando cliente pelo telefone…
-              </p>
-            ) : null}
-            {state.customerPhoneLinkError ? (
+            {(isPublicMode
+              ? state.customerDraftPhone.replace(/\D/g, '').length >= 4 &&
+                !isUsablePublicPhone(state.customerDraftPhone)
+              : normalizePhone(state.customerDraftPhone).length >= 10 &&
+                !isUsablePhone(state.customerDraftPhone)) ? (
               <p className="sm:col-span-2 text-sm text-cdl-action">
-                {state.customerPhoneLinkError}
+                {tCommon(uiLocale, 'invalidPhone')}
               </p>
             ) : null}
-            {customerLinkSuccess ? (
-              <p className="sm:col-span-2 text-sm font-semibold text-cdl-success">
-                {customerLinkSuccess}
-              </p>
-            ) : null}
-            {selectedCustomer ? (
-              <div className="sm:col-span-2 rounded-xl border border-cdl-success-border bg-cdl-success-soft px-4 py-3">
-                <p className="text-xs font-bold uppercase tracking-wider text-cdl-success">
-                  Cliente vinculado
-                </p>
-                <p className="mt-1 font-bold text-cdl-fg">
-                  {getCustomerName(selectedCustomer)}
-                </p>
-                {selectedCustomer.ab_number ? (
-                  <p className="mt-1 text-xs text-cdl-muted">
-                    {selectedCustomer.ab_number}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-
-            <div className="sm:col-span-2">
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end">
-                <div className="min-w-0 flex-1">
-                  <InputField
-                    label="Pesquisar cliente existente"
-                    value={customerSearch}
-                    onChange={(value) => {
-                      setCustomerSearch(value)
-                      setCustomerLinkSuccess(null)
-                    }}
-                    onFocus={() => void refreshCustomersFromApi(customerSearch)}
-                    placeholder="Nome, telefone, e-mail ou AB number"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void refreshCustomersFromApi(customerSearch)}
-                  disabled={customersRefreshing}
-                  className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-xl border border-cdl-border bg-cdl-surface px-4 py-3 text-xs font-bold uppercase tracking-wider text-cdl-fg disabled:opacity-50"
-                >
-                  {customersRefreshing ? 'Atualizando…' : 'Atualizar'}
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:col-span-2 sm:grid-cols-2">
-              {filteredCustomers.length === 0 ? (
-                <p className="text-sm text-cdl-muted sm:col-span-2">
-                  Nenhum cliente encontrado.
-                </p>
-              ) : (
-                filteredCustomers.map((customer) => {
-                  const selected = state.customerId === customer.id
-                  return (
-                    <button
-                      key={customer.id}
-                      type="button"
-                      onClick={() => selectCustomer(customer.id)}
-                      className={`rounded-xl border p-5 text-left shadow-cdl transition-colors ${
-                        selected
-                          ? 'border-cdl-success-border bg-cdl-success-soft'
-                          : 'border-cdl-border bg-cdl-inset hover:border-cdl-accent-border'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <h3
-                          className="cursor-pointer font-bold text-cdl-fg"
-                          title="Duplo clique para ir ao evento"
-                          onDoubleClick={() =>
-                            selectCustomerAndAdvance(customer.id)
-                          }
-                        >
-                          {getCustomerName(customer)}
-                        </h3>
-                        {selected && (
-                          <span className="text-sm font-bold text-cdl-success">
-                            ✓
-                          </span>
-                        )}
-                      </div>
-                      {customer.email && (
-                        <p className="mt-1 text-sm text-cdl-muted">{customer.email}</p>
-                      )}
-                      {customer.phone && (
-                        <p className="text-sm text-cdl-muted">{customer.phone}</p>
-                      )}
-                      {customer.ab_number && (
-                        <p className="text-xs font-semibold uppercase tracking-wider text-cdl-muted">
-                          {customer.ab_number}
-                        </p>
-                      )}
-                    </button>
-                  )
-                })
-              )}
-            </div>
+            <p className="sm:col-span-2 rounded-xl border border-cdl-border-subtle bg-cdl-inset px-4 py-3 text-sm leading-relaxed text-cdl-muted">
+              {w.contactPrivacyHint}
+            </p>
           </SectionCard>
         )}
 
         {step === 1 && (
           <SectionCard>
-            <div className="grid grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-2">
-              <InputField
-                label="Event Name"
-                value={state.eventName}
-                onChange={(v) => updateState({ eventName: v })}
-                placeholder="Nome do evento"
-                completion={getFieldCompletion(state.eventName)}
-              />
-              <DatePickerField
-                label="Event Date"
-                value={state.eventDate}
-                onChange={(v) => updateState({ eventDate: v })}
-                completion={getFieldCompletion(state.eventDate)}
-              />
-              <TimePickerField
-                label="Horário início"
-                value={state.startTime}
-                onChange={(v) =>
-                  setState((prev) => ({
-                    ...prev,
-                    startTime: v,
-                    endTime: endTimeCustomized
-                      ? prev.endTime
-                      : addHoursToTime(v, 4),
-                  }))
-                }
-                completion={getFieldCompletion(state.startTime)}
-              />
-              <div>
-                <TimePickerField
-                  label="Horário fim"
-                  value={state.endTime}
-                  onChange={(v) => {
-                    setEndTimeCustomized(true)
-                    updateState({ endTime: v })
-                  }}
-                  completion={getFieldCompletion(state.endTime)}
+            <div className="grid grid-cols-1 gap-4 sm:col-span-2">
+              {isEditMode ? (
+                <InputField
+                  label={w.eventName}
+                  value={state.eventName}
+                  onChange={(value) => updateState({ eventName: value })}
+                  placeholder={w.eventNamePlaceholder}
+                  completion={getFieldCompletion(state.eventName)}
                 />
-                <p className="mt-2 text-xs text-cdl-subtle">
-                  Preenchido automaticamente com +4h. Você pode alterar se
-                  quiser.
+              ) : (
+                <p className="rounded-xl border border-cdl-border-subtle bg-cdl-inset px-4 py-3 text-sm text-cdl-muted">
+                  {uiLocale === 'en'
+                    ? `Request for ${state.customerDraftName || 'your event'}`
+                    : uiLocale === 'es'
+                      ? `Solicitud para ${state.customerDraftName || 'tu evento'}`
+                      : `Solicitação para ${state.customerDraftName || 'seu evento'}`}
                 </p>
+              )}
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+                <DatePickerField
+                  label={w.eventDate}
+                  value={state.eventDate}
+                  onChange={(v) => updateState({ eventDate: v })}
+                  completion={getFieldCompletion(state.eventDate)}
+                  language={uiLocale}
+                  minDate={
+                    isPublicMode ? calendarDateInTimeZone() : undefined
+                  }
+                  required={isPublicMode}
+                  requiredLabel={requiredLabel}
+                />
+                <TimePickerField
+                  label={w.startTime}
+                  language={uiLocale}
+                  value={state.startTime}
+                  onChange={(v) =>
+                    setState((prev) => ({
+                      ...prev,
+                      startTime: v,
+                      endTime:
+                        isPublicMode || !endTimeCustomized
+                          ? deriveEventEndTime(v, serviceDurationMinutes)
+                          : prev.endTime,
+                    }))
+                  }
+                  completion={getFieldCompletion(state.startTime)}
+                  required={isPublicMode}
+                  requiredLabel={requiredLabel}
+                />
+                <div>
+                  <TimePickerField
+                    label={w.endTime}
+                    language={uiLocale}
+                    value={state.endTime}
+                    readOnly={isPublicMode}
+                    onChange={(v) => {
+                      if (isPublicMode) return
+                      setEndTimeCustomized(true)
+                      updateState({ endTime: v })
+                    }}
+                    completion={getFieldCompletion(state.endTime)}
+                  />
+                  <p className="mt-2 text-xs text-cdl-subtle">
+                    {isPublicMode ? w.endTimeHintPublic : w.endTimeHint}
+                  </p>
+                </div>
               </div>
-              <QuantityField
-                label="Adultos"
-                value={state.adultCount}
-                onChange={(v) => updateState({ adultCount: v })}
-                completion={getFieldCompletion(state.adultCount)}
-              />
-              <QuantityField
-                label="Crianças até 3 anos"
-                value={state.childrenUnder3Count}
-                onChange={(v) => updateState({ childrenUnder3Count: v })}
-              />
-              <QuantityField
-                label="Crianças 4 a 12 anos"
-                value={state.children4To12Count}
-                onChange={(v) => updateState({ children4To12Count: v })}
-              />
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <QuantityField
+                  label={w.adults}
+                  value={state.adultCount}
+                  onChange={(v) => updateState({ adultCount: v })}
+                  completion={getFieldCompletion(state.adultCount)}
+                  blankZero={isPublicMode}
+                  placeholder={isPublicMode ? w.publicAdultsPlaceholder : ''}
+                  required={isPublicMode}
+                  requiredLabel={requiredLabel}
+                />
+                <QuantityField
+                  label={w.childrenUnder3}
+                  value={state.childrenUnder3Count}
+                  onChange={(v) => updateState({ childrenUnder3Count: v })}
+                  blankZero={isPublicMode}
+                  placeholder={isPublicMode ? w.publicChildrenPlaceholder : ''}
+                />
+                <QuantityField
+                  label={w.children4to12}
+                  value={state.children4To12Count}
+                  onChange={(v) => updateState({ children4To12Count: v })}
+                  blankZero={isPublicMode}
+                  placeholder={isPublicMode ? w.publicChildrenPlaceholder : ''}
+                />
+              </div>
               <AddressAutocompleteFields
-                className="sm:col-span-2"
                 values={{
                   address: state.address,
+                  addressNumber: state.addressNumber,
                   city: state.city,
                   state: state.state,
                   zipCode: state.zipCode,
+                  addressFormatted: state.addressFormatted,
+                  addressPlaceId: state.addressPlaceId,
+                  addressCountry: state.addressCountry,
+                  addressLatitude: state.addressLatitude,
+                  addressLongitude: state.addressLongitude,
+                  addressSource: state.addressSource,
                 }}
                 fieldCompletions={{
                   city: getFieldCompletion(state.city),
                   state: getFieldCompletion(state.state),
-                  zipCode: getFieldCompletion(state.zipCode),
+                  zipCode: isUsablePostalCode(state.zipCode)
+                    ? 'filled'
+                    : 'empty',
                 }}
                 onChange={(patch) => updateState(patch)}
+                language={uiLocale}
+                allowedCountries={publicContext?.allowedCountries}
+                locationBias={
+                  isPublicMode ? publicContext?.locationBias ?? null : null
+                }
+                markRequired={isPublicMode}
+                requiredLabel={requiredLabel}
+                placeholders={
+                  isPublicMode
+                    ? {
+                        search: w.publicAddressPlaceholder,
+                        number: w.publicAddressNumberPlaceholder,
+                        city: w.publicCityPlaceholder,
+                        state: w.publicStatePlaceholder,
+                        postal: w.publicPostalPlaceholder,
+                      }
+                    : undefined
+                }
               />
             </div>
           </SectionCard>
@@ -2368,34 +3087,57 @@ export default function QuoteWizard({
 
         {step === 2 && (
           <div className="space-y-4">
-            <QuotePackageStepExplorer
-              packagesWithoutSides={packagesWithoutSides}
-              packagesWithSides={packagesWithSides}
-              allPackages={packages}
-              selectedPackageId={state.packageId}
-              language="pt"
-              sidesPricePerPerson={commercialRules.sidesPricePerPerson}
-              optionGroupsForPackage={optionGroupsForPackage}
-              packageItems={packageItems}
-              packageSideItems={packageSideItems}
-              catalogItems={itemCatalog}
-              selections={state.packageSelections}
-              onSelectionChange={handlePackageSelectionChange}
-              pendingSelectionGroupIds={pendingSelectionGroupIds}
-              onSelect={handlePackageSelect}
-              onNext={goNext}
-              nextDisabled={packageStepNextDisabled}
-              onNextBlockedClick={() => {
-                if (!state.packageId) {
-                  setPackageStepMessage('Selecione um pacote para continuar.')
-                  return
-                }
-                setPackageSelectionAttempted(true)
-              }}
-              stepMessage={packageStepMessage}
-            />
+            {packages.length === 0 ? (
+              <div className="rounded-2xl border border-red-500/40 bg-cdl-surface p-6 text-sm text-red-300">
+                {fetchErrors.some((e) => /pacote|package/i.test(e))
+                  ? tw(uiLocale, 'packagesLoadError')
+                  : w.noPackages}
+              </div>
+            ) : null}
+            {isPublicMode ? (
+              <PublicPackageCatalog
+                packagesWithoutSides={packagesWithoutSides}
+                packagesWithSides={packagesWithSides}
+                allPackages={packages}
+                selectedPackageId={state.packageId}
+                language={state.language}
+                sidesPricePerPerson={commercialRules.sidesPricePerPerson}
+                optionGroupsForPackage={optionGroupsForPackage}
+                selections={state.packageSelections}
+                onSelectionChange={handlePackageSelectionChange}
+                pendingSelectionGroupIds={pendingSelectionGroupIds}
+                onSelect={handlePackageSelect}
+              />
+            ) : (
+              <QuotePackageStepExplorer
+                packagesWithoutSides={packagesWithoutSides}
+                packagesWithSides={packagesWithSides}
+                allPackages={packages}
+                selectedPackageId={state.packageId}
+                language={state.language}
+                sidesPricePerPerson={commercialRules.sidesPricePerPerson}
+                optionGroupsForPackage={optionGroupsForPackage}
+                packageItems={packageItems}
+                packageSideItems={packageSideItems}
+                catalogItems={itemCatalog}
+                selections={state.packageSelections}
+                onSelectionChange={handlePackageSelectionChange}
+                pendingSelectionGroupIds={pendingSelectionGroupIds}
+                onSelect={handlePackageSelect}
+                onNext={goNext}
+                nextDisabled={packageStepNextDisabled}
+                onNextBlockedClick={() => {
+                  if (!state.packageId) {
+                    setPackageStepMessage(w.selectPackageToContinue)
+                    return
+                  }
+                  setPackageSelectionAttempted(true)
+                }}
+                stepMessage={packageStepMessage}
+              />
+            )}
 
-            {process.env.NODE_ENV !== 'production' ? (
+            {!isPublicMode && process.env.NODE_ENV !== 'production' ? (
               <PackageOptionsDebugPanel
                 companyId={debugCompanyId}
                 selectedPackage={selectedPackage}
@@ -2411,7 +3153,7 @@ export default function QuoteWizard({
         )}
 
         {step === 3 && (
-          <div className="space-y-6 pb-28">
+          <div className="min-w-0 space-y-6">
             <p className="text-sm text-cdl-muted">
               {quoteStrings.additionalsStepHint}
             </p>
@@ -2420,342 +3162,387 @@ export default function QuoteWizard({
                 {quoteStrings.noAdditionalsAvailable}
               </p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {additionalItemsByCategory.map(
                   ({ categoryKey, categoryLabel, items }) => (
                   <AdditionalCategorySection
                     key={categoryKey}
                     categoryKey={categoryKey}
-                    categoryLabel={categoryLabel}
+                    categoryLabel={
+                      additionalCategoryDisplayLabels.get(categoryKey) ??
+                      categoryLabel
+                    }
                     items={items}
                     expanded={openAdditionalCategories.has(categoryKey)}
                     selectedCount={selectedCountByCategory[categoryKey] ?? 0}
+                    visited={visitedAdditionalCategories.has(categoryKey)}
+                    emphasize={emphasizedAdditionalCategory === categoryKey}
                     quantities={state.additionals}
                     billableGuestCount={billableGuestCount}
-                    language={state.language}
+                    language={uiLocale}
                     onToggle={() => toggleAdditionalCategory(categoryKey)}
+                    exposeEpoch={extrasExposeEpoch}
+                    ctaReservePx={ctaReservePx}
+                    onExpose={() => handleAdditionalCategoryExpose(categoryKey)}
                     onChangeQty={setAdditionalQty}
                   />
                 ),
                 )}
               </div>
             )}
-
-            <div className="flex justify-end rounded-2xl border border-cdl-border bg-cdl-surface p-7 shadow-cdl sm:p-9">
-              <WizardStepButton
-                label={quoteStrings.continueToBbq}
-                onClick={() => setStep(4)}
-              />
-            </div>
           </div>
         )}
 
         {step === 4 && (
-          <SectionCard>
+          <div className="space-y-6">
+            {grillStepPendingIssues.length > 0 ? (
+              <section className="rounded-2xl border border-cdl-action/40 bg-cdl-red-soft p-5 shadow-cdl sm:p-6">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-cdl-action">
+                  {tw(uiLocale, 'stepPendingTitle')}
+                </h2>
+                <ul className="mt-3 space-y-1 text-sm text-cdl-text-secondary">
+                  {grillStepPendingIssues.map((issue) => (
+                    <li key={issue} className="flex gap-2">
+                      <span className="text-cdl-action" aria-hidden>
+                        •
+                      </span>
+                      <span>{issue}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+            <SectionCard>
             <div className="grid grid-cols-1 gap-5 sm:col-span-2 sm:grid-cols-2">
-              <CheckboxField
-                label="Cliente tem churrasqueira?"
-                checked={state.hasGrill}
-                onChange={(v) =>
-                  updateState(
-                    v
-                      ? {
-                          hasGrill: true,
-                          grillSetupAnswered: true,
-                          grillPhotoStatus: 'pending',
-                          grillPhotoRequired: true,
-                          grillPhotoAnswered: false,
+              <fieldset className="sm:col-span-2">
+                <legend className="cdl-eyebrow">{w.hasGrill}</legend>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  {[
+                    {
+                      value: true,
+                      label:
+                        uiLocale === 'en'
+                          ? 'Yes, there is a grill'
+                          : uiLocale === 'es'
+                            ? 'Sí, hay parrilla'
+                            : 'Sim, há churrasqueira',
+                    },
+                    {
+                      value: false,
+                      label:
+                        uiLocale === 'en'
+                          ? 'No grill on site'
+                          : uiLocale === 'es'
+                            ? 'No hay parrilla'
+                            : 'Não há churrasqueira',
+                    },
+                  ].map((option) => {
+                    const selected =
+                      state.grillSetupAnswered &&
+                      state.hasGrill === option.value
+                    return (
+                      <button
+                        key={String(option.value)}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() =>
+                          updateState(
+                            option.value
+                              ? {
+                                  hasGrill: true,
+                                  grillSetupAnswered: true,
+                                  grillPhotoStatus: 'pending',
+                                  grillPhotoRequired: true,
+                                  grillPhotoAnswered: false,
+                                  grillRentalRequired: false,
+                                  grillRentalQty: 0,
+                                }
+                              : {
+                                  hasGrill: false,
+                                  grillSetupAnswered: true,
+                                  grillPhotoStatus: 'not_applicable',
+                                  grillPhotoRequired: false,
+                                  grillPhotoAnswered: true,
+                                  grillPhotoUrl: null,
+                                  grillPhotoReference: null,
+                                },
+                          )
                         }
-                      : {
-                          hasGrill: false,
-                          grillSetupAnswered: true,
-                          grillPhotoStatus: 'not_applicable',
-                          grillPhotoRequired: false,
-                          grillPhotoAnswered: true,
-                        },
-                  )
-                }
-              />
-              <GrillPhotoStatusField
-                value={state.grillPhotoStatus}
-                disabled={!state.hasGrill}
-                onChange={setGrillPhotoStatus}
-              />
-              <div className="sm:col-span-2">
+                        className={`min-h-16 rounded-2xl border px-4 py-3 text-sm font-bold transition ${
+                          selected
+                            ? 'border-[var(--brand-primary-2)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,white)] text-[var(--brand-primary)] ring-2 ring-[color-mix(in_srgb,var(--brand-primary-2)_24%,transparent)]'
+                            : 'border-cdl-border bg-cdl-surface text-cdl-title hover:border-cdl-accent-border'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </fieldset>
+
+              {isEditMode ? (
+                <div className="sm:col-span-2">
+                  <GrillPhotoStatusField
+                    value={state.grillPhotoStatus}
+                    disabled={!state.hasGrill}
+                    onChange={setGrillPhotoStatus}
+                    language={uiLocale}
+                  />
+                </div>
+              ) : null}
+
+              {state.grillSetupAnswered && state.hasGrill ? (
+                <div className="sm:col-span-2 rounded-2xl border border-cdl-border bg-cdl-inset p-5">
+                <input
+                  ref={grillPhotoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    void handleGrillPhotoSelected(e.target.files?.[0] ?? null)
+                  }}
+                />
                 <button
                   type="button"
-                  disabled
-                  title="Em breve"
-                  className="inline-flex cursor-not-allowed items-center justify-center rounded-xl border border-dashed border-cdl-border bg-cdl-inset px-4 py-3 text-xs font-bold uppercase tracking-wider text-cdl-muted opacity-70"
+                  disabled={publicUploading}
+                  onClick={() => grillPhotoInputRef.current?.click()}
+                  className="inline-flex items-center justify-center rounded-xl border border-cdl-border bg-cdl-inset px-4 py-3 text-xs font-bold uppercase tracking-wider text-cdl-fg disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Anexar foto da churrasqueira
+                  {publicUploading
+                    ? uiLocale === 'en'
+                      ? 'Uploading…'
+                      : uiLocale === 'es'
+                        ? 'Subiendo…'
+                        : 'Enviando…'
+                    : w.attachGrillPhoto}
                 </button>
-                {/* Future: upload grill photo to Supabase Storage and save media id/url on events.grill_photo_media_id / grill_photo_url. */}
+                {state.grillPhotoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={state.grillPhotoUrl}
+                    alt=""
+                    className="mt-3 max-h-48 rounded-xl border border-cdl-border object-cover"
+                  />
+                ) : null}
                 <p className="mt-3 rounded-xl border border-cdl-border-subtle bg-cdl-inset px-4 py-3 text-sm leading-relaxed text-cdl-text-secondary">
-                  Se o cliente possui churrasqueira própria, confirme se a foto
-                  foi recebida para validar tamanho, condição e estrutura antes
-                  do evento.
+                  {w.grillPhotoHint}
                 </p>
+                {publicUploadError ? (
+                  <p className="mt-3 text-sm text-cdl-action" role="alert">
+                    {publicUploadError}
+                  </p>
+                ) : null}
               </div>
-              <CheckboxField
-                label="Necessário alugar churrasqueira?"
-                checked={state.grillRentalRequired}
-                onChange={(v) =>
-                  updateState({
-                    grillRentalRequired: v,
-                    grillRentalQty: v ? Math.max(1, state.grillRentalQty) : 0,
-                  })
-                }
-              />
-              <QuantityField
-                label="Quantidade de churrasqueiras para aluguel"
-                value={state.grillRentalQty}
-                min={state.grillRentalRequired ? 1 : 0}
-                disabled={!state.grillRentalRequired}
-                placeholder={state.grillRentalRequired ? '1' : '0'}
-                onChange={(v) =>
-                  updateState({
-                    grillRentalQty: state.grillRentalRequired
-                      ? Math.max(1, v)
-                      : 0,
-                  })
-                }
-              />
+              ) : null}
+
+              {state.grillSetupAnswered && !state.hasGrill ? (
+                <>
+                  <div className="sm:col-span-1">
+                    <CheckboxField
+                      label={w.grillRentalRequired}
+                      checked={state.grillRentalRequired}
+                      onChange={(value) =>
+                        updateState({
+                          grillRentalRequired: value,
+                          grillRentalQty: value
+                            ? Math.max(1, state.grillRentalQty)
+                            : 0,
+                        })
+                      }
+                    />
+                  </div>
+                  <QuantityField
+                    label={w.grillRentalQty}
+                    value={state.grillRentalQty}
+                    min={state.grillRentalRequired ? 1 : 0}
+                    disabled={!state.grillRentalRequired}
+                    placeholder={state.grillRentalRequired ? '1' : '0'}
+                    onChange={(value) =>
+                      updateState({
+                        grillRentalQty: state.grillRentalRequired
+                          ? Math.max(1, value)
+                          : 0,
+                      })
+                    }
+                  />
+                </>
+              ) : null}
               <div className="sm:col-span-2">
                 <label className="flex flex-col gap-2">
                   <span className="cdl-eyebrow">
-                    Observações sobre a churrasqueira
+                    {w.grillNotes}
                   </span>
                   <textarea
                     value={state.grillNotes}
                     onChange={(e) => updateState({ grillNotes: e.target.value })}
                     rows={4}
-                    placeholder="Ex.: cliente possui churrasqueira, mas foto ainda pendente"
+                    placeholder={w.grillNotesPlaceholder}
                     className="rounded-xl border border-cdl-border bg-cdl-inset px-4 py-3 text-sm text-cdl-fg outline-none transition-colors placeholder:text-cdl-faint focus:border-cdl-accent-border"
                   />
                 </label>
               </div>
             </div>
           </SectionCard>
+          </div>
         )}
 
         {step === 5 && (
-          <SectionCard>
-            <div className="sm:col-span-2 rounded-xl border border-cdl-warning-border bg-cdl-warning-soft px-4 py-3">
-              <p className="text-sm leading-relaxed text-cdl-text-secondary">
-                Base atual: {commercialRules.mileageBaseLocation}. Até{' '}
-                {commercialRules.mileageFreeLimit} mi grátis. Acima de{' '}
-                {commercialRules.mileageFreeLimit} mi, aplicar regra comercial
-                configurada.
-              </p>
-              {/* TODO: Future: calculate mileage automatically using event destination address and base location. */}
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-2">
-              <InputField
-                label="Base Location"
-                value={state.baseLocation}
-                onChange={(v) => updateState({ baseLocation: v })}
-                placeholder="Local base"
-                completion={getFieldCompletion(state.baseLocation)}
-              />
-              <InputField
-                label="Distance (mi)"
-                type="number"
-                value={state.distance}
-                inputRef={distanceInputRef}
-                onChange={(v) =>
-                  updateState({ distance: Math.max(0, Number(v) || 0) })
-                }
-                completion={getFieldCompletion(state.distance)}
-              />
-              <InputField
-                label="Free Limit (mi)"
-                type="number"
-                value={state.freeLimit}
-                onChange={(v) =>
-                  updateState({ freeLimit: Math.max(0, Number(v) || 0) })
-                }
-              />
-              <InputField
-                label="Rate ($/mi)"
-                type="number"
-                value={state.rate}
-                onChange={(v) =>
-                  updateState({ rate: Math.max(0, Number(v) || 0) })
-                }
-              />
-              <MileageSummaryPanel
-                distance={state.distance}
-                freeLimit={state.freeLimit}
-                rate={state.rate}
-                mileageFee={mileageFee}
-              />
-            </div>
-          </SectionCard>
+          isPublicMode ? (
+            <PublicQuoteConfirmationStep
+              state={state}
+              breakdown={pricingBreakdown}
+              pricingLoading={pricingPreview.loading}
+              pricingError={pricingPreview.error}
+              onRetryPricing={pricingPreview.refresh}
+              customerName={
+                [state.customerFirstName, state.customerLastName]
+                  .filter(Boolean)
+                  .join(' ')
+                  .trim() || w.customerNotLinkedShort
+              }
+              packageName={
+                selectedPackage
+                  ? getPackageName(selectedPackage, uiLocale)
+                  : null
+              }
+              packageImageUrl={packageImageUrl}
+              selectedPackage={selectedPackage}
+              allPackages={packages}
+              packageOptionGroups={flatOptionGroups}
+              packageOptionGroupItems={flatOptionGroupItems}
+              packageItems={packageItems}
+              packageSideItems={packageSideItems}
+              fromWithSidesSection={fromWithSidesSection}
+              additionals={reviewAdditionals}
+              currency={
+                selectedPackage?.currency_code ||
+                publicContext?.currencyCode ||
+                'USD'
+              }
+              language={uiLocale}
+              consentLabel={publicContext?.consentLabel || ''}
+              privacyUrl={publicContext?.privacyUrl}
+              mileageReviewRequired={
+                pricingPreview.data?.mileage?.status === 'pending_review'
+              }
+              saving={saving}
+              submitError={Boolean(saveErrorInfo)}
+              submitErrorMessage={
+                saveErrorInfo?.message &&
+                saveErrorInfo.message !== 'public_submit_failed' &&
+                saveErrorInfo.message !== 'Request could not be processed.'
+                  ? saveErrorInfo.message
+                  : null
+              }
+              onConsentChange={(accepted) =>
+                updateState({
+                  publicConsentAccepted: accepted,
+                  publicConsentVersion:
+                    publicContext?.consentVersion ?? null,
+                })
+              }
+              onGoToStep={(nextStep) => {
+                if (!canNavigateToStep(nextStep, stepStatusCtx)) return
+                setNavigationIssues([])
+                setStep(nextStep)
+              }}
+              onBack={goBack}
+              onSubmit={() => void handleSaveQuote(false)}
+            />
+          ) : (
+            <QuoteWizardConfirmationStep
+              state={state}
+              breakdown={pricingBreakdown}
+              pricingLoading={pricingPreview.loading}
+              pricingError={pricingPreview.error}
+              customerName={
+                isEditMode
+                  ? editCustomerDisplayName
+                  : selectedCustomer
+                    ? getCustomerName(selectedCustomer)
+                    : state.customerDraftName.trim() ||
+                      w.customerNotLinkedShort
+              }
+              packageName={
+                selectedPackage
+                  ? getPackageName(selectedPackage, uiLocale)
+                  : null
+              }
+              packageImageUrl={packageImageUrl}
+              selectedPackage={selectedPackage}
+              allPackages={packages}
+              packageOptionGroups={flatOptionGroups}
+              packageOptionGroupItems={flatOptionGroupItems}
+              packageItems={packageItems}
+              packageSideItems={packageSideItems}
+              fromWithSidesSection={fromWithSidesSection}
+              additionals={reviewAdditionals}
+              stepStatusCtx={stepStatusCtx}
+              mandatoryPendingSteps={mandatoryPendingSteps}
+              quoteReady={quoteReady}
+              saving={saving}
+              saveErrorInfo={saveErrorInfo}
+              isEditMode={isEditMode}
+              quoteId={quoteId}
+              uiLanguage={uiLocale}
+              onGoToStep={(nextStep) => {
+                if (!canNavigateToStep(nextStep, stepStatusCtx)) return
+                setStep(nextStep)
+              }}
+              onBack={goBack}
+              onSave={() => void handleSaveQuote(false)}
+              onDistanceChange={(distance) => {
+                distanceManualRef.current = true
+                updateState({ distance })
+              }}
+            />
+          )
         )}
 
-        {step === 6 && (
-          <SectionCard>
-            <div className="grid grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <div className="rounded-2xl border border-cdl-accent-border bg-cdl-inset px-4 py-4">
-                  <p className="text-sm leading-relaxed text-cdl-text-secondary">
-                    {RESERVATION_PAYMENT_TEXT}
-                  </p>
-                </div>
-              </div>
-              <div className="sm:col-span-2">
-                <div className="rounded-2xl border border-cdl-border bg-cdl-inset px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-cdl-muted">
-                    Total da cotação
-                  </p>
-                  <p className="mt-1 text-2xl font-black text-cdl-price">
-                    {formatCurrency(quoteTotal)}
-                  </p>
-                </div>
-              </div>
-              <InputField
-                label="Reservation Percentage (%)"
-                type="number"
-                step="0.001"
-                min={0}
-                max={100}
-                value={state.reservationPercentage}
-                onChange={updateReservationPercentage}
-              />
-              <InputField
-                label="Reservation Amount ($)"
-                type="number"
-                step="0.01"
-                min={0}
-                max={quoteTotal}
-                value={reservationAmount}
-                onChange={updateReservationAmount}
-              />
-              <p className="sm:col-span-2 text-xs text-cdl-subtle">
-                Percentual com até 3 casas decimais ou valor absoluto em $ — o
-                outro campo é recalculado automaticamente. Reserva:{' '}
-                {formatReservationSummary(
-                  state.reservationPercentage,
-                  reservationAmount,
-                  reservationAmountCustomized,
-                )}{' '}
-                · Saldo: {formatCurrency(balanceDue)}
-              </p>
-              <div className="sm:col-span-2">
-                <label className="flex flex-col gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-cdl-muted">
-                    Notes
-                  </span>
-                  <textarea
-                    value={state.reservationNotes}
-                    onChange={(e) =>
-                      updateState({ reservationNotes: e.target.value })
-                    }
-                    rows={4}
-                    placeholder="Observações da reserva..."
-                    className="rounded-xl border border-cdl-border bg-cdl-inset px-4 py-3 text-sm text-cdl-fg outline-none transition-colors placeholder:text-cdl-faint focus:border-cdl-accent-border"
-                  />
-                </label>
-              </div>
-            </div>
-          </SectionCard>
-        )}
-
-        {step === 7 && (
-          <QuoteWizardSummaryStep
-            state={state}
-            quoteTotals={quoteTotals}
-            customerName={
-              isEditMode
-                ? editCustomerDisplayName
-                : selectedCustomer
-                  ? getCustomerName(selectedCustomer)
-                  : state.customerDraftName.trim() ||
-                    'Cliente ainda não vinculado'
-            }
-            packageName={
-              selectedPackage ? getPackageName(selectedPackage) : null
-            }
-            packageImageUrl={packageImageUrl}
-            packageUnitPrice={packageUnitPrice}
-            selectedPackage={selectedPackage}
-            allPackages={packages}
-            packageOptionGroups={flatOptionGroups}
-            packageOptionGroupItems={flatOptionGroupItems}
-            packageItems={packageItems}
-            packageSideItems={packageSideItems}
-            fromWithSidesSection={fromWithSidesSection}
-            billableGuestCount={billableGuestCount}
-            additionals={reviewAdditionals}
-            commercialRules={commercialRules}
-            stepStatusCtx={stepStatusCtx}
-            mandatoryPendingSteps={mandatoryPendingSteps}
-            quoteReady={quoteReady}
-            saving={saving}
-            saveErrorInfo={saveErrorInfo}
-            isEditMode={isEditMode}
-            quoteId={quoteId}
-            onGoToStep={setStep}
-            onBack={goBack}
-            onSave={handleSaveQuote}
+        {step !== 5 && isPublicMode ? (
+          // The action bar stays pinned at the bottom. Reserve its measured
+          // height so the last package, category, item or price never sits
+          // behind Voltar/Próximo. Safe-area is already inside the nav.
+          <div
+            aria-hidden
+            data-wizard-cta-spacer
+            data-cta-reserve-px={ctaReservePx}
+            style={{ height: ctaReservePx }}
           />
-        )}
+        ) : null}
 
-        {step !== 7 && (
-        <div className="mt-8 space-y-3">
-          {step === 2 && !state.packageId && packageStepMessage ? (
-            <p className="text-center text-sm font-medium text-[var(--brand-primary)] sm:text-right">
-              {packageStepMessage}
-            </p>
-          ) : null}
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <button
-              type="button"
-              onClick={goBack}
-              disabled={step === 0}
-              className="rounded-xl border border-cdl-border bg-cdl-surface px-6 py-3 text-sm font-bold uppercase tracking-wider text-cdl-fg transition-colors hover:border-cdl-accent-border disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {quoteStrings.back}
-            </button>
-            {step === 2 && state.packageId ? null : (
-            <span className="relative inline-flex w-full sm:w-auto">
-              {step === 2 && packageStepNextDisabled ? (
-                <button
-                  type="button"
-                  aria-label={`${quoteStrings.next} — complete required options`}
-                  className="absolute inset-0 z-10 cursor-not-allowed rounded-xl"
-                  onClick={() => {
-                    if (!state.packageId) {
-                      setPackageStepMessage(
-                        state.language === 'en'
-                          ? 'Select a package to continue.'
-                          : state.language === 'es'
-                            ? 'Seleccione un paquete para continuar.'
-                            : 'Selecione um pacote para continuar.',
-                      )
-                      return
-                    }
-                    setPackageSelectionAttempted(true)
-                  }}
-                />
-              ) : null}
-              <button
-                type="button"
-                onClick={goNext}
-                disabled={
-                  step === WIZARD_STEP_COUNT - 1 ||
-                  (step === 2 && packageStepNextDisabled)
-                }
-                className="cdl-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
-              >
-                {quoteStrings.next}
-              </button>
-            </span>
-            )}
-          </div>
-        </div>
-        )}
+        {step !== 5 ? (
+          <QuoteWizardStepNav
+            step={step}
+            wizardStepCount={WIZARD_STEP_COUNT}
+            language={uiLocale}
+            packageId={state.packageId}
+            packageStepMessage={packageStepMessage}
+            packageStepNextDisabled={packageStepNextDisabled}
+            additionalsStepNextDisabled={additionalsStepNextDisabled}
+            additionalsReviewMessage={
+              additionalsReviewPrompt && additionalsStepNextDisabled
+                ? tw(uiLocale, 'additionalsReviewAllCategories')
+                : null
+            }
+            grillStepPendingIssuesCount={grillStepPendingIssues.length}
+            keepPackageNextVisible={isPublicMode}
+            sticky={isPublicMode}
+            containerRef={stepNavRef}
+            onBack={goBack}
+            onNext={goNext}
+            onPackageNextBlockedClick={() => {
+              if (!state.packageId) {
+                setPackageStepMessage(w.selectPackageToContinue)
+                return
+              }
+              setPackageSelectionAttempted(true)
+            }}
+            onAdditionalsNextBlockedClick={handleAdditionalsNextBlockedClick}
+          />
+        ) : null}
       </div>
     </main>
   )

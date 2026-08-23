@@ -8,6 +8,8 @@ import type {
   PackageOptionGroupItem,
   PackageOptionGroupRecord,
 } from '@/Lib/packageOptionGroups'
+import { collectBlockedCatalogItemIds } from '@/Lib/publicQuote/extrasEligibility.ts'
+import { resolveCatalogItemDisplayLabel } from '@/Lib/cdlPackageItemI18n'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
@@ -139,26 +141,33 @@ export function getPackageItemLabel(
   item: PackageItem,
   language: QuoteLanguage = 'pt',
 ): string {
-  if (language === 'en') {
-    return item.label_en?.trim() || item.label_pt?.trim() || item.item_key
-  }
-  if (language === 'es') {
-    return item.label_es?.trim() || item.label_pt?.trim() || item.item_key
-  }
-  return item.label_pt?.trim() || item.item_key
+  return (
+    resolveCatalogItemDisplayLabel(
+      {
+        pt: item.label_pt,
+        en: item.label_en,
+        es: item.label_es,
+      },
+      language,
+    ) || item.item_key
+  )
 }
 
 export function getPackageSideItemLabel(
   item: PackageSideItem,
   language: QuoteLanguage = 'pt',
 ): string {
-  if (language === 'en') {
-    return item.label_en?.trim() || item.label_pt?.trim() || item.item_key
-  }
-  if (language === 'es') {
-    return item.label_es?.trim() || item.label_pt?.trim() || item.item_key
-  }
-  return item.label_pt?.trim() || item.item_key
+  return (
+    resolveCatalogItemDisplayLabel(
+      {
+        pt: item.label_pt,
+        en: item.label_en,
+        es: item.label_es,
+        fallback: item.item_name,
+      },
+      language,
+    ) || item.item_key
+  )
 }
 
 export function getPackageItemsForPackage(
@@ -383,20 +392,21 @@ export function getBlockedCatalogItemIdsFromConfig({
 
   const blocked = new Set<string>()
 
-  for (const item of getDisplayableFixedPackageItems(packageId, packageItems, {
-    optionGroups,
-    optionGroupItems,
-  })) {
-    if (item.blocks_additional_item && item.additional_item_id?.trim()) {
-      blocked.add(item.additional_item_id.trim())
-    }
+  for (const id of collectBlockedCatalogItemIds(
+    getDisplayableFixedPackageItems(packageId, packageItems, {
+      optionGroups,
+      optionGroupItems,
+    }),
+  )) {
+    blocked.add(id)
   }
 
-  for (const side of getPackageSideItemsForPackage(packageId, packageSideItems)) {
-    if (side.included === false) continue
-    if (side.blocks_additional_item && side.additional_item_id?.trim()) {
-      blocked.add(side.additional_item_id.trim())
-    }
+  for (const id of collectBlockedCatalogItemIds(
+    getPackageSideItemsForPackage(packageId, packageSideItems).filter(
+      (side) => side.included !== false,
+    ),
+  )) {
+    blocked.add(id)
   }
 
   for (const group of optionGroupsForPackage(packageId, optionGroups)) {
@@ -434,14 +444,15 @@ export const getBlockedAdditionalItemIdsFromConfig =
 export async function fetchPackageItems(options?: {
   packageId?: string | null
   packageIds?: string[] | null
+  companyId?: string | null
 }) {
-  const companyId = getCdlCompanyId().trim()
+  const companyId = options?.companyId?.trim() || getCdlCompanyId().trim()
   const packageIds = resolvePackageIdsForQuery(options)
   const supabase = getSupabaseServerClient()
 
   let query = supabase
     .from('package_items')
-    .select('*')
+    .select(buildPackageItemsSelect())
     .eq('active', true)
     .order('display_order', { ascending: true })
 
@@ -468,14 +479,15 @@ export async function fetchPackageItems(options?: {
 export async function fetchPackageSideItems(options?: {
   packageId?: string | null
   packageIds?: string[] | null
+  companyId?: string | null
 }) {
-  const companyId = getCdlCompanyId().trim()
+  const companyId = options?.companyId?.trim() || getCdlCompanyId().trim()
   const packageIds = resolvePackageIdsForQuery(options)
   const supabase = getSupabaseServerClient()
 
   let query = supabase
     .from('package_side_items')
-    .select('*')
+    .select(buildPackageSideItemsSelect())
     .eq('active', true)
     .order('display_order', { ascending: true })
 
@@ -501,10 +513,14 @@ export async function fetchPackageSideItems(options?: {
 
 export async function loadPackageConfiguration(options?: {
   packageIds?: string[] | null
+  companyId?: string | null
 }) {
   const packageIds = options?.packageIds?.filter((id) => id?.trim()) ?? null
 
-  const queryScope = packageIds?.length ? { packageIds } : undefined
+  const queryScope = {
+    packageIds,
+    companyId: options?.companyId,
+  }
 
   const [itemsRes, sidesRes, choicesRes] = await Promise.all([
     fetchPackageItems(queryScope),

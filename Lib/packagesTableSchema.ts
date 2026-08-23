@@ -24,6 +24,7 @@ export const PACKAGES_TABLE_COLUMNS = [
   'package_highlights_pt',
   'package_highlights_en',
   'package_highlights_es',
+  'card_theme_key',
   'updated_at',
 ] as const
 
@@ -49,6 +50,7 @@ export const PACKAGES_INSERT_COLUMNS = [
   'package_highlights_pt',
   'package_highlights_en',
   'package_highlights_es',
+  'card_theme_key',
   'active',
 ] as const satisfies ReadonlyArray<PackagesTableColumn>
 
@@ -80,6 +82,7 @@ export const PACKAGES_LIST_COLUMNS = [
   'package_highlights_pt',
   'package_highlights_en',
   'package_highlights_es',
+  'card_theme_key',
   'updated_at',
 ] as const
 

@@ -13,7 +13,9 @@ import {
   resolvePackageSidesPricing,
   type PackageCatalogFields,
 } from '@/Lib/packageCatalogVisual'
+import { translateCdlItemList } from '@/Lib/cdlPackageItemI18n'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import { tw } from '@/Lib/quoteTranslations'
 
 export type QuoteReviewPackageFields = PackageCatalogFields & {
   description_pt?: string | null
@@ -46,8 +48,35 @@ export type QuoteReviewPackageSummary = {
 
 const DESCRIPTION_SECTION_MARKERS = [
   'Todos os pacotes acompanham:',
+  'All packages include:',
+  'Todos los paquetes incluyen:',
   'Guarnições inclusas',
+  'Included sides',
+  'Guarniciones incluidas',
   'Guarnições:',
+  'Sides:',
+  'Guarniciones:',
+  'Itens do pacote:',
+  'Package items:',
+  'Ítems del paquete:',
+] as const
+
+const PACKAGE_ITEMS_HEADERS = [
+  'Itens do pacote:',
+  'Package items:',
+  'Ítems del paquete:',
+] as const
+
+const COMMON_ITEMS_HEADERS = [
+  'Todos os pacotes acompanham:',
+  'All packages include:',
+  'Todos los paquetes incluyen:',
+] as const
+
+const GARNISH_HEADERS = [
+  'Guarnições:',
+  'Sides:',
+  'Guarniciones:',
 ] as const
 
 function roundMoney(value: number) {
@@ -90,6 +119,17 @@ function parseBulletItems(section: string): string[] {
     .filter((line) => line.startsWith('•'))
     .map((line) => line.replace(/^•\s*/, '').trim())
     .filter(Boolean)
+}
+
+function firstMatchingSection(
+  description: string,
+  headers: readonly string[],
+): string | null {
+  for (const header of headers) {
+    const section = extractDescriptionSection(description, header)
+    if (section) return section
+  }
+  return null
 }
 
 function extractDescriptionSection(
@@ -166,22 +206,24 @@ export function packageItemsDescription(
 
   const description = getDescriptionText(pkg, language)
   if (description) {
-    const packageSection = extractDescriptionSection(description, 'Itens do pacote:')
-    const commonSection = extractDescriptionSection(
-      description,
-      'Todos os pacotes acompanham:',
-    )
+    const packageSection = firstMatchingSection(description, PACKAGE_ITEMS_HEADERS)
+    const commonSection = firstMatchingSection(description, COMMON_ITEMS_HEADERS)
     const packageItems = packageSection ? parseBulletItems(packageSection) : []
     const commonItems = commonSection ? parseBulletItems(commonSection) : []
     const combined = [...packageItems, ...commonItems]
     if (combined.length > 0) {
-      return formatItemsList(combined)
+      return formatItemsList(translateCdlItemList(combined, language))
     }
   }
 
   const definition = getCdlPackageDefinition(pkg.package_key)
   if (definition) {
-    return formatItemsList([...definition.items, ...PACKAGE_COMMON_ITEMS])
+    return formatItemsList(
+      translateCdlItemList(
+        [...definition.items, ...PACKAGE_COMMON_ITEMS],
+        language,
+      ),
+    )
   }
 
   return null
@@ -195,18 +237,15 @@ function garnishItemsFromDescription(
   if (!description) return []
 
   const garnishHeaderMatch = description.match(
-    /Guarnições inclusas(?:\s*\([^)]+\))?:/i,
+    /(?:Guarnições inclusas|Included sides|Guarniciones incluidas)(?:\s*\([^)]+\))?:/i,
   )
   const garnishSection = garnishHeaderMatch
     ? extractDescriptionSection(description, garnishHeaderMatch[0]) ??
       description.slice(description.indexOf(garnishHeaderMatch[0]) + garnishHeaderMatch[0].length)
-    : extractDescriptionSection(description, 'Guarnições:')
+    : firstMatchingSection(description, GARNISH_HEADERS)
 
   return garnishSection ? parseBulletItems(garnishSection) : []
 }
-
-const DEFAULT_GARNISH_TEXT_PT =
-  'Arroz branco, Feijão tropeiro, Vinagrete, Farofa, Mandioca'
 
 export function garnishDescription(
   pkg: QuoteReviewPackageFields | null,
@@ -215,22 +254,22 @@ export function garnishDescription(
   if (!pkg) return null
 
   const packageKey = (pkg.package_key ?? '').trim()
-  if (packageKey.endsWith('+') && language === 'pt') {
+  if (packageKey.endsWith('+')) {
     const fromDescription = garnishItemsFromDescription(pkg, language)
     if (fromDescription.length > 0) {
-      return formatItemsList(fromDescription)
+      return formatItemsList(translateCdlItemList(fromDescription, language))
     }
-    return DEFAULT_GARNISH_TEXT_PT
+    return formatItemsList(translateCdlItemList([...SIDES_ITEMS], language))
   }
 
   const fromDescription = garnishItemsFromDescription(pkg, language)
   if (fromDescription.length > 0) {
-    return formatItemsList(fromDescription)
+    return formatItemsList(translateCdlItemList(fromDescription, language))
   }
 
   const definition = getCdlPackageDefinition(pkg.package_key)
   if (definition?.with_sides) {
-    return formatItemsList(SIDES_ITEMS)
+    return formatItemsList(translateCdlItemList([...SIDES_ITEMS], language))
   }
 
   const variant = getPackageCatalogVariant(pkg)
@@ -423,7 +462,7 @@ export function buildQuoteReviewPackageSummary(
   return {
     hasGarnish: garnish,
     packageItemsDescription: packageItemsDescription(input.pkg, language),
-    garnishDescription: garnish ? (garnishItems ?? '—') : 'Não',
+    garnishDescription: garnish ? (garnishItems ?? '—') : tw(language, 'no'),
     packageUnitPrice: basePerPerson,
     garnishUnitPrice: garnish ? garnishPerPerson : 0,
     totalUnitPrice: totalPerPerson,

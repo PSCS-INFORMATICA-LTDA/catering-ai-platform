@@ -11,11 +11,28 @@ export type CustomerSearchRecord = {
   phone?: string | null
   phone_normalized?: string | null
   ab_number?: string | null
+  address_line?: string | null
   city?: string | null
   state?: string | null
+  postal_code?: string | null
+  preferred_language?: string | null
+  is_customer?: boolean | null
+  is_supplier?: boolean | null
+  is_team?: boolean | null
+  address_book_role?: string | null
+  active?: boolean | null
   source?: string | null
   updated_at?: string | null
   created_at?: string | null
+}
+
+export function personRoleLabels(person: CustomerSearchRecord): string[] {
+  const labels: string[] = []
+  if (person.is_customer) labels.push('Cliente')
+  if (person.is_supplier) labels.push('Fornecedor')
+  if (person.is_team) labels.push('Equipe')
+  if (labels.length === 0) labels.push('Cliente')
+  return labels
 }
 
 function resolvePhoneKey(customer: CustomerSearchRecord): string {

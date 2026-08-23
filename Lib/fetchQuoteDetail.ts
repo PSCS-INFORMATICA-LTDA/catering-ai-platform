@@ -5,10 +5,15 @@ import {
   CATALOG_ITEMS_TABLE,
 } from '@/Lib/catalogItemsTableSchema'
 import { fetchQuoteLinkedPackageCatalog } from '@/Lib/fetchQuoteLinkedPackageCatalog'
+import { fetchPackageOptionGroups, fetchQuotePackageSelections } from '@/Lib/fetchPackageOptionGroups'
 import type { CustomerNameSource } from '@/Lib/getCustomerDisplayName'
 import type { CatalogItemListItem } from '@/Lib/itemCatalog'
+import {
+  buildPackageSelectionLabels,
+  packageSelectionsFromRows,
+} from '@/Lib/packageOptionGroups'
 import { getActiveCompanyId } from '@/Lib/tenant/resolveTenant'
-import { supabase } from './supabase'
+import { getSupabaseServerClient } from './supabaseServer'
 
 function normalizeQuoteDetailRow(
   raw: Record<string, unknown>,
@@ -47,10 +52,24 @@ function normalizeQuoteDetailRow(
 const OFFICIAL_GUEST_COLUMNS =
   'adult_count, children_under_3_count, children_4_to_12_count, physical_guest_count, billable_guest_count'
 
-export async function fetchQuoteDetail(id: string) {
-  const companyId = getActiveCompanyId()
+const PROPOSAL_COLUMNS =
+  'proposal_token, proposal_sent_at, proposal_response, proposal_accepted_at, proposal_rejected_at, proposal_follow_up_count, proposal_last_follow_up_at'
 
-  const [viewRes, guestRes] = await Promise.all([
+const ORDER_COLUMNS = 'accepted_version_id, converted_service_order_id'
+
+/** Colunas comerciais que a quote_detail_view pode não expor ainda. */
+const COMMERCIAL_COLUMNS =
+  'holiday_surcharge_amount, minimum_order_amount, minimum_order_applied, reservation_confirmed_at, reservation_confirmed_by, package_total, additional_total, grill_rental_total, grill_rental_required, grill_rental_qty, discount_amount, mileage_base_location, mileage_distance, mileage_free_limit, mileage_rate, mileage_fee, quote_total, reservation_amount, balance_due, reservation_percentage'
+
+export async function fetchQuoteDetail(
+  id: string,
+  displayLanguage?: string | null,
+) {
+  const companyId = getActiveCompanyId()
+  const supabase = getSupabaseServerClient()
+
+  const [viewRes, guestRes, proposalRes, orderRes, commercialRes, breakdownRes] =
+    await Promise.all([
     supabase
       .from('quote_detail_view')
       .select('*')
@@ -60,6 +79,30 @@ export async function fetchQuoteDetail(id: string) {
     supabase
       .from('quotes')
       .select(OFFICIAL_GUEST_COLUMNS)
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .maybeSingle(),
+    supabase
+      .from('quotes')
+      .select(PROPOSAL_COLUMNS)
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .maybeSingle(),
+    supabase
+      .from('quotes')
+      .select(ORDER_COLUMNS)
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .maybeSingle(),
+    supabase
+      .from('quotes')
+      .select(COMMERCIAL_COLUMNS)
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .maybeSingle(),
+    supabase
+      .from('quotes')
+      .select('pricing_breakdown')
       .eq('id', id)
       .eq('company_id', companyId)
       .maybeSingle(),
@@ -76,14 +119,55 @@ export async function fetchQuoteDetail(id: string) {
     )
   }
 
+  if (proposalRes.error && !/proposal_token|column/i.test(proposalRes.error.message)) {
+    console.error(
+      `[CDL Quote] Failed to load proposal fields for quote ${id}:`,
+      proposalRes.error.message,
+    )
+  }
+
+  if (orderRes.error && !/column/i.test(orderRes.error.message)) {
+    console.error(
+      `[CDL Quote] Failed to load order-conversion fields for quote ${id}:`,
+      orderRes.error.message,
+    )
+  }
+
+  if (
+    commercialRes.error &&
+    !/column|holiday_surcharge|minimum_order|reservation_confirmed/i.test(
+      commercialRes.error.message,
+    )
+  ) {
+    console.error(
+      `[CDL Quote] Failed to load commercial fields for quote ${id}:`,
+      commercialRes.error.message,
+    )
+  }
+
+  if (
+    breakdownRes.error &&
+    !/column|pricing_breakdown/i.test(breakdownRes.error.message)
+  ) {
+    console.error(
+      `[CDL Quote] Failed to load pricing_breakdown for quote ${id}:`,
+      breakdownRes.error.message,
+    )
+  }
+
   const quote = normalizeQuoteDetailRow({
     ...(viewRes.data as Record<string, unknown>),
     ...(guestRes.data ?? {}),
+    ...(proposalRes.data && !proposalRes.error ? proposalRes.data : {}),
+    ...(orderRes.data && !orderRes.error ? orderRes.data : {}),
+    ...(commercialRes.data && !commercialRes.error ? commercialRes.data : {}),
+    ...(breakdownRes.data && !breakdownRes.error ? breakdownRes.data : {}),
   })
 
   const packageCatalog = await fetchQuoteLinkedPackageCatalog({
     packageId: quote.package_id,
     packageKey: quote.package_key,
+    companyId,
   })
 
   const linkedPackage = packageCatalog.linkedPackage
@@ -138,6 +222,42 @@ export async function fetchQuoteDetail(id: string) {
           additional_items: enrichQuoteAdditionalsFromCatalog(
             additionalItems as QuoteAdditionalItem[],
             catalogRes.data as unknown as CatalogItemListItem[],
+          ),
+        }
+      }
+    }
+  }
+
+  const packageId = data.package_id?.trim() || null
+  const selectionsRes = await fetchQuotePackageSelections(id)
+  if (!selectionsRes.error && (selectionsRes.data?.length ?? 0) > 0) {
+    const selectionRows = selectionsRes.data ?? []
+    data = {
+      ...data,
+      package_selections: selectionRows.map((row) => ({
+        option_group_id: row.option_group_id,
+        option_item_id: row.option_item_id,
+        package_id: row.package_id,
+      })),
+    }
+
+    if (packageId) {
+      const groupsRes = await fetchPackageOptionGroups({ packageId })
+      if (!groupsRes.error && groupsRes.data?.length) {
+        const lang =
+          displayLanguage === 'en' ||
+          displayLanguage === 'es' ||
+          displayLanguage === 'pt'
+            ? displayLanguage
+            : data.language === 'en' || data.language === 'es'
+              ? data.language
+              : 'pt'
+        data = {
+          ...data,
+          package_selection_labels: buildPackageSelectionLabels(
+            packageSelectionsFromRows(selectionRows),
+            groupsRes.data,
+            lang,
           ),
         }
       }

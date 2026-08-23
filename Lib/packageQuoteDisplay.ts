@@ -13,6 +13,8 @@ import type {
   PackageOptionGroupItem,
 } from '@/Lib/packageOptionGroups'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import { tw } from '@/Lib/quoteTranslations'
+import { pickLocalizedText } from '@/Lib/i18n/locales'
 
 const OPTION_GROUP_ORDER: Record<string, number> = {
   SEAFOOD_OPTION: 0,
@@ -26,11 +28,14 @@ export type PackageItemDisplayCategory =
   | 'itens'
   | 'condimentos'
 
-const CATEGORY_LABELS: Record<PackageItemDisplayCategory, string> = {
-  carnes: 'Carnes',
-  linguicas: 'Linguiças',
-  itens: 'Itens do pacote',
-  condimentos: 'Condimentos internos',
+function categoryLabel(
+  category: PackageItemDisplayCategory,
+  language: QuoteLanguage,
+): string {
+  if (category === 'carnes') return tw(language, 'meatsCategory')
+  if (category === 'linguicas') return tw(language, 'sausagesCategory')
+  if (category === 'condimentos') return tw(language, 'condimentsCategory')
+  return tw(language, 'packageItemsCategory')
 }
 
 const CATEGORY_ORDER: PackageItemDisplayCategory[] = [
@@ -169,7 +174,7 @@ export function groupFixedPackageItemsForQuote({
     const label = getPackageItemLabel(item, language)
     const group = buckets.get(category) ?? {
       category,
-      label: CATEGORY_LABELS[category],
+      label: categoryLabel(category, language),
       items: [],
     }
     group.items.push({ label, item })
@@ -182,18 +187,31 @@ export function groupFixedPackageItemsForQuote({
 }
 
 export function getCommercialOptionGroupLabel(
-  group: { option_group_key?: string | null; label_pt?: string | null },
+  group: {
+    option_group_key?: string | null
+    label_pt?: string | null
+    label_en?: string | null
+    label_es?: string | null
+  },
+  language: QuoteLanguage = 'pt',
 ): string {
   const key = group.option_group_key?.trim().toUpperCase() ?? ''
   switch (key) {
     case 'SEAFOOD_OPTION':
-      return 'Seafood'
+      return tw(language, 'seafoodOption')
     case 'COSTELA_OPTION':
-      return 'Costela'
+      return tw(language, 'ribOption')
     case 'SIDE_OPTION':
-      return 'Guarnição'
+      return tw(language, 'sideOption')
     default:
-      return group.label_pt?.trim() || key || 'Opção'
+      return (
+        pickLocalizedText(
+          { pt: group.label_pt, en: group.label_en, es: group.label_es },
+          language,
+        ).trim() ||
+        key ||
+        tw(language, 'optionFallback')
+      )
   }
 }
 

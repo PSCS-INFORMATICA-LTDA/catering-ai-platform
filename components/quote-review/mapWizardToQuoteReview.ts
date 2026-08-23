@@ -19,7 +19,12 @@ import {
 } from '@/Lib/packageOptionGroups'
 import type { WizardState } from '@/Lib/quoteWizardTypes'
 import type { CommercialRulesSnapshot } from '@/Lib/supabaseCommercialRules'
+import type {
+  PricingBreakdown,
+  PricingBreakdownLine,
+} from '@/Lib/pricing/pricingBreakdownTypes'
 import { getGrillPhotoStatusLabel } from '@/Lib/grillPhotoStatus'
+import { tw } from '@/Lib/quoteTranslations'
 import {
   buildQuoteReviewPackageSummary,
   type QuoteReviewPackageFields,
@@ -56,12 +61,15 @@ export type MapWizardToQuoteReviewInput = {
   additionals: WizardSelectedAdditional[]
   billableGuestCount: number
   commercialRules: CommercialRulesSnapshot
+  /** Idioma da UI do operador (perfil). Itens e chrome da revisão seguem este locale. */
+  displayLanguage?: WizardState['language']
 }
 
 export function mapWizardToQuoteReview(
   input: MapWizardToQuoteReviewInput,
 ): QuoteReviewData {
   const { state, quoteTotals, commercialRules } = input
+  const lang = input.displayLanguage ?? state.language
 
   const reviewAdditionals: QuoteReviewAdditional[] = input.additionals.map(
     (item) => ({
@@ -91,7 +99,7 @@ export function mapWizardToQuoteReview(
       ? buildPackageSelectionLabels(
           state.packageSelections,
           packageGroups,
-          state.language,
+          lang,
         )
       : []
 
@@ -101,7 +109,7 @@ export function mapWizardToQuoteReview(
     sidesPricePerPerson: commercialRules.sidesPricePerPerson,
     chargedPeople: quoteTotals.billableGuestCount,
     fromWithSidesSection: input.fromWithSidesSection,
-    language: state.language,
+    language: lang,
   })
 
   const configuredItems =
@@ -115,8 +123,8 @@ export function mapWizardToQuoteReview(
 
   const baseItemsText =
     configuredItems.length > 0
-      ? formatPackageItemsText(configuredItems, state.language)
-      : getPackageItemsDescription(input.selectedPackage, state.language)
+      ? formatPackageItemsText(configuredItems, lang)
+      : getPackageItemsDescription(input.selectedPackage, lang)
 
   const resolvedItemsDescription =
     input.selectedPackage && baseItemsText
@@ -125,14 +133,14 @@ export function mapWizardToQuoteReview(
             baseItemsText,
             state.packageSelections,
             packageGroups,
-            state.language,
+            lang,
           )
         : baseItemsText
       : null
 
   const resolvedGarnishDescription =
     configuredSides.length > 0
-      ? formatPackageSideItemsText(configuredSides, state.language)
+      ? formatPackageSideItemsText(configuredSides, lang)
       : null
 
   const packageSummary = packageSummaryBase
@@ -159,14 +167,18 @@ export function mapWizardToQuoteReview(
   return {
     preview: true,
     customerName: input.customerName,
+    customerPhone: state.customerDraftPhone.trim() || null,
+    customerEmail: state.customerDraftEmail.trim() || null,
     eventName: state.eventName.trim() || input.customerName,
     eventDate: state.eventDate || null,
     startTime: state.startTime || null,
     endTime: state.endTime || null,
     addressLine: state.address || null,
+    addressNumber: state.addressNumber.trim() || null,
     city: state.city || null,
     state: state.state || null,
     zipCode: state.zipCode || null,
+    country: state.addressCountry?.trim() || null,
     packageName: input.packageName,
     packageImageUrl,
     packageUnitPrice: input.packageUnitPrice,
@@ -183,10 +195,12 @@ export function mapWizardToQuoteReview(
     hasGrill: state.grillSetupAnswered ? state.hasGrill : null,
     grillPhotoRequired: state.grillPhotoRequired,
     grillPhotoStatusLabel: state.hasGrill
-      ? getGrillPhotoStatusLabel(state.grillPhotoStatus)
-      : 'Não se aplica',
+      ? getGrillPhotoStatusLabel(state.grillPhotoStatus, lang)
+      : tw(lang, 'notApplicable'),
+    grillPhotoUrl: state.grillPhotoUrl,
     grillRentalRequired: state.grillRentalRequired,
     grillRentalQty: state.grillRentalRequired ? state.grillRentalQty : null,
+    grillRentalTotal: quoteTotals.grillRentalTotal,
     grillNotes: state.grillNotes.trim() || null,
     mileageBaseLocation:
       state.baseLocation.trim() || commercialRules.mileageBaseLocation,
@@ -194,12 +208,157 @@ export function mapWizardToQuoteReview(
     mileageFreeLimit: state.freeLimit ?? commercialRules.mileageFreeLimit,
     mileageRate: state.rate ?? commercialRules.mileageRate,
     mileageFee: quoteTotals.mileageFee,
+    distanceDisplayUnit: commercialRules.distanceDisplayUnit,
     additionalTotal: quoteTotals.additionalTotal,
+    holidaySurchargeAmount: quoteTotals.holidaySurchargeAmount,
+    minimumOrderAdjustment: quoteTotals.minimumOrderAdjustment,
+    minimumOrderApplied: quoteTotals.minimumOrderApplied,
+    minimumOrderAmount: quoteTotals.minimumOrderAmount,
     reservationPercentage: state.reservationPercentage,
     reservationAmount: quoteTotals.reservationAmount,
     balanceDue: quoteTotals.balanceDue,
     quoteTotal: quoteTotals.quoteTotal,
     additionals: reviewAdditionals,
-    language: state.language,
+    language: lang,
+  }
+}
+
+type MapWizardBreakdownToQuoteReviewInput = Omit<
+  MapWizardToQuoteReviewInput,
+  'quoteTotals' | 'commercialRules' | 'packageUnitPrice'
+> & {
+  breakdown: PricingBreakdown
+}
+
+function firstBreakdownLine(
+  breakdown: PricingBreakdown,
+  lineKey: string,
+): PricingBreakdownLine | null {
+  return (
+    [...breakdown.lines, ...breakdown.adjustments].find(
+      (line) => line.line_key === lineKey,
+    ) ?? null
+  )
+}
+
+function breakdownLineTotal(
+  breakdown: PricingBreakdown,
+  lineKey: string,
+): number {
+  return [...breakdown.lines, ...breakdown.adjustments]
+    .filter((line) => line.line_key === lineKey)
+    .reduce((total, line) => total + Number(line.amount ?? 0), 0)
+}
+
+/**
+ * Adapta o snapshot canônico do Pricing Engine para o layout de proposta.
+ * Não executa fórmulas comerciais: apenas seleciona e formata valores já
+ * calculados no servidor.
+ */
+export function mapWizardBreakdownToQuoteReview(
+  input: MapWizardBreakdownToQuoteReviewInput,
+): QuoteReviewData {
+  const { breakdown } = input
+  const packageLine = firstBreakdownLine(breakdown, 'package')
+  const mileageLine = firstBreakdownLine(breakdown, 'mileage')
+  const grillRentalLine = firstBreakdownLine(breakdown, 'grill_rental')
+  const holidayLine = firstBreakdownLine(breakdown, 'holiday_surcharge')
+  const minimumLine = firstBreakdownLine(breakdown, 'minimum_order')
+  const discountLine = firstBreakdownLine(breakdown, 'discount')
+  const additionalLinesById = new Map(
+    breakdown.lines
+      .filter(
+        (line): line is PricingBreakdownLine & { source_id: string } =>
+          line.line_key === 'additional_item' &&
+          typeof line.source_id === 'string' &&
+          line.source_id.length > 0,
+      )
+      .map((line) => [line.source_id, line]),
+  )
+
+  const canonicalAdditionals = input.additionals.map((item) => {
+    const line = additionalLinesById.get(item.id)
+    return line
+      ? {
+          ...item,
+          quantity: line.quantity,
+          unitPrice: line.unit_price,
+          totalPrice: line.amount,
+        }
+      : item
+  })
+
+  const guestCounts = breakdown.guest_counts
+  const quoteTotals: QuoteTotals = {
+    billableAdults: 0,
+    freeChildren: 0,
+    halfPriceChildren: 0,
+    billableGuestCount: guestCounts.billable_guest_count,
+    physicalGuestCount: guestCounts.physical_guest_count,
+    packageTotal: Number(packageLine?.amount ?? 0),
+    additionalTotal: breakdownLineTotal(breakdown, 'additional_item'),
+    mileageFee: Number(mileageLine?.amount ?? 0),
+    grillRentalTotal: Number(grillRentalLine?.amount ?? 0),
+    quoteSubtotal: breakdown.subtotal,
+    holidaySurchargeAmount: Number(holidayLine?.amount ?? 0),
+    holidaySurchargePercent: breakdown.rules_applied.holidaySurchargePercent,
+    minimumOrderAmount: Number(
+      minimumLine?.metadata?.minimum_order_amount ?? 0,
+    ),
+    minimumOrderApplied: Boolean(minimumLine),
+    minimumOrderAdjustment: Number(minimumLine?.amount ?? 0),
+    reservationAmount: breakdown.deposit,
+    balanceDue: breakdown.balance,
+    quoteTotal: breakdown.total,
+  }
+
+  const mapped = mapWizardToQuoteReview({
+    ...input,
+    additionals: canonicalAdditionals,
+    packageUnitPrice: Number(packageLine?.unit_price ?? 0),
+    quoteTotals,
+    commercialRules: breakdown.rules_applied,
+  })
+
+  return {
+    ...mapped,
+    packageUnitPrice: packageLine?.unit_price ?? null,
+    packageTotal: packageLine?.amount ?? null,
+    additionalTotal: quoteTotals.additionalTotal,
+    guestCounts: {
+      adultCount: guestCounts.adultCount,
+      childrenUnder3Count: guestCounts.childrenUnder3Count,
+      children4To12Count: guestCounts.children4To12Count,
+    },
+    billableGuestCount: guestCounts.billable_guest_count,
+    physicalGuestCount: guestCounts.physical_guest_count,
+    grillRentalQty: grillRentalLine?.quantity ?? null,
+    grillRentalTotal: grillRentalLine?.amount ?? null,
+    mileageBaseLocation:
+      String(
+        mileageLine?.metadata?.base_location ??
+          breakdown.rules_applied.mileageBaseLocation,
+      ) || null,
+    mileageDistance:
+      mileageLine?.metadata?.distance != null
+        ? Number(mileageLine.metadata.distance)
+        : null,
+    mileageFreeLimit:
+      mileageLine?.metadata?.free_limit != null
+        ? Number(mileageLine.metadata.free_limit)
+        : breakdown.rules_applied.mileageFreeLimit,
+    mileageRate:
+      mileageLine?.unit_price ?? breakdown.rules_applied.mileageRate,
+    mileageFee: mileageLine?.amount ?? 0,
+    holidaySurchargeAmount: quoteTotals.holidaySurchargeAmount,
+    minimumOrderAdjustment: quoteTotals.minimumOrderAdjustment,
+    minimumOrderApplied: quoteTotals.minimumOrderApplied,
+    minimumOrderAmount: quoteTotals.minimumOrderAmount,
+    reservationPercentage:
+      breakdown.rules_applied.reservationPercentage ?? null,
+    reservationAmount: breakdown.deposit,
+    balanceDue: breakdown.balance,
+    quoteTotal: breakdown.total,
+    discount: Math.abs(Number(discountLine?.amount ?? 0)),
   }
 }

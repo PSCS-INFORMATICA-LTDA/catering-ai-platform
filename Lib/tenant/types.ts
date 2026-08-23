@@ -5,6 +5,7 @@ export type CompanyRole =
   | 'sales'
   | 'operator'
   | 'kitchen'
+  | 'finance'
   | 'viewer'
 
 export type FranchiseGroup = {

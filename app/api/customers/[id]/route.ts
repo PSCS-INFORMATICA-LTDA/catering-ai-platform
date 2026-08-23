@@ -1,3 +1,4 @@
+import { requireApiPermission } from '@/Lib/auth/requireApi'
 import { getCdlCompanyId } from '@/Lib/cdlCompany'
 import {
   buildCustomersListSelect,
@@ -5,7 +6,12 @@ import {
   type CustomersUpdatePayload,
 } from '@/Lib/customersTableSchema'
 import { assertCustomerCanBeDeactivated } from '@/Lib/customerOpenQuotes'
-import { normalizePhone } from '@/Lib/normalizePhone'
+import {
+  formatPostalCode,
+  inferCountryFromPostalCode,
+  postalCodeSaveError,
+} from '@/Lib/cep'
+import { isUsablePhone, normalizePhone } from '@/Lib/normalizePhone'
 import { supabase } from '@/Lib/supabase'
 
 export const dynamic = 'force-dynamic'
@@ -15,6 +21,9 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const auth = await requireApiPermission('customers.manage')
+  if (!auth.ok) return auth.response
+
   const { id } = await context.params
   const companyId = getCdlCompanyId()
 
@@ -54,8 +63,26 @@ export async function PATCH(
 
   if (!isDeactivateOnly && body.phone !== undefined) {
     const phone = String(body.phone ?? '').trim()
+    if (!isUsablePhone(phone)) {
+      return Response.json(
+        { error: 'Telefone inválido. Informe o DDI (ex.: +5511983481803).' },
+        { status: 400 },
+      )
+    }
     updatePayload.phone = phone
     updatePayload.phone_normalized = normalizePhone(phone)
+  }
+
+  if (!isDeactivateOnly && body.postal_code !== undefined) {
+    const postal = String(body.postal_code ?? '').trim()
+    const postalError = postalCodeSaveError(postal)
+    if (postalError) {
+      return Response.json({ error: postalError }, { status: 400 })
+    }
+    if (postal) {
+      updatePayload.postal_code = formatPostalCode(postal)
+      updatePayload.country = inferCountryFromPostalCode(postal)
+    }
   }
 
   const { data, error } = await supabase

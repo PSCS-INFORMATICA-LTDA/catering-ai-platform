@@ -81,6 +81,9 @@ export function formatCommercialRuleDisplayValue(
 ): string {
   if (!ruleValue) return '—'
   const base = String(ruleValue.value ?? '')
+  if (ruleValue.type === 'json' && base.length > 120) {
+    return `${base.slice(0, 120)}…`
+  }
   if (ruleValue.unit?.trim()) {
     return `${base} ${ruleValue.unit.trim()}`
   }

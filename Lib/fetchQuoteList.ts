@@ -1,3 +1,4 @@
+import { pickLocalizedText } from './i18n/locales'
 import { getCdlCompanyId } from './cdlCompany'
 import {
   buildCustomersSelect,
@@ -8,7 +9,7 @@ import {
   getCustomerDisplayName,
   type CustomerNameSource,
 } from './getCustomerDisplayName'
-import { supabase } from './supabase'
+import { getSupabaseServerClient } from './supabaseServer'
 
 export type QuoteListGrillFields = {
   has_grill: boolean
@@ -32,6 +33,8 @@ export type QuoteListItem = {
   city: string | null
   state: string | null
   package_name: string | null
+  package_label_en?: string | null
+  package_label_es?: string | null
   quote_total: number | null
   reservation_amount: number | null
   balance_due: number | null
@@ -43,6 +46,8 @@ export type QuoteListItem = {
   grill_rental_required: boolean
   mileage_fee: number | null
   mileage_distance: number | null
+  proposal_response: string | null
+  converted_service_order_id: string | null
 }
 
 type QuoteRow = {
@@ -62,6 +67,8 @@ type QuoteRow = {
   additional_total: number | null
   mileage_fee: number | null
   mileage_distance: number | null
+  proposal_response: string | null
+  converted_service_order_id: string | null
 }
 
 type ListViewRow = {
@@ -92,6 +99,29 @@ type PackageRow = {
   id: string
   package_name?: string | null
   label_pt?: string | null
+  label_en?: string | null
+  label_es?: string | null
+}
+
+export function getQuoteListPackageName(
+  quote: Pick<
+    QuoteListItem,
+    'package_name' | 'package_label_en' | 'package_label_es'
+  >,
+  locale?: string | null,
+): string | null {
+  return (
+    pickLocalizedText(
+      {
+        pt: quote.package_name,
+        en: quote.package_label_en,
+        es: quote.package_label_es,
+      },
+      locale,
+    ).trim() ||
+    quote.package_name ||
+    null
+  )
 }
 
 type GrillViewRow = {
@@ -103,7 +133,7 @@ type GrillViewRow = {
 
 /** Colunas base de `quotes` — sem filtro por source ou quote_status. */
 const QUOTE_LIST_SELECT =
-  'id, quote_number, quote_total, quote_status, created_at, customer_id, event_id, package_id, active, reservation_amount, balance_due, physical_guest_count, billable_guest_count, additional_total, mileage_fee, mileage_distance'
+  'id, quote_number, quote_total, quote_status, created_at, customer_id, event_id, package_id, active, reservation_amount, balance_due, physical_guest_count, billable_guest_count, additional_total, mileage_fee, mileage_distance, proposal_response, converted_service_order_id'
 
 function resolveCustomerDisplayName(
   customer: CustomerRow | undefined,
@@ -150,6 +180,7 @@ async function fetchGrillFieldsByQuoteId(
 ): Promise<Map<string, QuoteListGrillFields>> {
   if (quoteIds.length === 0) return new Map()
 
+  const supabase = getSupabaseServerClient()
   const { data, error } = await supabase
     .from('quote_detail_view')
     .select('id, has_grill, grill_photo_required, grill_rental_required')
@@ -184,6 +215,7 @@ export function sortQuoteListItems(items: QuoteListItem[]): QuoteListItem[] {
  */
 export async function fetchQuoteList() {
   const companyId = getCdlCompanyId()
+  const supabase = getSupabaseServerClient()
 
   const { data: quotes, error } = await supabase
     .from('quotes')
@@ -235,7 +267,7 @@ export async function fetchQuoteList() {
       packageIds.length > 0
         ? supabase
             .from('packages')
-            .select('id, package_name, label_pt')
+            .select('id, package_name, label_pt, label_en, label_es')
             .in('id', packageIds)
         : Promise.resolve({ data: [] as PackageRow[], error: null }),
       fetchGrillFieldsByQuoteId(quoteIds),
@@ -315,6 +347,8 @@ export async function fetchQuoteList() {
       city: view?.city ?? event?.city ?? null,
       state: view?.state ?? event?.state ?? null,
       package_name: resolvePackageName(view?.package_name, pkg),
+      package_label_en: pkg?.label_en?.trim() || null,
+      package_label_es: pkg?.label_es?.trim() || null,
       quote_total: row.quote_total,
       reservation_amount: row.reservation_amount,
       balance_due: row.balance_due,
@@ -326,6 +360,8 @@ export async function fetchQuoteList() {
       grill_rental_required: grill.grill_rental_required,
       mileage_fee: row.mileage_fee,
       mileage_distance: row.mileage_distance,
+      proposal_response: row.proposal_response ?? null,
+      converted_service_order_id: row.converted_service_order_id ?? null,
     } satisfies QuoteListItem
   })
 

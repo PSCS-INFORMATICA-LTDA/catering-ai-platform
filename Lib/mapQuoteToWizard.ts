@@ -11,6 +11,7 @@ import {
   createInitialWizardState,
   type WizardState,
 } from './quoteWizardTypes'
+import { splitAddressNumber } from './addressLine'
 import { getMileageBaseLocation } from './cdlCommercialRules'
 
 function normalizeDate(value: string | null | undefined) {
@@ -67,7 +68,7 @@ export function mapQuoteDetailToWizardState(
     adultCount: quote.adult_count ?? 0,
     childrenUnder3Count: quote.children_under_3_count ?? 0,
     children4To12Count: quote.children_4_to_12_count ?? 0,
-    address: quote.address_line ?? '',
+    ...splitAddressNumber(quote.address_line),
     city: quote.city ?? '',
     state: quote.state ?? '',
     zipCode: quote.zip_code ?? quote.postal_code ?? '',

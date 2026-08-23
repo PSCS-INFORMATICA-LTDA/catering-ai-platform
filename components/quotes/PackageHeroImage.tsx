@@ -1,21 +1,32 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { tw } from '@/Lib/quoteTranslations'
+import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 export default function PackageHeroImage({
   src,
   alt,
-  fallbackLabel = 'Imagem do pacote',
+  fallbackLabel,
+  language = 'pt',
   expand = true,
+  compact = false,
+  opening = false,
 }: {
   src?: string | null
   alt: string
+  language?: QuoteLanguage
   fallbackLabel?: string
   /** Expande além do padding do card pai (Etapa 3 / resumo). */
   expand?: boolean
+  /** Coluna ao lado das opções — imagem menor, sem max-width largo. */
+  compact?: boolean
+  /** Primeira peça da revisão da cotação — foto grande no começo. */
+  opening?: boolean
 }) {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const normalizedSrc = src?.trim() || null
+  const resolvedFallback = fallbackLabel ?? tw(language, 'packageImage')
 
   useEffect(() => {
     if (!lightboxOpen) return
@@ -35,12 +46,23 @@ export default function PackageHeroImage({
   }, [lightboxOpen])
 
   const frameClass = [
-    expand ? '-mx-4 my-4 sm:-mx-2 sm:my-3' : 'my-3',
+    opening
+      ? 'mx-auto mb-6 mt-0 w-full max-w-6xl px-4 sm:px-8'
+      : compact
+        ? 'my-0 w-full max-w-full'
+        : expand
+          ? '-mx-4 my-4 sm:-mx-2 sm:my-3 md:mx-auto md:max-w-3xl lg:max-w-4xl'
+          : 'my-3 md:mx-auto md:max-w-3xl lg:max-w-4xl',
     'overflow-hidden rounded-3xl bg-white p-1 shadow-lg ring-1 ring-black/5',
-    'md:mx-auto md:max-w-3xl lg:max-w-4xl',
   ]
     .filter(Boolean)
     .join(' ')
+
+  const imgMaxClass = opening
+    ? 'max-h-[70vh] md:max-h-[820px]'
+    : compact
+      ? 'max-h-[280px] md:max-h-[360px] lg:max-h-[420px]'
+      : 'max-h-[620px] md:max-h-[760px]'
 
   const openLightbox = () => setLightboxOpen(true)
 
@@ -49,7 +71,7 @@ export default function PackageHeroImage({
       <div className={frameClass}>
         <div className="flex min-h-[10rem] w-full items-center justify-center rounded-2xl bg-gradient-to-br from-neutral-100 to-neutral-50 px-4 py-10">
           <span className="text-center text-xs font-semibold uppercase tracking-wider text-neutral-500">
-            {fallbackLabel}
+            {resolvedFallback}
           </span>
         </div>
       </div>
@@ -72,7 +94,7 @@ export default function PackageHeroImage({
           }}
           role="button"
           tabIndex={0}
-          className="h-auto max-h-[620px] w-full max-w-full cursor-zoom-in rounded-2xl object-contain md:max-h-[760px]"
+          className={`h-auto w-full max-w-full cursor-zoom-in rounded-2xl object-contain ${imgMaxClass}`}
           loading="lazy"
           decoding="async"
           aria-label={`Ampliar imagem: ${alt}`}

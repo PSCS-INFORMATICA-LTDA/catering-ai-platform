@@ -1,10 +1,12 @@
 'use client'
 
 import {
-  getCatalogItemPlaceholderLabel,
   normalizeCatalogItemPlaceholderType,
   type CatalogItemPlaceholderType,
 } from '@/Lib/catalogItemVisual'
+import { tCommon } from '@/Lib/i18n/common'
+import { tPackages } from '@/Lib/i18n/packages'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 export type CatalogImageVariant = 'package' | 'catalogItem'
 
@@ -26,11 +28,6 @@ const VARIANT_FRAMES: Record<
       'aspect-[4/3] w-full min-h-[9rem] max-h-[min(70vw,16rem)] sm:min-h-[10rem] md:max-h-[13rem]',
     thumbnail: 'aspect-square h-14 w-14 min-h-0 max-h-14 shrink-0 rounded-lg',
   },
-}
-
-const DEFAULT_FALLBACK: Record<CatalogImageVariant, string> = {
-  package: 'Imagem do pacote',
-  catalogItem: 'Sem imagem',
 }
 
 function joinClasses(...parts: Array<string | false | null | undefined>) {
@@ -123,13 +120,24 @@ export default function CatalogImageFrame({
   className?: string
   rounded?: 'top' | 'all' | 'none'
 }) {
+  const locale = useAuthLocaleFromMe()
   const normalizedSrc = src?.trim() || null
   const placeholderType = normalizeCatalogItemPlaceholderType(itemType)
+  const typeLabel =
+    placeholderType === 'SIDE'
+      ? tPackages(locale, 'typeSide')
+      : placeholderType === 'PACKAGE_ITEM'
+        ? tPackages(locale, 'typePackageItem')
+        : placeholderType === 'SUPPLY'
+          ? tPackages(locale, 'typeSupply')
+          : placeholderType === 'EQUIPMENT'
+            ? tPackages(locale, 'typeEquipment')
+            : tPackages(locale, 'typeProduct')
   const label =
     fallbackLabel ??
     (variant === 'catalogItem'
-      ? getCatalogItemPlaceholderLabel(placeholderType, categoryPt)
-      : DEFAULT_FALLBACK[variant])
+      ? categoryPt?.trim() || typeLabel
+      : tCommon(locale, 'packageImage'))
   const roundedClass =
     rounded === 'all'
       ? 'rounded-2xl'
@@ -154,7 +162,7 @@ export default function CatalogImageFrame({
         size === 'thumbnail' ? 'bottom-1 right-1 text-[7px]' : 'bottom-2 right-2 text-[9px] sm:text-[10px]',
       )}
     >
-      Foto pendente
+      {tCommon(locale, 'photoPending')}
     </span>
   ) : null
 

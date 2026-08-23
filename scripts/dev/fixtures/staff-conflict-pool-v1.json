@@ -1,0 +1,68 @@
+{
+  "fixture": "staff-conflict-pool-v1",
+  "companyId": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+  "customerId": "f2000000-0000-4000-8000-000000000001",
+  "packageId": "c2000000-0000-4000-8000-000000000001",
+  "teamCaioId": "a1000000-0000-4000-8000-000000000003",
+  "teamFilipeId": "a1000000-0000-4000-8000-000000000002",
+  "testDate": "2027-12-20",
+  "counts": {
+    "grill_master": 12,
+    "assistant": 12,
+    "team_leader": 12
+  },
+  "idBase": {
+    "grill_master": "b2800000-0000-4000-8000-0000000001",
+    "assistant": "b2800000-0000-4000-8000-0000000002",
+    "team_leader": "b2800000-0000-4000-8000-0000000003"
+  },
+  "phoneBase": {
+    "grill_master": 14075553000,
+    "assistant": 14075554000,
+    "team_leader": 14075555000
+  },
+  "names": {
+    "grill_master": [
+      "Bruno Grill",
+      "Diego Parrilla",
+      "Felipe Fogo",
+      "Gustavo Brasa",
+      "Hugo Carvão",
+      "Igor Churras",
+      "Kaique Fumaça",
+      "Leo Espeto",
+      "Marcos Costela",
+      "Nico Picanha",
+      "Otávio Alcatra",
+      "Pedro Maminha"
+    ],
+    "assistant": [
+      "Ana Apoio",
+      "Bia Mesa",
+      "Carla Prato",
+      "Duda Salada",
+      "Eva Bebida",
+      "Fran Montagem",
+      "Gabi Serviço",
+      "Helena Apoio",
+      "Iris Monta",
+      "Julia Apoio",
+      "Kelly Mesa",
+      "Lara Prato"
+    ],
+    "team_leader": [
+      "Alex Líder",
+      "Beto Chefe",
+      "Cesar Líder",
+      "Davi Chefe",
+      "Enzo Líder",
+      "Fabio Chefe",
+      "Gil Líder",
+      "Heitor Chefe",
+      "Ivo Líder",
+      "Jonas Chefe",
+      "Kauã Líder",
+      "Luis Chefe"
+    ]
+  }
+}

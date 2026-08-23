@@ -6,6 +6,7 @@ import {
   compareCategoryKeys,
   getCategoryLabel,
 } from '@/Lib/quoteTranslations'
+import { resolveCatalogItemDisplayLabel } from '@/Lib/cdlPackageItemI18n'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 export type QuoteAdditionalItem = {
@@ -35,28 +36,16 @@ export function getLocalizedAdditionalLabel(
   item: QuoteAdditionalItem,
   language: QuoteLanguage,
 ): string {
-  if (language === 'en') {
-    return (
-      item.label_en?.trim() ||
-      item.label_pt?.trim() ||
-      item.item_name?.trim() ||
-      '—'
-    )
-  }
-  if (language === 'es') {
-    return (
-      item.label_es?.trim() ||
-      item.label_pt?.trim() ||
-      item.item_name?.trim() ||
-      '—'
-    )
-  }
   return (
-    item.label_pt?.trim() ||
-    item.item_name?.trim() ||
-    item.label_en?.trim() ||
-    item.label_es?.trim() ||
-    '—'
+    resolveCatalogItemDisplayLabel(
+      {
+        pt: item.label_pt,
+        en: item.label_en,
+        es: item.label_es,
+        fallback: item.item_name,
+      },
+      language,
+    ) || '—'
   )
 }
 
@@ -66,9 +55,24 @@ export function isPerPersonAdditional(item: QuoteAdditionalItem): boolean {
   )
 }
 
+export {
+  getAdditionalChargeUnit,
+  getAdditionalChargeUnitLabel,
+  type AdditionalChargeUnit,
+} from '@/Lib/additionalChargeUnit'
+
+export function hasAdditionalPrice(item: QuoteAdditionalItem): boolean {
+  return getAdditionalUnitPrice(item) > 0
+}
+
 export function getAdditionalUnitPrice(item: QuoteAdditionalItem): number {
   return getAdditionalItemPrice(item)
 }
+
+export {
+  formatAdditionalPrice,
+  getAdditionalPriceLabel,
+} from '@/Lib/additionalPriceDisplay'
 
 export function normalizeAdditionalQuantity(
   item: QuoteAdditionalItem,
