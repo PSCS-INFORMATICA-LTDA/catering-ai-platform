@@ -19,12 +19,14 @@ import { getQuoteStrings } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 function CategoryHeaderCopy({
+  kicker,
   categoryLabel,
   itemCountLabel,
   selectedCount,
   selectedCountLabel,
   expanded,
 }: {
+  kicker: string
   categoryLabel: string
   itemCountLabel: string
   selectedCount: number
@@ -34,8 +36,9 @@ function CategoryHeaderCopy({
   return (
     <div className="flex min-w-0 items-start gap-3">
       <div className="min-w-0 flex-1">
+        <p className="public-additional-kicker">{kicker}</p>
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="text-base font-extrabold uppercase tracking-wide text-cdl-title sm:text-lg">
+          <span className="text-base font-black uppercase tracking-wide text-[#111] sm:text-lg">
             {categoryLabel}
           </span>
           <span className="text-sm font-medium text-cdl-muted">
@@ -135,6 +138,7 @@ export default function AdditionalCategorySection({
   const summaryId = `additional-category-summary-${categoryKey}`
   const headerCopy = (
     <CategoryHeaderCopy
+      kicker={t.wizard.publicAdditionalsKicker}
       categoryLabel={categoryLabel}
       itemCountLabel={t.itemsCount(items.length)}
       selectedCount={selectedCount}

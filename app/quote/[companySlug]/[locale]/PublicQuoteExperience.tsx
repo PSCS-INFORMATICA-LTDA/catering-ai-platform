@@ -599,8 +599,49 @@ export default function PublicQuoteExperience({
         </div>
       ) : null}
 
-      {!started || success ? (
-      <footer className="public-landing-footer">
+      {!started && !success ? (
+      <footer className="public-landing-footer" data-public-landing-footer>
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 py-6 text-center sm:px-8">
+          {emblemSrc ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              data-landing-cdl-logo
+              src={emblemSrc}
+              alt={bootstrap.company.name}
+              className="public-landing-cdl-logo"
+            />
+          ) : null}
+          <div className="space-y-2">
+            <p
+              data-footer-since-pioneer
+              className="text-sm font-semibold tracking-tight text-cdl-title sm:text-base"
+            >
+              {tw(locale, 'footerSincePioneer')}
+            </p>
+            <p className="text-[11px] text-cdl-faint">
+              {publicQuoteCopyrightLine(
+                bootstrap.company.slug,
+                bootstrap.company.name,
+                new Date().getFullYear(),
+              )}
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-4 text-xs text-cdl-muted">
+            {bootstrap.settings.consent.privacyUrl ? (
+              <a href={bootstrap.settings.consent.privacyUrl}>{copy.privacy}</a>
+            ) : null}
+            {bootstrap.settings.support.phone ? (
+              <a href={`tel:${bootstrap.settings.support.phone}`}>
+                {copy.support} {bootstrap.settings.support.phone}
+              </a>
+            ) : null}
+          </div>
+        </div>
+      </footer>
+      ) : null}
+
+      {success ? (
+      <footer className="public-landing-footer" data-success-footer>
         <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 py-6 text-center sm:px-8">
           <div className="space-y-2">
             <p

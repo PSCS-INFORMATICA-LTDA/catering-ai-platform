@@ -195,6 +195,7 @@ function PackageCatalogCard({
       aria-pressed={active}
       data-package-key={pkg.package_key ?? ''}
       data-package-sides-group={getPublicPackageSidesGroup(pkg)}
+      data-package-selected={active ? 'true' : 'false'}
       onClick={onClick}
       className={`public-package-card flex w-full min-w-0 flex-col overflow-hidden rounded-2xl border bg-cdl-surface text-left transition ${
         active
@@ -298,19 +299,34 @@ export default function PublicPackageCatalog({
     const selected = allPackages.find((pkg) => pkg.id === selectedPackageId)
     return selected ? getPublicPackageSidesGroup(selected) : null
   })
+  const [expandedPackageId, setExpandedPackageId] = useState<string | null>(
+    () => selectedPackageId,
+  )
 
   useEffect(() => {
     if (!selectedPackageId) return
     const node = optionsRef.current
     if (!node) return
     node.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [selectedPackageId, openGroup])
+  }, [selectedPackageId, expandedPackageId, openGroup])
+
+  function handlePackageClick(id: string) {
+    const pkg = allPackages.find((item) => item.id === id)
+    if (pkg) setOpenGroup(getPublicPackageSidesGroup(pkg))
+    if (selectedPackageId !== id) {
+      onSelect(id)
+      setExpandedPackageId(id)
+      return
+    }
+    setExpandedPackageId((current) => (current === id ? null : id))
+  }
 
   function renderGroup(packages: PublicPackageCard[]) {
     return (
       <div className="mt-4 grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
         {packages.map((pkg) => {
           const active = selectedPackageId === pkg.id
+          const expanded = expandedPackageId === pkg.id
           const selectableGroups = active
             ? optionGroupsForPackage(pkg.id).filter(
                 (group) => group.items.length > 0,
@@ -325,12 +341,13 @@ export default function PublicPackageCatalog({
                 active={active}
                 language={language}
                 sidesPricePerPerson={sidesPricePerPerson}
-                onClick={() => onSelect(pkg.id)}
+                onClick={() => handlePackageClick(pkg.id)}
               />
-              {active && selectableGroups.length > 0 ? (
+              {active && expanded && selectableGroups.length > 0 ? (
                 <div
                   ref={optionsRef}
                   data-public-package-options
+                  data-expanded-package={pkg.id}
                   className="min-w-0 lg:col-span-2"
                 >
                   <section className="rounded-2xl border-2 border-[color-mix(in_srgb,var(--brand-primary-2)_35%,transparent)] bg-cdl-surface p-4 sm:p-5">
@@ -384,6 +401,7 @@ export default function PublicPackageCatalog({
       </section>
       <div
         data-package-group-controls
+        data-expanded-package-id={expandedPackageId ?? ''}
         className="public-package-groups"
       >
         {packagesWithSides.length > 0 ? (
