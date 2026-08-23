@@ -102,6 +102,30 @@ test('SUCCESS_FIRE_PREMIUM_QUALITY', () => {
   assert.ok(existsSync(join(ROOT, 'public/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL.mp4')))
 })
 
+test('CURRENT_FIRE_VISUAL_PRESERVED', () => {
+  assert.match(signature, /PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC/)
+  assert.match(signature, /CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL|PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC/)
+  assert.doesNotMatch(signature, /cdl-fire-flames/)
+  assert.doesNotMatch(css, /\.cdl-fire-flames/)
+})
+
+test('SUCCESS_FIRE_CONTAIN', () => {
+  assert.match(signature, /data-success-fire-contain="true"/)
+  assert.match(css, /\.cdl-fire-signature-video \{[\s\S]*object-fit: contain/)
+})
+
+test('SUCCESS_FIRE_SAFE_AREA', () => {
+  assert.match(signature, /data-success-fire-safe-area="true"/)
+  assert.match(css, /clamp\(9\.9rem, 50\.5vw, 13\.15rem\)/)
+})
+
+test('SUCCESS_CONTACT_SIGNATURE_COMPACT', () => {
+  assert.match(css, /\.public-success-contacts \{[\s\S]*max-width: 18\.75rem/)
+  assert.match(css, /\.public-success-contacts a \{[\s\S]*display: inline-flex/)
+  assert.match(css, /\.public-success-contact-heading \{[\s\S]*font-size: 1\.02rem/)
+  assert.doesNotMatch(css, /\.public-success-contacts ul \{[\s\S]*flex-direction: row/)
+})
+
 test('SUCCESS_CONTACTS_BELOW_LOGO', () => {
   const logo = successScreen.indexOf('<CdlFireSignature')
   const heading = successScreen.indexOf('data-success-contact-heading')

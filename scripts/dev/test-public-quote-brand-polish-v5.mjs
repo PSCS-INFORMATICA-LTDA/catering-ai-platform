@@ -235,13 +235,13 @@ test('NO_HORIZONTAL_OVERFLOW', () => {
   assert.match(css, /overflow-x: clip/)
   assert.match(css, /overflow-wrap: break-word/)
   assert.doesNotMatch(signature, /width:\s*\d{4}px/)
-  assert.match(css, /clamp\(11\.25rem/)
-  assert.match(css, /clamp\(13\.75rem/)
+  assert.match(css, /clamp\(9\.9rem/)
+  assert.match(css, /clamp\(12\.1rem/)
 })
 
 test('SUCCESS_SIGNATURE_SIZE', () => {
-  assert.match(css, /clamp\(11\.25rem, 58vw, 15rem\)/)
-  assert.match(css, /clamp\(13\.75rem, 22vw, 17.5rem\)/)
+  assert.match(css, /clamp\(9\.9rem, 50\.5vw, 13\.15rem\)/)
+  assert.match(css, /clamp\(12\.1rem, 19\.4vw, 15\.4rem\)/)
 })
 
 if (failed > 0) {
