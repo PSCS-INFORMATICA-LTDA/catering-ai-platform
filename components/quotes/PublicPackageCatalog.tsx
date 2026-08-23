@@ -1,7 +1,6 @@
 'use client'
 
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Playfair_Display } from 'next/font/google'
 import {
   findBasePackage,
   formatPackageCatalogPriceLabel,
@@ -75,12 +74,26 @@ function PackageExperienceBody({
   )
 }
 
-const packageGroupDisplay = Playfair_Display({
-  subsets: ['latin'],
-  weight: ['700'],
-  display: 'swap',
-})
+const PACKAGE_EDITORIAL_HEADLINE = {
+  pt: 'PACOTES CDL',
+  en: 'CDL PACKAGES',
+  es: 'PAQUETES CDL',
+} as const
 
+function PackageGroupChevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      className={`h-4 w-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+      aria-hidden
+    >
+      <path
+        fill="currentColor"
+        d="M5.3 7.3a1 1 0 0 1 1.4 0L10 10.58l3.3-3.28a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.42z"
+      />
+    </svg>
+  )
+}
 
 function formatMoney(
   value: number,
@@ -123,30 +136,20 @@ function PackageGroupToggle({
       data-package-group-open={expanded ? 'true' : 'false'}
       aria-expanded={expanded}
       onClick={onClick}
-      className={`inline-flex w-fit max-w-full items-center gap-2 rounded-2xl border px-4 py-2.5 text-left shadow-[0_10px_24px_rgba(0,0,0,0.12)] transition ${
-        expanded
-          ? 'border-[color-mix(in_srgb,var(--brand-primary)_45%,transparent)] bg-cdl-surface text-cdl-title'
-          : 'border-cdl-border bg-cdl-surface text-cdl-title hover:bg-cdl-hover'
-      }`}
+      className={`public-package-group ${expanded ? 'is-open' : ''}`}
     >
-      <span
-        className={`${packageGroupDisplay.className} text-[0.88rem] font-black uppercase tracking-[0.22em] text-cdl-title sm:text-base`}
-      >
-        {title}
+      <span className="public-package-group-copy">
+        {expanded ? <span className="public-package-group-accent" aria-hidden /> : null}
+        <span className="public-package-group-label">{title}</span>
       </span>
       {selected ? (
         <span
           data-package-group-selected
-          className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500"
+          className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400"
           aria-hidden
         />
       ) : null}
-      <span
-        className="shrink-0 text-[10px] font-black text-[var(--brand-primary)]"
-        aria-hidden
-      >
-        {expanded ? '▲' : '▼'}
-      </span>
+      <PackageGroupChevron open={expanded} />
     </button>
   )
 }
@@ -193,18 +196,17 @@ function PackageCatalogCard({
       data-package-key={pkg.package_key ?? ''}
       data-package-sides-group={getPublicPackageSidesGroup(pkg)}
       onClick={onClick}
-      className={`flex w-full min-w-0 flex-col overflow-hidden rounded-2xl border bg-cdl-surface text-left transition ${
+      className={`public-package-card flex w-full min-w-0 flex-col overflow-hidden rounded-2xl border bg-cdl-surface text-left transition ${
         active
-          ? 'border-[var(--brand-primary-2)] ring-2 ring-[color-mix(in_srgb,var(--brand-primary-2)_40%,transparent)]'
+          ? 'is-selected border-[#e21b1b]'
           : 'border-cdl-border hover:border-neutral-300'
       }`}
     >
       <span className="relative block w-full min-w-0">
         <PackageCatalogHeroArt name={name} image={image} />
         {active ? (
-          <span className="absolute left-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white text-base font-black text-emerald-700 shadow">
-            ✓
-            <span className="sr-only">{selectedLabel}</span>
+          <span data-package-selected-badge className="public-package-selected-badge">
+            ✓ {selectedLabel}
           </span>
         ) : null}
       </span>
@@ -226,8 +228,10 @@ function PackageCatalogCard({
                 {getPackagePriceLineLabel('package', language)}
               </span>
               <span className="min-w-0 break-words text-right font-semibold tabular-nums text-cdl-title">
-                {money(showGarnishLine ? sidesPricing.basePricePerPerson! : packagePrice)}{' '}
-                / {perPerson}
+                <span className="public-package-price-unit">
+                  {money(showGarnishLine ? sidesPricing.basePricePerPerson! : packagePrice)}{' '}
+                  / {perPerson}
+                </span>
               </span>
             </span>
             {showGarnishLine ? (
@@ -236,7 +240,9 @@ function PackageCatalogCard({
                   {getPackagePriceLineLabel('sides', language)}
                 </span>
                 <span className="min-w-0 break-words text-right font-semibold tabular-nums text-cdl-title">
-                  {money(sidesPricing.sidesPricePerPerson)} / {perPerson}
+                  <span className="public-package-price-unit">
+                    {money(sidesPricing.sidesPricePerPerson)} / {perPerson}
+                  </span>
                 </span>
               </span>
             ) : null}
@@ -248,7 +254,9 @@ function PackageCatalogCard({
                 data-package-display-total
                 className="min-w-0 break-words text-right text-base font-black tabular-nums text-[var(--brand-primary)]"
               >
-                {money(displayTotal)} / {perPerson}
+                <span className="public-package-price-unit">
+                  {money(displayTotal)} / {perPerson}
+                </span>
               </span>
             </span>
           </span>
@@ -358,11 +366,16 @@ export default function PublicPackageCatalog({
   return (
     <div className="min-w-0 space-y-6">
       <section
-        className="mx-auto max-w-2xl text-center"
+        className="public-package-intro"
         data-package-experience-intro
       >
-        <h2 className="text-xl font-black tracking-tight text-cdl-title sm:text-2xl">
+        <p className="public-package-kicker">
           {tw(language, 'publicPackageExperienceTitle')}
+        </p>
+        <h2 className="public-package-headline">
+          <span className="public-package-headline-mark">
+            {PACKAGE_EDITORIAL_HEADLINE[language]}
+          </span>
         </h2>
         <PackageExperienceBody
           language={language}
@@ -371,7 +384,7 @@ export default function PublicPackageCatalog({
       </section>
       <div
         data-package-group-controls
-        className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap"
+        className="public-package-groups"
       >
         {packagesWithSides.length > 0 ? (
           <PackageGroupToggle

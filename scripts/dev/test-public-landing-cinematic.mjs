@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  groupLandingTitleLines,
   LANDING_FORBIDDEN_COMMERCE_TERMS,
   PUBLIC_LANDING_STORY,
 } from '../../Lib/publicQuote/landingStoryCopy.ts'
@@ -130,6 +131,85 @@ report(
   LANDING_FORBIDDEN_COMMERCE_TERMS.every((term) => !storyBlob.includes(term)) &&
     !cinematic.toLowerCase().includes('zelle') &&
     !experience.toLowerCase().includes('zelle'),
+)
+
+const displayCss = css.slice(
+  css.indexOf('.public-cinematic-display {'),
+  css.indexOf('.public-cinematic-editorial,'),
+)
+const storyTitleCss = css.slice(
+  css.indexOf('.public-cinematic-editorial,'),
+  css.indexOf('.public-landing-title-line'),
+)
+const highlightCss = css.slice(
+  css.indexOf('.cdl-highlight {'),
+  css.indexOf('.cdl-highlight--red'),
+)
+const chapterCss = css.slice(
+  css.indexOf('.public-cinematic-chapter {'),
+  css.indexOf('.public-cinematic-chapter--intro'),
+)
+const heroLines = groupLandingTitleLines(PUBLIC_LANDING_STORY.pt.hero.title)
+const titleSource = read('components/quotes/PublicLandingTitle.tsx')
+
+report(
+  'PUBLIC_LANDING_NO_TEXT_OVERLAP',
+  /line-height:\s*1\.0[4-8]/.test(displayCss) &&
+    /line-height:\s*1\.0[4-8]/.test(storyTitleCss) &&
+    !/line-height:\s*0\.94/.test(displayCss) &&
+    !highlightCss.includes('margin:') &&
+    !highlightCss.includes('position: absolute') &&
+    !highlightCss.includes('transform:') &&
+    css.includes('public-landing-title-line') &&
+    css.includes('padding-block: 0.12em') &&
+    titleSource.includes('groupLandingTitleLines') &&
+    titleSource.includes('data-landing-title-line'),
+)
+
+report(
+  'PUBLIC_LANDING_NO_HORIZONTAL_OVERFLOW',
+  css.includes('overflow-x: clip') &&
+    css.includes('overflow-wrap: break-word') &&
+    cinematic.includes('public-cinematic') &&
+    !cinematic.includes('scroll-snap'),
+)
+
+report(
+  'PUBLIC_LANDING_HIGHLIGHT_WITHIN_CONTAINER',
+  highlightCss.includes('box-decoration-break: clone') &&
+    highlightCss.includes('padding: 0.04em 0.16em') &&
+    titleSource.includes('data-landing-title-line') &&
+    heroLines.length === 4,
+)
+
+report(
+  'PUBLIC_LANDING_COMPACT_STORY_RHYTHM',
+  chapterCss.includes('min-height: 66svh') &&
+    !chapterCss.includes('min-height: 78svh') &&
+    !chapterCss.includes('scroll-snap') &&
+    !/^\s*height:/.test(chapterCss) &&
+    css.includes('public-cinematic-chapter--editorial'),
+)
+
+report(
+  'PUBLIC_LANDING_PT_MOBILE_LAYOUT',
+  PUBLIC_LANDING_STORY.pt.hero.title[0].breakAfter === true &&
+    PUBLIC_LANDING_STORY.pt.hero.title[1].text.toLowerCase().includes('churrasco') &&
+    PUBLIC_LANDING_STORY.pt.stories[0].title[0].breakAfter === true,
+)
+
+report(
+  'PUBLIC_LANDING_EN_MOBILE_LAYOUT',
+  PUBLIC_LANDING_STORY.en.hero.title[0].text === 'The best of' &&
+    PUBLIC_LANDING_STORY.en.hero.title[0].breakAfter === true &&
+    PUBLIC_LANDING_STORY.en.stories[0].title[1].text.includes('CATERING'),
+)
+
+report(
+  'PUBLIC_LANDING_ES_MOBILE_LAYOUT',
+  PUBLIC_LANDING_STORY.es.hero.title[0].text === 'Lo mejor de la' &&
+    PUBLIC_LANDING_STORY.es.hero.title[0].breakAfter === true &&
+    PUBLIC_LANDING_STORY.es.stories[2].title[1].highlight === 'red',
 )
 
 const live = process.argv.includes('--live')

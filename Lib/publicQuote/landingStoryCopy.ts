@@ -47,8 +47,9 @@ export const PUBLIC_LANDING_STORY = {
     hero: {
       eyebrow: 'ORÇAMENTO ONLINE',
       title: [
-        { text: 'O melhor do ' },
-        { text: 'churrasco brasileiro', highlight: 'red' },
+        { text: 'O melhor do', breakAfter: true },
+        { text: 'churrasco', highlight: 'red', breakAfter: true },
+        { text: 'brasileiro', highlight: 'red' },
         { text: ',', breakAfter: true },
         { text: 'onde você estiver.' },
       ],
@@ -134,8 +135,9 @@ export const PUBLIC_LANDING_STORY = {
     hero: {
       eyebrow: 'ONLINE QUOTE',
       title: [
-        { text: 'The best of ' },
-        { text: 'Brazilian barbecue', highlight: 'red' },
+        { text: 'The best of', breakAfter: true },
+        { text: 'Brazilian', highlight: 'red', breakAfter: true },
+        { text: 'barbecue', highlight: 'red' },
         { text: ',', breakAfter: true },
         { text: 'wherever you are.' },
       ],
@@ -221,8 +223,9 @@ export const PUBLIC_LANDING_STORY = {
     hero: {
       eyebrow: 'COTIZACIÓN ONLINE',
       title: [
-        { text: 'Lo mejor de la ' },
-        { text: 'parrilla brasileña', highlight: 'red' },
+        { text: 'Lo mejor de la', breakAfter: true },
+        { text: 'parrilla', highlight: 'red', breakAfter: true },
+        { text: 'brasileña', highlight: 'red' },
         { text: ',', breakAfter: true },
         { text: 'donde tú estés.' },
       ],
@@ -308,6 +311,22 @@ export const PUBLIC_LANDING_STORY = {
 
 export function publicLandingStory(locale: QuoteLanguage): LandingStoryCopy {
   return PUBLIC_LANDING_STORY[locale]
+}
+
+export function groupLandingTitleLines(
+  parts: readonly LandingTitlePart[],
+): LandingTitlePart[][] {
+  const lines: LandingTitlePart[][] = []
+  let current: LandingTitlePart[] = []
+  for (const part of parts) {
+    current.push(part)
+    if (part.breakAfter) {
+      lines.push(current)
+      current = []
+    }
+  }
+  if (current.length) lines.push(current)
+  return lines
 }
 
 export const LANDING_FORBIDDEN_COMMERCE_TERMS = [
