@@ -212,7 +212,11 @@ function PackageCatalogCard({
         ) : null}
       </span>
       <span className="flex min-w-0 flex-col gap-1 px-4 py-3">
-        <span className="text-base font-black leading-tight text-cdl-title sm:text-lg">
+        {/* The tier is what the customer picks by, so the name carries the card. */}
+        <span
+          data-package-card-name
+          className="text-lg font-black leading-tight tracking-tight text-cdl-title sm:text-xl"
+        >
           {name}
         </span>
         {priceOnRequest ? (
