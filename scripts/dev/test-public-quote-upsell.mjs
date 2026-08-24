@@ -182,11 +182,28 @@ test('ITEMS_SORTED_PRICE_DESC', () => {
 })
 
 test('CATEGORY_REVIEW_FLOW_UNCHANGED', () => {
-  // Reordering must not touch the review requirement or its bookkeeping.
+  // Reordering must not touch the review requirement or its bookkeeping. Note
+  // that the hard block on Next is already off on this branch — it was turned
+  // off in 780f10b, "unblock extras and restore quote submission" — so this
+  // asserts the plumbing is intact, not that Next is disabled.
   assert.match(wizard, /reviewedCategoryKeys/)
   assert.match(wizard, /additionalsStepNextDisabled/)
+  assert.match(wizard, /additionalsReviewPrompt/)
   const exposure = source('Lib/additionalCategoryExposure.ts')
   assert.match(exposure, /export/)
+  const accordion = source('components/quotes/additionals/AdditionalCategorySection.tsx')
+  assert.match(accordion, /data-additional-category-sentinel/)
+  assert.match(accordion, /data-additional-category-summary/)
+})
+
+test('EXTRAS_HEADER_IS_PURELY_ADDITIVE', () => {
+  // The opening sits beside the existing hint and wraps nothing, so it cannot
+  // change how categories mount, scroll or report themselves as reviewed.
+  const step = wizard.slice(wizard.indexOf('{step === 3 && ('))
+  const intro = step.slice(step.indexOf('data-suggested-extras'))
+  const closed = intro.slice(0, intro.indexOf('</section>'))
+  assert.doesNotMatch(closed, /AdditionalCategorySection|additionalItemsByCategory/)
+  assert.match(step, /additionalItemsByCategory\.map/)
 })
 
 test('PACKAGE_PRICING_UNCHANGED', () => {

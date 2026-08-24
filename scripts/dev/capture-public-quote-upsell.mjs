@@ -286,8 +286,9 @@ for (const locale of LOCALES) {
 
     const WANT = [
       'BOVINO_NOBRE', 'BOVINO_TRADICIONAL', 'PORCO', 'FRANGO', 'PEIXES',
-      'FRUTOS_DO_MAR', 'CORDEIRO', 'LINGUICAS', 'GUARNICOES',
-      'LEGUMES_E_SALADAS', 'EQUIPAMENTOS', 'OUTROS',
+      'FRUTOS_DO_MAR', 'CORDEIRO', 'LINGUICAS', 'GUARNICOES', 'ACOMPANHAMENTOS',
+      'LEGUMES_E_SALADAS', 'LEGUMES_E_VEGETAIS', 'FRUTAS', 'EQUIPAMENTOS',
+      'OUTROS',
     ]
     const rank = (k) => (WANT.indexOf(k) === -1 ? WANT.length : WANT.indexOf(k))
     const ordered = keys.every((k, i) => i === 0 || rank(keys[i - 1]) <= rank(k))
