@@ -63,15 +63,15 @@ function PackageExperienceBody({
       nodes.push(<span key={key++}>{remaining.slice(0, index)}</span>)
     }
     nodes.push(
-      <strong key={key++} className="font-black text-cdl-title">
+      <em key={key++} className="public-package-intro-mark">
         {remaining.slice(index, index + mark.length)}
-      </strong>,
+      </em>,
     )
     remaining = remaining.slice(index + mark.length)
   }
   if (remaining) nodes.push(<span key={key++}>{remaining}</span>)
   return (
-    <p className="mt-3 text-sm leading-relaxed text-cdl-muted">{nodes}</p>
+    <p className="public-package-intro-body">{nodes}</p>
   )
 }
 
@@ -392,18 +392,22 @@ export default function PublicPackageCatalog({
         className="public-package-intro"
         data-package-experience-intro
       >
-        <p className="public-package-kicker">
-          {tw(language, 'publicPackageExperienceTitle')}
-        </p>
-        <h2 className="public-package-headline">
-          <span className="public-package-headline-mark">
-            {PACKAGE_EDITORIAL_HEADLINE[language]}
-          </span>
-        </h2>
-        <PackageExperienceBody
-          language={language}
-          text={tw(language, 'publicPackageExperienceBody')}
-        />
+        <div className="public-package-title-band" data-package-title-band>
+          <h2 className="public-package-headline">
+            <span className="public-package-headline-mark">
+              {PACKAGE_EDITORIAL_HEADLINE[language]}
+            </span>
+          </h2>
+        </div>
+        <div className="public-package-intro-copy">
+          <p className="public-package-kicker">
+            {tw(language, 'publicPackageExperienceTitle')}
+          </p>
+          <PackageExperienceBody
+            language={language}
+            text={tw(language, 'publicPackageExperienceBody')}
+          />
+        </div>
       </section>
       {/* What every package already includes, before the with/without choice. */}
       <PackageSidesEditorial

@@ -83,8 +83,50 @@ test('PACKAGE_AND_EXTRAS_VISUAL_FAMILY_MATCH', () => {
   assert.match(css, /--cdl-yellow/)
 })
 
+test('PACKAGE_VISUAL_MATCHES_EXTRAS_STYLE', () => {
+  const packageIntro = css.match(/\.public-package-intro \{[\s\S]*?\n\}/)?.[0]
+  const extrasFeatured = css.match(/\.public-additional-category\.is-featured \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(packageIntro && extrasFeatured)
+  assert.match(packageIntro, /#0a0a0a/)
+  assert.match(css, /\.public-package-title-band \{[\s\S]*?#e21b1b/)
+  assert.match(css, /\.public-suggested-extras-title-band \{[\s\S]*?#e21b1b/)
+  assert.match(css, /\.public-package-intro-mark \{[\s\S]*?#f6d000/)
+  assert.match(css, /\.public-suggested-extras-mark \{[\s\S]*?#f6d000/)
+})
+
+test('PACKAGE_HEADER_RED_WHITE', () => {
+  const band = css.match(/\.public-package-title-band \{[\s\S]*?\n\}/)?.[0]
+  const mark = css.match(/\.public-package-headline-mark \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(band && mark)
+  assert.match(band, /background: #e21b1b/)
+  assert.match(band, /color: #fff/)
+  assert.match(mark, /background: #e21b1b/)
+  assert.match(mark, /color: #fff/)
+  assert.match(catalog, /data-package-title-band/)
+  assert.match(catalog, /PACOTES CDL/)
+})
+
+test('PACKAGE_INFO_BLOCK_DARK_THEME', () => {
+  const introCopy = css.match(/\.public-package-intro-copy \{[\s\S]*?\n\}/)?.[0]
+  const editorial = css.match(/\.public-package-editorial \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(introCopy && editorial)
+  assert.match(introCopy, /#070707|#0a0a0a/)
+  assert.match(editorial, /background: #0a0a0a/)
+  assert.match(css, /\.public-package-editorial-title \{[\s\S]*?color: #fff/)
+  assert.match(css, /\.public-package-intro-body \{[\s\S]*?rgba\(255, 255, 255/)
+})
+
+test('PACKAGE_YELLOW_HIGHLIGHTS_PRESENT', () => {
+  assert.match(css, /\.public-package-intro-mark \{[\s\S]*?#f6d000/)
+  assert.match(css, /\.public-package-editorial-price \{[\s\S]*?#f6d000/)
+  assert.match(catalog, /com ou sem guarnições/)
+  assert.match(catalog, /Explore os pacotes/)
+  assert.match(catalog, /O valor atualiza na hora/)
+  assert.match(catalog, /className="public-package-intro-mark"/)
+})
+
 test('PACKAGE_INFO_BLOCKS_POLISHED', () => {
-  assert.match(css, /\.public-package-editorial \{[\s\S]*?rgba\(226, 27, 27/)
+  assert.match(css, /\.public-package-editorial \{[\s\S]*?#0a0a0a/)
   assert.match(css, /\.public-package-editorial-title \{[\s\S]*?font-size: 0\.8rem/)
   assert.match(css, /\.public-package-editorial-title::before \{[\s\S]*?--cdl-yellow/)
 })
@@ -92,8 +134,16 @@ test('PACKAGE_INFO_BLOCKS_POLISHED', () => {
 test('PLUS_GUARNICOES_BLOCK_ALIGNED_WITH_VISUAL_SYSTEM', () => {
   assert.match(editorial, /packageSidesUpsellTitle/)
   assert.match(editorial, /public-package-editorial-price/)
-  assert.match(css, /\.public-package-editorial-price \{[\s\S]*?#e21b1b/)
+  assert.match(css, /\.public-package-editorial-price \{[\s\S]*?#f6d000/)
   assert.match(translations, /Adicione guarnições por \{price\} por pessoa\./)
+})
+
+test('PT_GUARNICOES_AND_ACOMPANHAMENTOS_RULES', () => {
+  assert.match(translations, /packageIncludedTitle: 'TODOS OS PACOTES ACOMPANHAM'/)
+  assert.match(translations, /packageSidesUpsellTitle: 'PLUS GUARNIÇÕES'/)
+  assert.match(read('Lib/cdlCommercialRules.ts'), /'Feijão preto'/)
+  assert.doesNotMatch(read('Lib/cdlCommercialRules.ts'), /tropeiro/i)
+  assert.match(read('Lib/packageCatalogVisual.ts'), /Guarnições: arroz branco, feijão preto/)
 })
 
 test('CUSTOM_PACKAGE_IMAGE_BLACK_SQUARE_REMOVED', () => {
@@ -148,9 +198,42 @@ print(sample.mean())
   assert.equal(probe.status, 0, probe.stderr || probe.stdout)
 })
 
+test('PACKAGE_IMAGE_BLACK_SQUARE_GONE_ON_PRIME_PLUS_PT', () => {
+  const generated = read('Lib/publicQuote/packageFolderArt.generated.ts')
+  assert.match(generated, /bbqpri-plus-pt-v4\.webp/)
+  const probe = spawnSync(
+    'python3',
+    ['-'],
+    {
+      input: `
+import cv2, numpy as np
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpri-plus-pt-v4.webp')}')
+assert im is not None
+# former black plate + X sat immediately right of the mark
+roi = im[1314:1460, 189:362]
+gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+lap = np.abs(cv2.Laplacian(gray, cv2.CV_32F)).mean()
+# restored wood has grain; a black plate does not
+assert gray.mean() > 12, gray.mean()
+assert lap > 3.5, lap
+print(gray.mean(), lap)
+`,
+      encoding: 'utf8',
+    },
+  )
+  assert.equal(probe.status, 0, probe.stderr || probe.stdout)
+})
+
+test('ADICIONAIS_UNCHANGED', () => {
+  assert.match(extras, /data-suggested-extras-title-band/)
+  assert.match(extras, /cortes e extras premium/)
+  assert.match(css, /\.public-suggested-extras-title-band \{[\s\S]*?#e21b1b/)
+  assert.match(wizard, /if \(category === SUGGESTED_EXTRAS_DISPLAY_KEY\) return/)
+})
+
 test('CUSTOM_PACKAGE_IMAGE_ART_NOT_DEGRADED', () => {
-  assert.match(visual, /bbqpers-plus-pt-v3\.webp/)
-  assert.match(visual, /\?v=bbfix2/)
+  assert.match(read('Lib/publicQuote/packageFolderArt.generated.ts'), /bbqpers-plus-pt-v4\.webp/)
+  assert.match(visual, /\?v=art4/)
   const probe = spawnSync(
     'python3',
     ['-'],
