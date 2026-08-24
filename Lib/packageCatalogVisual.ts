@@ -1,4 +1,9 @@
 import type { QuoteLanguage } from './quoteWizardTypes'
+import {
+  PACKAGE_FOLDER_ART_V2,
+  PACKAGE_FOLDER_BUCKET,
+  PACKAGE_FOLDER_PREFIX,
+} from './publicQuote/packageFolderArt.generated.ts'
 
 export type PackageCatalogVariant = 'without_sides' | 'with_sides' | 'custom'
 
@@ -105,10 +110,37 @@ export function getPackageCatalogName(
   )
 }
 
+/**
+ * V2 folder for this package in this locale, if one has been published.
+ *
+ * The folders carry text, so each package, variant and locale has its own file.
+ * They live in the same package-images bucket as everything else — this only
+ * picks the right key. Falls back to packages.image_url when a locale has no
+ * folder yet, so the catalog can never end up with a blank card.
+ */
+export function getPackageFolderArt(
+  pkg: PackageCatalogFields,
+  language?: string | null,
+): string | null {
+  const key = pkg.package_key?.trim().toUpperCase()
+  if (!key) return null
+  const locale = language === 'en' || language === 'es' ? language : 'pt'
+  const byLocale = PACKAGE_FOLDER_ART_V2[key]
+  const file = byLocale?.[locale] ?? byLocale?.pt
+  if (!file) return null
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '')
+  if (!base) return null
+  return `${base}/storage/v1/object/public/${PACKAGE_FOLDER_BUCKET}/${PACKAGE_FOLDER_PREFIX}/${file}`
+}
+
 export function getPackageCatalogImage(
   pkg: PackageCatalogFields,
   allPackages?: ReadonlyArray<PackageCatalogFields>,
+  language?: string | null,
 ): string | null {
+  const folder = getPackageFolderArt(pkg, language)
+  if (folder) return folder
+
   const direct = pkg.image_url?.trim() || null
   if (direct) return direct
 

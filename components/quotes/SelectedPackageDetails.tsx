@@ -156,7 +156,7 @@ export default function SelectedPackageDetails({
   onNextBlockedClick?: () => void
   stepMessage?: string | null
 }) {
-  const image = getPackageCatalogImage(pkg, allPackages)
+  const image = getPackageCatalogImage(pkg, allPackages, language)
   const variant = getPackageCatalogVariant(pkg)
   const hasOptions =
     pkg.id && hasPackageIncludedChoices(pkg.id, optionGroups, pkg)

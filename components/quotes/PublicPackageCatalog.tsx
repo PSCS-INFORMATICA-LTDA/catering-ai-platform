@@ -170,7 +170,8 @@ function PackageCatalogCard({
   onClick: () => void
 }) {
   const name = getPackageCatalogName(pkg, language)
-  const image = getPackageCatalogImage(pkg, allPackages)
+  // Folders carry text, so the art follows the locale like the copy does.
+  const image = getPackageCatalogImage(pkg, allPackages, language)
   const variant = getPackageCatalogVariant(pkg)
   const selectedLabel = getQuoteStrings(language).selected
   const currency = pkg.currency_code?.trim() || 'USD'

@@ -83,7 +83,7 @@ export default function QuotePackageSummary({
   showImage?: boolean
   pendingSelectionGroupIds?: string[]
 }) {
-  const image = getPackageCatalogImage(pkg, allPackages)
+  const image = getPackageCatalogImage(pkg, allPackages, language)
   const variant = getPackageCatalogVariant(pkg)
   const detailTitle = getPackageDetailTitle(pkg, language)
   const priceOnRequest = isPackageCatalogPriceOnRequest(pkg)
