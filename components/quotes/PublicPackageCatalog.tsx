@@ -19,6 +19,7 @@ import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import PackageIncludedOptions from '@/components/quotes/PackageIncludedOptions'
 import PackageCatalogHeroArt from '@/components/quotes/PackageCatalogHeroArt'
+import PackageSidesEditorial from '@/components/quotes/PackageSidesEditorial'
 
 type PackageSidesGroup = 'with_sides' | 'without_sides'
 
@@ -404,6 +405,12 @@ export default function PublicPackageCatalog({
           text={tw(language, 'publicPackageExperienceBody')}
         />
       </section>
+      {/* What every package already includes, before the with/without choice. */}
+      <PackageSidesEditorial
+        language={language}
+        sidesPricePerPerson={sidesPricePerPerson}
+        formatMoney={(value) => formatMoney(value, language, 'USD')}
+      />
       <div
         data-package-group-controls
         data-expanded-package-id={expandedPackageId ?? ''}

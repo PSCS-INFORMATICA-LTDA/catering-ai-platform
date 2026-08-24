@@ -73,17 +73,28 @@ const CATEGORY_LABEL_MAP: Record<string, Record<QuoteLanguage, string>> = {
   },
 }
 
+/**
+ * Presentation order for the extras step, set commercially: the premium cuts
+ * lead, then the rest of the proteins, then the non-protein food, and the
+ * accessories close. Display only — it never touches an item's category,
+ * price, eligibility or the review requirement.
+ *
+ * Anything not listed sorts to the end, so an unknown category still appears.
+ */
 const CATEGORY_SORT_ORDER = [
-  'BOVINO_TRADICIONAL',
   'BOVINO_NOBRE',
-  'LINGUICAS',
-  'FRANGO',
-  'FRUTOS_DO_MAR',
-  'PEIXES',
+  'BOVINO_TRADICIONAL',
   'PORCO',
+  'FRANGO',
+  'PEIXES',
+  'FRUTOS_DO_MAR',
   'CORDEIRO',
+  'LINGUICAS',
   'GUARNICOES',
+  'ACOMPANHAMENTOS',
   'LEGUMES_E_SALADAS',
+  'LEGUMES_E_VEGETAIS',
+  'FRUTAS',
   'EQUIPAMENTOS',
   'OUTROS',
 ] as const
@@ -205,6 +216,14 @@ type QuoteStrings = {
     publicAdditionalsKicker: string
     additionalPriceKicker: string
     withSidesGroupTitle: string
+    /** Editorial block above the sides toggles on the package step. */
+    packageIncludedTitle: string
+    packageIncludedHelper: string
+    packageSidesUpsellTitle: string
+    packageSidesUpsellText: string
+    /** Commercial opening above the extras categories. */
+    suggestedExtrasTitle: string
+    suggestedExtrasBody: string
     withoutSidesGroupTitle: string
     withSidesGroupHint: string
     withoutSidesGroupHint: string
@@ -622,6 +641,13 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicAdditionalsKicker: 'Adicionais',
       additionalPriceKicker: 'Preço',
       withSidesGroupTitle: 'COM GUARNIÇÕES',
+      packageIncludedTitle: 'TODOS OS PACOTES ACOMPANHAM',
+      packageIncludedHelper: 'Incluídos sem custo adicional.',
+      packageSidesUpsellTitle: 'PLUS GUARNIÇÕES',
+      packageSidesUpsellText: 'Adicione guarnições por {price} por pessoa.',
+      suggestedExtrasTitle: 'EXTRAS SUGERIDOS',
+      suggestedExtrasBody:
+        'Complete seu churrasco com cortes e itens especiais. Adicione somente o que fizer sentido para o seu evento.',
       withoutSidesGroupTitle: 'SEM GUARNIÇÕES',
       withSidesGroupHint:
         'Uma experiência completa, com acompanhamentos preparados para complementar o churrasco e deixar o serviço pronto para receber seus convidados. Explore {count} opções de pacotes disponíveis e escolha a combinação ideal para o seu evento.',
@@ -1061,6 +1087,13 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicAdditionalsKicker: 'Add-ons',
       additionalPriceKicker: 'Price',
       withSidesGroupTitle: 'WITH SIDES',
+      packageIncludedTitle: 'INCLUDED WITH EVERY PACKAGE',
+      packageIncludedHelper: 'Included at no additional charge.',
+      packageSidesUpsellTitle: 'PLUS SIDES',
+      packageSidesUpsellText: 'Add sides for {price} per person.',
+      suggestedExtrasTitle: 'SUGGESTED EXTRAS',
+      suggestedExtrasBody:
+        'Complete your BBQ with premium cuts and special extras. Add only what makes sense for your event.',
       withoutSidesGroupTitle: 'WITHOUT SIDES',
       withSidesGroupHint:
         'A complete experience, with sides prepared to complement the barbecue and ready your service for guests. Explore {count} available packages and choose the ideal combination for your event.',
@@ -1500,6 +1533,13 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicAdditionalsKicker: 'Adicionales',
       additionalPriceKicker: 'Precio',
       withSidesGroupTitle: 'CON ACOMPAÑAMIENTOS',
+      packageIncludedTitle: 'INCLUIDO EN TODOS LOS PAQUETES',
+      packageIncludedHelper: 'Incluido sin costo adicional.',
+      packageSidesUpsellTitle: 'PLUS GUARNICIONES',
+      packageSidesUpsellText: 'Agrega guarniciones por {price} por persona.',
+      suggestedExtrasTitle: 'EXTRAS SUGERIDOS',
+      suggestedExtrasBody:
+        'Completa tu BBQ con cortes premium y extras especiales. Agrega solo lo que tenga sentido para tu evento.',
       withoutSidesGroupTitle: 'SIN ACOMPAÑAMIENTOS',
       withSidesGroupHint:
         'Una experiencia completa, con acompañamientos preparados para complementar el asado y dejar el servicio listo para recibir a tus invitados. Explora {count} opciones de paquetes disponibles y elige la combinación ideal para tu evento.',
