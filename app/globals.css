@@ -469,13 +469,21 @@ body {
   scroll-margin-top: 120px;
 }
 
-/* Quiet divider between field groups inside a wizard step. */
+/*
+ * Group heading between field groups inside a wizard step.
+ *
+ * It has to outrank the field labels sitting right under it, which are 11px/700
+ * uppercase on the same left edge — at the same size it read as just another
+ * field label, and being lighter it read as a weaker one. Larger, darker, and
+ * with far more room above than below so it binds to the block it introduces.
+ */
 .wizard-section-label {
-  margin: 0.9rem 0 -0.35rem;
-  color: var(--cdl-subtle);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.13em;
+  margin: 1.75rem 0 0.2rem;
+  /* Not --cdl-title: that is the orange step-title accent in the light wizard. */
+  color: var(--cdl-fg);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -1877,18 +1885,21 @@ body {
   margin-top: 1.5rem;
 }
 
+/*
+ * One rail for every corner cue. `margin-top: auto` pins them to the bottom of
+ * the chapter: the chapters centre their content on desktop, so without it the
+ * cue drifted with the copy length and sat anywhere from 0 to 90px off the edge.
+ * Matching boxes put the arrow glyph and the closing dot on the same centre.
+ */
 .public-landing-cue--arrow,
 .public-landing-cue--end {
   align-self: flex-end;
-  margin-top: 1.1rem;
-  margin-right: -0.75rem;
-}
-
-/* Accessible target without giving the cue visual weight. */
-.public-landing-cue--arrow {
   justify-content: center;
   min-width: 2.75rem;
   min-height: 2.75rem;
+  margin-top: auto;
+  margin-right: -0.75rem;
+  padding-top: 1.1rem;
 }
 
 .public-landing-cue--lead {
@@ -1901,11 +1912,15 @@ body {
   letter-spacing: 0.09em;
   text-transform: uppercase;
   opacity: 0.9;
+  /* The chapters sit over photography; this keeps the cue legible where a
+     bright frame shows through, without putting a plate behind it. */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
 .public-landing-cue-arrow {
   width: 1.35rem;
   height: 1.35rem;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55));
   animation: public-landing-cue-drift 2.4s ease-in-out infinite;
 }
 
@@ -1925,6 +1940,14 @@ body {
   border-radius: 50%;
   background: var(--cdl-yellow);
   opacity: 0.6;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55));
+}
+
+/* The UA ring is near-black, which disappears on this surface. */
+.public-landing-cue:focus-visible {
+  outline: 2px solid var(--cdl-yellow);
+  outline-offset: 3px;
+  border-radius: 0.75rem;
 }
 
 @keyframes public-landing-cue-drift {

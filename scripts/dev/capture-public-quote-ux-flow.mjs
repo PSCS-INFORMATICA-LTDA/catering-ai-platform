@@ -279,6 +279,13 @@ try {
     const before = label.previousElementSibling
     const after = label.nextElementSibling
     const style = getComputedStyle(label)
+    // The field labels it has to outrank.
+    const field = after?.querySelector('.cdl-eyebrow, label > span')
+    const fieldStyle = field ? getComputedStyle(field) : null
+    const lum = (color) => {
+      const m = color.match(/\d+/g)
+      return m ? 0.2126 * +m[0] + 0.7152 * +m[1] + 0.0722 * +m[2] : null
+    }
     return {
       text: label.textContent.trim(),
       // Sits between the guest counts and the address grid.
@@ -290,6 +297,14 @@ try {
       hasCard:
         style.borderTopWidth !== '0px' ||
         style.backgroundColor !== 'rgba(0, 0, 0, 0)',
+      fieldFontSize: fieldStyle?.fontSize ?? null,
+      // On a light card, darker = stronger.
+      outranksField:
+        fieldStyle != null &&
+        parseFloat(style.fontSize) > parseFloat(fieldStyle.fontSize) &&
+        lum(style.color) < lum(fieldStyle.color),
+      gapAbove: parseFloat(style.marginTop),
+      gapBelow: parseFloat(style.marginBottom),
     }
   })
   record(
@@ -303,8 +318,14 @@ try {
     addressLabel.guestsBefore &&
       addressLabel.addressAfter &&
       !addressLabel.hasCard &&
-      parseFloat(addressLabel.fontSize) <= 13,
+      parseFloat(addressLabel.fontSize) <= 15,
     `between guests and address, ${addressLabel.fontSize}, no card, ${addressLabel.color}`,
+  )
+
+  record(
+    'EVENT_ADDRESS_SECTION_OUTRANKS_FIELD_LABELS',
+    addressLabel.outranksField && addressLabel.gapAbove > addressLabel.gapBelow * 4,
+    `heading ${addressLabel.fontSize} vs field ${addressLabel.fieldFontSize}, ${addressLabel.gapAbove}px above / ${addressLabel.gapBelow}px below`,
   )
 
   /** Real outside click: the pickers close on mousedown, not on click. */

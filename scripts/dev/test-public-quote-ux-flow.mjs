@@ -71,6 +71,42 @@ test('LANDING_CUE_USES_CDL_YELLOW', () => {
   assert.doesNotMatch(block, /#[0-9a-f]{6}/i)
 })
 
+test('LANDING_CUES_SHARE_ONE_RAIL', () => {
+  // Chapters centre their content on desktop, so without margin-top:auto the
+  // cue drifts with the copy length instead of holding the chapter edge.
+  const rail = css.match(
+    /\.public-landing-cue--arrow,\s*\.public-landing-cue--end \{([^}]+)\}/,
+  )?.[1]
+  assert.ok(rail, 'arrow and end must share one rule')
+  assert.match(rail, /margin-top: auto/)
+  assert.match(rail, /align-self: flex-end/)
+  assert.match(rail, /margin-right: -0\.75rem/)
+  // Identical boxes put the arrow glyph and the dot on the same centre.
+  assert.match(rail, /min-width: 2\.75rem/)
+  assert.match(rail, /min-height: 2\.75rem/)
+  assert.match(rail, /justify-content: center/)
+})
+
+test('LANDING_CUE_LEGIBLE_OVER_PHOTOGRAPHY', () => {
+  // Chapters sit over photos; a discreet shadow, never a plate.
+  assert.match(css, /\.public-landing-cue-arrow \{[^}]*drop-shadow\(0 1px 2px rgba\(0, 0, 0, 0\.55\)\)/)
+  assert.match(css, /\.public-landing-cue-label \{[^}]*text-shadow: 0 1px 3px rgba\(0, 0, 0, 0\.6\)/)
+  const cueBlock = css.slice(
+    css.indexOf('.public-landing-cue {'),
+    css.indexOf('.wizard-section-label'),
+  )
+  assert.doesNotMatch(cueBlock, /background:\s*(?!none)/)
+  assert.doesNotMatch(cueBlock, /border:\s*(?!0)/)
+})
+
+test('LANDING_CUE_FOCUS_VISIBLE', () => {
+  // The UA ring is near-black and vanishes on this surface.
+  const fv = css.match(/\.public-landing-cue:focus-visible \{([^}]+)\}/)?.[1]
+  assert.ok(fv, 'cues need an explicit focus ring')
+  assert.match(fv, /outline: 2px solid var\(--cdl-yellow\)/)
+  assert.match(fv, /outline-offset/)
+})
+
 test('LANDING_CUE_RESPECTS_REDUCED_MOTION', () => {
   assert.match(
     css,
@@ -146,10 +182,22 @@ test('EVENT_ADDRESS_SECTION_LABEL', () => {
   const label = wizard.indexOf('data-event-address-section')
   assert.ok(wizard.indexOf('w.children4to12') < label)
   assert.ok(label < wizard.indexOf('<AddressAutocompleteFields'))
-  // Discreet: a label, not a panel.
-  assert.match(css, /\.wizard-section-label \{[^}]*color: var\(--cdl-subtle\)/)
-  assert.doesNotMatch(css, /\.wizard-section-label \{[^}]*border:/)
-  assert.doesNotMatch(css, /\.wizard-section-label \{[^}]*background:/)
+  // A group heading, not a panel and not another field label. The field labels
+  // under it are 11px/700 uppercase, so this has to outrank them.
+  const headingRule = css
+    .match(/\.wizard-section-label \{([^}]+)\}/)?.[1]
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+  assert.ok(headingRule, 'missing .wizard-section-label rule')
+  assert.match(headingRule, /font-size: 0\.82rem/)
+  assert.match(headingRule, /font-weight: 800/)
+  assert.match(headingRule, /color: var\(--cdl-fg\)/)
+  // --cdl-title is the orange step-title accent in the light wizard.
+  assert.doesNotMatch(headingRule, /--cdl-title/)
+  assert.doesNotMatch(headingRule, /border:/)
+  assert.doesNotMatch(headingRule, /background:/)
+  // Far more room above than below, so it binds to the block it introduces.
+  const [top, , bottom] = headingRule.match(/margin: ([^;]+);/)[1].split(' ')
+  assert.ok(parseFloat(top) > parseFloat(bottom) * 4, `margin ${top} over ${bottom}`)
 })
 
 test('DUPLICATE_DEPOSIT_COPY_REMOVED', () => {
