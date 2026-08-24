@@ -107,6 +107,8 @@ test('CUSTOM_FOLDER_CREATED', () => {
 test('ART_FOLLOWS_LOCALE_WITH_FALLBACK', () => {
   assert.match(visual, /export function getPackageFolderArt/)
   assert.match(visual, /byLocale\?\.\[locale\] \?\? byLocale\?\.pt/)
+  assert.match(visual, /file\.startsWith\('bbqpers-'\)/)
+  assert.match(visual, /\?v=bbfix1/)
   // The database column stays the fallback, so a card can never go blank.
   assert.match(visual, /const direct = pkg\.image_url\?\.trim\(\) \|\| null/)
   assert.match(visual, /findBasePackage\(pkg, allPackages\)/)

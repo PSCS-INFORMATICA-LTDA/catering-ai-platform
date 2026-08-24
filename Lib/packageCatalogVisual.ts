@@ -130,7 +130,13 @@ export function getPackageFolderArt(
   if (!file) return null
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '')
   if (!base) return null
-  return `${base}/storage/v1/object/public/${PACKAGE_FOLDER_BUCKET}/${PACKAGE_FOLDER_PREFIX}/${file}`
+  const url = `${base}/storage/v1/object/public/${PACKAGE_FOLDER_BUCKET}/${PACKAGE_FOLDER_PREFIX}/${file}`
+  // Personalized folders were repaired in place; bust the year-long cache
+  // on those six objects only. Other V3 art keeps the stored filename.
+  if (file.startsWith('bbqpers-')) {
+    return `${url}?v=bbfix1`
+  }
+  return url
 }
 
 export function getPackageCatalogImage(

@@ -138,8 +138,27 @@ test('FOLDER_PIPELINE_IS_REPRODUCIBLE', () => {
     'scripts/dev/fix-cdl-folder-marks.mjs',
     'scripts/dev/locate-folder-badges.py',
     'scripts/dev/remove-folder-pioneer-marks.py',
+    'scripts/dev/remove-folder-stray-bb.py',
   ]) {
     assert.ok(read(script).length > 500, `${script} missing`)
+  }
+})
+
+test('PERSONALIZED_STRAY_BB_REMOVED', () => {
+  const script = read('scripts/dev/remove-folder-stray-bb.py')
+  assert.match(script, /bbqpers-plus-pt-v3\.webp/)
+  assert.match(script, /bbqpers-plus-en-v3\.webp/)
+  assert.match(script, /bbqpers-plus-es-v3\.webp/)
+  const removal = json('assets/packages/folder-stray-bb-removal.json')
+  for (const name of [
+    'bbqpers-plus-pt-v3.webp',
+    'bbqpers-plus-en-v3.webp',
+    'bbqpers-plus-es-v3.webp',
+    'bbqpers-pt-v3.webp',
+    'bbqpers-en-v3.webp',
+    'bbqpers-es-v3.webp',
+  ]) {
+    assert.match(String(removal[name] ?? ''), /^removed/, `${name} not repaired`)
   }
 })
 
