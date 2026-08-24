@@ -11,7 +11,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
-const FOLDERS = join(ROOT, 'assets/packages/folders-v2')
+const FOLDERS = join(ROOT, 'assets/packages/folders-v3')
 const read = (p) => readFileSync(join(ROOT, p), 'utf8')
 const json = (p) => JSON.parse(read(p))
 
@@ -38,7 +38,7 @@ test('FOLDER_SET_COMPLETE', () => {
   // Five tiers x with/without sides x three locales.
   assert.equal(names.length, 30, `expected 30 folders, found ${names.length}`)
   for (const locale of ['pt', 'en', 'es']) {
-    const forLocale = names.filter((n) => n.includes(`-${locale}-v2`))
+    const forLocale = names.filter((n) => n.includes(`-${locale}-v3`))
     assert.equal(forLocale.length, 10, `${locale} should have 10 folders`)
   }
 })
@@ -60,10 +60,13 @@ test('FOLDER_WRONG_CDL_LOGO_COUNT_ZERO', () => {
   )?.[1]
   assert.ok(placed !== undefined, 'placement table missing')
   const placedNames = [...placed.matchAll(/'([^']+\.webp)'/g)].map((m) => m[1])
+  // V3 is derived from V2 without moving anything, so the marks resolved for
+  // V2 still describe where they sit.
   for (const name of names) {
-    const matched = locations[name] && locations[name].score >= 0.12
+    const key = name.replace('-v3.webp', '-v2.webp')
+    const matched = locations[key] && locations[key].score >= 0.12
     assert.ok(
-      matched || placedNames.includes(name),
+      matched || placedNames.includes(key),
       `${name} has no resolved CDL mark`,
     )
   }
@@ -71,7 +74,9 @@ test('FOLDER_WRONG_CDL_LOGO_COUNT_ZERO', () => {
 
 test('FOLDER_MARKS_CONSISTENT_SIZE_AND_MARGIN', () => {
   // One visual family: the mark sits on the left margin at a similar size.
-  const spots = names.map((n) => locations[n]).filter((v) => v && v.score >= 0.12)
+  const spots = names
+    .map((n) => locations[n.replace('-v3.webp', '-v2.webp')])
+    .filter((v) => v && v.score >= 0.12)
   const xs = spots.map((v) => v.x / 1024)
   const sizes = spots.map((v) => v.size / 1024)
   assert.ok(Math.max(...xs) < 0.12, `mark drifts right (max x ${Math.max(...xs)})`)
@@ -115,7 +120,7 @@ test('FOLDER_ART_STILL_MAPPED_PER_LOCALE', () => {
   }
   // Portable: file names only, bucket and host resolved at runtime.
   assert.doesNotMatch(generated, /https?:\/\//)
-  assert.match(generated, /PACKAGE_FOLDER_PREFIX = 'cdl-folders-v2'/)
+  assert.match(generated, /PACKAGE_FOLDER_PREFIX = 'cdl-folders-v3'/)
 })
 
 test('FOLDER_FILES_WEB_SIZED', () => {

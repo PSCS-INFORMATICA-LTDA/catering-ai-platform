@@ -5,7 +5,7 @@
  * gates lock the mapping, the fallback and the fact that nothing about pricing,
  * selection or the accordion moved with them.
  *
- * Run: node --experimental-strip-types scripts/dev/test-public-package-folders-v2.mjs
+ * Run: node --experimental-strip-types scripts/dev/test-public-package-folders-v3.mjs
  */
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
@@ -32,8 +32,8 @@ function test(name, callback) {
 const visual = source('Lib/packageCatalogVisual.ts')
 const generated = source('Lib/publicQuote/packageFolderArt.generated.ts')
 const catalog = source('components/quotes/PublicPackageCatalog.tsx')
-const uploader = source('scripts/dev/upload-cdl-package-folders-v2.mjs')
-const masters = readdirSync(join(ROOT, 'assets/packages/folders-v2')).filter((f) =>
+const uploader = source('scripts/dev/upload-cdl-package-folders-v3.mjs')
+const masters = readdirSync(join(ROOT, 'assets/packages/folders-v3')).filter((f) =>
   f.endsWith('.webp'),
 )
 
@@ -58,8 +58,8 @@ test('FOLDER_SET_COMPLETE', () => {
     const slug = key.replace('+', '-plus').toLowerCase()
     for (const locale of LOCALES) {
       assert.ok(
-        masters.includes(`${slug}-${locale}-v2.webp`),
-        `missing master ${slug}-${locale}-v2.webp`,
+        masters.includes(`${slug}-${locale}-v3.webp`),
+        `missing master ${slug}-${locale}-v3.webp`,
       )
     }
   }
@@ -69,16 +69,16 @@ test('PACKAGE_PT_EN_ES_ART_MAPPED', () => {
   for (const key of KEYS) {
     for (const locale of LOCALES) {
       const entry = new RegExp(
-        `"${key.replace('+', '\\+')}":[\\s\\S]{0,400}?"${locale}": "[a-z-]+${locale}-v2\\.webp"`,
+        `"${key.replace('+', '\\+')}":[\\s\\S]{0,400}?"${locale}": "[a-z-]+${locale}-v3\\.webp"`,
       )
       assert.match(generated, entry, `${key} ${locale} is not mapped`)
     }
   }
-  const files = [...generated.matchAll(/"([a-z-]+-v2\.webp)"/g)].map((m) => m[1])
+  const files = [...generated.matchAll(/"([a-z-]+-v3\.webp)"/g)].map((m) => m[1])
   assert.equal(files.length, 30)
   // The bucket the runtime already reads from, and no baked-in host.
   assert.match(generated, /PACKAGE_FOLDER_BUCKET = 'package-images'/)
-  assert.match(generated, /PACKAGE_FOLDER_PREFIX = 'cdl-folders-v2'/)
+  assert.match(generated, /PACKAGE_FOLDER_PREFIX = 'cdl-folders-v3'/)
   assert.doesNotMatch(generated, /https:\/\//)
 })
 
