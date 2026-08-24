@@ -6,12 +6,18 @@
 export const PUBLIC_SUCCESS_CDL_LOGO_SRC = '/cdl/logo.png'
 export const PUBLIC_SUCCESS_FIRE_LOGO_SRC = PUBLIC_SUCCESS_CDL_LOGO_SRC
 /**
- * Same footage as the plate below, re-framed on a constant 610x610 canvas so the
- * ring keeps ~19% safe area through the whole cycle.
+ * Same footage as the plate below, re-framed on a constant 610x610 canvas. V7
+ * renders the ring at 65.5% of the canvas — bigger than V6's 58% — and still
+ * keeps ~17% safe area through the whole cycle.
  * Rebuild with `npm run build:dev:cdl-fire-safe-asset`.
  */
 export const PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC =
+  '/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_SAFE_V7.mp4'
+/** Previous framing, kept on disk so the asset change is reversible. */
+export const PUBLIC_SUCCESS_CDL_FIRE_PREVIOUS_MP4_SRC =
   '/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_SAFE_V6.mp4'
+/** Ring share used by scripts/dev/build-cdl-fire-safe-asset.mjs. */
+export const PUBLIC_SUCCESS_CDL_FIRE_RING_SHARE = 0.655
 export const PUBLIC_SUCCESS_CDL_FIRE_SOURCE_MP4_SRC =
   '/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL.mp4'
 export const PUBLIC_SUCCESS_CDL_FIRE_SOURCE_NAME =

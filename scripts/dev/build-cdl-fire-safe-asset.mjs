@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const SOURCE = join(ROOT, 'public/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL.mp4')
-const TARGET = join(ROOT, 'public/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_SAFE_V6.mp4')
+const TARGET = join(ROOT, 'public/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_SAFE_V7.mp4')
 
 const SRC_W = 512
 const SRC_H = 610
@@ -33,15 +33,18 @@ const PAD_W = 768
 const PAD_H = 840
 // Delivered canvas. Square so the success stage never letterboxes.
 const CANVAS = 610
-// Ring is rendered at this share of the canvas, leaving ~21% safe area.
-const RING_SHARE = 0.58
-const BACKDROP_BLUR = 30
+// Ring is rendered at this share of the canvas, leaving ~17% safe area. Larger
+// than V6's 0.58 so the mark carries the top of the screen on its own.
+const RING_SHARE = 0.655
+const BACKDROP_BLUR = 38
 // Plate border melts into its own blurred backdrop everywhere except over the
 // ring itself, which runs to the very bottom of the source frame.
-const FEATHER = 30
+const FEATHER = 38
 const RING_GUARD = 0.08
-// Radial falloff stays outside the ring and ends on pure black.
-const FALLOFF_START = 0.72
+// Radial falloff starts just outside the ring and ends on pure black, so the
+// flames above the mark fade out across the whole distance to the canvas edge
+// instead of dying in the last few percent.
+const FALLOFF_START = 0.67
 
 if (!existsSync(SOURCE)) {
   console.error(`Missing source plate: ${SOURCE}`)
