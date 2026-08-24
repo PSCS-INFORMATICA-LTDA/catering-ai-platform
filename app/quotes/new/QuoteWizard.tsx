@@ -3181,6 +3181,15 @@ export default function QuoteWizardCore({
 
         {step === 3 && (
           <div className="min-w-0 space-y-6">
+            {/* Sets up the step as an opportunity, not a form to get through. */}
+            <section data-suggested-extras className="public-extras-intro">
+              <p className="public-extras-intro-title">
+                {tw(uiLocale, 'suggestedExtrasTitle')}
+              </p>
+              <p className="public-extras-intro-body">
+                {tw(uiLocale, 'suggestedExtrasBody')}
+              </p>
+            </section>
             <p className="text-sm text-cdl-muted">
               {quoteStrings.additionalsStepHint}
             </p>
