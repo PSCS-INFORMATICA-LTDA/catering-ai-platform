@@ -32,6 +32,7 @@ import {
   formatEventAddressLines,
   isSameEventDestination,
 } from '@/Lib/formatEventAddress'
+import { mileageDestinationAddress } from '@/Lib/publicQuote/mileageDestination'
 import PricingBreakdownView from './PricingBreakdownView'
 import type {
   PricingBreakdown,
@@ -444,12 +445,9 @@ function ConfirmationProposalBody({
                 <p
                   className="quote-proposal-value"
                   data-mileage-destination
+                  data-mileage-destination-source="event-address"
                 >
-                  {mileageDestinationCopy(
-                    lang,
-                    eventAddressText,
-                    eventAddressText,
-                  )}
+                  {mileageDestinationAddress(eventAddressText)}
                 </p>
               </div>
             </div>
@@ -544,6 +542,9 @@ function ConfirmationProposalBody({
         balanceAmount={breakdown.balance}
         reservationPercentage={breakdown.rules_applied.reservationPercentage}
         ruleHint={tw(lang, 'reservationRuleHint')}
+        // The amount labels already carry the percentages, and the rules panel
+        // right below states the policy again.
+        showPercentSplit={false}
       />
 
       <CdlImportantRulesPanel

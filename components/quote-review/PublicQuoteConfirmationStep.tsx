@@ -245,7 +245,15 @@ export default function PublicQuoteConfirmationStep({
         </p>
       ) : null}
 
-      <div className="sticky bottom-0 z-20 -mx-4 flex flex-col-reverse gap-3 border-t border-cdl-border bg-cdl-bg/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-between sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+      {/*
+        Single action shell, sticky at every width, so the customer can confirm
+        from anywhere in the review without scrolling to the last pixel. It is
+        the same button in both states — there is no second submit below.
+      */}
+      <div
+        data-public-review-actions
+        className="sticky bottom-0 z-20 -mx-4 flex flex-col-reverse gap-3 border-t border-cdl-border bg-cdl-bg/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:mx-0 sm:flex-row sm:justify-between sm:rounded-t-2xl sm:px-5"
+      >
         <button
           type="button"
           onClick={onBack}

@@ -31,6 +31,7 @@ export default function QuoteReservationPaymentCard({
   balanceAmount,
   reservationPercentage,
   ruleHint,
+  showPercentSplit = true,
 }: {
   language?: string | null
   extraNotes?: ReactNode
@@ -38,6 +39,11 @@ export default function QuoteReservationPaymentCard({
   balanceAmount?: number | null
   reservationPercentage?: number | null
   ruleHint?: string | null
+  /**
+   * The split restates percentages the amount labels already carry. Useful on
+   * the printed proposal, redundant on the public review.
+   */
+  showPercentSplit?: boolean
 }) {
   const locale = loc(language)
   const paymentText = tQuotesOrders(locale, 'docReservationPaymentText')
@@ -78,9 +84,11 @@ export default function QuoteReservationPaymentCard({
       <p className="quote-proposal-reservation-copy">
         {emphasizePercents(ruleHint?.trim() || paymentText)}
       </p>
-      <p className="quote-proposal-reservation-split">
-        {emphasizePercents(splitLine)}
-      </p>
+      {showPercentSplit ? (
+        <p className="quote-proposal-reservation-split">
+          {emphasizePercents(splitLine)}
+        </p>
+      ) : null}
       {extraNotes}
     </section>
   )
