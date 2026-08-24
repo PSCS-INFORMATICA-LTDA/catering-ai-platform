@@ -1,0 +1,17 @@
+{
+  "source": "bbqpers-plus-pt-v4.webp",
+  "dest": "bbqpers-plus-pt-v5.webp",
+  "mark": {
+    "x": 40,
+    "y": 1337,
+    "size": 162,
+    "score": 0.306562215089798
+  },
+  "stamp": {
+    "left": 35,
+    "top": 1332,
+    "size": 172
+  },
+  "mask_px": 88473,
+  "outside_logo_mae": 0.0017003542892213104
+}

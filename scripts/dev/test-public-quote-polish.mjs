@@ -137,7 +137,10 @@ test('TEST 9 Premium copy lives above the selectors', () => {
   assert.equal(tw('es', 'withoutSidesGroupTitle'), 'SIN ACOMPAÑAMIENTOS')
   assert.doesNotMatch(catalog, /Playfair_Display/)
   assert.match(catalog, /public-package-group/)
-  assert.match(catalog, /PACOTES CDL/)
+  assert.match(catalog, /publicPackageEditorialHeadline/)
+  assert.equal(tw('pt', 'publicPackageEditorialHeadline'), 'ESCOLHA SEU PACOTE')
+  assert.equal(tw('en', 'publicPackageEditorialHeadline'), 'CHOOSE YOUR PACKAGE')
+  assert.equal(tw('es', 'publicPackageEditorialHeadline'), 'ELIGE TU PAQUETE')
 })
 
 test('TEST 10 Package name canonical', () => {

@@ -131,8 +131,11 @@ export function getPackageFolderArt(
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '')
   if (!base) return null
   const url = `${base}/storage/v1/object/public/${PACKAGE_FOLDER_BUCKET}/${PACKAGE_FOLDER_PREFIX}/${file}`
-  // V4 objects are new filenames; the query keeps CDN caches from serving
-  // an older upload of the same key during this DEV pass.
+  // New filenames plus a query keep CDN caches from serving an older upload
+  // of the same key during this DEV pass.
+  if (file.endsWith('-v5.webp')) {
+    return `${url}?v=art5`
+  }
   if (file.endsWith('-v4.webp')) {
     return `${url}?v=art4`
   }

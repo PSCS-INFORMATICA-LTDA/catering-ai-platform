@@ -2512,10 +2512,12 @@ body {
 .public-package-title-band {
   display: flex;
   align-items: center;
-  padding: 0.72rem 1rem;
-  background: #e21b1b;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem 0.7rem;
+  background: #0a0a0a;
   color: #fff;
-  border-bottom: 3px solid var(--cdl-yellow);
+  border-bottom: 1px solid var(--cdl-yellow);
 }
 
 .public-package-intro-copy {
@@ -2557,9 +2559,21 @@ body {
 }
 
 .public-package-headline-mark {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
   background: #e21b1b;
   color: #fff;
-  padding: 0;
+  padding: 0.32rem 0.58rem;
+  border-radius: 0.28rem;
+}
+
+.public-package-title-corner {
+  flex-shrink: 0;
+  color: var(--cdl-yellow);
+  font-size: 0.85rem;
+  line-height: 1;
 }
 
 .public-package-intro-body {

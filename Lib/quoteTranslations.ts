@@ -233,6 +233,8 @@ type QuoteStrings = {
     publicPackageChooseHint: string
     publicPackageExperienceTitle: string
     publicPackageExperienceBody: string
+    /** Short red stamp on the black package intro — not a full-width bar. */
+    publicPackageEditorialHeadline: string
     footerSincePioneer: string
     publicAdditionalsKicker: string
     additionalPriceKicker: string
@@ -662,6 +664,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicPackageExperienceTitle: 'Escolha sua experiência',
       publicPackageExperienceBody:
         'Escolha o estilo do seu churrasco: com ou sem guarnições. Explore os pacotes, encontre o que combina com o seu evento e personalize só o que fizer sentido. O valor atualiza na hora.',
+      publicPackageEditorialHeadline: 'ESCOLHA SEU PACOTE',
       footerSincePioneer: 'Desde 2017 · Pioneira em Orlando, Flórida',
       publicAdditionalsKicker: 'Adicionais',
       additionalPriceKicker: 'Preço',
@@ -1112,6 +1115,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicPackageExperienceTitle: 'Choose your experience',
       publicPackageExperienceBody:
         'Choose the style of your barbecue: with or without sides. Explore the packages, find what fits your event, and customize only what applies. Pricing updates as you go.',
+      publicPackageEditorialHeadline: 'CHOOSE YOUR PACKAGE',
       footerSincePioneer: 'Since 2017 · Pioneer in Orlando, Florida',
       publicAdditionalsKicker: 'Add-ons',
       additionalPriceKicker: 'Price',
@@ -1562,6 +1566,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicPackageExperienceTitle: 'Elige tu experiencia',
       publicPackageExperienceBody:
         'Elige el estilo de tu asado: con o sin acompañamientos. Explora los paquetes, encuentra lo que combina con tu evento y personaliza solo lo que aplique. El precio se actualiza al momento.',
+      publicPackageEditorialHeadline: 'ELIGE TU PAQUETE',
       footerSincePioneer: 'Desde 2017 · Pionera en Orlando, Florida',
       publicAdditionalsKicker: 'Adicionales',
       additionalPriceKicker: 'Precio',

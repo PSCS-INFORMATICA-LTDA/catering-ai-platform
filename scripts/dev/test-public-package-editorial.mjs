@@ -31,6 +31,7 @@ const css = read('app/globals.css')
 const experience = read('app/quote/[companySlug]/[locale]/PublicQuoteExperience.tsx')
 const lock = read('components/quotes/usePublicQuoteThemeLock.ts')
 const visual = read('Lib/packageCatalogVisual.ts')
+const translations = read('Lib/quoteTranslations.ts')
 
 const withSides = {
   package_key: 'BBQCHO+',
@@ -48,9 +49,11 @@ report(
   'PACKAGE_GROUP_EDITORIAL_UI',
   !catalog.includes('Playfair_Display') &&
     catalog.includes('public-package-group') &&
-    catalog.includes('PACOTES CDL') &&
-    catalog.includes('CDL PACKAGES') &&
-    catalog.includes('PAQUETES CDL') &&
+    catalog.includes('publicPackageEditorialHeadline') &&
+    catalog.includes('data-package-headline-tag') &&
+    translations.includes('ESCOLHA SEU PACOTE') &&
+    translations.includes('CHOOSE YOUR PACKAGE') &&
+    translations.includes('ELIGE TU PAQUETE') &&
     css.includes('.public-package-group.is-open') &&
     css.includes('background: #e21b1b') &&
     css.includes('min-height: 60px') &&

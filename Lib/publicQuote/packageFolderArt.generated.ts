@@ -5,7 +5,8 @@
  * `package-images/cdl-folders-v3`, the bucket the runtime already reads from; the host
  * comes from the environment so this map is portable.
  *
- * Cleaned arts use *-v4.webp. V3 masters stay on disk for rollback.
+ * Cleaned arts use *-v4.webp / the plus-PT custom mark uses *-v5.webp.
+ * V3 masters stay on disk for rollback.
  */
 export const PACKAGE_FOLDER_BUCKET = 'package-images'
 export const PACKAGE_FOLDER_PREFIX = 'cdl-folders-v3'
@@ -32,7 +33,7 @@ export const PACKAGE_FOLDER_ART_V2: Record<
   "BBQPERS+": {
     "en": "bbqpers-plus-en-v4.webp",
     "es": "bbqpers-plus-es-v4.webp",
-    "pt": "bbqpers-plus-pt-v4.webp"
+    "pt": "bbqpers-plus-pt-v5.webp"
   },
   "BBQPRI": {
     "en": "bbqpri-en-v4.webp",

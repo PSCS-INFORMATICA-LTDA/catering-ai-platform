@@ -1,7 +1,7 @@
 /**
- * Visual identity lock: PACOTES CDL and EXTRAS SUGERIDOS share one family,
- * suggested-extras title is the red/white stamp, and the plus-PT flyer
- * no longer carries the leftover black plate.
+ * Visual identity lock: the package intro is a black canvas with a short red
+ * title tag (not a full-width bar), yellow extras-family details, and the
+ * plus-PT custom flyer carries a clean official CDL mark.
  *
  * Run: node --experimental-strip-types scripts/dev/test-public-quote-visual-identity.mjs
  */
@@ -71,39 +71,98 @@ test('EXTRAS_SUGERIDOS_YELLOW_HIGHLIGHTS', () => {
   assert.match(extras, /className="public-suggested-extras-mark"/)
 })
 
+test('PACKAGE_CURRENT_LAYOUT_PRESERVED', () => {
+  assert.match(catalog, /data-package-experience-intro/)
+  assert.match(catalog, /data-package-title-band/)
+  assert.match(catalog, /data-package-sides-editorial|PackageSidesEditorial/)
+  assert.match(catalog, /data-package-group-controls/)
+  assert.match(catalog, /public-package-group/)
+})
+
+test('PACKAGE_BLACK_HEADER', () => {
+  const intro = css.match(/\.public-package-intro \{[\s\S]*?\n\}/)?.[0]
+  const band = css.match(/\.public-package-title-band \{[\s\S]*?\n\}/)?.[0]
+  const copy = css.match(/\.public-package-intro-copy \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(intro && band && copy)
+  assert.match(intro, /#0a0a0a/)
+  assert.match(band, /background: #0a0a0a/)
+  assert.match(copy, /#070707|#0a0a0a/)
+})
+
+test('PACKAGE_RED_FULL_WIDTH_BAR', () => {
+  const band = css.match(/\.public-package-title-band \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(band)
+  assert.doesNotMatch(band, /background: #e21b1b/)
+})
+
+test('PACKAGE_RED_TITLE_TAG_ONLY', () => {
+  const mark = css.match(/\.public-package-headline-mark \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(mark)
+  assert.match(mark, /background: #e21b1b/)
+  assert.match(mark, /color: #fff/)
+  assert.match(mark, /width: fit-content/)
+  assert.match(mark, /border-radius/)
+  assert.match(mark, /padding:/)
+  assert.match(catalog, /data-package-headline-tag/)
+  assert.match(translations, /publicPackageEditorialHeadline: 'ESCOLHA SEU PACOTE'/)
+  assert.match(translations, /publicPackageEditorialHeadline: 'CHOOSE YOUR PACKAGE'/)
+  assert.match(translations, /publicPackageEditorialHeadline: 'ELIGE TU PAQUETE'/)
+})
+
+test('PACKAGE_TITLE_WHITE', () => {
+  const mark = css.match(/\.public-package-headline-mark \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(mark)
+  assert.match(mark, /color: #fff/)
+})
+
+test('PACKAGE_YELLOW_DIVIDER', () => {
+  const band = css.match(/\.public-package-title-band \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(band)
+  assert.match(band, /border-bottom: 1px solid var\(--cdl-yellow\)/)
+})
+
+test('PACKAGE_YELLOW_LEFT_ACCENT', () => {
+  const bar = css.match(/\.public-package-intro-copy::before \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(bar)
+  assert.match(bar, /--cdl-yellow/)
+})
+
+test('PACKAGE_YELLOW_CORNER_DETAIL', () => {
+  const corner = css.match(/\.public-package-title-corner \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(corner)
+  assert.match(corner, /--cdl-yellow/)
+  assert.match(catalog, /public-package-title-corner/)
+})
+
+test('PACKAGE_YELLOW_TEXT_HIGHLIGHTS', () => {
+  assert.match(css, /\.public-package-intro-mark \{[\s\S]*?#f6d000/)
+  assert.match(catalog, /com ou sem guarnições/)
+  assert.match(catalog, /Explore os pacotes/)
+  assert.match(catalog, /O valor atualiza na hora/)
+})
+
 test('PACKAGE_AND_EXTRAS_VISUAL_FAMILY_MATCH', () => {
   const stamp = css.match(/\.public-package-headline-mark \{[\s\S]*?\n\}/)?.[0]
-  const band = css.match(/\.public-suggested-extras-title-band \{[\s\S]*?\n\}/)?.[0]
-  assert.ok(stamp && band)
+  const extrasStamp = css.match(/\.public-suggested-extras-title-band \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(stamp && extrasStamp)
   assert.match(stamp, /background: #e21b1b/)
   assert.match(stamp, /color: #fff/)
-  assert.match(band, /background: #e21b1b/)
-  assert.match(band, /color: #fff/)
-  assert.match(catalog, /public-package-headline-mark/)
+  assert.match(extrasStamp, /background: #e21b1b/)
+  assert.match(extrasStamp, /color: #fff/)
+  assert.match(css, /\.public-package-intro-mark \{[\s\S]*?#f6d000/)
+  assert.match(css, /\.public-suggested-extras-mark \{[\s\S]*?#f6d000/)
   assert.match(css, /--cdl-yellow/)
 })
 
-test('PACKAGE_VISUAL_MATCHES_EXTRAS_STYLE', () => {
+test('PACKAGE_VISUAL_MATCHES_EXTRAS_FAMILY', () => {
   const packageIntro = css.match(/\.public-package-intro \{[\s\S]*?\n\}/)?.[0]
   const extrasFeatured = css.match(/\.public-additional-category\.is-featured \{[\s\S]*?\n\}/)?.[0]
   assert.ok(packageIntro && extrasFeatured)
   assert.match(packageIntro, /#0a0a0a/)
-  assert.match(css, /\.public-package-title-band \{[\s\S]*?#e21b1b/)
+  assert.match(css, /\.public-package-headline-mark \{[\s\S]*?#e21b1b/)
   assert.match(css, /\.public-suggested-extras-title-band \{[\s\S]*?#e21b1b/)
-  assert.match(css, /\.public-package-intro-mark \{[\s\S]*?#f6d000/)
-  assert.match(css, /\.public-suggested-extras-mark \{[\s\S]*?#f6d000/)
-})
-
-test('PACKAGE_HEADER_RED_WHITE', () => {
-  const band = css.match(/\.public-package-title-band \{[\s\S]*?\n\}/)?.[0]
-  const mark = css.match(/\.public-package-headline-mark \{[\s\S]*?\n\}/)?.[0]
-  assert.ok(band && mark)
-  assert.match(band, /background: #e21b1b/)
-  assert.match(band, /color: #fff/)
-  assert.match(mark, /background: #e21b1b/)
-  assert.match(mark, /color: #fff/)
-  assert.match(catalog, /data-package-title-band/)
-  assert.match(catalog, /PACOTES CDL/)
+  assert.match(css, /\.public-package-title-corner \{[\s\S]*?--cdl-yellow/)
+  assert.match(css, /\.public-suggested-extras-chevron \{[\s\S]*?--cdl-yellow/)
 })
 
 test('PACKAGE_INFO_BLOCK_DARK_THEME', () => {
@@ -231,18 +290,157 @@ test('ADICIONAIS_UNCHANGED', () => {
   assert.match(wizard, /if \(category === SUGGESTED_EXTRAS_DISPLAY_KEY\) return/)
 })
 
-test('CUSTOM_PACKAGE_IMAGE_ART_NOT_DEGRADED', () => {
-  assert.match(read('Lib/publicQuote/packageFolderArt.generated.ts'), /bbqpers-plus-pt-v4\.webp/)
-  assert.match(visual, /\?v=art4/)
+test('CUSTOM_PLUS_PHOTO_CHANGED_OUTSIDE_LOGO', () => {
+  assert.match(read('Lib/publicQuote/packageFolderArt.generated.ts'), /bbqpers-plus-pt-v5\.webp/)
+  assert.match(visual, /\?v=art5/)
+  const probe = spawnSync(
+    'python3',
+    ['-'],
+    {
+      input: `
+import cv2, numpy as np
+old = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v4.webp')}')
+new = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v5.webp')}')
+assert old is not None and new is not None
+assert old.shape == new.shape == (1536, 1024, 3)
+diff = np.abs(new.astype(np.int16) - old.astype(np.int16)).mean(axis=2)
+# food, title and chafing dishes live above the mark
+top = diff[0:1100]
+assert top.mean() < 1.2, top.mean()
+print(old.shape, float(top.mean()))
+`,
+      encoding: 'utf8',
+    },
+  )
+  assert.equal(probe.status, 0, probe.stderr || probe.stdout)
+})
+
+test('CUSTOM_PLUS_LOGO_CLEAN', () => {
+  const probe = spawnSync(
+    'python3',
+    ['-'],
+    {
+      input: `
+import cv2, numpy as np
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v5.webp')}')
+# former smear immediately right of the mark now has table grain
+roi = im[1360:1500, 220:420]
+gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+assert gray.mean() > 14, gray.mean()
+assert gray.std() > 8, gray.std()
+print(gray.mean(), gray.std())
+`,
+      encoding: 'utf8',
+    },
+  )
+  assert.equal(probe.status, 0, probe.stderr || probe.stdout)
+})
+
+test('CUSTOM_PLUS_LOGO_OFFICIAL', () => {
+  const script = read('scripts/dev/fix-custom-plus-pt-logo-v5.py')
+  assert.match(script, /cdl-badge-official\.png/)
+  assert.match(script, /bbqpers-plus-pt-v4\.webp/)
+  assert.match(script, /bbqpers-plus-pt-v5\.webp/)
   const probe = spawnSync(
     'python3',
     ['-'],
     {
       input: `
 import cv2
-im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v3.webp')}')
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v5.webp')}')
+# official mark: pale inner disc / white ring, not a black smear
+cx, cy = 121, 1418
+ring = im[cy-42:cy-30, cx-8:cx+8]
+assert ring.mean() > 150, ring.mean()
+print(ring.mean())
+`,
+      encoding: 'utf8',
+    },
+  )
+  assert.equal(probe.status, 0, probe.stderr || probe.stdout)
+})
+
+test('CUSTOM_PLUS_LOGO_NOT_CROPPED', () => {
+  const probe = spawnSync(
+    'python3',
+    ['-'],
+    {
+      input: `
+import cv2, numpy as np
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v5.webp')}')
+cx, cy, r = 121, 1418, 84
+# official mark keeps a full pale outer ring — not clipped on one side
+vals = []
+for ang in range(0, 360, 10):
+    a = np.deg2rad(ang)
+    x = int(cx + r * np.cos(a))
+    y = int(cy + r * np.sin(a))
+    vals.append(float(im[y, x].mean()))
+assert np.mean(vals) > 100, np.mean(vals)
+assert min(vals) > 35, min(vals)
+print(np.mean(vals), min(vals))
+`,
+      encoding: 'utf8',
+    },
+  )
+  assert.equal(probe.status, 0, probe.stderr || probe.stdout)
+})
+
+test('CUSTOM_PLUS_BLACK_PATCH', () => {
+  const script = read('scripts/dev/fix-custom-plus-pt-logo-v5.py')
+  assert.doesNotMatch(script, /rectangle\\(.*-1\\)|filled.?black|quadrado preto/i)
+  const probe = spawnSync(
+    'python3',
+    ['-'],
+    {
+      input: `
+import cv2, numpy as np
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v5.webp')}')
+roi = im[1360:1500, 220:420]
+gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+# a painted black plate is almost zero-variance; restored wood is not
+assert gray.std() > 8, gray.std()
+assert gray.mean() > 12, gray.mean()
+print(gray.mean(), gray.std())
+`,
+      encoding: 'utf8',
+    },
+  )
+  assert.equal(probe.status, 0, probe.stderr || probe.stdout)
+})
+
+test('CUSTOM_PLUS_VISIBLE_EDIT_ARTIFACT', () => {
+  const probe = spawnSync(
+    'python3',
+    ['-'],
+    {
+      input: `
+import cv2, numpy as np
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v5.webp')}')
+# no leftover red BB plate next to the mark
+roi = im[1306:1532, 204:504]
+b,g,r = cv2.split(roi)
+red = ((r.astype(np.int16) - np.maximum(g, b).astype(np.int16) > 45) & (r > 90)).sum()
+assert red < 400, red
+print(red)
+`,
+      encoding: 'utf8',
+    },
+  )
+  assert.equal(probe.status, 0, probe.stderr || probe.stdout)
+})
+
+test('CUSTOM_PACKAGE_IMAGE_ART_NOT_DEGRADED', () => {
+  assert.match(read('Lib/publicQuote/packageFolderArt.generated.ts'), /bbqpers-plus-pt-v5\.webp/)
+  assert.match(visual, /\?v=art5/)
+  const probe = spawnSync(
+    'python3',
+    ['-'],
+    {
+      input: `
+import cv2
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v5.webp')}')
 assert im.shape == (1536, 1024, 3)
-# food / labels live in the upper 2/3 — that region must stay intact
 top = im[80:1100]
 assert top.std() > 25
 print(im.shape, top.std())

@@ -75,12 +75,6 @@ function PackageExperienceBody({
   )
 }
 
-const PACKAGE_EDITORIAL_HEADLINE = {
-  pt: 'PACOTES CDL',
-  en: 'CDL PACKAGES',
-  es: 'PAQUETES CDL',
-} as const
-
 function PackageGroupChevron({ open }: { open: boolean }) {
   return (
     <svg
@@ -394,10 +388,16 @@ export default function PublicPackageCatalog({
       >
         <div className="public-package-title-band" data-package-title-band>
           <h2 className="public-package-headline">
-            <span className="public-package-headline-mark">
-              {PACKAGE_EDITORIAL_HEADLINE[language]}
+            <span
+              className="public-package-headline-mark"
+              data-package-headline-tag
+            >
+              {tw(language, 'publicPackageEditorialHeadline')}
             </span>
           </h2>
+          <span className="public-package-title-corner" aria-hidden>
+            ▲
+          </span>
         </div>
         <div className="public-package-intro-copy">
           <p className="public-package-kicker">
