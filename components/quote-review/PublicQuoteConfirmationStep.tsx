@@ -136,6 +136,13 @@ export default function PublicQuoteConfirmationStep({
     !pricingError &&
     state.publicConsentAccepted &&
     !saving
+  // Same conditions as before; only the rendering moved into the action shell.
+  const blockedReason =
+    canSubmit || saving
+      ? null
+      : !breakdown || pricingLoading || pricingError
+        ? pricingMessage || w.pricingCalcError
+        : w.consentRequired
   void currency
 
   return (
@@ -214,28 +221,6 @@ export default function PublicQuoteConfirmationStep({
         </p>
       ) : null}
 
-      <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-cdl-border bg-cdl-surface p-5">
-        <input
-          type="checkbox"
-          checked={state.publicConsentAccepted}
-          onChange={(event) => onConsentChange(event.target.checked)}
-          className="mt-1 h-5 w-5 accent-[var(--brand-primary)]"
-        />
-        <span className="text-sm leading-6 text-cdl-text-secondary">
-          {consentLabel}{' '}
-          {privacyUrl ? (
-            <a
-              href={privacyUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="font-bold text-[var(--brand-primary)] underline"
-            >
-              {w.privacyLink}
-            </a>
-          ) : null}
-        </span>
-      </label>
-
       {submitError ? (
         <p
           role="alert"
@@ -246,51 +231,77 @@ export default function PublicQuoteConfirmationStep({
       ) : null}
 
       {/*
-        Single action shell, sticky at every width, so the customer can confirm
-        from anywhere in the review without scrolling to the last pixel. It is
-        the same button in both states — there is no second submit below.
+        One decision unit: accepting and submitting are the same action, so the
+        consent sits in the shell with the button and travels with it. Sticky at
+        every width, so the customer can confirm from anywhere in the review
+        without scrolling to the last pixel, and there is no second copy of
+        either control in the page body.
       */}
       <div
         data-public-review-actions
-        className="sticky bottom-0 z-20 -mx-4 flex flex-col-reverse gap-3 border-t border-cdl-border bg-cdl-bg/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:mx-0 sm:flex-row sm:justify-between sm:rounded-t-2xl sm:px-5"
+        className="sticky bottom-0 z-20 -mx-4 border-t border-cdl-border bg-cdl-bg/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:mx-0 sm:rounded-t-2xl sm:px-5"
       >
-        <button
-          type="button"
-          onClick={onBack}
-          className="rounded-xl border border-cdl-border bg-cdl-surface px-6 py-3 text-sm font-bold"
+        <label
+          data-public-consent
+          className="mb-3 flex cursor-pointer items-start gap-2.5"
         >
-          {copy.back}
-        </button>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          {state.packageId && (pricingError || (!breakdown && !pricingLoading)) ? (
-            <button
-              type="button"
-              onClick={onRetryPricing}
-              className="rounded-xl border border-cdl-border px-6 py-3 text-sm font-bold"
-            >
-              {w.pricingRetry}
-            </button>
-          ) : null}
+          <input
+            type="checkbox"
+            checked={state.publicConsentAccepted}
+            onChange={(event) => onConsentChange(event.target.checked)}
+            className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--brand-primary)]"
+          />
+          <span className="text-xs leading-5 text-cdl-text-secondary">
+            {consentLabel}{' '}
+            {privacyUrl ? (
+              <a
+                href={privacyUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="font-bold text-[var(--brand-primary)] underline"
+              >
+                {w.privacyLink}
+              </a>
+            ) : null}
+          </span>
+        </label>
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
-            data-testid="public-quote-submit"
-            disabled={!canSubmit}
-            onClick={onSubmit}
-            className="cdl-btn-primary min-h-12 px-8 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={onBack}
+            className="rounded-xl border border-cdl-border bg-cdl-surface px-6 py-3 text-sm font-bold"
           >
-            {saving ? w.publicSubmittingRequest : w.publicSubmitRequest}
+            {copy.back}
           </button>
-          {!canSubmit && !saving ? (
-            <p
-              data-submit-blocked-reason
-              role="status"
-              className="text-center text-xs font-semibold text-cdl-muted sm:text-left"
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {state.packageId && (pricingError || (!breakdown && !pricingLoading)) ? (
+              <button
+                type="button"
+                onClick={onRetryPricing}
+                className="rounded-xl border border-cdl-border px-6 py-3 text-sm font-bold"
+              >
+                {w.pricingRetry}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              data-testid="public-quote-submit"
+              disabled={!canSubmit}
+              onClick={onSubmit}
+              className="cdl-btn-primary min-h-12 px-8 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {!breakdown || pricingLoading || pricingError
-                ? pricingMessage || w.pricingCalcError
-                : w.consentRequired}
-            </p>
-          ) : null}
+              {saving ? w.publicSubmittingRequest : w.publicSubmitRequest}
+            </button>
+            {blockedReason ? (
+              <p
+                data-submit-blocked-reason
+                role="status"
+                className="text-center text-xs font-semibold text-cdl-muted sm:text-left"
+              >
+                {blockedReason}
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>
