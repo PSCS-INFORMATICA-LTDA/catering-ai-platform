@@ -139,6 +139,7 @@ test('FOLDER_PIPELINE_IS_REPRODUCIBLE', () => {
     'scripts/dev/locate-folder-badges.py',
     'scripts/dev/remove-folder-pioneer-marks.py',
     'scripts/dev/remove-folder-stray-bb.py',
+    'scripts/dev/remove-folder-black-square.py',
   ]) {
     assert.ok(read(script).length > 500, `${script} missing`)
   }

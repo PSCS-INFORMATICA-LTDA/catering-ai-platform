@@ -132,7 +132,10 @@ export function getPackageFolderArt(
   if (!base) return null
   const url = `${base}/storage/v1/object/public/${PACKAGE_FOLDER_BUCKET}/${PACKAGE_FOLDER_PREFIX}/${file}`
   // Personalized folders were repaired in place; bust the year-long cache
-  // on those six objects only. Other V3 art keeps the stored filename.
+  // on those objects only. Other V3 art keeps the stored filename.
+  if (file === 'bbqpers-plus-pt-v3.webp') {
+    return `${url}?v=bbfix2`
+  }
   if (file.startsWith('bbqpers-')) {
     return `${url}?v=bbfix1`
   }
