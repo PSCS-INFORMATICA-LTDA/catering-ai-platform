@@ -101,6 +101,8 @@
     "test:dev:public-quote-success-v6": "node --experimental-strip-types scripts/dev/test-public-quote-success-v6.mjs",
     "test:dev:public-quote-success-v7": "node --experimental-strip-types scripts/dev/test-public-quote-success-v7.mjs",
     "test:dev:public-quote-ux-flow": "node --experimental-strip-types scripts/dev/test-public-quote-ux-flow.mjs",
+    "test:dev:public-quote-micro-polish": "node --experimental-strip-types scripts/dev/test-public-quote-micro-polish.mjs",
+    "capture:dev:public-quote-micro-polish": "node scripts/dev/capture-public-quote-micro-polish.mjs",
     "capture:dev:public-quote-ux-flow": "node scripts/dev/capture-public-quote-ux-flow.mjs",
     "capture:dev:public-quote-success-v7": "node scripts/dev/capture-public-quote-success-v7.mjs",
     "build:dev:cdl-fire-safe-asset": "node scripts/dev/build-cdl-fire-safe-asset.mjs",
