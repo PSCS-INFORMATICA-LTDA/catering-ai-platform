@@ -1621,6 +1621,7 @@ export default function QuoteWizardCore({
   }
 
   function toggleAdditionalCategory(category: string) {
+    if (category === SUGGESTED_EXTRAS_DISPLAY_KEY) return
     setOpenAdditionalCategories((prev) => {
       const next = new Set(prev)
       if (next.has(category)) {
@@ -1845,7 +1846,14 @@ export default function QuoteWizardCore({
     if (step !== 3) {
       setOpenAdditionalCategories(new Set())
       setAdditionalsReviewPrompt(false)
+      return
     }
+    setVisitedAdditionalCategories((prev) => {
+      if (prev.has(SUGGESTED_EXTRAS_DISPLAY_KEY)) return prev
+      const next = new Set(prev)
+      next.add(SUGGESTED_EXTRAS_DISPLAY_KEY)
+      return next
+    })
   }, [step])
 
   useEffect(() => {
@@ -3204,7 +3212,10 @@ export default function QuoteWizardCore({
                       categoryLabel
                     }
                     items={items}
-                    expanded={openAdditionalCategories.has(categoryKey)}
+                    expanded={
+                      categoryKey === SUGGESTED_EXTRAS_DISPLAY_KEY ||
+                      openAdditionalCategories.has(categoryKey)
+                    }
                     selectedCount={selectedCountByCategory[categoryKey] ?? 0}
                     visited={visitedAdditionalCategories.has(categoryKey)}
                     emphasize={emphasizedAdditionalCategory === categoryKey}

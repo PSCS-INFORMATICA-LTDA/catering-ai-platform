@@ -619,35 +619,53 @@ body {
 }
 
 /*
- * Featured merchandising category: same CDL red + white type + yellow rule,
- * now as the first accordion header rather than a standalone banner.
+ * Featured merchandising category: charcoal plate like the success screen,
+ * yellow rule as the primary accent, red used only as a secondary wash.
  */
 .public-additional-category.is-featured {
-  border-color: #9d0b22;
-  background: linear-gradient(135deg, #c8102e 0%, #9d0b22 100%);
-  box-shadow: 0 10px 24px -16px rgba(0, 0, 0, 0.75);
+  border-color: rgba(246, 208, 0, 0.28);
+  background: #070707;
+  box-shadow: 0 14px 32px -18px rgba(0, 0, 0, 0.85);
   color: #fff;
+  scroll-margin-top: calc(var(--public-header-h, 3.5rem) + 0.75rem);
 }
 
 .public-additional-category.is-featured.is-expanded {
-  background: #fff;
-  color: inherit;
+  background: #070707;
+  color: #fff;
 }
 
 .public-suggested-extras-header {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #c8102e 0%, #9d0b22 100%);
+  background:
+    linear-gradient(to bottom, #070707 0, rgba(7, 7, 7, 0.2) 100%),
+    radial-gradient(ellipse 42% 70% at 16% 18%, rgba(226, 27, 27, 0.16), transparent 64%),
+    radial-gradient(ellipse 36% 58% at 88% 6%, rgba(246, 208, 0, 0.1), transparent 58%),
+    #0a0a0a;
   color: #fff;
+  border-bottom: 1px solid rgba(246, 208, 0, 0.22);
+}
+
+.public-suggested-extras-header::before {
+  position: absolute;
+  top: 0.9rem;
+  bottom: 0.9rem;
+  left: 0;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--cdl-yellow);
+  content: '';
+  pointer-events: none;
 }
 
 .public-suggested-extras-header::after {
   position: absolute;
   inset: 0;
   background: radial-gradient(
-    120% 90% at 88% 0%,
-    rgba(255, 255, 255, 0.16) 0%,
-    transparent 62%
+    90% 70% at 100% 0%,
+    rgba(246, 208, 0, 0.08) 0%,
+    transparent 58%
   );
   content: '';
   pointer-events: none;
@@ -656,11 +674,11 @@ body {
 .public-suggested-extras-title {
   position: relative;
   margin: 0 0 0.55rem;
-  padding-bottom: 0.5rem;
+  padding-bottom: 0.55rem;
   color: #fff;
-  font-size: 1.05rem;
+  font-size: 1.32rem;
   font-weight: 900;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
@@ -668,7 +686,7 @@ body {
   position: absolute;
   left: 0;
   bottom: 0;
-  width: 2.25rem;
+  width: 2.6rem;
   height: 3px;
   border-radius: 2px;
   background: var(--cdl-yellow);
@@ -688,7 +706,7 @@ body {
   position: relative;
   margin: 0;
   max-width: 34rem;
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(255, 255, 255, 0.82);
   font-size: 0.86rem;
   line-height: 1.5;
 }
@@ -697,7 +715,7 @@ body {
   position: relative;
   margin: 0.4rem 0 0;
   max-width: 34rem;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.68);
   font-size: 0.8rem;
   line-height: 1.45;
 }
@@ -705,7 +723,7 @@ body {
 .public-suggested-extras-count {
   position: relative;
   margin: 0.45rem 0 0;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.62);
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -714,7 +732,7 @@ body {
   position: relative;
   display: inline-block;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(226, 27, 27, 0.28);
   padding: 0.15rem 0.65rem;
   color: #fff;
   font-size: 0.75rem;
@@ -723,7 +741,7 @@ body {
 
 .public-suggested-extras-chevron {
   position: relative;
-  color: #ffd54a;
+  color: var(--cdl-yellow);
   font-size: 0.85rem;
 }
 

@@ -208,7 +208,7 @@ test('TEST 17 Click on summary item/price area opens category', () => {
 
 test('TEST 18 Expanded interactive control does not accidentally collapse', () => {
   const expanded = extras.slice(
-    extras.indexOf('{expanded ? ('),
+    extras.indexOf('{isExpanded ? ('),
     extras.indexOf('data-additional-category-hitarea'),
   )
   assert.match(expanded, /<AdditionalItemCard/)

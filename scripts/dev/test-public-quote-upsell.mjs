@@ -114,7 +114,7 @@ test('SUGGESTED_EXTRAS_HEADER', () => {
   assert.match(translations, /Explore a selection of premium cuts and extras/)
   assert.match(translations, /Descubre una selección de cortes premium y extras/)
   assert.match(wizard, /featured=\{categoryKey === SUGGESTED_EXTRAS_DISPLAY_KEY\}/)
-  assert.match(css, /\.public-suggested-extras-header \{[\s\S]*?background: linear-gradient\(135deg, #c8102e/)
+  assert.match(css, /\.public-suggested-extras-header \{[\s\S]*?#070707/)
   assert.doesNotMatch(wizard, /data-suggested-extras[\s\S]{0,600}?(modal|carousel|popup|<img)/i)
 })
 

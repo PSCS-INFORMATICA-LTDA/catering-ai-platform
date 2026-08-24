@@ -71,7 +71,6 @@ function FeaturedCategoryHeaderCopy({
   itemCountLabel,
   selectedCount,
   selectedCountLabel,
-  expanded,
 }: {
   title: string
   lead: string
@@ -80,7 +79,6 @@ function FeaturedCategoryHeaderCopy({
   itemCountLabel: string
   selectedCount: number
   selectedCountLabel: string
-  expanded: boolean
 }) {
   return (
     <div className="flex min-w-0 items-start gap-3">
@@ -102,7 +100,7 @@ function FeaturedCategoryHeaderCopy({
         className="public-suggested-extras-chevron mt-1 shrink-0"
         aria-hidden
       >
-        {expanded ? '▲' : '▼'}
+        ▲
       </span>
     </div>
   )
@@ -181,6 +179,8 @@ export default function AdditionalCategorySection({
     return () => exposeObserver.disconnect()
   }, [categoryKey, exposeEpoch, ctaReservePx])
 
+  const lockExpanded = featured
+  const isExpanded = lockExpanded || expanded
   const contentId = `additional-category-content-${categoryKey}`
   const summaryId = `additional-category-summary-${categoryKey}`
   const headerCopy = featured ? (
@@ -192,7 +192,6 @@ export default function AdditionalCategorySection({
       itemCountLabel={t.itemsCount(items.length)}
       selectedCount={selectedCount}
       selectedCountLabel={t.selectedCount(selectedCount)}
-      expanded={expanded}
     />
   ) : (
     <CategoryHeaderCopy
@@ -280,20 +279,17 @@ export default function AdditionalCategorySection({
   )
 
   const sectionClass = featured
-    ? `public-additional-category is-featured overflow-hidden rounded-2xl border shadow-cdl transition ${
-        expanded ? 'is-expanded' : ''
-      }`
+    ? `public-additional-category is-featured is-expanded overflow-hidden rounded-2xl border shadow-cdl transition`
     : `overflow-hidden rounded-2xl border bg-cdl-surface shadow-cdl transition ${
         emphasize
           ? 'border-[var(--brand-primary)] ring-2 ring-[color-mix(in_srgb,var(--brand-primary)_35%,transparent)]'
           : 'border-cdl-border'
       }`
-  const headerButtonClass = featured
-    ? 'public-suggested-extras-header w-full cursor-pointer p-4 text-left sm:p-5'
-    : 'w-full cursor-pointer p-4 text-left transition-colors hover:bg-cdl-hover active:bg-cdl-hover sm:p-5'
-  const collapsedWrapClass = featured
-    ? 'public-suggested-extras-header group relative'
-    : 'group relative hover:bg-cdl-hover active:bg-cdl-hover'
+  const headerButtonClass =
+    'w-full cursor-pointer p-4 text-left transition-colors hover:bg-cdl-hover active:bg-cdl-hover sm:p-5'
+  const headerStaticClass =
+    'public-suggested-extras-header w-full cursor-default p-4 pl-5 text-left sm:p-5'
+  const collapsedWrapClass = 'group relative hover:bg-cdl-hover active:bg-cdl-hover'
 
   return (
     <section
@@ -304,18 +300,28 @@ export default function AdditionalCategorySection({
       className={sectionClass}
       style={{ scrollMarginBottom: ctaReservePx }}
     >
-      {expanded ? (
+      {isExpanded ? (
         <>
-          <button
-            type="button"
-            data-additional-category-header
-            onClick={onToggle}
-            aria-expanded={expanded}
-            aria-controls={contentId}
-            className={headerButtonClass}
-          >
-            {headerCopy}
-          </button>
+          {lockExpanded ? (
+            <div
+              data-additional-category-header
+              data-suggested-extras-locked="true"
+              className={headerStaticClass}
+            >
+              {headerCopy}
+            </div>
+          ) : (
+            <button
+              type="button"
+              data-additional-category-header
+              onClick={onToggle}
+              aria-expanded={isExpanded}
+              aria-controls={contentId}
+              className={headerButtonClass}
+            >
+              {headerCopy}
+            </button>
+          )}
           <div
             id={contentId}
             role="region"

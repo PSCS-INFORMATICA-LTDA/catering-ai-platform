@@ -209,10 +209,23 @@ if (onExtras) {
       && closed.keys[4] === 'PORCO',
     closed.keys.join(' > '))
 
-  await page.evaluate(() => {
-    document.querySelector('[data-suggested-extras] [data-additional-category-hitarea]')?.click()
+  const alreadyOpen = await page.evaluate(() => {
+    const suggested = document.querySelector('[data-suggested-extras]')
+    return {
+      locked: suggested?.querySelector('[data-suggested-extras-locked]') != null,
+      cards: suggested?.querySelectorAll('[data-additional-item-card]').length ?? 0,
+    }
   })
-  await wait(800)
+  record('SUGGESTED_EXTRAS_LOCKED_OPEN', alreadyOpen.locked && alreadyOpen.cards >= 3,
+    `locked=${alreadyOpen.locked} cards=${alreadyOpen.cards}`)
+  await page.evaluate(() => {
+    document.querySelector('[data-suggested-extras] [data-additional-category-header]')?.click()
+  })
+  await wait(400)
+  const stillOpen = await page.evaluate(() => (
+    document.querySelectorAll('[data-suggested-extras] [data-additional-item-card]').length
+  ))
+  record('SUGGESTED_EXTRAS_STAYS_OPEN', stillOpen >= 3, `cards after header click=${stillOpen}`)
   await page.evaluate(() => {
     document.querySelector('[data-suggested-extras]')?.scrollIntoView({ block: 'start' })
   })

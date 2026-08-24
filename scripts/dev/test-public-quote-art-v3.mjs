@@ -125,11 +125,12 @@ test('NO_TROPEIRO_IN_ART_PIPELINE', () => {
 
 // --- Suggested extras ------------------------------------------------------
 
-test('SUGGESTED_EXTRAS_RED_CALLOUT', () => {
+test('SUGGESTED_EXTRAS_PREMIUM_CALLOUT', () => {
   assert.match(wizard, /SUGGESTED_EXTRAS_DISPLAY_KEY/)
   const block = css.match(/\.public-suggested-extras-header \{[\s\S]*?\n\}/)?.[0]
   assert.ok(block, 'featured header style missing')
-  assert.match(block, /#c8102e/, 'featured header is not CDL red')
+  assert.match(block, /#070707/, 'featured header is not charcoal')
+  assert.match(css, /--cdl-yellow/)
 })
 
 test('SUGGESTED_EXTRAS_WHITE_TEXT', () => {

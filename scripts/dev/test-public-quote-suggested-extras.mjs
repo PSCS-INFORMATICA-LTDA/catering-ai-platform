@@ -394,10 +394,25 @@ test('SUGGESTED_EXTRAS_COPY_NO_PRICE', () => {
 })
 
 test('SUGGESTED_EXTRAS_FEATURED_VISUAL', () => {
-  assert.match(css, /\.public-suggested-extras-header \{[\s\S]*?#c8102e/)
+  assert.match(css, /\.public-suggested-extras-header \{[\s\S]*?#070707/)
   assert.match(css, /\.public-suggested-extras-title \{[\s\S]*?color: #fff/)
   assert.match(css, /background: var\(--cdl-yellow\)/)
   assert.match(categorySection, /data-suggested-extras=\{featured \? 'true'/)
+})
+
+test('SUGGESTED_EXTRAS_ALWAYS_OPEN', () => {
+  assert.match(categorySection, /const lockExpanded = featured/)
+  assert.match(categorySection, /const isExpanded = lockExpanded \|\| expanded/)
+  assert.match(categorySection, /data-suggested-extras-locked="true"/)
+  assert.match(
+    wizard,
+    /categoryKey === SUGGESTED_EXTRAS_DISPLAY_KEY \|\|/,
+  )
+  assert.match(wizard, /openAdditionalCategories\.has\(categoryKey\)/)
+  assert.match(
+    wizard,
+    /if \(category === SUGGESTED_EXTRAS_DISPLAY_KEY\) return/,
+  )
 })
 
 test('ADDITIONAL_GRILL_ITEM_FOUND', () => {
