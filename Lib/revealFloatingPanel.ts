@@ -12,6 +12,8 @@
 const GUTTER = 12
 /** Below this the scroll is not worth the motion. */
 const MIN_SHIFT = 2
+/** Room left above whatever the customer just tapped, so context survives. */
+const CONTEXT_GAP = 24
 
 export type StickyInsets = { top: number; bottom: number }
 
@@ -68,6 +70,64 @@ export function revealFloatingPanel(
 }
 
 /**
+ * After a choice, nudge just far enough to show that another block follows.
+ *
+ * Scrolls the smallest distance that puts `minReveal` px of `next` inside the
+ * usable strip, and never so far that `anchor` — the control the customer just
+ * used — leaves it. Does nothing when the next block is already clear, or when
+ * there is no next block, so the page only moves when it is actually telling
+ * the customer something.
+ */
+export function revealNextBlock(
+  anchor: HTMLElement | null,
+  next: HTMLElement | null,
+  options: {
+    insets?: StickyInsets
+    minReveal?: number
+    behavior?: ScrollBehavior
+  } = {},
+): number {
+  if (!next || typeof window === 'undefined') return 0
+
+  const insets = options.insets ?? measureStickyInsets(next.ownerDocument)
+  const minReveal = options.minReveal ?? 72
+  const viewportHeight = window.visualViewport?.height ?? window.innerHeight
+  const usableTop = insets.top + GUTTER
+  const usableBottom = viewportHeight - insets.bottom - GUTTER
+
+  const nextRect = next.getBoundingClientRect()
+  const wanted = Math.min(minReveal, nextRect.height)
+  const alreadyVisible =
+    Math.min(nextRect.bottom, usableBottom) - Math.max(nextRect.top, usableTop)
+  if (alreadyVisible >= wanted) return 0
+
+  let delta = nextRect.top + wanted - usableBottom
+  if (delta <= 0) return 0
+
+  if (anchor) {
+    const anchorRect = anchor.getBoundingClientRect()
+    // The customer taps something they can see. If the anchor is off-screen the
+    // change came from somewhere else, and moving the page would be disorienting.
+    if (anchorRect.bottom <= usableTop || anchorRect.top >= usableBottom) return 0
+    // Keep what was just tapped on screen with room to spare above it, so it
+    // never ends up flush against the header and the previous block stays partly
+    // in view.
+    const maxDelta = anchorRect.top - usableTop - CONTEXT_GAP
+    if (maxDelta <= 0) return 0
+    delta = Math.min(delta, maxDelta)
+  }
+
+  if (delta < MIN_SHIFT) return 0
+
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  window.scrollBy({
+    top: delta,
+    behavior: options.behavior ?? (reduced ? 'auto' : 'smooth'),
+  })
+  return delta
+}
+
+/**
  * Runs `revealFloatingPanel` once the panel has been laid out. Returns a cleanup
  * that cancels the pending frames.
  */
@@ -84,4 +144,18 @@ export function revealFloatingPanelWhenReady(
     window.cancelAnimationFrame(outer)
     if (inner) window.cancelAnimationFrame(inner)
   }
+}
+
+/** Runs `revealNextBlock` after the selection has re-rendered and settled. */
+export function revealNextBlockWhenReady(
+  getAnchor: () => HTMLElement | null,
+  getNext: () => HTMLElement | null,
+  options: Parameters<typeof revealNextBlock>[2] = {},
+): void {
+  if (typeof window === 'undefined') return
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      revealNextBlock(getAnchor(), getNext(), options)
+    })
+  })
 }
