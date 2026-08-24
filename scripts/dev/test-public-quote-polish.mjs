@@ -343,15 +343,19 @@ test('TEST 32 Powered by PSCS One is discreet', () => {
   )
 })
 
-test('TEST 33 No image files edited/generated', () => {
+test('TEST 33 No protected brand imagery edited', () => {
+  // Package folder art is edited deliberately and gated by
+  // test-public-package-folder-marks. The approved brand, landing and final
+  // screen assets are not: nothing in this flow may touch them.
+  const protectedAsset = (file) =>
+    /\.(png|jpe?g|webp|gif|pdf|svg|mp4)$/i.test(file) &&
+    !file.startsWith('assets/packages/')
   const changed = execSync('git diff --name-only HEAD', {
     cwd: ROOT,
     encoding: 'utf8',
   })
-  const images = changed
-    .split('\n')
-    .filter((file) => /\.(png|jpe?g|webp|gif|pdf|svg)$/i.test(file))
-  assert.deepEqual(images, [])
+  const touched = changed.split('\n').filter(protectedAsset)
+  assert.deepEqual(touched, [])
 })
 
 test('TEST 34 No horizontal overflow', () => {
