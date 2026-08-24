@@ -131,13 +131,10 @@ export function getPackageFolderArt(
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '')
   if (!base) return null
   const url = `${base}/storage/v1/object/public/${PACKAGE_FOLDER_BUCKET}/${PACKAGE_FOLDER_PREFIX}/${file}`
-  // Personalized folders were repaired in place; bust the year-long cache
-  // on those objects only. Other V3 art keeps the stored filename.
-  if (file === 'bbqpers-plus-pt-v3.webp') {
-    return `${url}?v=bbfix2`
-  }
-  if (file.startsWith('bbqpers-')) {
-    return `${url}?v=bbfix1`
+  // V4 objects are new filenames; the query keeps CDN caches from serving
+  // an older upload of the same key during this DEV pass.
+  if (file.endsWith('-v4.webp')) {
+    return `${url}?v=art4`
   }
   return url
 }

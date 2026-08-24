@@ -4,6 +4,8 @@
  * One folder per package, variant and locale. Values are file names inside
  * `package-images/cdl-folders-v3`, the bucket the runtime already reads from; the host
  * comes from the environment so this map is portable.
+ *
+ * Cleaned arts use *-v4.webp. V3 masters stay on disk for rollback.
  */
 export const PACKAGE_FOLDER_BUCKET = 'package-images'
 export const PACKAGE_FOLDER_PREFIX = 'cdl-folders-v3'
@@ -13,53 +15,53 @@ export const PACKAGE_FOLDER_ART_V2: Record<
   Partial<Record<'pt' | 'en' | 'es', string>>
 > = {
   "BBQCHO": {
-    "en": "bbqcho-en-v3.webp",
-    "es": "bbqcho-es-v3.webp",
+    "en": "bbqcho-en-v4.webp",
+    "es": "bbqcho-es-v4.webp",
     "pt": "bbqcho-pt-v3.webp"
   },
   "BBQCHO+": {
-    "en": "bbqcho-plus-en-v3.webp",
+    "en": "bbqcho-plus-en-v4.webp",
     "es": "bbqcho-plus-es-v3.webp",
     "pt": "bbqcho-plus-pt-v3.webp"
   },
   "BBQPERS": {
-    "en": "bbqpers-en-v3.webp",
-    "es": "bbqpers-es-v3.webp",
-    "pt": "bbqpers-pt-v3.webp"
+    "en": "bbqpers-en-v4.webp",
+    "es": "bbqpers-es-v4.webp",
+    "pt": "bbqpers-pt-v4.webp"
   },
   "BBQPERS+": {
-    "en": "bbqpers-plus-en-v3.webp",
-    "es": "bbqpers-plus-es-v3.webp",
-    "pt": "bbqpers-plus-pt-v3.webp"
+    "en": "bbqpers-plus-en-v4.webp",
+    "es": "bbqpers-plus-es-v4.webp",
+    "pt": "bbqpers-plus-pt-v4.webp"
   },
   "BBQPRI": {
-    "en": "bbqpri-en-v3.webp",
-    "es": "bbqpri-es-v3.webp",
+    "en": "bbqpri-en-v4.webp",
+    "es": "bbqpri-es-v4.webp",
     "pt": "bbqpri-pt-v3.webp"
   },
   "BBQPRI+": {
-    "en": "bbqpri-plus-en-v3.webp",
+    "en": "bbqpri-plus-en-v4.webp",
     "es": "bbqpri-plus-es-v3.webp",
-    "pt": "bbqpri-plus-pt-v3.webp"
+    "pt": "bbqpri-plus-pt-v4.webp"
   },
   "BBQSEL": {
     "en": "bbqsel-en-v3.webp",
     "es": "bbqsel-es-v3.webp",
-    "pt": "bbqsel-pt-v3.webp"
+    "pt": "bbqsel-pt-v4.webp"
   },
   "BBQSEL+": {
     "en": "bbqsel-plus-en-v3.webp",
     "es": "bbqsel-plus-es-v3.webp",
-    "pt": "bbqsel-plus-pt-v3.webp"
+    "pt": "bbqsel-plus-pt-v4.webp"
   },
   "BBQTRAD": {
     "en": "bbqtrad-en-v3.webp",
-    "es": "bbqtrad-es-v3.webp",
+    "es": "bbqtrad-es-v4.webp",
     "pt": "bbqtrad-pt-v3.webp"
   },
   "BBQTRAD+": {
-    "en": "bbqtrad-plus-en-v3.webp",
+    "en": "bbqtrad-plus-en-v4.webp",
     "es": "bbqtrad-plus-es-v3.webp",
-    "pt": "bbqtrad-plus-pt-v3.webp"
+    "pt": "bbqtrad-plus-pt-v4.webp"
   }
 }

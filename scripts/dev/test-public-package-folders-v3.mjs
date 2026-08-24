@@ -33,9 +33,10 @@ const visual = source('Lib/packageCatalogVisual.ts')
 const generated = source('Lib/publicQuote/packageFolderArt.generated.ts')
 const catalog = source('components/quotes/PublicPackageCatalog.tsx')
 const uploader = source('scripts/dev/upload-cdl-package-folders-v3.mjs')
-const masters = readdirSync(join(ROOT, 'assets/packages/folders-v3')).filter((f) =>
+const allFolders = readdirSync(join(ROOT, 'assets/packages/folders-v3')).filter((f) =>
   f.endsWith('.webp'),
 )
+const masters = allFolders.filter((f) => f.endsWith('-v3.webp'))
 
 const KEYS = [
   'BBQTRAD',
@@ -69,13 +70,16 @@ test('PACKAGE_PT_EN_ES_ART_MAPPED', () => {
   for (const key of KEYS) {
     for (const locale of LOCALES) {
       const entry = new RegExp(
-        `"${key.replace('+', '\\+')}":[\\s\\S]{0,400}?"${locale}": "[a-z-]+${locale}-v3\\.webp"`,
+        `"${key.replace('+', '\\+')}":[\\s\\S]{0,400}?"${locale}": "[a-z-]+${locale}-v[34]\\.webp"`,
       )
       assert.match(generated, entry, `${key} ${locale} is not mapped`)
     }
   }
-  const files = [...generated.matchAll(/"([a-z-]+-v3\.webp)"/g)].map((m) => m[1])
+  const files = [...generated.matchAll(/"([a-z-]+-v[34]\.webp)"/g)].map((m) => m[1])
   assert.equal(files.length, 30)
+  for (const file of files) {
+    assert.ok(allFolders.includes(file), `${file} is mapped but missing on disk`)
+  }
   // The bucket the runtime already reads from, and no baked-in host.
   assert.match(generated, /PACKAGE_FOLDER_BUCKET = 'package-images'/)
   assert.match(generated, /PACKAGE_FOLDER_PREFIX = 'cdl-folders-v3'/)
@@ -107,10 +111,9 @@ test('CUSTOM_FOLDER_CREATED', () => {
 test('ART_FOLLOWS_LOCALE_WITH_FALLBACK', () => {
   assert.match(visual, /export function getPackageFolderArt/)
   assert.match(visual, /byLocale\?\.\[locale\] \?\? byLocale\?\.pt/)
-  assert.match(visual, /file\.startsWith\('bbqpers-'\)/)
-  assert.match(visual, /\?v=bbfix1/)
-  assert.match(visual, /bbqpers-plus-pt-v3\.webp/)
-  assert.match(visual, /\?v=bbfix2/)
+  assert.match(visual, /file\.endsWith\('-v4\.webp'\)/)
+  assert.match(visual, /\?v=art4/)
+  assert.match(generated, /bbqpers-plus-pt-v4\.webp/)
   // The database column stays the fallback, so a card can never go blank.
   assert.match(visual, /const direct = pkg\.image_url\?\.trim\(\) \|\| null/)
   assert.match(visual, /findBasePackage\(pkg, allPackages\)/)

@@ -29,7 +29,8 @@ function test(name, callback) {
   }
 }
 
-const names = readdirSync(FOLDERS).filter((f) => f.endsWith('.webp')).sort()
+const allWebp = readdirSync(FOLDERS).filter((f) => f.endsWith('.webp')).sort()
+const names = allWebp.filter((f) => f.endsWith('-v3.webp'))
 const locations = json('assets/packages/folder-badge-locations.json')
 const removal = json('assets/packages/folder-pioneer-removal.json')
 const generated = read('Lib/publicQuote/packageFolderArt.generated.ts')
@@ -115,7 +116,7 @@ test('FOLDER_ART_STILL_MAPPED_PER_LOCALE', () => {
     const mapped = [...generated.matchAll(new RegExp(`"${locale}": "([^"]+)"`, 'g'))]
     assert.equal(mapped.length, 10, `${locale} should map 10 folders`)
     for (const [, file] of mapped) {
-      assert.ok(names.includes(file), `${file} is mapped but not on disk`)
+      assert.ok(allWebp.includes(file), `${file} is mapped but not on disk`)
     }
   }
   // Portable: file names only, bucket and host resolved at runtime.
@@ -124,7 +125,7 @@ test('FOLDER_ART_STILL_MAPPED_PER_LOCALE', () => {
 })
 
 test('FOLDER_FILES_WEB_SIZED', () => {
-  for (const name of names) {
+  for (const name of allWebp) {
     const bytes = statSync(join(FOLDERS, name)).size
     assert.ok(bytes > 20_000, `${name} looks truncated (${bytes} bytes)`)
     assert.ok(bytes < 1_200_000, `${name} is too heavy (${bytes} bytes)`)
@@ -140,6 +141,7 @@ test('FOLDER_PIPELINE_IS_REPRODUCIBLE', () => {
     'scripts/dev/remove-folder-pioneer-marks.py',
     'scripts/dev/remove-folder-stray-bb.py',
     'scripts/dev/remove-folder-black-square.py',
+    'scripts/dev/clean-folder-artifacts-v4.py',
   ]) {
     assert.ok(read(script).length > 500, `${script} missing`)
   }

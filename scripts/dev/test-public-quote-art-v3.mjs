@@ -30,7 +30,7 @@ function test(name, fn) {
 }
 
 const folders = readdirSync(join(ROOT, 'assets/packages/folders-v3')).filter((f) =>
-  f.endsWith('.webp'),
+  f.endsWith('-v3.webp'),
 )
 const labelFix = json('assets/packages/folder-pt-label-fix.json')
 const awardFix = json('assets/packages/folder-award-removal.json')
