@@ -469,6 +469,16 @@ body {
   scroll-margin-top: 120px;
 }
 
+/* Quiet divider between field groups inside a wizard step. */
+.wizard-section-label {
+  margin: 0.9rem 0 -0.35rem;
+  color: var(--cdl-subtle);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
 .package-highlights-box {
   background: #fffaf0;
   border: 1px solid #f1d98a;
@@ -1844,11 +1854,102 @@ body {
   margin-top: calc((var(--public-header-h) - 100svh));
 }
 
+/*
+ * Continuity cues. In flow rather than absolutely positioned, so they can never
+ * sit on top of the chapter copy. Orientation only — scrolling stays free.
+ */
+.public-landing-cue {
+  display: inline-flex;
+  align-items: center;
+  color: var(--cdl-yellow);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  /* Touch target without visual weight. */
+  padding: 0.5rem;
+  margin: 0;
+}
+
+.public-landing-cue--lead {
+  flex-direction: column;
+  gap: 0.3rem;
+  align-self: center;
+  margin-top: 1.5rem;
+}
+
+.public-landing-cue--arrow,
+.public-landing-cue--end {
+  align-self: flex-end;
+  margin-top: 1.1rem;
+  margin-right: -0.75rem;
+}
+
+/* Accessible target without giving the cue visual weight. */
+.public-landing-cue--arrow {
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}
+
+.public-landing-cue--lead {
+  min-height: 2.75rem;
+}
+
+.public-landing-cue-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.public-landing-cue-arrow {
+  width: 1.35rem;
+  height: 1.35rem;
+  animation: public-landing-cue-drift 2.4s ease-in-out infinite;
+}
+
+.public-landing-cue--arrow .public-landing-cue-arrow {
+  width: 1.15rem;
+  height: 1.15rem;
+  opacity: 0.72;
+}
+
+.public-landing-cue--arrow:hover .public-landing-cue-arrow {
+  opacity: 1;
+}
+
+.public-landing-cue-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--cdl-yellow);
+  opacity: 0.6;
+}
+
+@keyframes public-landing-cue-drift {
+  0%,
+  100% {
+    transform: translateY(-0.12rem);
+  }
+  50% {
+    transform: translateY(0.12rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-landing-cue-arrow {
+    animation: none;
+  }
+}
+
 .public-cinematic-chapter {
   min-height: 66svh;
   display: flex;
   flex-direction: column;
   justify-content: safe flex-end;
+  /* Cues scroll chapters to the top, so clear the sticky header. */
+  scroll-margin-top: var(--public-header-h, 3.5rem);
   padding: 1.9rem 1.1rem calc(1.75rem + env(safe-area-inset-bottom));
   background: linear-gradient(
     180deg,

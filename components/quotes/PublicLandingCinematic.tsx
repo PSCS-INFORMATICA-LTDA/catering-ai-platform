@@ -1,5 +1,6 @@
 'use client'
 
+import PublicLandingChapterCue from '@/components/quotes/PublicLandingChapterCue'
 import PublicLandingReveal from '@/components/quotes/PublicLandingReveal'
 import PublicLandingTitle from '@/components/quotes/PublicLandingTitle'
 import CdlHighlight from '@/components/quotes/CdlHighlight'
@@ -92,6 +93,11 @@ export default function PublicLandingCinematic({
               <p className="public-cinematic-error">{startErrorText}</p>
             ) : null}
           </PublicLandingReveal>
+          <PublicLandingChapterCue
+            variant="lead"
+            label={story.scrollHint}
+            ariaLabel={story.scrollHint}
+          />
         </section>
 
         <section
@@ -104,6 +110,7 @@ export default function PublicLandingCinematic({
               className="public-cinematic-editorial"
             />
           </PublicLandingReveal>
+          <PublicLandingChapterCue variant="arrow" ariaLabel={story.scrollNext} />
         </section>
 
         {story.stories.map((chapter) => (
@@ -125,6 +132,7 @@ export default function PublicLandingCinematic({
               />
               <p className="public-cinematic-body">{chapter.body}</p>
             </PublicLandingReveal>
+            <PublicLandingChapterCue variant="arrow" ariaLabel={story.scrollNext} />
           </section>
         ))}
 
@@ -144,6 +152,7 @@ export default function PublicLandingCinematic({
               localeLabels={story.video.locales}
             />
           </PublicLandingReveal>
+          <PublicLandingChapterCue variant="arrow" ariaLabel={story.scrollNext} />
         </section>
 
         <section
@@ -169,6 +178,7 @@ export default function PublicLandingCinematic({
               <span aria-hidden>→</span>
             </button>
           </PublicLandingReveal>
+          <PublicLandingChapterCue variant="end" ariaLabel={story.scrollNext} />
         </section>
       </div>
     </div>

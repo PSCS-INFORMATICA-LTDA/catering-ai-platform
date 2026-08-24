@@ -24,6 +24,10 @@ export type LandingStoryCopy = {
     microcopy: string
     quickCta: string
   }
+  /** Invitation shown once, under the first chapter, so the fold reads as a start. */
+  scrollHint: string
+  /** Accessible name for the quiet per-chapter continuity arrows. */
+  scrollNext: string
   howItWorksTitle: readonly LandingTitlePart[]
   stories: readonly LandingStoryChapter[]
   finalCta: {
@@ -58,6 +62,8 @@ export const PUBLIC_LANDING_STORY = {
         'Monte seu evento em poucos minutos. Nossa equipe revisa tudo antes da confirmação.',
       quickCta: 'COMEÇAR COTAÇÃO',
     },
+    scrollHint: 'Conheça nosso churrasco',
+    scrollNext: 'Ver a próxima seção',
     howItWorksTitle: [
       { text: 'ENTENDA', breakAfter: true },
       { text: 'COMO', breakAfter: true },
@@ -145,6 +151,8 @@ export const PUBLIC_LANDING_STORY = {
         'Build your event in just a few minutes. Our team reviews everything before confirmation.',
       quickCta: 'START QUOTE',
     },
+    scrollHint: 'Discover our BBQ experience',
+    scrollNext: 'See the next section',
     howItWorksTitle: [
       { text: 'SEE', breakAfter: true },
       { text: 'HOW IT', breakAfter: true },
@@ -232,6 +240,8 @@ export const PUBLIC_LANDING_STORY = {
         'Arma tu evento en pocos minutos. Nuestro equipo revisa todo antes de la confirmación.',
       quickCta: 'COMENZAR COTIZACIÓN',
     },
+    scrollHint: 'Conoce nuestra experiencia BBQ',
+    scrollNext: 'Ver la siguiente sección',
     howItWorksTitle: [
       { text: 'CONOCE', breakAfter: true },
       { text: 'CÓMO', breakAfter: true },
