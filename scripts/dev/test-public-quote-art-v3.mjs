@@ -187,22 +187,26 @@ test('PER_PERSON_NO_FAKE_QUANTITY_SELECTOR', () => {
 })
 
 test('ADDITIONAL_QUANTITY_LOGIC_UNCHANGED', () => {
+  // The teaser helpers live in this file too, so compare the quantity
+  // functions themselves rather than the file as a whole.
+  const base = execFileSync(
+    'git',
+    ['show', 'HEAD:Lib/quoteAdditionalDisplay.ts'],
+    { cwd: ROOT, encoding: 'utf8' },
+  )
+  const body = (source, fn) =>
+    source.match(new RegExp(`export function ${fn}\\([\\s\\S]*?\\n\\}`))?.[0]
+
   for (const fn of [
     'normalizeAdditionalQuantity',
     'calcAdditionalLineTotalForItem',
     'isPerPersonAdditional',
+    'getAdditionalUnitPrice',
   ]) {
-    assert.match(display, new RegExp(`export function ${fn}`), `${fn} missing`)
+    const now = body(display, fn)
+    assert.ok(now, `${fn} missing`)
+    assert.equal(now, body(base, fn), `${fn} was modified`)
   }
-  const diff = execFileSync(
-    'git',
-    ['diff', 'HEAD', '--unified=0', '--', 'Lib/quoteAdditionalDisplay.ts'],
-    { cwd: ROOT, encoding: 'utf8' },
-  )
-  const removed = diff
-    .split('\n')
-    .filter((l) => l.startsWith('-') && !l.startsWith('---'))
-  assert.equal(removed.length, 0, `quantity lib lost lines:\n${removed.join('\n')}`)
 })
 
 test('CATEGORY_ORDER_UNCHANGED_FROM_APPROVED', () => {

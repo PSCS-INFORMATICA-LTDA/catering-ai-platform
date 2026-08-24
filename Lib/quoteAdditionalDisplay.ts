@@ -182,19 +182,34 @@ export function pickSuggestedExtraNames<T extends QuoteAdditionalItem>(
   return names
 }
 
+/**
+ * Catalog labels are stored upper case for the cards, where that reads as a
+ * heading. Dropped into a sentence they read as shouting, so they are cased
+ * down for prose while staying the same words as the card below.
+ */
+function forProse(label: string, language: QuoteLanguage): string {
+  if (label !== label.toUpperCase()) return label
+  const locale = language === 'pt' ? 'pt-BR' : language
+  return label.replace(
+    /\p{Lu}[\p{Lu}\p{M}]*/gu,
+    (word) => word[0] + word.slice(1).toLocaleLowerCase(locale),
+  )
+}
+
 /** "a, b, c e d" in PT, "a, b, c, and d" in EN, "a, b, c y d" in ES. */
 export function formatSuggestedExtraNames(
   names: ReadonlyArray<string>,
   language: QuoteLanguage,
 ): string {
   const locale = language === 'pt' ? 'pt-BR' : language
+  const prose = names.map((name) => forProse(name, language))
   try {
     return new Intl.ListFormat(locale, {
       style: 'long',
       type: 'conjunction',
-    }).format(names)
+    }).format(prose)
   } catch {
-    return names.join(', ')
+    return prose.join(', ')
   }
 }
 
