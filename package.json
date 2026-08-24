@@ -100,6 +100,8 @@
     "test:dev:public-quote-hero-fire-hotfix": "node --experimental-strip-types scripts/dev/test-public-quote-hero-fire-hotfix.mjs",
     "test:dev:public-quote-success-v6": "node --experimental-strip-types scripts/dev/test-public-quote-success-v6.mjs",
     "test:dev:public-quote-success-v7": "node --experimental-strip-types scripts/dev/test-public-quote-success-v7.mjs",
+    "test:dev:public-quote-ux-flow": "node --experimental-strip-types scripts/dev/test-public-quote-ux-flow.mjs",
+    "capture:dev:public-quote-ux-flow": "node scripts/dev/capture-public-quote-ux-flow.mjs",
     "capture:dev:public-quote-success-v7": "node scripts/dev/capture-public-quote-success-v7.mjs",
     "build:dev:cdl-fire-safe-asset": "node scripts/dev/build-cdl-fire-safe-asset.mjs",
     "configure:dev:public-quote": "node scripts/dev/configure-public-self-service-quote.mjs",
