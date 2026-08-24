@@ -227,6 +227,8 @@ type QuoteStrings = {
     adults: string
     childrenUnder3: string
     children4to12: string
+    /** Separates the guest counts from the address block on the Event step. */
+    eventAddressSection: string
     hasGrill: string
     grillPhotoReceived: string
     yes: string
@@ -649,6 +651,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       adults: 'Adultos',
       childrenUnder3: 'Crianças até 3 anos',
       children4to12: 'Crianças 4 a 12 anos',
+      eventAddressSection: 'Endereço do evento',
       hasGrill: 'Cliente tem churrasqueira?',
       grillPhotoReceived: 'Foto da churrasqueira recebida?',
       yes: 'Sim',
@@ -1086,6 +1089,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       adults: 'Adults',
       childrenUnder3: 'Children up to 3 years',
       children4to12: 'Children 4 to 12 years',
+      eventAddressSection: 'Event address',
       hasGrill: 'Does the customer have a grill?',
       grillPhotoReceived: 'Grill photo received?',
       yes: 'Yes',
@@ -1524,6 +1528,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       adults: 'Adultos',
       childrenUnder3: 'Niños hasta 3 años',
       children4to12: 'Niños de 4 a 12 años',
+      eventAddressSection: 'Dirección del evento',
       hasGrill: '¿El cliente tiene parrilla?',
       grillPhotoReceived: '¿Foto de la parrilla recibida?',
       yes: 'Sí',

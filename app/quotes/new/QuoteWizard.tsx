@@ -31,6 +31,7 @@ import {
   pruneVisitedAdditionalCategories,
 } from '@/Lib/wizardAdditionalCategories'
 import { resolveNextWizardStep, WIZARD_STEP_COUNT } from '@/Lib/wizardStepAdvance'
+import { revealFloatingPanelWhenReady } from '@/Lib/revealFloatingPanel'
 import {
   ADDITIONAL_CATEGORY_EXPOSE_FALLBACK_BOTTOM_PX,
   isExtrasExposeScrollJump,
@@ -452,8 +453,15 @@ function DatePickerField({
   const [open, setOpen] = useState(false)
   const [viewDate, setViewDate] = useState(() => parseDateValue(value) ?? new Date())
   const containerRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   const selectedDate = parseDateValue(value)
+
+  // The calendar opens below the trigger and often lands past the fold.
+  useEffect(() => {
+    if (!open) return
+    return revealFloatingPanelWhenReady(() => panelRef.current)
+  }, [open])
 
   useEffect(() => {
     const parsed = parseDateValue(value)
@@ -527,6 +535,8 @@ function DatePickerField({
 
       {open && (
         <div
+          ref={panelRef}
+          data-wizard-datepicker-panel
           role="dialog"
           aria-label={tw(language, 'calendarOf', { label })}
           className="absolute left-0 top-full z-30 mt-2 w-full min-w-[300px] rounded-2xl border border-cdl-border bg-cdl-surface p-4 shadow-cdl-popup sm:w-[320px]"
@@ -649,11 +659,19 @@ function TimePickerField({
   required?: boolean
   requiredLabel?: string
 }) {
+  // Always starts closed, including the end time: it only opens on an explicit
+  // tap, never on step entry, date change or start-time change.
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
   const selected = parseTimeParts(value)
   const [draftHour, setDraftHour] = useState(selected?.hours ?? 18)
   const [draftMinute, setDraftMinute] = useState(selected?.minutes ?? 0)
+
+  useEffect(() => {
+    if (!open || readOnly) return
+    return revealFloatingPanelWhenReady(() => panelRef.current)
+  }, [open, readOnly])
 
   useEffect(() => {
     const parsed = parseTimeParts(value)
@@ -719,6 +737,8 @@ function TimePickerField({
 
       {open && !readOnly && (
         <div
+          ref={panelRef}
+          data-wizard-timepicker-panel
           role="dialog"
           aria-label={tw(language, 'timePickerOf', { label })}
           className="absolute left-0 top-full z-30 mt-2 w-full min-w-[300px] rounded-2xl border border-cdl-border bg-cdl-surface p-4 shadow-cdl-popup sm:w-[320px]"
@@ -3040,6 +3060,13 @@ export default function QuoteWizardCore({
                   placeholder={isPublicMode ? w.publicChildrenPlaceholder : ''}
                 />
               </div>
+              {/* Without this the address reads as more guest fields. */}
+              <p
+                data-event-address-section
+                className="wizard-section-label"
+              >
+                {w.eventAddressSection}
+              </p>
               <AddressAutocompleteFields
                 values={{
                   address: state.address,
