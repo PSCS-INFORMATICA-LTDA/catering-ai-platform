@@ -2339,6 +2339,32 @@ body {
   background: transparent;
 }
 
+/* Success closes on one centred signature: label above, official mark below. */
+.public-success-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.15rem 1.15rem 2.15rem;
+  background: #070707;
+}
+
+.public-success-powered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  text-align: center;
+}
+
+.public-success-powered-label {
+  color: rgba(255, 255, 255, 0.44);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  line-height: 1;
+}
+
 .public-success-contact-block {
   max-width: 42rem;
   margin: 0 auto;
@@ -2442,7 +2468,7 @@ body {
   position: relative;
   display: grid;
   place-items: center;
-  width: clamp(12.5rem, 63vw, 16.5rem);
+  width: clamp(14rem, 70vw, 18rem);
   aspect-ratio: 1;
   overflow: hidden;
   background: transparent;
@@ -2587,7 +2613,7 @@ body {
   .cdl-fire-signature-stage {
     /* Starts where the mobile clamp tops out, so the plate does not jump size
        across the breakpoint. */
-    width: clamp(16.5rem, 20vw, 17.5rem);
+    width: clamp(18rem, 22vw, 19.5rem);
   }
 
   .public-success-contacts {

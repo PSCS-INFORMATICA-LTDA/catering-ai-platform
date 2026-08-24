@@ -640,42 +640,17 @@ export default function PublicQuoteExperience({
       </footer>
       ) : null}
 
+      {/* Success closes on the PSCS One signature alone — the CDL story already
+          played out above it, so no second lockup competes with the fire mark. */}
       {success ? (
-      <footer className="public-landing-footer" data-success-footer>
-        <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 py-6 text-center sm:px-8">
-          <div className="space-y-2">
-            <p
-              data-footer-since-pioneer
-              className="text-sm font-semibold tracking-tight text-cdl-title sm:text-base"
-            >
-              {tw(locale, 'footerSincePioneer')}
-            </p>
-            <p className="text-[11px] text-cdl-faint">
-              {publicQuoteCopyrightLine(
-                bootstrap.company.slug,
-                bootstrap.company.name,
-                new Date().getFullYear(),
-              )}
-            </p>
-          </div>
-          <p
-            data-powered-by
-            aria-label={copy.poweredByLabel}
-            className="flex flex-wrap items-center justify-center gap-2 text-[11px] leading-none tracking-[0.14em] text-cdl-faint"
-          >
-            <span>{copy.poweredBy}</span>
-            <PscsOneMark size="footer" variant="full" className="shadow-sm" />
-          </p>
-          <div className="flex flex-wrap justify-center gap-4 text-xs text-cdl-muted">
-            {bootstrap.settings.consent.privacyUrl ? (
-              <a href={bootstrap.settings.consent.privacyUrl}>{copy.privacy}</a>
-            ) : null}
-            {bootstrap.settings.support.phone ? (
-              <a href={`tel:${bootstrap.settings.support.phone}`}>
-                {copy.support} {bootstrap.settings.support.phone}
-              </a>
-            ) : null}
-          </div>
+      <footer className="public-success-footer" data-success-footer>
+        <div
+          data-powered-by
+          aria-label={copy.poweredByLabel}
+          className="public-success-powered"
+        >
+          <span className="public-success-powered-label">{copy.poweredBy}</span>
+          <PscsOneMark size="footer" variant="full" className="shadow-sm" />
         </div>
       </footer>
       ) : null}
