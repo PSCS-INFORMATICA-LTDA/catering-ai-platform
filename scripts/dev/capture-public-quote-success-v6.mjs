@@ -382,7 +382,7 @@ try {
   )
   record(
     'SUCCESS_USES_TREATED_PLATE',
-    dom.videoSrc.includes('CDL_LOGO_FOGO_SEM_BOOK_NOW_SAFE_V6.mp4'),
+    dom.videoSrc.includes('CDL_LOGO_FOGO_SEM_BOOK_NOW_SAFE_V7.mp4'),
     dom.videoSrc,
   )
   await overflow(page, '390')

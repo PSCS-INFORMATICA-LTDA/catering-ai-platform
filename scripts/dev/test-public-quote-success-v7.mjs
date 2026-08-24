@@ -29,6 +29,20 @@ function test(name, callback) {
 const css = source('app/globals.css')
 const signature = source('components/quotes/CdlFireSignature.tsx')
 const successScreen = source('components/quotes/PublicQuoteSuccessScreen.tsx')
+const experience = source(
+  'app/quote/[companySlug]/[locale]/PublicQuoteExperience.tsx',
+)
+const assetScript = source('scripts/dev/build-cdl-fire-safe-asset.mjs')
+const media = source('Lib/publicQuote/successHeroMedia.ts')
+
+const landingFooter = experience.slice(
+  experience.indexOf('data-public-landing-footer'),
+  experience.indexOf('data-success-footer'),
+)
+const successFooter = (() => {
+  const start = experience.indexOf('data-success-footer')
+  return experience.slice(start, experience.indexOf('</footer>', start) + 9)
+})()
 
 const rule = (selector) => {
   const match = css.match(
@@ -92,10 +106,10 @@ test('SUBTLE_HALO_ONLY', () => {
 
 test('MOBILE_PLATE_SIZE', () => {
   const stage = rule('.cdl-fire-signature-stage')
-  assert.match(stage, /width: clamp\(12\.5rem, 63vw, 16\.5rem\)/)
+  assert.match(stage, /width: clamp\(14rem, 70vw, 18rem\)/)
   // Desktop picks up where the mobile clamp tops out, so the plate does not
   // jump size across the breakpoint.
-  assert.match(css, /width: clamp\(16\.5rem, 20vw, 17\.5rem\)/)
+  assert.match(css, /width: clamp\(18rem, 22vw, 19\.5rem\)/)
 })
 
 test('MATTE_NEUTRALISED', () => {
@@ -131,6 +145,56 @@ test('IOS_VIDEO_ATTRIBUTES', () => {
 test('REDUCED_MOTION_PRESERVED', () => {
   assert.match(signature, /prefers-reduced-motion: reduce/)
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?cdl-fire-signature-video/)
+})
+
+test('CDL_LOGO_VISUALLY_LARGER', () => {
+  // Bigger stage plus a bigger ring inside the canvas, not just a bigger box.
+  assert.match(assetScript, /const RING_SHARE = 0\.655/)
+  assert.match(media, /PUBLIC_SUCCESS_CDL_FIRE_RING_SHARE = 0\.655/)
+  assert.match(media, /SAFE_V7\.mp4/)
+  // V6 stays referenced so the asset swap is reversible.
+  assert.match(media, /PUBLIC_SUCCESS_CDL_FIRE_PREVIOUS_MP4_SRC[\s\S]*SAFE_V6\.mp4/)
+})
+
+test('SUCCESS_FOOTER_ONLY_POWERED_BY_PSCS_ONE', () => {
+  assert.ok(successFooter.includes('data-success-footer'))
+  assert.match(successFooter, /\{copy\.poweredBy\}/)
+  assert.match(successFooter, /PscsOneMark/)
+  for (const removed of [
+    'footerSincePioneer',
+    'publicQuoteCopyrightLine',
+    'getFullYear',
+    'copy.privacy',
+    'copy.support',
+    'data-landing-cdl-logo',
+  ]) {
+    assert.ok(!successFooter.includes(removed), `success footer still has ${removed}`)
+  }
+})
+
+test('SUCCESS_PSCS_ONE_BELOW_POWERED_BY', () => {
+  assert.ok(
+    successFooter.indexOf('copy.poweredBy') < successFooter.indexOf('PscsOneMark'),
+    'label must render above the mark',
+  )
+  const powered = rule('.public-success-powered')
+  assert.match(powered, /flex-direction: column/)
+  assert.match(powered, /align-items: center/)
+  assert.match(powered, /justify-content: center/)
+  const footer = rule('.public-success-footer')
+  assert.match(footer, /justify-content: center/)
+  // Official mark is reused untouched, at the approved footer size.
+  assert.match(successFooter, /size="footer"/)
+  assert.match(source('components/brand/PscsOneMark.tsx'), /h-\[22px\]/)
+})
+
+test('LANDING_NOT_REGRESSED', () => {
+  // The landing keeps its own signature; only success was stripped.
+  assert.match(landingFooter, /footerSincePioneer/)
+  assert.match(landingFooter, /publicQuoteCopyrightLine/)
+  assert.match(landingFooter, /data-landing-cdl-logo/)
+  assert.ok(!landingFooter.includes('PscsOneMark'))
+  assert.ok(!landingFooter.includes('CdlFireSignature'))
 })
 
 test('NO_NEW_RUNTIME_DEPENDENCIES', () => {

@@ -116,7 +116,7 @@ test('SUCCESS_FIRE_CONTAIN', () => {
 
 test('SUCCESS_FIRE_SAFE_AREA', () => {
   assert.match(signature, /data-success-fire-safe-area="true"/)
-  assert.match(css, /clamp\(12\.5rem, 63vw, 16\.5rem\)/)
+  assert.match(css, /clamp\(14rem, 70vw, 18rem\)/)
 })
 
 test('SUCCESS_CONTACT_SIGNATURE_COMPACT', () => {

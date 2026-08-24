@@ -172,11 +172,20 @@ test('TEST 18 Small colored footer mark visible', () => {
 })
 
 test('TEST 19 Footer contains only Powered by PSCS One', () => {
-  const powered = experience.slice(experience.indexOf('data-powered-by'))
-  const block = powered.slice(0, powered.indexOf('</p>') + 4)
+  const footer = experience.slice(experience.indexOf('data-success-footer'))
+  const block = footer.slice(0, footer.indexOf('</footer>') + 9)
   assert.match(block, /\{copy\.poweredBy\}/)
   assert.match(block, /PscsOneMark/)
   assert.doesNotMatch(block, /Catering App/)
+  // Nothing else survives in the success footer.
+  for (const removed of [
+    'footerSincePioneer',
+    'publicQuoteCopyrightLine',
+    'copy.privacy',
+    'copy.support',
+  ]) {
+    assert.ok(!block.includes(removed), `success footer still renders ${removed}`)
+  }
   assert.equal((experience.match(/poweredBy: 'Powered by'/g) ?? []).length, 3)
   assert.equal(
     (experience.match(/poweredByLabel: 'Powered by PSCS One'/g) ?? []).length,

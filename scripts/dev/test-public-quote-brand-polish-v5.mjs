@@ -103,7 +103,7 @@ test('SUCCESS_FIRE_SIGNATURE_REPAIRED', () => {
   assert.equal(SUCCESS_DOES_NOT_USE_CDL_MP4, false)
   assert.equal(
     PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC,
-    '/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_SAFE_V6.mp4',
+    '/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_SAFE_V7.mp4',
   )
   assert.match(successScreen, /<CdlFireSignature/)
   assert.match(signature, /data-cdl-fire-signature/)
@@ -236,13 +236,13 @@ test('NO_HORIZONTAL_OVERFLOW', () => {
   assert.match(css, /overflow-x: clip/)
   assert.match(css, /overflow-wrap: break-word/)
   assert.doesNotMatch(signature, /width:\s*\d{4}px/)
-  assert.match(css, /clamp\(12\.5rem/)
-  assert.match(css, /clamp\(16\.5rem/)
+  assert.match(css, /clamp\(14rem/)
+  assert.match(css, /clamp\(18rem/)
 })
 
 test('SUCCESS_SIGNATURE_SIZE', () => {
-  assert.match(css, /clamp\(12\.5rem, 63vw, 16\.5rem\)/)
-  assert.match(css, /clamp\(16\.5rem, 20vw, 17\.5rem\)/)
+  assert.match(css, /clamp\(14rem, 70vw, 18rem\)/)
+  assert.match(css, /clamp\(18rem, 22vw, 19\.5rem\)/)
 })
 
 if (failed > 0) {

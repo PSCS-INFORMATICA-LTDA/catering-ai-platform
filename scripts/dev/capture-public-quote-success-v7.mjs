@@ -432,13 +432,32 @@ try {
       scrollWidth: document.documentElement.scrollWidth,
       clientWidth: document.documentElement.clientWidth,
       videoCount: success.querySelectorAll('video').length,
+      footer: (() => {
+        const el = document.querySelector('[data-success-footer]')
+        if (!el) return null
+        const label = el.querySelector('.public-success-powered-label')
+        const mark = el.querySelector('[data-pscs-one-mark]')
+        const lr = label.getBoundingClientRect()
+        const mr = mark.getBoundingClientRect()
+        return {
+          text: el.innerText,
+          marks: el.querySelectorAll('[data-pscs-one-mark]').length,
+          links: el.querySelectorAll('a').length,
+          labelBottom: lr.bottom,
+          labelCentre: lr.left + lr.width / 2,
+          markTop: mr.top,
+          markCentre: mr.left + mr.width / 2,
+          markHeight: Math.round(mr.height),
+          viewportCentre: window.innerWidth / 2,
+        }
+      })(),
     }
   })
 
   record(
     'REAL_FIRE_VIDEO_PRESERVED',
     !!dom.video &&
-      /CDL_LOGO_FOGO_SEM_BOOK_NOW_SAFE_V6\.mp4$/.test(dom.video.src) &&
+      /CDL_LOGO_FOGO_SEM_BOOK_NOW_SAFE_V7\.mp4$/.test(dom.video.src) &&
       dom.video.intrinsic === '610x610' &&
       dom.videoCount === 1,
     `${dom.video?.src} ${dom.video?.intrinsic} videos=${dom.videoCount}`,
@@ -492,8 +511,24 @@ try {
 
   record(
     'MOBILE_PLATE_SIZE',
-    dom.stage.width >= 235 && dom.stage.width <= 270,
-    `${dom.stage.width}px at 393 (grown from 188.6px)`,
+    dom.stage.width >= 260 && dom.stage.width <= 300,
+    `${dom.stage.width}px at 393 (grown from 247.6px)`,
+  )
+
+  record(
+    'SUCCESS_FOOTER_ONLY_POWERED_BY_PSCS_ONE',
+    dom.footer.text.replace(/\s+/g, ' ').trim().toLowerCase() === 'powered by' &&
+      dom.footer.marks === 1 &&
+      dom.footer.links === 0,
+    `footer text "${dom.footer.text.replace(/\s+/g, ' ').trim()}", ${dom.footer.marks} mark, ${dom.footer.links} links`,
+  )
+
+  record(
+    'SUCCESS_PSCS_ONE_BELOW_POWERED_BY',
+    dom.footer.markTop > dom.footer.labelBottom &&
+      Math.abs(dom.footer.markCentre - dom.footer.labelCentre) <= 2 &&
+      Math.abs(dom.footer.markCentre - dom.footer.viewportCentre) <= 2,
+    `mark starts ${Math.round(dom.footer.markTop - dom.footer.labelBottom)}px below the label, both centred`,
   )
 
   record(
@@ -628,6 +663,13 @@ try {
   await page.evaluate(() => window.scrollTo(0, 0))
   await new Promise((r) => setTimeout(r, 300))
   await shot(page, 'v7_success_393_top')
+  await page.evaluate(() =>
+    document
+      .querySelector('[data-success-footer]')
+      ?.scrollIntoView({ block: 'end' }),
+  )
+  await new Promise((r) => setTimeout(r, 400))
+  await shot(page, 'v7_success_393_footer')
   await page.close()
 
   // ---- 390 x 844 ----------------------------------------------------------

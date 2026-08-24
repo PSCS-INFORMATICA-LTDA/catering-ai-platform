@@ -123,7 +123,7 @@ test('FINAL_CDL_ASSET_PATH_CORRECT', () => {
   // V6 ships the safe-area re-frame of the very same official plate.
   assert.equal(
     PUBLIC_SUCCESS_CDL_FIRE_MP4_SRC,
-    '/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_SAFE_V6.mp4',
+    '/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_SAFE_V7.mp4',
   )
   assert.equal(
     PUBLIC_SUCCESS_CDL_FIRE_SOURCE_NAME,
@@ -131,7 +131,7 @@ test('FINAL_CDL_ASSET_PATH_CORRECT', () => {
   )
   assert.equal(
     fireMp4Rel.replace(/\\/g, '/'),
-    'public/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_SAFE_V6.mp4',
+    'public/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_SAFE_V7.mp4',
   )
   assert.ok(
     existsSync(join(ROOT, 'public/cdl/video/CDL_LOGO_FOGO_SEM_BOOK_NOW_FINAL.mp4')),
