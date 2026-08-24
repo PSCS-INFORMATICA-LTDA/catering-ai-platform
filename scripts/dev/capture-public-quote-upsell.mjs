@@ -252,12 +252,9 @@ for (const locale of LOCALES) {
       const sections = [...document.querySelectorAll('[id^="additional-category-"]')]
         .filter((n) => !/^additional-category-(content|summary|sentinel)-/.test(n.id))
       return {
-        title: intro?.querySelector('.public-extras-intro-title')?.textContent?.trim(),
-        body: intro?.querySelector('.public-extras-intro-body')?.textContent?.trim(),
-        introFirst: intro && sections.length
-          ? !!(intro.compareDocumentPosition(sections[0]) &
-              Node.DOCUMENT_POSITION_FOLLOWING)
-          : false,
+        title: intro?.querySelector('.public-suggested-extras-title')?.textContent?.trim(),
+        body: intro?.querySelector('.public-suggested-extras-body')?.textContent?.trim(),
+        introFirst: sections[0]?.getAttribute('data-suggested-extras') === 'true',
         categories: sections.map((s) => ({
           key: s.id.replace('additional-category-', ''),
           label: s.querySelector('[data-additional-category-header]')
@@ -277,18 +274,27 @@ for (const locale of LOCALES) {
 
     const keys = extras.categories.map((c) => c.key).filter(Boolean)
     record(`SUGGESTED_EXTRAS_HEADER_${locale.toUpperCase()}`, !!extras.title, extras.title)
-    record(`EXTRAS_HEADER_ABOVE_CATEGORIES_${locale.toUpperCase()}`, extras.introFirst)
-    record(`FIRST_CATEGORY_BOVINO_NOBRE_${locale.toUpperCase()}`,
-      keys[0] === 'BOVINO_NOBRE', `order: ${keys.slice(0, 4).join(' > ')}`)
-    record(`SECOND_CATEGORY_BOVINO_TRADICIONAL_${locale.toUpperCase()}`,
-      keys[1] === 'BOVINO_TRADICIONAL', keys[1])
-    record(`THIRD_CATEGORY_PORCO_${locale.toUpperCase()}`, keys[2] === 'PORCO', keys[2])
+    record(`SUGGESTED_EXTRAS_CATEGORY_FIRST_${locale.toUpperCase()}`, extras.introFirst && keys[0] === 'SUGGESTED_EXTRAS',
+      `order: ${keys.slice(0, 4).join(' > ')}`)
+    record(`FIRST_CATEGORY_SUGGESTED_EXTRAS_${locale.toUpperCase()}`,
+      keys[0] === 'SUGGESTED_EXTRAS', `order: ${keys.slice(0, 4).join(' > ')}`)
+    record(`SECOND_CATEGORY_BOVINO_NOBRE_${locale.toUpperCase()}`,
+      keys[1] === 'BOVINO_NOBRE', keys[1])
+    record(`THIRD_CATEGORY_BOVINO_TRADICIONAL_${locale.toUpperCase()}`,
+      keys[2] === 'BOVINO_TRADICIONAL', keys[2])
+
+    const suggested = extras.categories.find((c) => c.key === 'SUGGESTED_EXTRAS')
+    const nobre = extras.categories.find((c) => c.key === 'BOVINO_NOBRE')
+    const suggestedLabels = new Set((suggested?.items ?? []).map((i) => i.label))
+    const dupes = (nobre?.items ?? []).filter((i) => suggestedLabels.has(i.label))
+    record(`SUGGESTED_EXTRAS_NO_DUPLICATES_${locale.toUpperCase()}`,
+      dupes.length === 0, dupes.map((i) => i.label).join(', '))
 
     const WANT = [
-      'BOVINO_NOBRE', 'BOVINO_TRADICIONAL', 'PORCO', 'FRANGO', 'PEIXES',
-      'FRUTOS_DO_MAR', 'CORDEIRO', 'LINGUICAS', 'GUARNICOES', 'ACOMPANHAMENTOS',
-      'LEGUMES_E_SALADAS', 'LEGUMES_E_VEGETAIS', 'FRUTAS', 'EQUIPAMENTOS',
-      'OUTROS',
+      'SUGGESTED_EXTRAS', 'BOVINO_NOBRE', 'BOVINO_TRADICIONAL', 'FRANGO', 'PORCO',
+      'LINGUICAS', 'PEIXES', 'FRUTOS_DO_MAR', 'CORDEIRO', 'GUARNICOES',
+      'ACOMPANHAMENTOS', 'LEGUMES_E_SALADAS', 'LEGUMES_E_VEGETAIS', 'FRUTAS',
+      'EQUIPAMENTOS', 'OUTROS',
     ]
     const rank = (k) => (WANT.indexOf(k) === -1 ? WANT.length : WANT.indexOf(k))
     const ordered = keys.every((k, i) => i === 0 || rank(keys[i - 1]) <= rank(k))

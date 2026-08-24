@@ -19,12 +19,15 @@ import {
   calcAdditionalLineTotalForItem,
   getAdditionalUnitPrice,
   getLocalizedAdditionalLabel,
-  groupAdditionalItemsByCategory,
-  pickSuggestedExtraNames,
-  formatSuggestedExtraNames,
+  getAdditionalImage,
   isPerPersonAdditional,
   normalizeAdditionalQuantity,
 } from '../../../Lib/quoteAdditionalDisplay'
+import {
+  buildPublicAdditionalDisplayGroups,
+  getReviewAdditionalCategoryLabel,
+  SUGGESTED_EXTRAS_DISPLAY_KEY,
+} from '@/Lib/publicQuote/suggestedExtras'
 import { getAdditionalItemCategoryKey } from '@/Lib/additionalItemFieldAccess'
 import {
   buildAdditionalCategoryDisplayLabels,
@@ -77,7 +80,6 @@ import {
   CUSTOMER_DISPLAY_NAME_EMPTY,
   getCustomerDisplayName,
 } from '../../../Lib/getCustomerDisplayName'
-import { getCatalogItemImageUrl } from '../../../Lib/catalogItemVisual'
 import { isUsablePostalCode } from '../../../Lib/cep'
 import { isUsablePhone, normalizePhone } from '../../../Lib/normalizePhone'
 import {
@@ -1580,15 +1582,8 @@ export default function QuoteWizardCore({
     [itemCatalog, blockedCatalogItemIds],
   )
 
-  // Headline names for the extras teaser, read off the list the customer is
-  // about to browse so it can never advertise something that is not there.
-  const suggestedExtraNames = useMemo(
-    () => pickSuggestedExtraNames(visibleAdditionalItems, uiLocale),
-    [visibleAdditionalItems, uiLocale],
-  )
-
   const additionalItemsByCategory = useMemo(
-    () => groupAdditionalItemsByCategory(visibleAdditionalItems, uiLocale),
+    () => buildPublicAdditionalDisplayGroups(visibleAdditionalItems, uiLocale),
     [visibleAdditionalItems, uiLocale],
   )
 
@@ -1778,15 +1773,15 @@ export default function QuoteWizardCore({
 
   const reviewAdditionals = useMemo(
     () =>
-      selectedAdditionalsByCategory.flatMap(({ categoryLabel, items }) =>
+      selectedAdditionalsByCategory.flatMap(({ items }) =>
         items.map(({ item, quantity, unitPrice, perPerson, totalPrice }) => ({
           id: item.id,
           label: getLocalizedAdditionalLabel(item, uiLocale),
-          category: categoryLabel,
+          category: getReviewAdditionalCategoryLabel(item, uiLocale),
           quantity,
           unitPrice,
           totalPrice,
-          imageUrl: getCatalogItemImageUrl(item),
+          imageUrl: getAdditionalImage(item),
           itemType: item.item_type,
           categoryPt: item.category_pt,
           perPerson,
@@ -3190,32 +3185,6 @@ export default function QuoteWizardCore({
 
         {step === 3 && (
           <div className="min-w-0 space-y-6">
-            {/* Sets up the step as an opportunity, not a form to get through. */}
-            <section data-suggested-extras className="public-extras-intro">
-              <p className="public-extras-intro-title">
-                {tw(uiLocale, 'suggestedExtrasTitle')}
-              </p>
-              <p className="public-extras-intro-lead">
-                {tw(uiLocale, 'suggestedExtrasLead')}
-              </p>
-              {suggestedExtraNames.length >= 2 ? (
-                <p
-                  data-suggested-extras-products
-                  className="public-extras-intro-body"
-                >
-                  {tw(uiLocale, 'suggestedExtrasProducts', {
-                    products: formatSuggestedExtraNames(suggestedExtraNames, uiLocale),
-                  })}
-                </p>
-              ) : (
-                <p className="public-extras-intro-body">
-                  {tw(uiLocale, 'suggestedExtrasBody')}
-                </p>
-              )}
-              <p className="public-extras-intro-close">
-                {tw(uiLocale, 'suggestedExtrasClose')}
-              </p>
-            </section>
             <p className="text-sm text-cdl-muted">
               {quoteStrings.additionalsStepHint}
             </p>
@@ -3239,6 +3208,7 @@ export default function QuoteWizardCore({
                     selectedCount={selectedCountByCategory[categoryKey] ?? 0}
                     visited={visitedAdditionalCategories.has(categoryKey)}
                     emphasize={emphasizedAdditionalCategory === categoryKey}
+                    featured={categoryKey === SUGGESTED_EXTRAS_DISPLAY_KEY}
                     quantities={state.additionals}
                     billableGuestCount={billableGuestCount}
                     language={uiLocale}

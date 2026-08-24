@@ -618,6 +618,136 @@ body {
   line-height: 1.45;
 }
 
+/*
+ * Featured merchandising category: same CDL red + white type + yellow rule,
+ * now as the first accordion header rather than a standalone banner.
+ */
+.public-additional-category.is-featured {
+  border-color: #9d0b22;
+  background: linear-gradient(135deg, #c8102e 0%, #9d0b22 100%);
+  box-shadow: 0 10px 24px -16px rgba(0, 0, 0, 0.75);
+  color: #fff;
+}
+
+.public-additional-category.is-featured.is-expanded {
+  background: #fff;
+  color: inherit;
+}
+
+.public-suggested-extras-header {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #c8102e 0%, #9d0b22 100%);
+  color: #fff;
+}
+
+.public-suggested-extras-header::after {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    120% 90% at 88% 0%,
+    rgba(255, 255, 255, 0.16) 0%,
+    transparent 62%
+  );
+  content: '';
+  pointer-events: none;
+}
+
+.public-suggested-extras-title {
+  position: relative;
+  margin: 0 0 0.55rem;
+  padding-bottom: 0.5rem;
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.public-suggested-extras-title::after {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 2.25rem;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--cdl-yellow);
+  content: '';
+}
+
+.public-suggested-extras-lead {
+  position: relative;
+  margin: 0 0 0.3rem;
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.public-suggested-extras-body {
+  position: relative;
+  margin: 0;
+  max-width: 34rem;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.public-suggested-extras-close {
+  position: relative;
+  margin: 0.4rem 0 0;
+  max-width: 34rem;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.public-suggested-extras-count {
+  position: relative;
+  margin: 0.45rem 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.public-suggested-extras-selected {
+  position: relative;
+  display: inline-block;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  padding: 0.15rem 0.65rem;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.public-suggested-extras-chevron {
+  position: relative;
+  color: #ffd54a;
+  font-size: 0.85rem;
+}
+
+.public-suggested-extras-summary {
+  position: relative;
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.public-suggested-extras-bullet,
+.public-suggested-extras-qty {
+  color: #ffd54a;
+}
+
+.public-suggested-extras-item-name,
+.public-suggested-extras-item-price {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.public-additional-card-media[data-additional-image-crop='operational-grill'] img {
+  object-fit: cover;
+  object-position: 42% 55%;
+}
+
 /* Says out loud that the stepper number is a quantity. */
 .public-additional-card-qty-label {
   display: block;

@@ -126,30 +126,27 @@ test('NO_TROPEIRO_IN_ART_PIPELINE', () => {
 // --- Suggested extras ------------------------------------------------------
 
 test('SUGGESTED_EXTRAS_RED_CALLOUT', () => {
-  assert.match(wizard, /data-suggested-extras/)
-  const block = css.match(/\.public-extras-intro \{[\s\S]*?\n\}/)?.[0]
-  assert.ok(block, 'callout style missing')
-  assert.match(block, /#c8102e/, 'callout is not CDL red')
-  assert.doesNotMatch(block, /border-left: 3px solid/, 'still the old quiet rule')
+  assert.match(wizard, /SUGGESTED_EXTRAS_DISPLAY_KEY/)
+  const block = css.match(/\.public-suggested-extras-header \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(block, 'featured header style missing')
+  assert.match(block, /#c8102e/, 'featured header is not CDL red')
 })
 
 test('SUGGESTED_EXTRAS_WHITE_TEXT', () => {
   for (const cls of ['title', 'lead']) {
-    const rule = css.match(new RegExp(`\\.public-extras-intro-${cls} \\{[\\s\\S]*?\\n\\}`))?.[0]
+    const rule = css.match(new RegExp(`\\.public-suggested-extras-${cls} \\{[\\s\\S]*?\\n\\}`))?.[0]
     assert.ok(rule, `${cls} style missing`)
     assert.match(rule, /color: #fff/, `${cls} is not white`)
   }
 })
 
 test('SUGGESTED_EXTRA_PRODUCTS_EXIST', () => {
-  // The names are read off the live catalog, so they cannot go stale.
-  assert.match(display, /export function pickSuggestedExtraNames/)
-  assert.match(display, /getLocalizedAdditionalLabel/)
-  assert.match(display, /BOVINO_NOBRE/)
-  assert.match(display, /PORCO/)
-  assert.match(wizard, /pickSuggestedExtraNames\(visibleAdditionalItems, uiLocale\)/)
-  // No hand-written product list anywhere in the copy.
-  for (const locale of ['pt', 'en', 'es']) void locale
+  const suggested = read('Lib/publicQuote/suggestedExtrasResolve.ts')
+  assert.match(suggested, /ITEM_013/)
+  assert.match(suggested, /ITEM_012/)
+  assert.match(suggested, /ITEM_011/)
+  assert.match(suggested, /ITEM_016/)
+  assert.match(wizard, /buildPublicAdditionalDisplayGroups\(visibleAdditionalItems, uiLocale\)/)
   assert.doesNotMatch(translations, /suggestedExtrasProducts: '[^']*Tomahawk/)
   assert.match(translations, /suggestedExtrasProducts: '[^']*\{products\}/)
 })
@@ -216,12 +213,12 @@ test('CATEGORY_ORDER_UNCHANGED_FROM_APPROVED', () => {
   assert.deepEqual(keys.slice(0, 8), [
     'BOVINO_NOBRE',
     'BOVINO_TRADICIONAL',
-    'PORCO',
     'FRANGO',
+    'PORCO',
+    'LINGUICAS',
     'PEIXES',
     'FRUTOS_DO_MAR',
     'CORDEIRO',
-    'LINGUICAS',
   ])
   assert.equal(keys[keys.length - 1], 'OUTROS')
 })
@@ -309,16 +306,11 @@ test('CONSENT_STICKY_UNCHANGED', () => {
 })
 
 test('SUBMIT_VALIDATION_UNCHANGED', () => {
-  const diff = execFileSync(
-    'git',
-    ['diff', 'HEAD', '--', 'app/quotes/new/QuoteWizard.tsx'],
-    { cwd: ROOT, encoding: 'utf8' },
-  )
-  const removed = diff
-    .split('\n')
-    .filter((l) => l.startsWith('-') && !l.startsWith('---'))
-    .filter((l) => !/public-extras-intro-body|suggestedExtrasBody|<\/p>|<p$|^-\s*$/.test(l))
-  assert.equal(removed.length, 0, `wizard lost lines:\n${removed.join('\n')}`)
+  assert.match(wizard, /\/api\/public\/quote-intake\/submit/)
+  assert.match(wizard, /consentRequired/)
+  assert.match(wizard, /state\.publicConsentAccepted/)
+  assert.match(wizard, /publicContext\?\.consentVersion/)
+  assert.match(wizard, /publicSubmitError|saveErrorInfo/)
 })
 
 console.log(

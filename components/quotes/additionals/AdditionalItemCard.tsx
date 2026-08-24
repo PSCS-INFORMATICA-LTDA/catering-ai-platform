@@ -2,6 +2,10 @@
 
 import { getAdditionalItemCategoryKey } from '@/Lib/additionalItemFieldAccess'
 import {
+  getPublicAdditionalImageObjectPosition,
+  isGrillRentalAdditional,
+} from '@/Lib/publicQuote/grillRentalDisplay'
+import {
   calcAdditionalLineTotalForItem,
   formatAdditionalPrice,
   getAdditionalChargeUnitLabel,
@@ -39,6 +43,8 @@ export default function AdditionalItemCard({
 }) {
   const t = getQuoteStrings(language)
   const image = getAdditionalImage(item)
+  const imagePosition = getPublicAdditionalImageObjectPosition(item)
+  const grillCrop = isGrillRentalAdditional(item)
   const label = getLocalizedAdditionalLabel(item, language)
   const priceLabel = getAdditionalPriceLabel(item, language)
   const chargeUnitLabel = getAdditionalChargeUnitLabel(item, language)
@@ -64,13 +70,17 @@ export default function AdditionalItemCard({
   }`
 
   const media = (
-    <div className="public-additional-card-media bg-neutral-100">
+    <div
+      className="public-additional-card-media bg-neutral-100"
+      data-additional-image-crop={grillCrop ? 'operational-grill' : undefined}
+    >
       {image ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={image}
           alt={label}
           className="h-full w-full object-cover"
+          style={imagePosition ? { objectPosition: imagePosition } : undefined}
           loading="lazy"
           decoding="async"
         />

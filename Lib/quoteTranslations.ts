@@ -66,6 +66,26 @@ const CATEGORY_LABEL_MAP: Record<string, Record<QuoteLanguage, string>> = {
     en: 'Vegetables & Salads',
     es: 'Verduras y Ensaladas',
   },
+  ACOMPANHAMENTOS: {
+    pt: 'Acompanhamentos',
+    en: 'Accompaniments',
+    es: 'Acompañamientos',
+  },
+  LEGUMES_E_VEGETAIS: {
+    pt: 'Legumes e Vegetais',
+    en: 'Vegetables',
+    es: 'Verduras',
+  },
+  FRUTAS: {
+    pt: 'Frutas',
+    en: 'Fruit',
+    es: 'Frutas',
+  },
+  SUGGESTED_EXTRAS: {
+    pt: 'Extras Sugeridos',
+    en: 'Suggested Extras',
+    es: 'Extras Sugeridos',
+  },
   OUTROS: {
     pt: 'Outros',
     en: 'Other',
@@ -74,22 +94,23 @@ const CATEGORY_LABEL_MAP: Record<string, Record<QuoteLanguage, string>> = {
 }
 
 /**
- * Presentation order for the extras step, set commercially: the premium cuts
- * lead, then the rest of the proteins, then the non-protein food, and the
- * accessories close. Display only — it never touches an item's category,
- * price, eligibility or the review requirement.
+ * Canonical extras order AFTER the virtual Suggested Extras row.
+ * Display only — it never touches an item's category, price, eligibility
+ * or the review requirement.
  *
- * Anything not listed sorts to the end, so an unknown category still appears.
+ * Live catalog extras that are not in the commercial list
+ * (ACOMPANHAMENTOS, LEGUMES_E_VEGETAIS, FRUTAS) sit next to the nearest
+ * food group and always before OUTROS. Empty groups are never invented.
  */
 const CATEGORY_SORT_ORDER = [
   'BOVINO_NOBRE',
   'BOVINO_TRADICIONAL',
-  'PORCO',
   'FRANGO',
+  'PORCO',
+  'LINGUICAS',
   'PEIXES',
   'FRUTOS_DO_MAR',
   'CORDEIRO',
-  'LINGUICAS',
   'GUARNICOES',
   'ACOMPANHAMENTOS',
   'LEGUMES_E_SALADAS',
@@ -221,11 +242,10 @@ type QuoteStrings = {
     packageIncludedHelper: string
     packageSidesUpsellTitle: string
     packageSidesUpsellText: string
-    /** Commercial opening above the extras categories. */
+    /** Featured virtual extras category — merchandising only. */
     suggestedExtrasTitle: string
     suggestedExtrasBody: string
     suggestedExtrasLead: string
-    /** Names come from the live catalog, so the sentence takes them as a slot. */
     suggestedExtrasProducts: string
     suggestedExtrasClose: string
     additionalQuantityLabel: string
@@ -652,11 +672,10 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packageSidesUpsellText: 'Adicione guarnições por {price} por pessoa.',
       suggestedExtrasTitle: 'EXTRAS SUGERIDOS',
       suggestedExtrasBody:
-        'Complete seu churrasco com cortes e itens especiais. Adicione somente o que fizer sentido para o seu evento.',
+        'Selecionamos alguns dos cortes e extras premium mais procurados para você personalizar seu evento.',
       suggestedExtrasLead: 'Quer deixar seu churrasco ainda mais especial?',
       suggestedExtrasProducts: 'Explore cortes e extras premium como {products}.',
-      suggestedExtrasClose:
-        'Escolha seus favoritos abaixo e personalize a experiência do seu evento.',
+      suggestedExtrasClose: 'Escolha seus favoritos abaixo.',
       additionalQuantityLabel: 'Quantidade',
       withoutSidesGroupTitle: 'SEM GUARNIÇÕES',
       withSidesGroupHint:
@@ -1103,11 +1122,10 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packageSidesUpsellText: 'Add sides for {price} per person.',
       suggestedExtrasTitle: 'SUGGESTED EXTRAS',
       suggestedExtrasBody:
-        'Complete your BBQ with premium cuts and special extras. Add only what makes sense for your event.',
+        'Explore a selection of premium cuts and extras to personalize your event.',
       suggestedExtrasLead: 'Want to make your BBQ even more special?',
       suggestedExtrasProducts: 'Explore premium cuts and extras such as {products}.',
-      suggestedExtrasClose:
-        'Choose your favorites below and personalize your event experience.',
+      suggestedExtrasClose: 'Choose your favorites below.',
       additionalQuantityLabel: 'Quantity',
       withoutSidesGroupTitle: 'WITHOUT SIDES',
       withSidesGroupHint:
@@ -1554,11 +1572,10 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packageSidesUpsellText: 'Agrega guarniciones por {price} por persona.',
       suggestedExtrasTitle: 'EXTRAS SUGERIDOS',
       suggestedExtrasBody:
-        'Completa tu BBQ con cortes premium y extras especiales. Agrega solo lo que tenga sentido para tu evento.',
+        'Descubre una selección de cortes premium y extras para personalizar tu evento.',
       suggestedExtrasLead: '¿Quieres llevar tu BBQ a otro nivel?',
       suggestedExtrasProducts: 'Descubre cortes y extras premium como {products}.',
-      suggestedExtrasClose:
-        'Elige tus favoritos abajo y personaliza la experiencia de tu evento.',
+      suggestedExtrasClose: 'Elige tus favoritos abajo.',
       additionalQuantityLabel: 'Cantidad',
       withoutSidesGroupTitle: 'SIN ACOMPAÑAMIENTOS',
       withSidesGroupHint:

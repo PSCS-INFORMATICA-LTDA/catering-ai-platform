@@ -63,6 +63,51 @@ function CategoryHeaderCopy({
   )
 }
 
+function FeaturedCategoryHeaderCopy({
+  title,
+  lead,
+  body,
+  close,
+  itemCountLabel,
+  selectedCount,
+  selectedCountLabel,
+  expanded,
+}: {
+  title: string
+  lead: string
+  body: string
+  close: string
+  itemCountLabel: string
+  selectedCount: number
+  selectedCountLabel: string
+  expanded: boolean
+}) {
+  return (
+    <div className="flex min-w-0 items-start gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="public-suggested-extras-title">{title}</p>
+        <p className="public-suggested-extras-lead">{lead}</p>
+        <p className="public-suggested-extras-body">{body}</p>
+        <p className="public-suggested-extras-close">{close}</p>
+        <p className="public-suggested-extras-count">{itemCountLabel}</p>
+        {selectedCount > 0 ? (
+          <div className="mt-2">
+            <span className="public-suggested-extras-selected">
+              {selectedCountLabel}
+            </span>
+          </div>
+        ) : null}
+      </div>
+      <span
+        className="public-suggested-extras-chevron mt-1 shrink-0"
+        aria-hidden
+      >
+        {expanded ? '▲' : '▼'}
+      </span>
+    </div>
+  )
+}
+
 export default function AdditionalCategorySection({
   categoryKey,
   categoryLabel,
@@ -71,6 +116,7 @@ export default function AdditionalCategorySection({
   selectedCount,
   visited,
   emphasize = false,
+  featured = false,
   quantities,
   billableGuestCount,
   language,
@@ -87,6 +133,7 @@ export default function AdditionalCategorySection({
   selectedCount: number
   visited: boolean
   emphasize?: boolean
+  featured?: boolean
   quantities: Record<string, number>
   billableGuestCount: number
   language: QuoteLanguage
@@ -136,7 +183,18 @@ export default function AdditionalCategorySection({
 
   const contentId = `additional-category-content-${categoryKey}`
   const summaryId = `additional-category-summary-${categoryKey}`
-  const headerCopy = (
+  const headerCopy = featured ? (
+    <FeaturedCategoryHeaderCopy
+      title={t.wizard.suggestedExtrasTitle}
+      lead={t.wizard.suggestedExtrasLead}
+      body={t.wizard.suggestedExtrasBody}
+      close={t.wizard.suggestedExtrasClose}
+      itemCountLabel={t.itemsCount(items.length)}
+      selectedCount={selectedCount}
+      selectedCountLabel={t.selectedCount(selectedCount)}
+      expanded={expanded}
+    />
+  ) : (
     <CategoryHeaderCopy
       kicker={t.wizard.publicAdditionalsKicker}
       categoryLabel={categoryLabel}
@@ -151,7 +209,11 @@ export default function AdditionalCategorySection({
     <ul
       id={summaryId}
       data-additional-category-summary
-      className="border-t border-cdl-border-subtle px-4 py-3 sm:px-5"
+      className={
+        featured
+          ? 'public-suggested-extras-summary border-t px-4 py-3 sm:px-5'
+          : 'border-t border-cdl-border-subtle px-4 py-3 sm:px-5'
+      }
     >
       {items.map((item) => {
         const quantity = quantities[item.id] ?? 0
@@ -159,24 +221,54 @@ export default function AdditionalCategorySection({
           <li
             key={item.id}
             data-additional-summary-item
-            className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1 text-sm leading-snug"
+            className={`flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1 text-sm leading-snug${
+              featured ? ' is-featured-summary-item' : ''
+            }`}
           >
             <span
-              className="shrink-0 text-[var(--brand-primary)]"
+              className={
+                featured
+                  ? 'public-suggested-extras-bullet shrink-0'
+                  : 'shrink-0 text-[var(--brand-primary)]'
+              }
               aria-hidden
             >
               •
             </span>
-            <span className="min-w-0 flex-1 break-words text-cdl-text">
+            <span
+              className={
+                featured
+                  ? 'public-suggested-extras-item-name min-w-0 flex-1 break-words'
+                  : 'min-w-0 flex-1 break-words text-cdl-text'
+              }
+            >
               {getLocalizedAdditionalLabel(item, language)}
               {quantity > 0 ? (
-                <span className="ml-2 font-bold text-[var(--brand-primary)]">
+                <span
+                  className={
+                    featured
+                      ? 'public-suggested-extras-qty ml-2 font-bold'
+                      : 'ml-2 font-bold text-[var(--brand-primary)]'
+                  }
+                >
                   ×{quantity}
                 </span>
               ) : null}
             </span>
-            <span className="min-w-0 shrink-0 break-words text-right text-cdl-muted">
-              <span className="font-semibold text-cdl-title">
+            <span
+              className={
+                featured
+                  ? 'public-suggested-extras-item-price min-w-0 shrink-0 break-words text-right'
+                  : 'min-w-0 shrink-0 break-words text-right text-cdl-muted'
+              }
+            >
+              <span
+                className={
+                  featured
+                    ? 'font-semibold'
+                    : 'font-semibold text-cdl-title'
+                }
+              >
                 {getAdditionalPriceLabel(item, language)}
               </span>{' '}
               {getAdditionalChargeUnitLabel(item, language)}
@@ -187,16 +279,29 @@ export default function AdditionalCategorySection({
     </ul>
   )
 
+  const sectionClass = featured
+    ? `public-additional-category is-featured overflow-hidden rounded-2xl border shadow-cdl transition ${
+        expanded ? 'is-expanded' : ''
+      }`
+    : `overflow-hidden rounded-2xl border bg-cdl-surface shadow-cdl transition ${
+        emphasize
+          ? 'border-[var(--brand-primary)] ring-2 ring-[color-mix(in_srgb,var(--brand-primary)_35%,transparent)]'
+          : 'border-cdl-border'
+      }`
+  const headerButtonClass = featured
+    ? 'public-suggested-extras-header w-full cursor-pointer p-4 text-left sm:p-5'
+    : 'w-full cursor-pointer p-4 text-left transition-colors hover:bg-cdl-hover active:bg-cdl-hover sm:p-5'
+  const collapsedWrapClass = featured
+    ? 'public-suggested-extras-header group relative'
+    : 'group relative hover:bg-cdl-hover active:bg-cdl-hover'
+
   return (
     <section
       id={`additional-category-${categoryKey}`}
       data-category-key={categoryKey}
       data-category-reviewed={visited ? 'true' : 'false'}
-      className={`overflow-hidden rounded-2xl border bg-cdl-surface shadow-cdl transition ${
-        emphasize
-          ? 'border-[var(--brand-primary)] ring-2 ring-[color-mix(in_srgb,var(--brand-primary)_35%,transparent)]'
-          : 'border-cdl-border'
-      }`}
+      data-suggested-extras={featured ? 'true' : undefined}
+      className={sectionClass}
       style={{ scrollMarginBottom: ctaReservePx }}
     >
       {expanded ? (
@@ -207,7 +312,7 @@ export default function AdditionalCategorySection({
             onClick={onToggle}
             aria-expanded={expanded}
             aria-controls={contentId}
-            className="w-full cursor-pointer p-4 text-left transition-colors hover:bg-cdl-hover active:bg-cdl-hover sm:p-5"
+            className={headerButtonClass}
           >
             {headerCopy}
           </button>
@@ -215,7 +320,7 @@ export default function AdditionalCategorySection({
             id={contentId}
             role="region"
             aria-label={categoryLabel}
-            className="border-t border-cdl-border-subtle p-3 sm:p-4"
+            className="border-t border-cdl-border-subtle bg-cdl-surface p-3 sm:p-4"
           >
             <div
               data-additional-items-grid
@@ -236,7 +341,7 @@ export default function AdditionalCategorySection({
         </>
       ) : (
         <div
-          className="group relative hover:bg-cdl-hover active:bg-cdl-hover"
+          className={collapsedWrapClass}
           data-additional-category-header
         >
           <button

@@ -1,5 +1,5 @@
 import { getAdditionalItemCategoryKey } from '@/Lib/additionalItemFieldAccess'
-import { getCatalogItemImageUrl } from '@/Lib/catalogItemVisual'
+import { getPublicAdditionalDisplayImageUrl } from '@/Lib/publicQuote/grillRentalDisplay'
 import { getAdditionalItemPrice } from '@/Lib/additionalItemFieldAccess'
 import { calcAdditionalLineTotal } from '@/Lib/calculateQuoteTotals'
 import {
@@ -134,7 +134,7 @@ export function getAdditionalTotalWeight(
 }
 
 export function getAdditionalImage(item: QuoteAdditionalItem): string | null {
-  return getCatalogItemImageUrl(item)
+  return getPublicAdditionalDisplayImageUrl(item)
 }
 
 export type AdditionalCategoryGroup<T extends QuoteAdditionalItem> = {

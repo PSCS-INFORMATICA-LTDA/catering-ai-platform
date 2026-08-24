@@ -110,13 +110,11 @@ test('SIDES_PRICE_NOT_HARDCODED', () => {
 test('SUGGESTED_EXTRAS_HEADER', () => {
   assert.match(translations, /suggestedExtrasTitle: 'EXTRAS SUGERIDOS'/)
   assert.match(translations, /suggestedExtrasTitle: 'SUGGESTED EXTRAS'/)
-  assert.match(translations, /Complete seu churrasco com cortes e itens especiais/)
-  assert.match(translations, /Complete your BBQ with premium cuts and special extras/)
-  assert.match(translations, /Completa tu BBQ con cortes premium y extras especiales/)
-  assert.match(wizard, /data-suggested-extras/)
-  assert.match(wizard, /tw\(uiLocale, 'suggestedExtrasTitle'\)/)
-  // Merchandising, not a promo banner: CDL red, no photography, no interruption.
-  assert.match(css, /\.public-extras-intro \{[\s\S]*?background: linear-gradient\(135deg, #c8102e/)
+  assert.match(translations, /Selecionamos alguns dos cortes e extras premium/)
+  assert.match(translations, /Explore a selection of premium cuts and extras/)
+  assert.match(translations, /Descubre una selección de cortes premium y extras/)
+  assert.match(wizard, /featured=\{categoryKey === SUGGESTED_EXTRAS_DISPLAY_KEY\}/)
+  assert.match(css, /\.public-suggested-extras-header \{[\s\S]*?background: linear-gradient\(135deg, #c8102e/)
   assert.doesNotMatch(wizard, /data-suggested-extras[\s\S]{0,600}?(modal|carousel|popup|<img)/i)
 })
 
@@ -142,8 +140,8 @@ test('CATEGORY_ORDER_COMMERCIAL', () => {
   const order = [...block.matchAll(/'([A-Z_]+)'/g)].map((m) => m[1])
   // The twelve the brief asked for, in that relative order...
   const asked = [
-    'BOVINO_NOBRE', 'BOVINO_TRADICIONAL', 'PORCO', 'FRANGO', 'PEIXES',
-    'FRUTOS_DO_MAR', 'CORDEIRO', 'LINGUICAS', 'GUARNICOES',
+    'BOVINO_NOBRE', 'BOVINO_TRADICIONAL', 'FRANGO', 'PORCO', 'LINGUICAS',
+    'PEIXES', 'FRUTOS_DO_MAR', 'CORDEIRO', 'GUARNICOES',
     'LEGUMES_E_SALADAS', 'EQUIPAMENTOS', 'OUTROS',
   ]
   assert.deepEqual(order.filter((k) => asked.includes(k)), asked)
@@ -158,7 +156,9 @@ test('CATEGORY_ORDER_COMMERCIAL', () => {
   assert.equal(order[order.length - 1], 'OUTROS')
   assert.equal(order[0], 'BOVINO_NOBRE')
   assert.equal(order[1], 'BOVINO_TRADICIONAL')
-  assert.equal(order[2], 'PORCO')
+  assert.equal(order[2], 'FRANGO')
+  assert.equal(order[3], 'PORCO')
+  assert.equal(order[4], 'LINGUICAS')
 })
 
 test('CATEGORY_ORDER_IS_DISPLAY_ONLY', () => {
@@ -197,13 +197,13 @@ test('CATEGORY_REVIEW_FLOW_UNCHANGED', () => {
 })
 
 test('EXTRAS_HEADER_IS_PURELY_ADDITIVE', () => {
-  // The opening sits beside the existing hint and wraps nothing, so it cannot
-  // change how categories mount, scroll or report themselves as reviewed.
+  // Suggested extras is a display group on the same accordion, so review,
+  // expose and quantity stay on the existing category machinery.
   const step = wizard.slice(wizard.indexOf('{step === 3 && ('))
-  const intro = step.slice(step.indexOf('data-suggested-extras'))
-  const closed = intro.slice(0, intro.indexOf('</section>'))
-  assert.doesNotMatch(closed, /AdditionalCategorySection|additionalItemsByCategory/)
   assert.match(step, /additionalItemsByCategory\.map/)
+  assert.match(step, /featured=\{categoryKey === SUGGESTED_EXTRAS_DISPLAY_KEY\}/)
+  assert.match(step, /quantities=\{state\.additionals\}/)
+  assert.doesNotMatch(step, /suggestedExtrasState|promoQuantity|secondarySelection/)
 })
 
 test('PACKAGE_PRICING_UNCHANGED', () => {
