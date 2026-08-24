@@ -547,11 +547,7 @@ function ConfirmationProposalBody({
         showPercentSplit={false}
       />
 
-      <CdlImportantRulesPanel
-        variant="summary"
-        showReservationText
-        language={lang}
-      />
+      <CdlImportantRulesPanel variant="summary" language={lang} />
 
       <CdlCancellationPolicySection variant="summary" language={lang} />
 
@@ -976,7 +972,6 @@ function DefaultProposalBody({
 
       <CdlImportantRulesPanel
         variant={rulesVariant === 'pdf' ? 'pdf' : 'summary'}
-        showReservationText
         language={lang}
       />
 

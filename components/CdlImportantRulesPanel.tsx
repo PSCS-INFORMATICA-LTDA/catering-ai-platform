@@ -1,5 +1,4 @@
 import {
-  BALANCE_PERCENTAGE,
   FOOD_STORAGE_FINE,
   HOLIDAY_MIN_ORDER,
   HOLIDAY_SURCHARGE_PERCENT,
@@ -11,7 +10,6 @@ import {
   MIN_ORDER_DEC_JAN,
   MIN_ORDER_WEEKDAY,
   MIN_ORDER_WEEKEND,
-  RESERVATION_PERCENTAGE,
 } from '../Lib/cdlCommercialRules'
 import { emphasizeRuleText } from '../Lib/emphasizeRuleText'
 import { tQuotesOrders } from '../Lib/i18n/quotesOrders'
@@ -81,10 +79,6 @@ function importantRuleItems(language: QuoteLanguage) {
       t('ruleMileageFree', { limit: MILEAGE_FREE_LIMIT, unit: MILEAGE_UNIT }),
       t('ruleMileageRate', { rate: MILEAGE_RATE, unit: MILEAGE_UNIT }),
     ],
-    reservation: [
-      t('ruleReservationPct', { pct: RESERVATION_PERCENTAGE }),
-      t('ruleBalancePct', { pct: BALANCE_PERCENTAGE }),
-    ],
     foodPolicy: [
       t('ruleFoodStorage'),
       t('ruleFoodFine', { amount: FOOD_STORAGE_FINE }),
@@ -101,13 +95,19 @@ function importantRuleItems(language: QuoteLanguage) {
   }
 }
 
+/**
+ * The canonical rules, minus anything about the deposit.
+ *
+ * The reservation split is stated by QuoteReservationPaymentCard, which sits
+ * directly above this panel everywhere it renders, so repeating it here read as
+ * the same rule twice. The percentages themselves are unchanged and still come
+ * from the commercial rules via that card.
+ */
 export function CdlImportantRulesPanel({
   variant = 'summary',
-  showReservationText = false,
   language = 'pt',
 }: {
   variant?: RulesVariant
-  showReservationText?: boolean
   language?: string | null
 }) {
   const locale = loc(language)
@@ -125,13 +125,6 @@ export function CdlImportantRulesPanel({
   return (
     <section className={wrapperClass}>
       <h2 className={titleClass}>{tw(locale, 'importantRules')}</h2>
-      {showReservationText && variant === 'summary' && (
-        <p className="mt-4 text-sm leading-relaxed text-cdl-text-secondary">
-          {emphasizeRuleText(
-            tQuotesOrders(locale, 'docReservationPaymentText'),
-          )}
-        </p>
-      )}
       <div
         className={
           variant === 'pdf'
@@ -147,11 +140,6 @@ export function CdlImportantRulesPanel({
         <RulesBlock
           title={tQuotesOrders(locale, 'mileageLabel')}
           items={rules.mileage}
-          variant={variant}
-        />
-        <RulesBlock
-          title={tQuotesOrders(locale, 'reservationLabel')}
-          items={rules.reservation}
           variant={variant}
         />
         <RulesBlock
