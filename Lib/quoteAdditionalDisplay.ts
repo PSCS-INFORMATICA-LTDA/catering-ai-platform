@@ -143,6 +143,61 @@ export type AdditionalCategoryGroup<T extends QuoteAdditionalItem> = {
   items: T[]
 }
 
+/**
+ * Names to headline in the suggested-extras teaser, taken from the catalog the
+ * customer is about to browse.
+ *
+ * Reading the names off the live list is the point: the teaser can never
+ * advertise an item that was deactivated, hidden or repriced, and it needs no
+ * separate list to maintain. Premium beef leads, then one pork item, which is
+ * the commercial preference for what to put in front of people first.
+ */
+export function pickSuggestedExtraNames<T extends QuoteAdditionalItem>(
+  items: ReadonlyArray<T>,
+  language: QuoteLanguage,
+  limit = 4,
+): string[] {
+  const byPrice = (a: T, b: T) =>
+    getAdditionalUnitPrice(b) - getAdditionalUnitPrice(a)
+  const inCategory = (key: string) =>
+    items
+      .filter(
+        (item) =>
+          getAdditionalItemCategoryKey(item) === key &&
+          hasAdditionalPrice(item) &&
+          getLocalizedAdditionalLabel(item, language).trim(),
+      )
+      .sort(byPrice)
+
+  const beef = inCategory('BOVINO_NOBRE')
+  const pork = inCategory('PORCO')
+  const picked = [...beef.slice(0, Math.max(1, limit - 1)), ...pork.slice(0, 1)]
+
+  const names: string[] = []
+  for (const item of picked) {
+    const label = getLocalizedAdditionalLabel(item, language).trim()
+    if (label && !names.includes(label)) names.push(label)
+    if (names.length >= limit) break
+  }
+  return names
+}
+
+/** "a, b, c e d" in PT, "a, b, c, and d" in EN, "a, b, c y d" in ES. */
+export function formatSuggestedExtraNames(
+  names: ReadonlyArray<string>,
+  language: QuoteLanguage,
+): string {
+  const locale = language === 'pt' ? 'pt-BR' : language
+  try {
+    return new Intl.ListFormat(locale, {
+      style: 'long',
+      type: 'conjunction',
+    }).format(names)
+  } catch {
+    return names.join(', ')
+  }
+}
+
 export function groupAdditionalItemsByCategory<T extends QuoteAdditionalItem>(
   items: ReadonlyArray<T>,
   language: QuoteLanguage,

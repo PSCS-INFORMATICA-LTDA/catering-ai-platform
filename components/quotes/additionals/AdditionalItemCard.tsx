@@ -140,6 +140,13 @@ export default function AdditionalItemCard({
       {media}
       <div className="public-additional-card-body">
         {copy}
+        {/* The stepper number was unlabelled; per-person cards keep a button. */}
+        <span
+          data-additional-qty-label
+          className="public-additional-card-qty-label"
+        >
+          {t.wizard.additionalQuantityLabel}
+        </span>
         <div className="public-additional-qty">
           <button
             type="button"

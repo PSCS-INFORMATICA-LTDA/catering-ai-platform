@@ -115,9 +115,9 @@ test('SUGGESTED_EXTRAS_HEADER', () => {
   assert.match(translations, /Completa tu BBQ con cortes premium y extras especiales/)
   assert.match(wizard, /data-suggested-extras/)
   assert.match(wizard, /tw\(uiLocale, 'suggestedExtrasTitle'\)/)
-  // Merchandising, not a promo banner.
-  assert.match(css, /\.public-extras-intro \{[^}]*border-left: 3px solid var\(--cdl-yellow\)/)
-  assert.doesNotMatch(wizard, /data-suggested-extras[\s\S]{0,400}?(modal|carousel|popup)/i)
+  // Merchandising, not a promo banner: CDL red, no photography, no interruption.
+  assert.match(css, /\.public-extras-intro \{[\s\S]*?background: linear-gradient\(135deg, #c8102e/)
+  assert.doesNotMatch(wizard, /data-suggested-extras[\s\S]{0,600}?(modal|carousel|popup|<img)/i)
 })
 
 test('NO_FAKE_RECOMMENDATION_BADGES', () => {

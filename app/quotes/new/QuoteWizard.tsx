@@ -20,6 +20,8 @@ import {
   getAdditionalUnitPrice,
   getLocalizedAdditionalLabel,
   groupAdditionalItemsByCategory,
+  pickSuggestedExtraNames,
+  formatSuggestedExtraNames,
   isPerPersonAdditional,
   normalizeAdditionalQuantity,
 } from '../../../Lib/quoteAdditionalDisplay'
@@ -1576,6 +1578,13 @@ export default function QuoteWizardCore({
   const visibleAdditionalItems = useMemo(
     () => getVisiblePublicExtraItems(itemCatalog, blockedCatalogItemIds),
     [itemCatalog, blockedCatalogItemIds],
+  )
+
+  // Headline names for the extras teaser, read off the list the customer is
+  // about to browse so it can never advertise something that is not there.
+  const suggestedExtraNames = useMemo(
+    () => pickSuggestedExtraNames(visibleAdditionalItems, uiLocale),
+    [visibleAdditionalItems, uiLocale],
   )
 
   const additionalItemsByCategory = useMemo(
@@ -3186,8 +3195,25 @@ export default function QuoteWizardCore({
               <p className="public-extras-intro-title">
                 {tw(uiLocale, 'suggestedExtrasTitle')}
               </p>
-              <p className="public-extras-intro-body">
-                {tw(uiLocale, 'suggestedExtrasBody')}
+              <p className="public-extras-intro-lead">
+                {tw(uiLocale, 'suggestedExtrasLead')}
+              </p>
+              {suggestedExtraNames.length >= 2 ? (
+                <p
+                  data-suggested-extras-products
+                  className="public-extras-intro-body"
+                >
+                  {tw(uiLocale, 'suggestedExtrasProducts', {
+                    products: formatSuggestedExtraNames(suggestedExtraNames, uiLocale),
+                  })}
+                </p>
+              ) : (
+                <p className="public-extras-intro-body">
+                  {tw(uiLocale, 'suggestedExtrasBody')}
+                </p>
+              )}
+              <p className="public-extras-intro-close">
+                {tw(uiLocale, 'suggestedExtrasClose')}
               </p>
             </section>
             <p className="text-sm text-cdl-muted">

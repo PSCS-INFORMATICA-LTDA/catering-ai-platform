@@ -224,6 +224,11 @@ type QuoteStrings = {
     /** Commercial opening above the extras categories. */
     suggestedExtrasTitle: string
     suggestedExtrasBody: string
+    suggestedExtrasLead: string
+    /** Names come from the live catalog, so the sentence takes them as a slot. */
+    suggestedExtrasProducts: string
+    suggestedExtrasClose: string
+    additionalQuantityLabel: string
     withoutSidesGroupTitle: string
     withSidesGroupHint: string
     withoutSidesGroupHint: string
@@ -648,6 +653,11 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       suggestedExtrasTitle: 'EXTRAS SUGERIDOS',
       suggestedExtrasBody:
         'Complete seu churrasco com cortes e itens especiais. Adicione somente o que fizer sentido para o seu evento.',
+      suggestedExtrasLead: 'Quer deixar seu churrasco ainda mais especial?',
+      suggestedExtrasProducts: 'Explore cortes e extras premium como {products}.',
+      suggestedExtrasClose:
+        'Escolha seus favoritos abaixo e personalize a experiência do seu evento.',
+      additionalQuantityLabel: 'Quantidade',
       withoutSidesGroupTitle: 'SEM GUARNIÇÕES',
       withSidesGroupHint:
         'Uma experiência completa, com acompanhamentos preparados para complementar o churrasco e deixar o serviço pronto para receber seus convidados. Explore {count} opções de pacotes disponíveis e escolha a combinação ideal para o seu evento.',
@@ -1094,6 +1104,11 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       suggestedExtrasTitle: 'SUGGESTED EXTRAS',
       suggestedExtrasBody:
         'Complete your BBQ with premium cuts and special extras. Add only what makes sense for your event.',
+      suggestedExtrasLead: 'Want to make your BBQ even more special?',
+      suggestedExtrasProducts: 'Explore premium cuts and extras such as {products}.',
+      suggestedExtrasClose:
+        'Choose your favorites below and personalize your event experience.',
+      additionalQuantityLabel: 'Quantity',
       withoutSidesGroupTitle: 'WITHOUT SIDES',
       withSidesGroupHint:
         'A complete experience, with sides prepared to complement the barbecue and ready your service for guests. Explore {count} available packages and choose the ideal combination for your event.',
@@ -1540,6 +1555,11 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       suggestedExtrasTitle: 'EXTRAS SUGERIDOS',
       suggestedExtrasBody:
         'Completa tu BBQ con cortes premium y extras especiales. Agrega solo lo que tenga sentido para tu evento.',
+      suggestedExtrasLead: '¿Quieres llevar tu BBQ a otro nivel?',
+      suggestedExtrasProducts: 'Descubre cortes y extras premium como {products}.',
+      suggestedExtrasClose:
+        'Elige tus favoritos abajo y personaliza la experiencia de tu evento.',
+      additionalQuantityLabel: 'Cantidad',
       withoutSidesGroupTitle: 'SIN ACOMPAÑAMIENTOS',
       withSidesGroupHint:
         'Una experiencia completa, con acompañamientos preparados para complementar el asado y dejar el servicio listo para recibir a tus invitados. Explora {count} opciones de paquetes disponibles y elige la combinación ideal para tu evento.',
