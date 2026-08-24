@@ -94,7 +94,7 @@ test('SIDES_UPSELL_COPY_AND_DYNAMIC_PRICE', () => {
   assert.match(translations, /Agrega guarniciones por \{price\} por persona\./)
   // The number comes from the prop the cards already price with.
   assert.match(editorial, /sidesPricePerPerson: number/)
-  assert.match(editorial, /price: formatMoney\(sidesPricePerPerson\)/)
+  assert.match(editorial, /formatMoney\(sidesPricePerPerson\)/)
   assert.match(catalog, /sidesPricePerPerson=\{sidesPricePerPerson\}/)
 })
 

@@ -27,9 +27,19 @@ export default function PackageSidesEditorial({
 }) {
   const included = translateCdlItemList([...PACKAGE_COMMON_ITEMS], language)
   const sides = translateCdlItemList([...SIDES_ITEMS], language)
-  const upsell = tw(language, 'packageSidesUpsellText', {
-    price: formatMoney(sidesPricePerPerson),
-  })
+  const price = formatMoney(sidesPricePerPerson)
+  const upsell = tw(language, 'packageSidesUpsellText', { price })
+  const priceAt = upsell.indexOf(price)
+  const upsellNodes =
+    priceAt >= 0
+      ? [
+          upsell.slice(0, priceAt),
+          <span key="price" className="public-package-editorial-price">
+            {price}
+          </span>,
+          upsell.slice(priceAt + price.length),
+        ]
+      : [upsell]
 
   return (
     <section data-package-sides-editorial className="public-package-editorial">
@@ -50,7 +60,7 @@ export default function PackageSidesEditorial({
             {tw(language, 'packageSidesUpsellTitle')}
           </p>
           <p data-package-sides-upsell className="public-package-editorial-items">
-            {upsell}
+            {upsellNodes}
           </p>
           <p data-package-sides-items className="public-package-editorial-helper">
             {sides.join(' · ')}

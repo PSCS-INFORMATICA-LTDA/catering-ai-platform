@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import AdditionalItemCard from '@/components/quotes/additionals/AdditionalItemCard'
 import {
   ADDITIONAL_CATEGORY_EXPOSE_FALLBACK_BOTTOM_PX,
@@ -63,6 +63,39 @@ function CategoryHeaderCopy({
   )
 }
 
+const EXTRAS_BODY_MARKS: Record<QuoteLanguage, string[]> = {
+  pt: ['cortes e extras premium', 'personalizar seu evento'],
+  en: ['premium cuts', 'personalize your event'],
+  es: ['cortes premium', 'personalizar tu evento'],
+}
+
+const EXTRAS_CLOSE_MARKS: Record<QuoteLanguage, string[]> = {
+  pt: ['favoritos'],
+  en: ['favorites'],
+  es: ['favoritos'],
+}
+
+function highlightMarks(text: string, marks: string[]): ReactNode[] {
+  const nodes: ReactNode[] = []
+  let remaining = text
+  let key = 0
+  for (const mark of marks) {
+    const index = remaining.toLowerCase().indexOf(mark.toLowerCase())
+    if (index < 0) continue
+    if (index > 0) {
+      nodes.push(<span key={key++}>{remaining.slice(0, index)}</span>)
+    }
+    nodes.push(
+      <em key={key++} className="public-suggested-extras-mark">
+        {remaining.slice(index, index + mark.length)}
+      </em>,
+    )
+    remaining = remaining.slice(index + mark.length)
+  }
+  if (remaining) nodes.push(<span key={key++}>{remaining}</span>)
+  return nodes
+}
+
 function FeaturedCategoryHeaderCopy({
   title,
   lead,
@@ -71,6 +104,7 @@ function FeaturedCategoryHeaderCopy({
   itemCountLabel,
   selectedCount,
   selectedCountLabel,
+  language,
 }: {
   title: string
   lead: string
@@ -79,14 +113,27 @@ function FeaturedCategoryHeaderCopy({
   itemCountLabel: string
   selectedCount: number
   selectedCountLabel: string
+  language: QuoteLanguage
 }) {
   return (
-    <div className="flex min-w-0 items-start gap-3">
-      <div className="min-w-0 flex-1">
+    <div className="public-suggested-extras-head">
+      <div
+        className="public-suggested-extras-title-band"
+        data-suggested-extras-title-band
+      >
         <p className="public-suggested-extras-title">{title}</p>
+        <span className="public-suggested-extras-chevron" aria-hidden>
+          ▲
+        </span>
+      </div>
+      <div className="public-suggested-extras-copy">
         <p className="public-suggested-extras-lead">{lead}</p>
-        <p className="public-suggested-extras-body">{body}</p>
-        <p className="public-suggested-extras-close">{close}</p>
+        <p className="public-suggested-extras-body">
+          {highlightMarks(body, EXTRAS_BODY_MARKS[language])}
+        </p>
+        <p className="public-suggested-extras-close">
+          {highlightMarks(close, EXTRAS_CLOSE_MARKS[language])}
+        </p>
         <p className="public-suggested-extras-count">{itemCountLabel}</p>
         {selectedCount > 0 ? (
           <div className="mt-2">
@@ -96,12 +143,6 @@ function FeaturedCategoryHeaderCopy({
           </div>
         ) : null}
       </div>
-      <span
-        className="public-suggested-extras-chevron mt-1 shrink-0"
-        aria-hidden
-      >
-        ▲
-      </span>
     </div>
   )
 }
@@ -192,6 +233,7 @@ export default function AdditionalCategorySection({
       itemCountLabel={t.itemsCount(items.length)}
       selectedCount={selectedCount}
       selectedCountLabel={t.selectedCount(selectedCount)}
+      language={language}
     />
   ) : (
     <CategoryHeaderCopy
@@ -288,7 +330,7 @@ export default function AdditionalCategorySection({
   const headerButtonClass =
     'w-full cursor-pointer p-4 text-left transition-colors hover:bg-cdl-hover active:bg-cdl-hover sm:p-5'
   const headerStaticClass =
-    'public-suggested-extras-header w-full cursor-default p-4 pl-5 text-left sm:p-5'
+    'public-suggested-extras-header w-full cursor-default text-left'
   const collapsedWrapClass = 'group relative hover:bg-cdl-hover active:bg-cdl-hover'
 
   return (
