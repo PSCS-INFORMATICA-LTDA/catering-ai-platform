@@ -5,7 +5,7 @@
  * `package-images/cdl-folders-v3`, the bucket the runtime already reads from; the host
  * comes from the environment so this map is portable.
  *
- * Cleaned arts use *-v4.webp / the plus-PT custom mark uses *-v7.webp.
+ * Cleaned arts use *-v4.webp / *-v5.webp / the plus-PT custom mark uses *-v8.webp.
  * Older plus-PT masters stay on disk for rollback.
  */
 export const PACKAGE_FOLDER_BUCKET = 'package-images'
@@ -26,19 +26,19 @@ export const PACKAGE_FOLDER_ART_V2: Record<
     "pt": "bbqcho-plus-pt-v3.webp"
   },
   "BBQPERS": {
-    "en": "bbqpers-en-v4.webp",
+    "en": "bbqpers-en-v5.webp",
     "es": "bbqpers-es-v4.webp",
-    "pt": "bbqpers-pt-v4.webp"
+    "pt": "bbqpers-pt-v5.webp"
   },
   "BBQPERS+": {
     "en": "bbqpers-plus-en-v4.webp",
     "es": "bbqpers-plus-es-v4.webp",
-    "pt": "bbqpers-plus-pt-v7.webp"
+    "pt": "bbqpers-plus-pt-v8.webp"
   },
   "BBQPRI": {
-    "en": "bbqpri-en-v4.webp",
+    "en": "bbqpri-en-v5.webp",
     "es": "bbqpri-es-v4.webp",
-    "pt": "bbqpri-pt-v3.webp"
+    "pt": "bbqpri-pt-v5.webp"
   },
   "BBQPRI+": {
     "en": "bbqpri-plus-en-v4.webp",
@@ -47,7 +47,7 @@ export const PACKAGE_FOLDER_ART_V2: Record<
   },
   "BBQSEL": {
     "en": "bbqsel-en-v3.webp",
-    "es": "bbqsel-es-v3.webp",
+    "es": "bbqsel-es-v5.webp",
     "pt": "bbqsel-pt-v4.webp"
   },
   "BBQSEL+": {
@@ -58,7 +58,7 @@ export const PACKAGE_FOLDER_ART_V2: Record<
   "BBQTRAD": {
     "en": "bbqtrad-en-v3.webp",
     "es": "bbqtrad-es-v4.webp",
-    "pt": "bbqtrad-pt-v3.webp"
+    "pt": "bbqtrad-pt-v5.webp"
   },
   "BBQTRAD+": {
     "en": "bbqtrad-plus-en-v4.webp",
