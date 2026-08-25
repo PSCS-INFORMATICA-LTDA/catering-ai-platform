@@ -252,6 +252,8 @@ type QuoteStrings = {
     suggestedExtrasLead: string
     suggestedExtrasProducts: string
     suggestedExtrasClose: string
+    postSuggestedCategoryHintTitle: string
+    postSuggestedCategoryHintBody: string
     additionalQuantityLabel: string
     withoutSidesGroupTitle: string
     withSidesGroupHint: string
@@ -682,6 +684,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       suggestedExtrasLead: 'Quer deixar seu churrasco ainda mais especial?',
       suggestedExtrasProducts: 'Explore cortes e extras premium como {products}.',
       suggestedExtrasClose: 'Escolha seus favoritos abaixo.',
+      postSuggestedCategoryHintTitle: 'Explore mais opções',
+      postSuggestedCategoryHintBody: 'Toque em uma categoria abaixo para visualizar todos os itens disponíveis.',
       additionalQuantityLabel: 'Quantidade',
       withoutSidesGroupTitle: 'SEM GUARNIÇÕES',
       withSidesGroupHint:
@@ -1134,6 +1138,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       suggestedExtrasLead: 'Want to make your BBQ even more special?',
       suggestedExtrasProducts: 'Explore premium cuts and extras such as {products}.',
       suggestedExtrasClose: 'Choose your favorites below.',
+      postSuggestedCategoryHintTitle: 'Explore more options',
+      postSuggestedCategoryHintBody: 'Tap a category below to view all available items.',
       additionalQuantityLabel: 'Quantity',
       withoutSidesGroupTitle: 'WITHOUT SIDES',
       withSidesGroupHint:
@@ -1586,6 +1592,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       suggestedExtrasLead: '¿Quieres llevar tu BBQ a otro nivel?',
       suggestedExtrasProducts: 'Descubre cortes y extras premium como {products}.',
       suggestedExtrasClose: 'Elige tus favoritos abajo.',
+      postSuggestedCategoryHintTitle: 'Explora más opciones',
+      postSuggestedCategoryHintBody: 'Toca una categoría abajo para ver todos los artículos disponibles.',
       additionalQuantityLabel: 'Cantidad',
       withoutSidesGroupTitle: 'SIN ACOMPAÑAMIENTOS',
       withSidesGroupHint:

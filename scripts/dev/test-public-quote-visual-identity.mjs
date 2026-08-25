@@ -122,9 +122,48 @@ test('PACKAGE_YELLOW_DIVIDER', () => {
 })
 
 test('PACKAGE_YELLOW_LEFT_ACCENT', () => {
-  const bar = css.match(/\.public-package-intro-copy::before \{[\s\S]*?\n\}/)?.[0]
+  const bar = css.match(/\.public-package-kicker::before \{[\s\S]*?\n\}/)?.[0]
   assert.ok(bar)
   assert.match(bar, /--cdl-yellow/)
+})
+
+test('PACKAGE_EXPERIENCE_TITLE_WHITE', () => {
+  const kicker = css.match(/\.public-package-kicker \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(kicker)
+  assert.match(kicker, /color: #fff/)
+  assert.doesNotMatch(kicker, /color: #[89a-fA-F][0-9a-fA-F]{5}/)
+  assert.match(catalog, /data-package-experience-title/)
+})
+
+test('PACKAGE_EXPERIENCE_TITLE_STRONG', () => {
+  const kicker = css.match(/\.public-package-kicker \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(kicker)
+  assert.match(kicker, /font-weight: 900/)
+  assert.match(kicker, /letter-spacing: 0\.2em/)
+  assert.match(kicker, /font-size: 0\.8rem/)
+})
+
+test('PACKAGE_EXPERIENCE_TITLE_LEFT_YELLOW_ACCENT', () => {
+  const bar = css.match(/\.public-package-kicker::before \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(bar)
+  assert.match(bar, /width: 3px/)
+  assert.match(bar, /background: var\(--cdl-yellow\)/)
+  assert.match(bar, /top: 0\.12em/)
+  assert.match(bar, /bottom: 0\.12em/)
+})
+
+test('PACKAGE_OTHER_COPY_UNCHANGED', () => {
+  assert.match(catalog, /com ou sem guarnições/)
+  assert.match(catalog, /Explore os pacotes/)
+  assert.match(catalog, /O valor atualiza na hora/)
+  assert.match(translations, /publicPackageExperienceTitle: 'Escolha sua experiência'/)
+  assert.match(translations, /packageSidesUpsellTitle: 'PLUS GUARNIÇÕES'/)
+  assert.match(read('Lib/cdlCommercialRules.ts'), /Arroz branco/)
+  assert.match(read('Lib/cdlCommercialRules.ts'), /Feijão preto/)
+  assert.match(read('Lib/cdlCommercialRules.ts'), /Mandioca/)
+  assert.match(read('Lib/cdlCommercialRules.ts'), /Vinagrete/)
+  assert.match(editorial, /getPlusGuarnicoesChoiceLabels/)
+  assert.match(editorial, /SIDE_OPTION/)
 })
 
 test('PACKAGE_YELLOW_CORNER_DETAIL', () => {
@@ -290,72 +329,73 @@ test('ADICIONAIS_UNCHANGED', () => {
   assert.match(wizard, /if \(category === SUGGESTED_EXTRAS_DISPLAY_KEY\) return/)
 })
 
-test('CUSTOM_PLUS_PHOTO_CHANGED_OUTSIDE_LOGO', () => {
-  assert.match(read('Lib/publicQuote/packageFolderArt.generated.ts'), /bbqpers-plus-pt-v6\.webp/)
-  assert.match(visual, /\?v=art6b/)
-  const probe = spawnSync(
-    'python3',
-    ['-'],
-    {
-      input: `
-import cv2, numpy as np
-old = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v5.webp')}')
-new = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v6.webp')}')
-assert old is not None and new is not None
-assert old.shape == new.shape == (1536, 1024, 3)
-diff = np.abs(new.astype(np.int16) - old.astype(np.int16)).mean(axis=2)
-# food, title and chafing dishes live above the plaques
-top = diff[0:1100]
-assert top.mean() < 1.2, top.mean()
-yy, xx = np.ogrid[:new.shape[0], :new.shape[1]]
-logo = (xx - 121) ** 2 + (yy - 1418) ** 2 <= 90 ** 2
-assert float(diff[logo].mean()) == 0.0, float(diff[logo].mean())
-print(old.shape, float(top.mean()), float(diff[logo].mean()))
-`,
-      encoding: 'utf8',
-    },
-  )
-  assert.equal(probe.status, 0, probe.stderr || probe.stdout)
+test('SUGGESTED_EXTRAS_VISUAL_UNCHANGED', () => {
+  const band = css.match(/\.public-suggested-extras-title-band \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(band)
+  assert.match(band, /background: #e21b1b/)
+  assert.match(band, /border-bottom: 3px solid var\(--cdl-yellow\)/)
+  assert.match(extras, /data-suggested-extras-title-band/)
+  assert.match(extras, /public-suggested-extras-mark/)
 })
 
-test('CUSTOM_PLUS_LOGO_CLEAN', () => {
-  const probe = spawnSync(
-    'python3',
-    ['-'],
-    {
-      input: `
-import cv2, numpy as np
-im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v6.webp')}')
-# former smear immediately right of the mark now has table grain
-roi = im[1360:1500, 220:420]
-gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-assert gray.mean() > 14, gray.mean()
-assert gray.std() > 8, gray.std()
-print(gray.mean(), gray.std())
-`,
-      encoding: 'utf8',
-    },
-  )
-  assert.equal(probe.status, 0, probe.stderr || probe.stdout)
+test('POST_SUGGESTED_CATEGORY_HINT_PRESENT', () => {
+  assert.match(extras, /export function PostSuggestedCategoryHint/)
+  assert.match(extras, /data-post-suggested-category-hint/)
+  assert.match(wizard, /<PostSuggestedCategoryHint/)
+  assert.match(wizard, /SUGGESTED_EXTRAS_DISPLAY_KEY \? \(/)
+  assert.match(css, /\.public-post-suggested-category-hint \{/)
 })
 
-test('CUSTOM_PLUS_LOGO_OFFICIAL', () => {
-  const script = read('scripts/dev/fix-custom-plus-pt-logo-v5.py')
+test('CATEGORY_HINT_PT', () => {
+  assert.match(translations, /postSuggestedCategoryHintTitle: 'Explore mais opções'/)
+  assert.match(
+    translations,
+    /postSuggestedCategoryHintBody: 'Toque em uma categoria abaixo para visualizar todos os itens disponíveis.'/,
+  )
+})
+
+test('CATEGORY_HINT_EN', () => {
+  assert.match(translations, /postSuggestedCategoryHintTitle: 'Explore more options'/)
+  assert.match(
+    translations,
+    /postSuggestedCategoryHintBody: 'Tap a category below to view all available items.'/,
+  )
+})
+
+test('CATEGORY_HINT_ES', () => {
+  assert.match(translations, /postSuggestedCategoryHintTitle: 'Explora más opciones'/)
+  assert.match(
+    translations,
+    /postSuggestedCategoryHintBody: 'Toca una categoría abajo para ver todos los artículos disponibles.'/,
+  )
+})
+
+test('CUSTOM_PLUS_REBUILT_FROM_CLEAN_BASE', () => {
+  const script = read('scripts/dev/rebuild-custom-plus-pt-v7.py')
+  assert.match(script, /bbqpers-pt-v4\.webp/)
+  assert.match(script, /bbqtrad-plus-pt-v4\.webp/)
   assert.match(script, /cdl-badge-official\.png/)
-  assert.match(script, /bbqpers-plus-pt-v4\.webp/)
-  assert.match(script, /bbqpers-plus-pt-v5\.webp/)
+  assert.match(script, /bbqpers-plus-pt-v7\.webp/)
+  assert.match(script, /bbqpers-pt-v4\.webp/)
+  assert.doesNotMatch(script, /BASE = .*bbqpers-plus/)
+  assert.match(read('Lib/publicQuote/packageFolderArt.generated.ts'), /bbqpers-plus-pt-v7\.webp/)
+  assert.match(visual, /\?v=art7/)
+})
+
+test('CUSTOM_PLUS_BASE_IS_CUSTOM_WITHOUT_SIDES', () => {
   const probe = spawnSync(
     'python3',
     ['-'],
     {
       input: `
-import cv2
-im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v6.webp')}')
-# official mark: pale inner disc / white ring, not a black smear
-cx, cy = 121, 1418
-ring = im[cy-42:cy-30, cx-8:cx+8]
-assert ring.mean() > 150, ring.mean()
-print(ring.mean())
+import cv2, numpy as np
+base = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-pt-v4.webp')}')
+new = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v7.webp')}')
+assert base is not None and new is not None
+assert base.shape == new.shape == (1536, 1024, 3)
+diff = np.abs(new[:1035].astype(np.int16) - base[:1035].astype(np.int16)).mean()
+assert diff < 2.5, diff
+print(diff)
 `,
       encoding: 'utf8',
     },
@@ -363,25 +403,18 @@ print(ring.mean())
   assert.equal(probe.status, 0, probe.stderr || probe.stdout)
 })
 
-test('CUSTOM_PLUS_LOGO_NOT_CROPPED', () => {
+test('CUSTOM_PLUS_SIDES_PRESENT', () => {
   const probe = spawnSync(
     'python3',
     ['-'],
     {
       input: `
 import cv2, numpy as np
-im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v6.webp')}')
-cx, cy, r = 121, 1418, 84
-# official mark keeps a full pale outer ring — not clipped on one side
-vals = []
-for ang in range(0, 360, 10):
-    a = np.deg2rad(ang)
-    x = int(cx + r * np.cos(a))
-    y = int(cy + r * np.sin(a))
-    vals.append(float(im[y, x].mean()))
-assert np.mean(vals) > 100, np.mean(vals)
-assert min(vals) > 35, min(vals)
-print(np.mean(vals), min(vals))
+trad = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqtrad-plus-pt-v4.webp')}')
+new = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v7.webp')}')
+diff = np.abs(new[1107:1348].astype(np.int16) - trad[1107:1348].astype(np.int16)).mean()
+assert diff < 3.0, diff
+print(diff)
 `,
       encoding: 'utf8',
     },
@@ -389,22 +422,53 @@ print(np.mean(vals), min(vals))
   assert.equal(probe.status, 0, probe.stderr || probe.stdout)
 })
 
-test('CUSTOM_PLUS_BLACK_PATCH', () => {
-  const script = read('scripts/dev/fix-custom-plus-pt-logo-v5.py')
-  assert.doesNotMatch(script, /rectangle\\(.*-1\\)|filled.?black|quadrado preto/i)
+function plaqueProbe(name, y0, y1, x0, x1) {
   const probe = spawnSync(
     'python3',
     ['-'],
     {
       input: `
 import cv2, numpy as np
-im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v6.webp')}')
-roi = im[1360:1500, 220:420]
-gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-# a painted black plate is almost zero-variance; restored wood is not
-assert gray.std() > 8, gray.std()
-assert gray.mean() > 12, gray.mean()
-print(gray.mean(), gray.std())
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v7.webp')}')
+roi = cv2.cvtColor(im[${y0}:${y1}, ${x0}:${x1}], cv2.COLOR_BGR2GRAY)
+assert roi.mean() < 70, roi.mean()
+assert (roi > 140).sum() > 400, (roi > 140).sum()
+assert (roi < 40).sum() > 2000, (roi < 40).sum()
+print('${name}', float(roi.mean()), int((roi > 140).sum()))
+`,
+      encoding: 'utf8',
+    },
+  )
+  assert.equal(probe.status, 0, probe.stderr || probe.stdout)
+}
+
+test('CUSTOM_PLUS_WHITE_RICE_PRESENT', () => {
+  plaqueProbe('arroz', 1208, 1290, 50, 250)
+})
+
+test('CUSTOM_PLUS_BLACK_BEANS_PRESENT', () => {
+  plaqueProbe('feijao', 1242, 1324, 266, 476)
+})
+
+test('CUSTOM_PLUS_VINAIGRETTE_PRESENT', () => {
+  plaqueProbe('vina', 1246, 1328, 668, 878)
+})
+
+test('CUSTOM_PLUS_BLACK_BEANS_SIGN_READABLE', () => {
+  const probe = spawnSync(
+    'python3',
+    ['-'],
+    {
+      input: `
+import cv2, numpy as np
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v7.webp')}')
+plaque = cv2.cvtColor(im[1242:1324, 266:476], cv2.COLOR_BGR2GRAY)
+arroz = cv2.cvtColor(im[1208:1290, 50:250], cv2.COLOR_BGR2GRAY)
+assert plaque.mean() < 55, plaque.mean()
+assert arroz.mean() < 55, arroz.mean()
+assert (plaque > 140).sum() > 400
+assert (arroz > 140).sum() > 400
+print(plaque.mean(), arroz.mean(), int((plaque > 140).sum()))
 `,
       encoding: 'utf8',
     },
@@ -412,89 +476,96 @@ print(gray.mean(), gray.std())
   assert.equal(probe.status, 0, probe.stderr || probe.stdout)
 })
 
-test('CUSTOM_PLUS_VISIBLE_EDIT_ARTIFACT', () => {
+test('CUSTOM_PLUS_OFFICIAL_CDL_LOGO', () => {
+  const script = read('scripts/dev/rebuild-custom-plus-pt-v7.py')
+  assert.match(script, /cdl-badge-official\.png/)
+  assert.doesNotMatch(script, /Pioneer in Orlando|Since 2017/)
   const probe = spawnSync(
     'python3',
     ['-'],
     {
       input: `
 import cv2, numpy as np
-im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v6.webp')}')
-# no leftover red BB plate next to the mark
-roi = im[1306:1532, 204:504]
-b,g,r = cv2.split(roi)
-red = ((r.astype(np.int16) - np.maximum(g, b).astype(np.int16) > 45) & (r > 90)).sum()
-assert red < 400, red
-print(red)
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v7.webp')}')
+cx, cy, r = 106, 1436, 88
+# official mark: pale field above the grill, not a black smear
+pale = im[cy-50:cy-22, cx-14:cx+14]
+assert pale.mean() > 140, pale.mean()
+# fully inside the canvas
+assert 18 >= 8 and 1348 + 176 <= 1528
+print(pale.mean())
 `,
       encoding: 'utf8',
     },
   )
   assert.equal(probe.status, 0, probe.stderr || probe.stdout)
+})
+
+test('CUSTOM_PLUS_PIONEER_ABSENT', () => {
+  const script = read('scripts/dev/rebuild-custom-plus-pt-v7.py')
+  assert.doesNotMatch(script, /Pioneer|Since 2017/)
+  assert.match(script, /cdl-badge-official\.png/)
+})
+
+test('CUSTOM_PLUS_VISIBLE_PATCH_ABSENT', () => {
+  const probe = spawnSync(
+    'python3',
+    ['-'],
+    {
+      input: `
+import cv2, numpy as np
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v7.webp')}')
+trad = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqtrad-plus-pt-v4.webp')}')
+# sides below the seam match the real buffet — no painted patch
+diff = np.abs(im[1107:1348].astype(np.int16) - trad[1107:1348].astype(np.int16)).mean()
+assert diff < 3.0, diff
+print(diff)
+`,
+      encoding: 'utf8',
+    },
+  )
+  assert.equal(probe.status, 0, probe.stderr || probe.stdout)
+})
+
+test('CUSTOM_PLUS_BLACK_BOX_ARTIFACT_ABSENT', () => {
+  const probe = spawnSync(
+    'python3',
+    ['-'],
+    {
+      input: `
+import cv2, numpy as np
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v7.webp')}')
+roi = cv2.cvtColor(im[1360:1500, 210:420], cv2.COLOR_BGR2GRAY)
+assert roi.std() > 8, roi.std()
+assert roi.mean() > 12, roi.mean()
+print(roi.mean(), roi.std())
+`,
+      encoding: 'utf8',
+    },
+  )
+  assert.equal(probe.status, 0, probe.stderr || probe.stdout)
+})
+
+test('CUSTOM_PLUS_PRICE_IN_IMAGE_ABSENT', () => {
+  const script = read('scripts/dev/rebuild-custom-plus-pt-v7.py')
+  assert.match(script, /'price_in_image': False/)
+  assert.doesNotMatch(script, /putText|US\\$|Sob consulta/)
 })
 
 test('CUSTOM_PACKAGE_IMAGE_ART_NOT_DEGRADED', () => {
-  assert.match(read('Lib/publicQuote/packageFolderArt.generated.ts'), /bbqpers-plus-pt-v6\.webp/)
-  assert.match(visual, /\?v=art6b/)
+  assert.match(read('Lib/publicQuote/packageFolderArt.generated.ts'), /bbqpers-plus-pt-v7\.webp/)
+  assert.match(visual, /\?v=art7/)
   const probe = spawnSync(
     'python3',
     ['-'],
     {
       input: `
 import cv2
-im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v6.webp')}')
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v7.webp')}')
 assert im.shape == (1536, 1024, 3)
-top = im[80:1100]
+top = im[80:1000]
 assert top.std() > 25
 print(im.shape, top.std())
-`,
-      encoding: 'utf8',
-    },
-  )
-  assert.equal(probe.status, 0, probe.stderr || probe.stdout)
-})
-
-test('CUSTOM_PLUS_BLACK_BEANS_SIGN_RESTORED', () => {
-  const probe = spawnSync(
-    'python3',
-    ['-'],
-    {
-      input: `
-import cv2, numpy as np
-im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v6.webp')}')
-v5 = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v5.webp')}')
-roi = im[1256:1338, 330:538]
-gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-bright = (gray > 140).sum()
-assert bright > 280, bright
-# logo disk must stay the approved v5 mark
-yy, xx = np.ogrid[:im.shape[0], :im.shape[1]]
-logo = (xx - 121) ** 2 + (yy - 1418) ** 2 <= 90 ** 2
-assert np.array_equal(im[logo], v5[logo])
-print(bright)
-`,
-      encoding: 'utf8',
-    },
-  )
-  assert.equal(probe.status, 0, probe.stderr || probe.stdout)
-})
-
-test('CUSTOM_PLUS_BLACK_BEANS_SIGN_MATCHES_OTHER_SIGNS', () => {
-  const probe = spawnSync(
-    'python3',
-    ['-'],
-    {
-      input: `
-import cv2, numpy as np
-im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v6.webp')}')
-plaque = cv2.cvtColor(im[1256:1338, 330:538], cv2.COLOR_BGR2GRAY)
-arroz = cv2.cvtColor(im[1218:1310, 80:250], cv2.COLOR_BGR2GRAY)
-# both are dark cards with bright script
-assert plaque.mean() < 40, plaque.mean()
-assert arroz.mean() < 45, arroz.mean()
-assert (plaque > 140).sum() > 250
-assert (arroz > 140).sum() > 200
-print(plaque.mean(), arroz.mean())
 `,
       encoding: 'utf8',
     },

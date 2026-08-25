@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import AdminCompactMenu from '../../../components/quotes/AdminCompactMenu'
 import { useTenant } from '../../../components/tenant/TenantProvider'
 import CatalogImageFrame from '../../../components/CatalogImageFrame'
@@ -13,7 +13,9 @@ import PublicPackageCatalog from '../../../components/quotes/PublicPackageCatalo
 import PublicPhoneField from '../../../components/quotes/PublicPhoneField'
 import PublicRequiredMark from '../../../components/quotes/PublicRequiredMark'
 import QuoteWizardStepNav from '../../../components/quotes/QuoteWizardStepNav'
-import AdditionalCategorySection from '../../../components/quotes/additionals/AdditionalCategorySection'
+import AdditionalCategorySection, {
+  PostSuggestedCategoryHint,
+} from '../../../components/quotes/additionals/AdditionalCategorySection'
 import { useAutoEventDistance } from '@/Lib/hooks/useAutoEventDistance'
 import {
   calcAdditionalLineTotalForItem,
@@ -3211,7 +3213,7 @@ export default function QuoteWizardCore({
                     isPublicMode
                       ? (value) => {
                           if (value <= 0) return
-                          focusWizardField(streetNumberInputRef.current)
+                          focusWizardField(addressSearchInputRef.current)
                         }
                       : undefined
                   }
@@ -3243,10 +3245,11 @@ export default function QuoteWizardCore({
               <AddressAutocompleteFields
                 searchInputRef={addressSearchInputRef}
                 numberInputRef={streetNumberInputRef}
-                onNumberCommit={
+                onPlaceSelected={
                   isPublicMode
-                    ? () => {
-                        focusWizardField(addressSearchInputRef.current)
+                    ? ({ addressNumber }) => {
+                        if (addressNumber.trim()) return
+                        focusWizardField(streetNumberInputRef.current)
                       }
                     : undefined
                 }
@@ -3374,8 +3377,8 @@ export default function QuoteWizardCore({
               <div className="space-y-4">
                 {additionalItemsByCategory.map(
                   ({ categoryKey, categoryLabel, items }) => (
+                  <Fragment key={categoryKey}>
                   <AdditionalCategorySection
-                    key={categoryKey}
                     categoryKey={categoryKey}
                     categoryLabel={
                       additionalCategoryDisplayLabels.get(categoryKey) ??
@@ -3399,6 +3402,13 @@ export default function QuoteWizardCore({
                     onExpose={() => handleAdditionalCategoryExpose(categoryKey)}
                     onChangeQty={setAdditionalQty}
                   />
+                  {categoryKey === SUGGESTED_EXTRAS_DISPLAY_KEY ? (
+                    <PostSuggestedCategoryHint
+                      title={w.postSuggestedCategoryHintTitle}
+                      body={w.postSuggestedCategoryHintBody}
+                    />
+                  ) : null}
+                  </Fragment>
                 ),
                 )}
               </div>

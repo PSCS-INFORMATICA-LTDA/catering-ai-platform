@@ -415,3 +415,20 @@ export default function AdditionalCategorySection({
     </section>
   )
 }
+
+export function PostSuggestedCategoryHint({
+  title,
+  body,
+}: {
+  title: string
+  body: string
+}) {
+  return (
+    <div className="public-post-suggested-category-hint" data-post-suggested-category-hint>
+      <p className="public-post-suggested-category-hint-title">
+        <span aria-hidden="true">↓</span> {title}
+      </p>
+      <p className="public-post-suggested-category-hint-body">{body}</p>
+    </div>
+  )
+}

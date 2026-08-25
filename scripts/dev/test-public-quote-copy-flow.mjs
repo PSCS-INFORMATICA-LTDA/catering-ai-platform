@@ -113,10 +113,24 @@ test('ADULTS_VALIDATION_UNCHANGED', () => {
 })
 
 test('ADULTS_TO_ADDRESS_FLOW', () => {
-  assert.match(wizard, /focusWizardField\(streetNumberInputRef\.current\)/)
+  assert.match(wizard, /focusWizardField\(addressSearchInputRef\.current\)/)
   assert.match(wizard, /guestField/)
   assert.match(wizard, /data-guest-field/)
   assert.match(wizard, /shouldAdvanceFromFieldBlur/)
+  const adultsCommit = wizard.match(
+    /inputRef=\{adultsInputRef\}[\s\S]{0,400}onCommit=\{[\s\S]{0,220}focusWizardField\(([^)]+)\)/,
+  )
+  assert.ok(adultsCommit)
+  assert.match(adultsCommit[1], /addressSearchInputRef\.current/)
+  assert.doesNotMatch(adultsCommit[1], /streetNumberInputRef/)
+})
+
+test('ADULTS_TO_STREET_NUMBER', () => {
+  const adultsCommit = wizard.match(
+    /inputRef=\{adultsInputRef\}[\s\S]{0,400}onCommit=\{[\s\S]{0,220}focusWizardField\(([^)]+)\)/,
+  )
+  assert.ok(adultsCommit)
+  assert.doesNotMatch(adultsCommit[1], /streetNumberInputRef/)
 })
 
 test('STREET_NUMBER_NUMERIC_KEYBOARD_HINT', () => {
@@ -127,17 +141,39 @@ test('STREET_NUMBER_NUMERIC_KEYBOARD_HINT', () => {
   assert.match(address, /numberInputRef/)
 })
 
-test('STREET_NUMBER_TO_GOOGLE_SEARCH_FOCUS', () => {
-  assert.match(address, /onNumberCommit/)
-  assert.match(wizard, /focusWizardField\(addressSearchInputRef\.current\)/)
-  assert.match(address, /searchInputRef/)
+test('GOOGLE_ADDRESS_WITH_NUMBER_PRESERVED', () => {
+  assert.match(address, /onPlaceSelected\?: \(info: \{ addressNumber: string \}\) => void/)
+  assert.match(
+    address,
+    /const addressNumber =\s*selected\.addressNumber\?\.trim\(\) \|\|\s*valuesRef\.current\.addressNumber/,
+  )
+  assert.match(wizard, /if \(addressNumber\.trim\(\)\) return/)
+})
+
+test('GOOGLE_ADDRESS_WITHOUT_NUMBER_FOCUSES_NUMBER', () => {
+  assert.match(address, /onPlaceSelectedRef\.current\?\.\(\{ addressNumber \}\)/)
+  assert.match(
+    wizard,
+    /if \(addressNumber\.trim\(\)\) return\s*focusWizardField\(streetNumberInputRef\.current\)/,
+  )
+})
+
+test('STREET_NUMBER_NUMERIC_WHEN_REQUIRED', () => {
+  assert.match(address, /data-address-number/)
+  assert.match(address, /inputMode="numeric"/)
+  assert.match(address, /pattern="\[0-9\]\*"/)
 })
 
 test('GOOGLE_PLACES_UNCHANGED', () => {
   assert.match(address, /types: \['address'\]/)
   assert.match(address, /importLibrary\('places'\)/)
-  assert.match(address, /addressNumber:\s*selected\.addressNumber\?\.trim\(\) \|\|\s*valuesRef\.current\.addressNumber/)
+  assert.match(
+    address,
+    /const addressNumber =\s*selected\.addressNumber\?\.trim\(\) \|\|\s*valuesRef\.current\.addressNumber/,
+  )
   assert.doesNotMatch(address, /inputMode="numeric"[\s\S]{0,80}autoComplete="street-address"/)
+  assert.match(address, /data-address-search/)
+  assert.match(address, /type="text"/)
 })
 
 test('END_TIME_AUTO_CALC_UNCHANGED', () => {
@@ -186,9 +222,9 @@ test('PHONE_VALIDATION_UNCHANGED', () => {
   assert.match(phone, /isUsablePublicPhone\(display\)/)
 })
 
-test('CUSTOM_PLUS_MAPPED_TO_V6', () => {
-  assert.match(generated, /bbqpers-plus-pt-v6\.webp/)
-  assert.match(visual, /\?v=art6b/)
+test('CUSTOM_PLUS_MAPPED_TO_V7', () => {
+  assert.match(generated, /bbqpers-plus-pt-v7\.webp/)
+  assert.match(visual, /\?v=art7/)
 })
 
 test('NO_QUERYSELECTOR_BY_LABEL', () => {

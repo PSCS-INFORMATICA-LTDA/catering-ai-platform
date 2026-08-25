@@ -273,22 +273,25 @@ await page.keyboard.type('25', { delay: 20 })
 await page.keyboard.press('Enter')
 await wait(250)
 const afterAdults = await page.evaluate(activeInfo)
-record('ADULTS_TO_STREET_NUMBER', afterAdults)
-if (!afterAdults.addressNumber || afterAdults.inputMode !== 'numeric') {
+record('ADULTS_TO_ADDRESS_SEARCH', afterAdults)
+if (
+  !afterAdults.addressSearch ||
+  afterAdults.addressNumber ||
+  afterAdults.inputMode === 'numeric' ||
+  afterAdults.type === 'tel'
+) {
   report.ok = false
 }
-await page.screenshot({
-  path: join(OUT, 'event-number-focused-390.jpg'),
-  type: 'jpeg',
-  quality: 88,
+const numberField = await page.evaluate(() => {
+  const el = document.querySelector('[data-address-number]')
+  return {
+    present: Boolean(el),
+    inputMode: el?.getAttribute('inputmode') || '',
+    focused: document.activeElement === el,
+  }
 })
-
-await page.keyboard.type('13801', { delay: 20 })
-await page.keyboard.press('Enter')
-await wait(450)
-const afterNumber = await page.evaluate(activeInfo)
-record('STREET_NUMBER_TO_GOOGLE_SEARCH', afterNumber)
-if (!afterNumber.addressSearch || afterNumber.inputMode === 'numeric' || afterNumber.type === 'tel') {
+record('STREET_NUMBER_NOT_AUTOFOCUSED_AFTER_ADULTS', numberField)
+if (!numberField.present || numberField.focused || numberField.inputMode !== 'numeric') {
   report.ok = false
 }
 await page.screenshot({

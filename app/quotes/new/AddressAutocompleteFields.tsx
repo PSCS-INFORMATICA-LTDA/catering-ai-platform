@@ -200,7 +200,7 @@ export default function AddressAutocompleteFields({
   placeholders,
   numberInputRef,
   searchInputRef,
-  onNumberCommit,
+  onPlaceSelected,
 }: {
   values: AddressValues
   onChange: (patch: Partial<AddressValues>) => void
@@ -228,7 +228,7 @@ export default function AddressAutocompleteFields({
   }
   numberInputRef?: React.RefObject<HTMLInputElement | null>
   searchInputRef?: React.RefObject<HTMLInputElement | null>
-  onNumberCommit?: () => void
+  onPlaceSelected?: (info: { addressNumber: string }) => void
 }) {
   const loc: QuoteLanguage = language === 'en' || language === 'es' ? language : 'pt'
   const copy = ADDRESS_COPY[loc]
@@ -247,6 +247,7 @@ export default function AddressAutocompleteFields({
   const manualFallback = googleUnavailable
   const manualMode = manualFallback
   const onChangeRef = useRef(onChange)
+  const onPlaceSelectedRef = useRef(onPlaceSelected)
   const valuesRef = useRef(values)
   const fallbackSearchRef = useRef<HTMLInputElement>(null)
   const assignSearchNode = (node: HTMLInputElement | null) => {
@@ -267,8 +268,9 @@ export default function AddressAutocompleteFields({
 
   useEffect(() => {
     onChangeRef.current = onChange
+    onPlaceSelectedRef.current = onPlaceSelected
     valuesRef.current = values
-  }, [onChange, values])
+  }, [onChange, onPlaceSelected, values])
 
   useEffect(
     () => () => {
@@ -356,12 +358,14 @@ export default function AddressAutocompleteFields({
                 place.formatted_address ||
                 selected.address,
             )
+            const addressNumber =
+              selected.addressNumber?.trim() ||
+              valuesRef.current.addressNumber
             onChangeRef.current({
               ...selected,
-              addressNumber:
-                selected.addressNumber?.trim() ||
-                valuesRef.current.addressNumber,
+              addressNumber,
             })
+            onPlaceSelectedRef.current?.({ addressNumber })
           })()
         })
       })
@@ -414,41 +418,6 @@ export default function AddressAutocompleteFields({
       window.clearTimeout(timer)
     }
   }, [loc, manualMode, values.zipCode])
-
-  function focusAddressSearchFromNumber() {
-    const search = fallbackSearchRef.current
-    const apply = () => {
-      if (!search) return
-      const active = document.activeElement
-      if (active === search) return
-      if (active instanceof HTMLElement) {
-        if (active.closest('[data-guest-field]')) return
-        if (active.matches('button, a, [href], [role="button"]')) return
-        if (
-          active.matches('input, textarea, select') &&
-          !active.hasAttribute('data-address-number') &&
-          !active.hasAttribute('readonly')
-        ) {
-          return
-        }
-      }
-      search.focus({ preventScroll: true })
-      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-      search.scrollIntoView({
-        behavior: reduced ? 'auto' : 'smooth',
-        block: 'center',
-      })
-    }
-    apply()
-    requestAnimationFrame(() => {
-      requestAnimationFrame(apply)
-    })
-  }
-
-  function commitStreetNumber() {
-    onNumberCommit?.()
-    focusAddressSearchFromNumber()
-  }
 
   const zipDigits = normalizePostalDigits(values.zipCode)
   const zipInvalid =
@@ -530,24 +499,6 @@ export default function AddressAutocompleteFields({
             if (event.key !== 'Enter') return
             event.preventDefault()
             event.stopPropagation()
-            commitStreetNumber()
-          }}
-          onBlur={(event) => {
-            const related = event.relatedTarget
-            if (related instanceof HTMLElement) {
-              if (related.closest('[data-guest-field]')) return
-              if (related.matches('[data-address-search]')) return
-              if (related.matches('button, a, [href], [role="button"]')) return
-              // Next often lands on ZIP/city/state. Those are canonical and
-              // read-only when Places is up — still take the user to search.
-              if (
-                related.matches('input, textarea, select') &&
-                !related.hasAttribute('readonly')
-              ) {
-                return
-              }
-            }
-            commitStreetNumber()
           }}
           className={getInputClassName(
             values.addressNumber ? 'filled' : undefined,

@@ -409,7 +409,10 @@ export default function PublicPackageCatalog({
           </span>
         </div>
         <div className="public-package-intro-copy">
-          <p className="public-package-kicker">
+          <p
+            className="public-package-kicker"
+            data-package-experience-title
+          >
             {tw(language, 'publicPackageExperienceTitle')}
           </p>
           <PackageExperienceBody

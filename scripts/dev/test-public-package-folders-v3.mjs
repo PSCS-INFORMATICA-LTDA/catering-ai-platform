@@ -70,12 +70,12 @@ test('PACKAGE_PT_EN_ES_ART_MAPPED', () => {
   for (const key of KEYS) {
     for (const locale of LOCALES) {
       const entry = new RegExp(
-        `"${key.replace('+', '\\+')}":[\\s\\S]{0,400}?"${locale}": "[a-z-]+${locale}-v[3-6]\\.webp"`,
+        `"${key.replace('+', '\\+')}":[\\s\\S]{0,400}?"${locale}": "[a-z-]+${locale}-v[3-7]\\.webp"`,
       )
       assert.match(generated, entry, `${key} ${locale} is not mapped`)
     }
   }
-  const files = [...generated.matchAll(/"([a-z-]+-v[3-6]\.webp)"/g)].map((m) => m[1])
+  const files = [...generated.matchAll(/"([a-z-]+-v[3-7]\.webp)"/g)].map((m) => m[1])
   assert.equal(files.length, 30)
   for (const file of files) {
     assert.ok(allFolders.includes(file), `${file} is mapped but missing on disk`)
@@ -111,9 +111,9 @@ test('CUSTOM_FOLDER_CREATED', () => {
 test('ART_FOLLOWS_LOCALE_WITH_FALLBACK', () => {
   assert.match(visual, /export function getPackageFolderArt/)
   assert.match(visual, /byLocale\?\.\[locale\] \?\? byLocale\?\.pt/)
-  assert.match(visual, /file\.endsWith\('-v6\.webp'\)/)
-  assert.match(visual, /\?v=art6b/)
-  assert.match(generated, /bbqpers-plus-pt-v6\.webp/)
+  assert.match(visual, /file\.endsWith\('-v7\.webp'\)/)
+  assert.match(visual, /\?v=art7/)
+  assert.match(generated, /bbqpers-plus-pt-v7\.webp/)
   // The database column stays the fallback, so a card can never go blank.
   assert.match(visual, /const direct = pkg\.image_url\?\.trim\(\) \|\| null/)
   assert.match(visual, /findBasePackage\(pkg, allPackages\)/)
