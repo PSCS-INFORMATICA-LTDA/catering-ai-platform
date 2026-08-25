@@ -54,7 +54,7 @@ export const SIDES_ITEMS = [
   'Feijão preto',
   'Vinagrete',
   'Farofa',
-  'Mandioca',
+  'Maionese',
 ] as const
 
 export type CdlPackageDefinition = {

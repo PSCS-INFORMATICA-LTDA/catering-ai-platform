@@ -72,7 +72,8 @@ test('SIDES_LIST_CANONICAL_AND_BLACK_BEANS', () => {
   }
   // Nothing dropped silently: the config also carries these two.
   assert.match(rules, /'Farofa'/)
-  assert.match(rules, /'Mandioca'/)
+  assert.match(rules, /'Maionese'/)
+  assert.doesNotMatch(rules, /'Mandioca'/)
   // Tropeiro must not reach the customer.
   assert.doesNotMatch(editorial, /tropeiro/i)
   const sidesBlock = rules.slice(

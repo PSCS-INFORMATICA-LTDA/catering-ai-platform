@@ -133,6 +133,9 @@ export function getPackageFolderArt(
   const url = `${base}/storage/v1/object/public/${PACKAGE_FOLDER_BUCKET}/${PACKAGE_FOLDER_PREFIX}/${file}`
   // New filenames plus a query keep CDN caches from serving an older upload
   // of the same key during this DEV pass.
+  if (file.endsWith('-v9.webp')) {
+    return `${url}?v=art9`
+  }
   if (file.endsWith('-v8.webp')) {
     return `${url}?v=art8b`
   }
@@ -316,12 +319,12 @@ export function formatPackageCatalogPriceLabel(
 
 export function getPackageSidesDescription(language: QuoteLanguage): string {
   if (language === 'en') {
-    return 'Sides: white rice, black beans, vinaigrette, farofa and cassava.'
+    return 'Sides: white rice, black beans, vinaigrette, farofa and potato salad.'
   }
   if (language === 'es') {
-    return 'Guarniciones: arroz blanco, frijoles negros, vinagreta, farofa y yuca.'
+    return 'Guarniciones: arroz blanco, frijoles negros, vinagreta, farofa y ensalada de papa.'
   }
-  return 'Guarnições: arroz branco, feijão preto, vinagrete, farofa e mandioca.'
+  return 'Guarnições: arroz branco, feijão preto, vinagrete, farofa e maionese.'
 }
 
 export function getPackageSidesIncludedLabel(language: QuoteLanguage): string {

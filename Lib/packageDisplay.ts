@@ -16,7 +16,7 @@ import {
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 const DEFAULT_GARNISH_TEXT_PT =
-  'Arroz branco • Feijão preto • Vinagrete • Farofa • Mandioca'
+  'Arroz branco • Feijão preto • Vinagrete • Farofa • Maionese'
 
 const TRADITIONAL_BASE_ITEMS = [
   'Picanha Angus',

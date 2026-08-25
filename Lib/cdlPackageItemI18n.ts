@@ -32,6 +32,7 @@ const CDL_ITEM_I18N: Record<string, CdlItemTranslation> = {
   'Feijão preto': { en: 'Black beans', es: 'Frijoles negros' },
   Vinagrete: { en: 'Vinaigrette salsa', es: 'Vinagreta' },
   Mandioca: { en: 'Cassava', es: 'Yuca' },
+  Maionese: { en: 'Potato salad', es: 'Ensalada de papa' },
   'Churrasco tradicional CDL': {
     en: 'CDL traditional barbecue',
     es: 'Parrillada tradicional CDL',
