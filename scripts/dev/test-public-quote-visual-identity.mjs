@@ -174,7 +174,7 @@ test('PACKAGE_OTHER_COPY_UNCHANGED', () => {
   assert.match(read('Lib/cdlCommercialRules.ts'), /Maionese/)
   assert.doesNotMatch(read('Lib/cdlCommercialRules.ts'), /Mandioca/)
   assert.match(read('Lib/cdlCommercialRules.ts'), /Vinagrete/)
-  assert.match(editorial, /plusGuarnicoesHasCaesarChoice/)
+  assert.match(editorial, /getPlusGuarnicoesChoiceLabels/)
   assert.match(editorial, /SIDE_OPTION/)
 })
 
@@ -253,7 +253,7 @@ test('PT_GUARNICOES_AND_ACOMPANHAMENTOS_RULES', () => {
   assert.match(translations, /packageSidesUpsellTitle: 'PLUS GUARNIÇÕES'/)
   assert.match(read('Lib/cdlCommercialRules.ts'), /'Feijão preto'/)
   assert.doesNotMatch(read('Lib/cdlCommercialRules.ts'), /tropeiro/i)
-  assert.match(read('Lib/packageCatalogVisual.ts'), /ARROZ BRANCO, FEIJÃO PRETO/)
+  assert.match(read('Lib/packageCatalogVisual.ts'), /Guarnições: arroz branco, feijão preto/)
 })
 
 test('CUSTOM_PACKAGE_IMAGE_BLACK_SQUARE_REMOVED', () => {
@@ -310,7 +310,7 @@ print(sample.mean())
 
 test('PACKAGE_IMAGE_BLACK_SQUARE_GONE_ON_PRIME_PLUS_PT', () => {
   const generated = read('Lib/publicQuote/packageFolderArt.generated.ts')
-  assert.match(generated, /bbqpri-plus-pt-v10\.webp/)
+  assert.match(generated, /bbqpri-plus-pt-v9\.webp/)
   const probe = spawnSync(
     'python3',
     ['-'],
@@ -390,8 +390,8 @@ test('CUSTOM_PLUS_REBUILT_FROM_CLEAN_BASE', () => {
   assert.match(script, /bbqpers-plus-pt-v7\.webp/)
   assert.match(script, /cdl-badge-official\.png/)
   assert.match(script, /bbqpers-plus-pt-v8\.webp/)
-  assert.match(read('Lib/publicQuote/packageFolderArt.generated.ts'), /bbqpers-plus-pt-v10\.webp/)
-  assert.match(visual, /\?v=art10/)
+  assert.match(read('Lib/publicQuote/packageFolderArt.generated.ts'), /bbqpers-plus-pt-v9\.webp/)
+  assert.match(visual, /\?v=art9/)
 })
 
 test('CUSTOM_PLUS_BASE_IS_CUSTOM_WITHOUT_SIDES', () => {
@@ -592,8 +592,8 @@ test('CUSTOM_PLUS_PRICE_IN_IMAGE_ABSENT', () => {
 })
 
 test('CUSTOM_PACKAGE_IMAGE_ART_NOT_DEGRADED', () => {
-  assert.match(read('Lib/publicQuote/packageFolderArt.generated.ts'), /bbqpers-plus-pt-v10\.webp/)
-  assert.match(visual, /\?v=art10/)
+  assert.match(read('Lib/publicQuote/packageFolderArt.generated.ts'), /bbqpers-plus-pt-v9\.webp/)
+  assert.match(visual, /\?v=art9/)
   const probe = spawnSync(
     'python3',
     ['-'],
@@ -719,9 +719,9 @@ test('OFFICIAL_CDL_LOGO_USED', () => {
   assert.match(stamp, /bbqpers-plus-en-v6\.webp/)
   assert.doesNotMatch(stamp, /GenerateImage|openai|dall.?e|Pioneer|Since 2017/)
   const generated = read('Lib/publicQuote/packageFolderArt.generated.ts')
-  assert.match(generated, /bbqpers-plus-en-v10\.webp/)
-  assert.match(generated, /bbqpers-plus-es-v10\.webp/)
-  assert.match(generated, /bbqpers-plus-pt-v10\.webp/)
+  assert.match(generated, /bbqpers-plus-en-v9\.webp/)
+  assert.match(generated, /bbqpers-plus-es-v9\.webp/)
+  assert.match(generated, /bbqpers-plus-pt-v9\.webp/)
 })
 
 test('PACKAGE_ART_IDENTITY_PRESERVED', () => {

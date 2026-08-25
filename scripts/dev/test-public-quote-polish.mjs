@@ -133,7 +133,7 @@ test('TEST 9 Premium copy lives above the selectors', () => {
   assert.equal(tw('pt', 'withoutSidesGroupTitle'), 'SEM GUARNIÇÕES')
   assert.equal(tw('en', 'withSidesGroupTitle'), 'WITH SIDES')
   assert.equal(tw('en', 'withoutSidesGroupTitle'), 'WITHOUT SIDES')
-  assert.equal(tw('es', 'withSidesGroupTitle'), 'CON GUARNICIONES')
+  assert.equal(tw('es', 'withSidesGroupTitle'), 'CON ACOMPAÑAMIENTOS')
   assert.equal(tw('es', 'withoutSidesGroupTitle'), 'SIN ACOMPAÑAMIENTOS')
   assert.doesNotMatch(catalog, /Playfair_Display/)
   assert.match(catalog, /public-package-group/)

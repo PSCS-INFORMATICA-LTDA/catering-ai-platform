@@ -109,7 +109,6 @@
     "test:dev:public-quote-visual-identity": "node --experimental-strip-types scripts/dev/test-public-quote-visual-identity.mjs",
     "test:dev:public-package-folder-marks": "node --experimental-strip-types scripts/dev/test-public-package-folder-marks.mjs",
     "test:dev:public-package-folders-v3": "node --experimental-strip-types scripts/dev/test-public-package-folders-v3.mjs",
-    "test:dev:public-plus-sides-v10": "node --experimental-strip-types scripts/dev/test-public-plus-sides-v10.mjs",
     "upload:dev:package-folders-v3": "node scripts/dev/upload-cdl-package-folders-v3.mjs",
     "capture:dev:public-quote-micro-polish": "node scripts/dev/capture-public-quote-micro-polish.mjs",
     "capture:dev:public-quote-ux-flow": "node scripts/dev/capture-public-quote-ux-flow.mjs",

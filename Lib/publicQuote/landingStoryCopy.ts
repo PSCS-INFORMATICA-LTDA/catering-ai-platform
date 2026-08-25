@@ -106,7 +106,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'Seu ritmo.' },
         ],
         badge: { text: 'BUFFET', tone: 'yellow' },
-        body: 'Nosso serviço é no formato buffet, com acompanhamentos que completam a experiência do churrasco, para que cada convidado se sirva de acordo com seu gosto.',
+        body: 'Nosso serviço é no formato buffet, trazendo liberdade e praticidade para que cada convidado se sirva de acordo com seu gosto.',
       },
       {
         id: 'since-2017',
@@ -195,7 +195,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'Your pace.' },
         ],
         badge: { text: 'BUFFET', tone: 'yellow' },
-        body: 'Our service is buffet-style, with sides that complete the barbecue experience, so every guest can serve themselves according to their taste.',
+        body: 'Our service is buffet-style, giving every guest the freedom and convenience to serve themselves according to their taste.',
       },
       {
         id: 'since-2017',
@@ -284,7 +284,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'A tu ritmo.' },
         ],
         badge: { text: 'BUFFET', tone: 'yellow' },
-        body: 'Nuestro servicio es estilo buffet, con acompañamientos que completan la experiencia de la parrilla, para que cada invitado se sirva según su gusto.',
+        body: 'Nuestro servicio es estilo buffet, ofreciendo libertad y practicidad para que cada invitado se sirva según su gusto.',
       },
       {
         id: 'since-2017',

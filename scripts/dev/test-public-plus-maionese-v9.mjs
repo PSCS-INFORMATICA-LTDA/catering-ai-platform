@@ -64,13 +64,13 @@ test('TEXT_MANDIOCA_REMOVED_PT', () => {
   assert.doesNotMatch(sides, /Mandioca/)
   assert.doesNotMatch(display, /Mandioca/)
   assert.doesNotMatch(visual, /mandioca/i)
-  assert.match(editorial, /getPresentedPlusSideLabels/)
+  assert.match(editorial, /getPlusGuarnicoesFixedSideLabels/)
 })
 
 test('TEXT_MAIONESE_ADDED_PT', () => {
   assert.match(rules, /'Maionese'/)
   assert.match(display, /Maionese/)
-  assert.match(visual, /MAIONESE/)
+  assert.match(visual, /farofa e maionese/)
   assert.match(quoteDisplay, /SIDES_ITEMS/)
 })
 
@@ -86,7 +86,7 @@ test('TEXT_MANDIOCA_REMOVED_EN', () => {
 
 test('TEXT_MAIONESE_ADDED_EN', () => {
   assert.match(i18n, /Maionese: \{ en: 'Potato salad', es: 'Ensalada de papa' \}/)
-  assert.match(visual, /POTATO SALAD/)
+  assert.match(visual, /farofa and potato salad/)
 })
 
 test('TEXT_MANDIOCA_REMOVED_ES', () => {
@@ -100,7 +100,7 @@ test('TEXT_MANDIOCA_REMOVED_ES', () => {
 
 test('TEXT_MAIONESE_ADDED_ES', () => {
   assert.match(i18n, /es: 'Ensalada de papa'/)
-  assert.match(visual, /ENSALADA DE PAPA/)
+  assert.match(visual, /farofa y ensalada de papa/)
 })
 
 test('WITH_SIDES_IMAGES_UPDATED', () => {
@@ -109,9 +109,9 @@ test('WITH_SIDES_IMAGES_UPDATED', () => {
       existsSync(join(ROOT, 'assets/packages/folders-v3', file)),
       `missing ${file}`,
     )
-    assert.match(generated, new RegExp(file.replace('-v9.webp', '-v10\\.webp')))
+    assert.match(generated, new RegExp(file.replace('.', '\\.')))
   }
-  assert.match(visual, /\?v=art10/)
+  assert.match(visual, /\?v=art9/)
   assert.match(script, /item-076-clean\.webp/)
   assert.match(script, /'pt': 'Maionese'/)
   assert.match(script, /'en': 'Potato salad'/)

@@ -39,7 +39,7 @@ const supabase = createClient(url, key, { auth: { persistSession: false } })
 
 /** bbqtrad-plus-pt-v4.webp -> { key: 'BBQTRAD+', locale: 'pt' } */
 function parseName(file) {
-  const m = /^([a-z]+)(-plus)?-(pt|en|es)-v(?:[3-9]|10)\.webp$/.exec(file)
+  const m = /^([a-z]+)(-plus)?-(pt|en|es)-v[3-9]\.webp$/.exec(file)
   if (!m) return null
   return { key: `${m[1].toUpperCase()}${m[2] ? '+' : ''}`, locale: m[3] }
 }
