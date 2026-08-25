@@ -1,9 +1,12 @@
+import { requireApiPermission } from '@/Lib/auth/requireApi'
 import { uploadPackageImage } from '@/Lib/packageImageStorage'
 
 export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const auth = await requireApiPermission('media.manage')
+  if (!auth.ok) return auth.response
   const { id: packageId } = await context.params
 
   let formData: FormData

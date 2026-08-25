@@ -70,6 +70,7 @@
     "test:dev:landing-layout": "node scripts/dev/test-public-landing-layout-gate.mjs",
     "test:dev:public-quote-how-it-works": "node scripts/dev/test-public-quote-how-it-works.mjs",
     "test:dev:media-content": "node scripts/dev/test-media-content-manager.mjs",
+    "test:dev:media-ops": "node scripts/dev/test-media-ops-readiness.mjs",
     "test:dev:media-hero-ux": "node scripts/dev/test-media-hero-ux-v2.mjs",
     "test:dev:media-v3": "node scripts/dev/test-media-manager-v3.mjs",
     "test:dev:media-save-public": "node scripts/dev/test-media-save-public-reflect.mjs",

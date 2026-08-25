@@ -1,3 +1,4 @@
+import { requireApiPermission } from '@/Lib/auth/requireApi'
 import { uploadAdditionalItemImage } from '@/Lib/additionalItemImageStorage'
 
 export const dynamic = 'force-dynamic'
@@ -7,6 +8,8 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const auth = await requireApiPermission('media.manage')
+  if (!auth.ok) return auth.response
   const { id: itemId } = await context.params
 
   let formData: FormData

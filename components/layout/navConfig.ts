@@ -39,8 +39,8 @@ export const CATERING_NAV: NavGroup[] = [
       { href: '/customers', label: 'Pessoas' },
       { href: '/packages', label: 'Pacotes' },
       { href: '/additional-items', label: 'Cadastro de itens' },
-      { href: '/packages/images', label: 'Imagens' },
-      { href: '/media', label: 'Mídia e Conteúdo' },
+      { href: '/media', label: 'Mídia' },
+      { href: '/media/packages', label: 'Imagens de Pacotes' },
     ],
   },
   {
@@ -79,11 +79,13 @@ export function isNavHrefActive(pathname: string, href: string): boolean {
     )
   }
   if (href === '/packages') {
-    return (
-      pathname === '/packages' ||
-      (pathname.startsWith('/packages/') &&
-        !pathname.startsWith('/packages/images'))
-    )
+    return pathname === '/packages' || pathname.startsWith('/packages/')
+  }
+  if (href === '/media') {
+    return pathname === '/media'
+  }
+  if (href === '/media/packages') {
+    return pathname === '/media/packages' || pathname.startsWith('/media/packages/')
   }
   if (href === '/quotes/new') {
     return pathname === '/quotes/new' || pathname.startsWith('/quotes/new/')
