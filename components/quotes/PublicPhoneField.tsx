@@ -1,5 +1,6 @@
 'use client'
 
+import type { Ref } from 'react'
 import { getQuoteStrings } from '@/Lib/quoteTranslations'
 import {
   displayPublicPhone,
@@ -15,12 +16,14 @@ export default function PublicPhoneField({
   onChange,
   required = false,
   requiredLabel,
+  inputRef,
 }: {
   value: string
   language: QuoteLanguage
   onChange: (value: string) => void
   required?: boolean
   requiredLabel?: string
+  inputRef?: Ref<HTMLInputElement>
 }) {
   const t = getQuoteStrings(language).wizard
   const display = displayPublicPhone(value)
@@ -35,6 +38,7 @@ export default function PublicPhoneField({
       </span>
       <div className="relative">
         <input
+          ref={inputRef}
           type="tel"
           inputMode="tel"
           autoComplete="tel"

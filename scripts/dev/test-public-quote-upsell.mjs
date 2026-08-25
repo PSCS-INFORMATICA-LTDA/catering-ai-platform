@@ -32,6 +32,7 @@ const editorial = source('components/quotes/PackageSidesEditorial.tsx')
 const catalog = source('components/quotes/PublicPackageCatalog.tsx')
 const wizard = source('app/quotes/new/QuoteWizard.tsx')
 const display = source('Lib/quoteAdditionalDisplay.ts')
+const quoteDisplay = source('Lib/packageQuoteDisplay.ts')
 const itemI18n = source('Lib/cdlPackageItemI18n.ts')
 const css = source('app/globals.css')
 
@@ -64,7 +65,8 @@ test('ACCOMPANIMENTS_COME_FROM_CANONICAL_CONFIG', () => {
 })
 
 test('SIDES_LIST_CANONICAL_AND_BLACK_BEANS', () => {
-  assert.match(editorial, /SIDES_ITEMS/)
+  assert.match(quoteDisplay, /SIDES_ITEMS/)
+  assert.match(editorial, /getPlusGuarnicoesFixedSideLabels/)
   for (const item of ['Arroz branco', 'Feijão preto', 'Vinagrete']) {
     assert.match(rules, new RegExp(`'${item}'`), `${item} missing from SIDES_ITEMS`)
   }
@@ -204,6 +206,64 @@ test('EXTRAS_HEADER_IS_PURELY_ADDITIVE', () => {
   assert.match(step, /featured=\{categoryKey === SUGGESTED_EXTRAS_DISPLAY_KEY\}/)
   assert.match(step, /quantities=\{state\.additionals\}/)
   assert.doesNotMatch(step, /suggestedExtrasState|promoQuantity|secondarySelection/)
+})
+
+test('PACKAGE_ACCOMPANIMENT_ITEMS_YELLOW', () => {
+  const names = css.match(/\.public-package-editorial-names \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(names, 'yellow names class missing')
+  assert.match(names, /color: #f6d000/)
+  assert.doesNotMatch(names, /background:\s*#f6d000|background:\s*yellow/i)
+  assert.match(editorial, /data-package-included-items/)
+  assert.match(editorial, /public-package-editorial-names/)
+  const helper = css.match(/\.public-package-editorial-helper \{[\s\S]*?\n\}/)?.[0]
+  assert.match(helper, /rgba\(255, 255, 255, 0\.62\)/)
+})
+
+test('PACKAGE_FIXED_SIDES_YELLOW', () => {
+  assert.match(editorial, /data-package-sides-items/)
+  assert.match(editorial, /getPlusGuarnicoesFixedSideLabels/)
+  assert.match(quoteDisplay, /getPlusGuarnicoesFixedSideItems/)
+  assert.match(quoteDisplay, /isCommonPackageItem/)
+  assert.match(quoteDisplay, /isSideChoiceItem/)
+})
+
+test('PACKAGE_FIXED_SIDES_DISPLAY', () => {
+  const helper = quoteDisplay.slice(
+    quoteDisplay.indexOf('export function getPlusGuarnicoesFixedSideItems'),
+    quoteDisplay.indexOf('export function getPlusGuarnicoesFixedSideItems') + 500,
+  )
+  assert.match(helper, /SIDES_ITEMS\.filter/)
+  assert.match(quoteDisplay, /!isCommonPackageItem\(name\)/)
+  assert.match(quoteDisplay, /!isSideChoiceItem\(name, optionGroups\)/)
+})
+
+test('SIDE_CHOICE_HELPER_AND_CANONICAL_LABELS', () => {
+  assert.match(translations, /packageSidesChoiceLead: 'Escolha 1 opção:'/)
+  assert.match(translations, /packageSidesChoiceLead: 'Choose 1 option:'/)
+  assert.match(translations, /packageSidesChoiceLead: 'Elige 1 opción:'/)
+  assert.match(editorial, /getPlusGuarnicoesChoiceLabels/)
+  assert.match(editorial, /data-package-sides-choice/)
+  assert.match(quoteDisplay, /option_group_key\?\.trim\(\)\.toUpperCase\(\) === 'SIDE_OPTION'/)
+  assert.match(quoteDisplay, /getOptionItemLabel/)
+  assert.doesNotMatch(editorial, /Vinagrete ou Salada/)
+  assert.doesNotMatch(editorial, /const .*=\s*\[\s*'Vinagrete'/)
+})
+
+test('FAROFA_NOT_DUPLICATED_IN_PLUS_DISPLAY', () => {
+  assert.match(rules, /export const SIDES_ITEMS/)
+  const sidesBlock = rules.slice(
+    rules.indexOf('export const SIDES_ITEMS'),
+    rules.indexOf('export const SIDES_ITEMS') + 220,
+  )
+  assert.match(sidesBlock, /'Farofa'/)
+  assert.match(quoteDisplay, /isCommonPackageItem/)
+  assert.match(editorial, /PACKAGE_COMMON_ITEMS/)
+})
+
+test('SIDES_PRICE_UNCHANGED', () => {
+  assert.match(rules, /export const SIDES_PRICE_PER_PERSON = 13/)
+  assert.doesNotMatch(editorial, /\b13\b/)
+  assert.doesNotMatch(editorial, /\$13/)
 })
 
 test('PACKAGE_PRICING_UNCHANGED', () => {

@@ -198,6 +198,9 @@ export default function AddressAutocompleteFields({
   markRequired = false,
   requiredLabel,
   placeholders,
+  numberInputRef,
+  searchInputRef,
+  onNumberCommit,
 }: {
   values: AddressValues
   onChange: (patch: Partial<AddressValues>) => void
@@ -223,6 +226,9 @@ export default function AddressAutocompleteFields({
     state?: string
     postal?: string
   }
+  numberInputRef?: React.RefObject<HTMLInputElement | null>
+  searchInputRef?: React.RefObject<HTMLInputElement | null>
+  onNumberCommit?: () => void
 }) {
   const loc: QuoteLanguage = language === 'en' || language === 'es' ? language : 'pt'
   const copy = ADDRESS_COPY[loc]
@@ -242,7 +248,11 @@ export default function AddressAutocompleteFields({
   const manualMode = manualFallback
   const onChangeRef = useRef(onChange)
   const valuesRef = useRef(values)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const fallbackSearchRef = useRef<HTMLInputElement>(null)
+  const assignSearchNode = (node: HTMLInputElement | null) => {
+    fallbackSearchRef.current = node
+    if (searchInputRef) searchInputRef.current = node
+  }
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
   const listenerRef = useRef<google.maps.MapsEventListener | null>(null)
   const mountedRef = useRef(true)
@@ -269,7 +279,7 @@ export default function AddressAutocompleteFields({
   )
 
   useEffect(() => {
-    const input = inputRef.current
+    const input = fallbackSearchRef.current
     const maps = window.google?.maps
     if (!input || !ready || !maps?.importLibrary) {
       return
@@ -346,7 +356,12 @@ export default function AddressAutocompleteFields({
                 place.formatted_address ||
                 selected.address,
             )
-            onChangeRef.current(selected)
+            onChangeRef.current({
+              ...selected,
+              addressNumber:
+                selected.addressNumber?.trim() ||
+                valuesRef.current.addressNumber,
+            })
           })()
         })
       })
@@ -400,6 +415,41 @@ export default function AddressAutocompleteFields({
     }
   }, [loc, manualMode, values.zipCode])
 
+  function focusAddressSearchFromNumber() {
+    const search = fallbackSearchRef.current
+    const apply = () => {
+      if (!search) return
+      const active = document.activeElement
+      if (active === search) return
+      if (active instanceof HTMLElement) {
+        if (active.closest('[data-guest-field]')) return
+        if (active.matches('button, a, [href], [role="button"]')) return
+        if (
+          active.matches('input, textarea, select') &&
+          !active.hasAttribute('data-address-number') &&
+          !active.hasAttribute('readonly')
+        ) {
+          return
+        }
+      }
+      search.focus({ preventScroll: true })
+      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+      search.scrollIntoView({
+        behavior: reduced ? 'auto' : 'smooth',
+        block: 'center',
+      })
+    }
+    apply()
+    requestAnimationFrame(() => {
+      requestAnimationFrame(apply)
+    })
+  }
+
+  function commitStreetNumber() {
+    onNumberCommit?.()
+    focusAddressSearchFromNumber()
+  }
+
   const zipDigits = normalizePostalDigits(values.zipCode)
   const zipInvalid =
     zipDigits.length >= 5 && !isUsablePostalCode(values.zipCode)
@@ -416,7 +466,8 @@ export default function AddressAutocompleteFields({
         </FieldLabel>
         <div className="relative">
           <input
-            ref={inputRef}
+            ref={assignSearchNode}
+            data-address-search
             type="text"
             autoComplete="street-address"
             value={query}
@@ -466,11 +517,38 @@ export default function AddressAutocompleteFields({
       <label className="flex flex-col gap-2 lg:col-span-2">
         <FieldLabel>{tCommon(loc, 'streetNumber')}</FieldLabel>
         <input
+          ref={numberInputRef}
+          data-address-number
           type="text"
           inputMode="numeric"
+          pattern="[0-9]*"
+          enterKeyHint="next"
           value={values.addressNumber}
           placeholder={placeholders?.number}
           onChange={(event) => onChange({ addressNumber: event.target.value })}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter') return
+            event.preventDefault()
+            event.stopPropagation()
+            commitStreetNumber()
+          }}
+          onBlur={(event) => {
+            const related = event.relatedTarget
+            if (related instanceof HTMLElement) {
+              if (related.closest('[data-guest-field]')) return
+              if (related.matches('[data-address-search]')) return
+              if (related.matches('button, a, [href], [role="button"]')) return
+              // Next often lands on ZIP/city/state. Those are canonical and
+              // read-only when Places is up — still take the user to search.
+              if (
+                related.matches('input, textarea, select') &&
+                !related.hasAttribute('readonly')
+              ) {
+                return
+              }
+            }
+            commitStreetNumber()
+          }}
           className={getInputClassName(
             values.addressNumber ? 'filled' : undefined,
           )}

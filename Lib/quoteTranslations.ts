@@ -244,6 +244,8 @@ type QuoteStrings = {
     packageIncludedHelper: string
     packageSidesUpsellTitle: string
     packageSidesUpsellText: string
+    /** Lead before the live SIDE_OPTION labels on the PLUS block. */
+    packageSidesChoiceLead: string
     /** Featured virtual extras category — merchandising only. */
     suggestedExtrasTitle: string
     suggestedExtrasBody: string
@@ -673,6 +675,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packageIncludedHelper: 'Incluídos sem custo adicional.',
       packageSidesUpsellTitle: 'PLUS GUARNIÇÕES',
       packageSidesUpsellText: 'Adicione guarnições por {price} por pessoa.',
+      packageSidesChoiceLead: 'Escolha 1 opção:',
       suggestedExtrasTitle: 'EXTRAS SUGERIDOS',
       suggestedExtrasBody:
         'Selecionamos alguns dos cortes e extras premium mais procurados para você personalizar seu evento.',
@@ -1124,6 +1127,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packageIncludedHelper: 'Included at no additional charge.',
       packageSidesUpsellTitle: 'PLUS SIDES',
       packageSidesUpsellText: 'Add sides for {price} per person.',
+      packageSidesChoiceLead: 'Choose 1 option:',
       suggestedExtrasTitle: 'SUGGESTED EXTRAS',
       suggestedExtrasBody:
         'Explore a selection of premium cuts and extras to personalize your event.',
@@ -1575,6 +1579,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packageIncludedHelper: 'Incluido sin costo adicional.',
       packageSidesUpsellTitle: 'PLUS GUARNICIONES',
       packageSidesUpsellText: 'Agrega guarniciones por {price} por persona.',
+      packageSidesChoiceLead: 'Elige 1 opción:',
       suggestedExtrasTitle: 'EXTRAS SUGERIDOS',
       suggestedExtrasBody:
         'Descubre una selección de cortes premium y extras para personalizar tu evento.',

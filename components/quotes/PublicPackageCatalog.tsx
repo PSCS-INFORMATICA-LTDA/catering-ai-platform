@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   findBasePackage,
   formatPackageCatalogPriceLabel,
@@ -302,6 +302,15 @@ export default function PublicPackageCatalog({
   const [expandedPackageId, setExpandedPackageId] = useState<string | null>(
     () => selectedPackageId,
   )
+  const sideOptionGroups = useMemo(() => {
+    for (const pkg of packagesWithSides) {
+      const groups = optionGroupsForPackage(pkg.id).filter(
+        (group) => group.option_group_key?.trim().toUpperCase() === 'SIDE_OPTION',
+      )
+      if (groups.length) return groups
+    }
+    return []
+  }, [optionGroupsForPackage, packagesWithSides])
 
   useEffect(() => {
     if (!selectedPackageId) return
@@ -414,6 +423,7 @@ export default function PublicPackageCatalog({
         language={language}
         sidesPricePerPerson={sidesPricePerPerson}
         formatMoney={(value) => formatMoney(value, language, 'USD')}
+        optionGroups={sideOptionGroups}
       />
       <div
         data-package-group-controls

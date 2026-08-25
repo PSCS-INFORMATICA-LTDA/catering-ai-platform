@@ -1,0 +1,33 @@
+{
+  "source": "bbqpers-plus-pt-v5.webp",
+  "dest": "bbqpers-plus-pt-v6.webp",
+  "logo_mae": 0.0,
+  "plaque_mae": 26.740485053581498,
+  "outside_mae": 0.0,
+  "changed_px": 11856,
+  "plaque": [
+    [
+      336,
+      1254
+    ],
+    [
+      530,
+      1252
+    ],
+    [
+      532,
+      1326
+    ],
+    [
+      334,
+      1328
+    ]
+  ],
+  "logo_disk": {
+    "cx": 121,
+    "cy": 1418,
+    "r": 90
+  },
+  "white_border": false,
+  "visible_patch": false
+}

@@ -363,6 +363,24 @@ function toDateValue(date: Date) {
 
 type FieldCompletion = 'filled' | 'empty'
 
+function focusWizardField(node: HTMLElement | null) {
+  if (!node) return
+  // Focus first so iOS can still open the keyboard from the same gesture.
+  node.focus({ preventScroll: true })
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  node.scrollIntoView({
+    behavior: reduced ? 'auto' : 'smooth',
+    block: 'center',
+  })
+}
+
+function shouldAdvanceFromFieldBlur(related: EventTarget | null) {
+  if (!(related instanceof HTMLElement)) return true
+  if (related.closest('[data-guest-field]')) return false
+  if (related.matches('input, textarea, select, button, [href]')) return false
+  return true
+}
+
 function getFieldCompletion(value: string | number): FieldCompletion {
   if (typeof value === 'number') return value > 0 ? 'filled' : 'empty'
   return value.trim().length > 0 ? 'filled' : 'empty'
@@ -443,6 +461,7 @@ function DatePickerField({
   minDate,
   required,
   requiredLabel,
+  onCommit,
 }: {
   label: string
   value: string
@@ -453,6 +472,7 @@ function DatePickerField({
   minDate?: string
   required?: boolean
   requiredLabel?: string
+  onCommit?: (value: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [viewDate, setViewDate] = useState(() => parseDateValue(value) ?? new Date())
@@ -499,8 +519,10 @@ function DatePickerField({
   }, [viewDate])
 
   function selectDay(day: number) {
-    onChange(toDateValue(new Date(calendarDays.year, calendarDays.month, day)))
+    const next = toDateValue(new Date(calendarDays.year, calendarDays.month, day))
+    onChange(next)
     setOpen(false)
+    onCommit?.(next)
   }
 
   function shiftMonth(offset: number) {
@@ -652,6 +674,10 @@ function TimePickerField({
   readOnly = false,
   required,
   requiredLabel,
+  open: openProp,
+  onOpenChange,
+  emptyDefaultHour = 18,
+  onCommit,
 }: {
   label: string
   value: string
@@ -662,14 +688,24 @@ function TimePickerField({
   readOnly?: boolean
   required?: boolean
   requiredLabel?: string
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  emptyDefaultHour?: number
+  onCommit?: (value: string) => void
 }) {
   // Always starts closed, including the end time: it only opens on an explicit
   // tap, never on step entry, date change or start-time change.
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isControlled = openProp !== undefined
+  const open = isControlled ? Boolean(openProp) : uncontrolledOpen
+  const setOpen = (next: boolean) => {
+    if (!isControlled) setUncontrolledOpen(next)
+    onOpenChange?.(next)
+  }
   const containerRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const selected = parseTimeParts(value)
-  const [draftHour, setDraftHour] = useState(selected?.hours ?? 18)
+  const [draftHour, setDraftHour] = useState(selected?.hours ?? emptyDefaultHour)
   const [draftMinute, setDraftMinute] = useState(selected?.minutes ?? 0)
 
   useEffect(() => {
@@ -682,8 +718,13 @@ function TimePickerField({
     if (parsed) {
       setDraftHour(parsed.hours)
       setDraftMinute(parsed.minutes)
+      return
     }
-  }, [value])
+    if (open) {
+      setDraftHour(emptyDefaultHour)
+      setDraftMinute(0)
+    }
+  }, [open, value, emptyDefaultHour])
 
   useEffect(() => {
     if (!open) return
@@ -705,8 +746,10 @@ function TimePickerField({
 
   function selectMinute(minute: number) {
     setDraftMinute(minute)
-    onChange(toTimeValue(draftHour, minute))
+    const next = toTimeValue(draftHour, minute)
+    onChange(next)
     setOpen(false)
+    onCommit?.(next)
   }
 
   return (
@@ -719,7 +762,7 @@ function TimePickerField({
           type="button"
           onClick={() => {
             if (readOnly) return
-            setOpen((current) => !current)
+            setOpen(!open)
           }}
           disabled={readOnly}
           className={`flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3.5 pr-10 text-left text-base outline-none transition-colors ${
@@ -884,7 +927,10 @@ function InputField({
   completion,
   inputRef,
   onFocus,
+  onBlur,
+  onKeyDown,
   autoComplete,
+  enterKeyHint,
   required,
   requiredLabel,
 }: {
@@ -900,7 +946,10 @@ function InputField({
   completion?: FieldCompletion
   inputRef?: React.RefObject<HTMLInputElement | null>
   onFocus?: () => void
+  onBlur?: React.FocusEventHandler<HTMLInputElement>
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>
   autoComplete?: string
+  enterKeyHint?: React.HTMLAttributes<HTMLInputElement>['enterKeyHint']
   required?: boolean
   requiredLabel?: string
 }) {
@@ -919,7 +968,10 @@ function InputField({
           min={min}
           max={max}
           onFocus={onFocus}
+          onBlur={onBlur}
+          onKeyDown={onKeyDown}
           autoComplete={autoComplete}
+          enterKeyHint={enterKeyHint}
           onChange={(e) => onChange(e.target.value)}
           className={`w-full rounded-xl border px-4 py-3.5 pr-10 text-base text-cdl-fg shadow-cdl outline-none transition-colors placeholder:text-cdl-faint focus:border-cdl-accent-border ${fieldCompletionClass(completion)}`}
         />
@@ -941,6 +993,10 @@ function QuantityField({
   blankZero = false,
   required,
   requiredLabel,
+  inputRef,
+  onCommit,
+  enterKeyHint,
+  guestField,
 }: {
   label: string
   value: number
@@ -953,6 +1009,10 @@ function QuantityField({
   blankZero?: boolean
   required?: boolean
   requiredLabel?: string
+  inputRef?: React.RefObject<HTMLInputElement | null>
+  onCommit?: (value: number) => void
+  enterKeyHint?: React.HTMLAttributes<HTMLInputElement>['enterKeyHint']
+  guestField?: boolean
 }) {
   const displayValue = (next: number) =>
     blankZero && next === 0 ? '' : String(next)
@@ -966,6 +1026,16 @@ function QuantityField({
     setDraft(displayValue(value))
   }
 
+  function commitDraft(): number {
+    const next =
+      draft === ''
+        ? min
+        : Math.max(min, Number.parseInt(draft, 10) || min)
+    onChange(next)
+    setDraft(displayValue(next))
+    return next
+  }
+
   return (
     <label className={`flex flex-col gap-2 ${className}`}>
       <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
@@ -973,20 +1043,28 @@ function QuantityField({
       </WizardFieldLabel>
       <div className="relative">
         <input
+          ref={inputRef}
           type="text"
           inputMode="numeric"
+          pattern="[0-9]*"
+          enterKeyHint={enterKeyHint}
+          data-guest-field={guestField ? '' : undefined}
           value={draft}
           placeholder={placeholder}
           disabled={disabled}
           onFocus={() => setFocused(true)}
-          onBlur={() => {
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter') return
+            event.preventDefault()
+            event.stopPropagation()
+            onCommit?.(commitDraft())
+          }}
+          onBlur={(event) => {
             setFocused(false)
-            const next =
-              draft === ''
-                ? min
-                : Math.max(min, Number.parseInt(draft, 10) || min)
-            onChange(next)
-            setDraft(displayValue(next))
+            const next = commitDraft()
+            if (shouldAdvanceFromFieldBlur(event.relatedTarget)) {
+              onCommit?.(next)
+            }
           }}
           onChange={(e) => {
             const raw = e.target.value.replace(/\D/g, '')
@@ -1181,6 +1259,13 @@ export default function QuoteWizardCore({
   )
   visitedAdditionalCategoriesRef.current = visitedAdditionalCategories
   const grillPhotoInputRef = useRef<HTMLInputElement>(null)
+  const firstNameInputRef = useRef<HTMLInputElement>(null)
+  const lastNameInputRef = useRef<HTMLInputElement>(null)
+  const phoneInputRef = useRef<HTMLInputElement>(null)
+  const adultsInputRef = useRef<HTMLInputElement>(null)
+  const streetNumberInputRef = useRef<HTMLInputElement>(null)
+  const addressSearchInputRef = useRef<HTMLInputElement>(null)
+  const [startTimePickerOpen, setStartTimePickerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveErrorInfo, setSaveErrorInfo] = useState<SaveQuoteErrorInfo | null>(
     null,
@@ -1862,6 +1947,10 @@ export default function QuoteWizardCore({
     if (!isPublicMode || typeof window === 'undefined') return
     window.scrollTo({ top: 0, behavior: 'auto' })
   }, [isPublicMode, step])
+
+  useEffect(() => {
+    if (step !== 1) setStartTimePickerOpen(false)
+  }, [step])
 
   useEffect(() => {
     if (!isPublicMode) return
@@ -2894,7 +2983,19 @@ export default function QuoteWizardCore({
                 onChange={(value) =>
                   updateContactIdentity('customerFirstName', value)
                 }
+                inputRef={firstNameInputRef}
                 autoComplete="given-name"
+                enterKeyHint={isPublicMode ? 'next' : undefined}
+                onKeyDown={
+                  isPublicMode
+                    ? (event) => {
+                        if (event.key !== 'Enter') return
+                        event.preventDefault()
+                        event.stopPropagation()
+                        focusWizardField(lastNameInputRef.current)
+                      }
+                    : undefined
+                }
                 completion={getFieldCompletion(state.customerFirstName)}
                 required={isPublicMode}
                 requiredLabel={requiredLabel}
@@ -2905,7 +3006,30 @@ export default function QuoteWizardCore({
                 onChange={(value) =>
                   updateContactIdentity('customerLastName', value)
                 }
+                inputRef={lastNameInputRef}
                 autoComplete="family-name"
+                enterKeyHint={isPublicMode ? 'next' : undefined}
+                onKeyDown={
+                  isPublicMode
+                    ? (event) => {
+                        if (event.key !== 'Enter') return
+                        event.preventDefault()
+                        event.stopPropagation()
+                        focusWizardField(phoneInputRef.current)
+                      }
+                    : undefined
+                }
+                onBlur={
+                  isPublicMode
+                    ? (event) => {
+                        if (!state.customerLastName.trim()) return
+                        if (!shouldAdvanceFromFieldBlur(event.relatedTarget)) {
+                          return
+                        }
+                        focusWizardField(phoneInputRef.current)
+                      }
+                    : undefined
+                }
                 completion={getFieldCompletion(state.customerLastName)}
                 required={isPublicMode}
                 requiredLabel={requiredLabel}
@@ -2916,6 +3040,7 @@ export default function QuoteWizardCore({
                   language={uiLocale}
                   required
                   requiredLabel={requiredLabel}
+                  inputRef={phoneInputRef}
                   onChange={(value) =>
                     updateState({
                       customerDraftPhone: value,
@@ -3009,6 +3134,17 @@ export default function QuoteWizardCore({
                   }
                   required={isPublicMode}
                   requiredLabel={requiredLabel}
+                  onCommit={
+                    isPublicMode
+                      ? () => {
+                          requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                              setStartTimePickerOpen(true)
+                            })
+                          })
+                        }
+                      : undefined
+                  }
                 />
                 <TimePickerField
                   label={w.startTime}
@@ -3027,6 +3163,18 @@ export default function QuoteWizardCore({
                   completion={getFieldCompletion(state.startTime)}
                   required={isPublicMode}
                   requiredLabel={requiredLabel}
+                  open={isPublicMode ? startTimePickerOpen : undefined}
+                  onOpenChange={
+                    isPublicMode ? setStartTimePickerOpen : undefined
+                  }
+                  emptyDefaultHour={isPublicMode ? 11 : 18}
+                  onCommit={
+                    isPublicMode
+                      ? () => {
+                          focusWizardField(adultsInputRef.current)
+                        }
+                      : undefined
+                  }
                 />
                 <div>
                   <TimePickerField
@@ -3056,6 +3204,17 @@ export default function QuoteWizardCore({
                   placeholder={isPublicMode ? w.publicAdultsPlaceholder : ''}
                   required={isPublicMode}
                   requiredLabel={requiredLabel}
+                  inputRef={adultsInputRef}
+                  guestField
+                  enterKeyHint={isPublicMode ? 'next' : undefined}
+                  onCommit={
+                    isPublicMode
+                      ? (value) => {
+                          if (value <= 0) return
+                          focusWizardField(streetNumberInputRef.current)
+                        }
+                      : undefined
+                  }
                 />
                 <QuantityField
                   label={w.childrenUnder3}
@@ -3063,6 +3222,7 @@ export default function QuoteWizardCore({
                   onChange={(v) => updateState({ childrenUnder3Count: v })}
                   blankZero={isPublicMode}
                   placeholder={isPublicMode ? w.publicChildrenPlaceholder : ''}
+                  guestField
                 />
                 <QuantityField
                   label={w.children4to12}
@@ -3070,6 +3230,7 @@ export default function QuoteWizardCore({
                   onChange={(v) => updateState({ children4To12Count: v })}
                   blankZero={isPublicMode}
                   placeholder={isPublicMode ? w.publicChildrenPlaceholder : ''}
+                  guestField
                 />
               </div>
               {/* Without this the address reads as more guest fields. */}
@@ -3080,6 +3241,15 @@ export default function QuoteWizardCore({
                 {w.eventAddressSection}
               </p>
               <AddressAutocompleteFields
+                searchInputRef={addressSearchInputRef}
+                numberInputRef={streetNumberInputRef}
+                onNumberCommit={
+                  isPublicMode
+                    ? () => {
+                        focusWizardField(addressSearchInputRef.current)
+                      }
+                    : undefined
+                }
                 values={{
                   address: state.address,
                   addressNumber: state.addressNumber,

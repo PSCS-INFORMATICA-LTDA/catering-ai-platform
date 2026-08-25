@@ -133,6 +133,9 @@ export function getPackageFolderArt(
   const url = `${base}/storage/v1/object/public/${PACKAGE_FOLDER_BUCKET}/${PACKAGE_FOLDER_PREFIX}/${file}`
   // New filenames plus a query keep CDN caches from serving an older upload
   // of the same key during this DEV pass.
+  if (file.endsWith('-v6.webp')) {
+    return `${url}?v=art6b`
+  }
   if (file.endsWith('-v5.webp')) {
     return `${url}?v=art5`
   }

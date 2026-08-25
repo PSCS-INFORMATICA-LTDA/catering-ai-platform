@@ -162,7 +162,7 @@ export default function AdditionalItemCard({
             type="button"
             onClick={() => onChangeQty(normalizedQty - 1)}
             disabled={normalizedQty === 0}
-            className="public-additional-qty-btn"
+            className="public-additional-qty-btn is-minus"
             aria-label={t.removeUnit}
           >
             −
@@ -176,7 +176,7 @@ export default function AdditionalItemCard({
           <button
             type="button"
             onClick={() => onChangeQty(normalizedQty + 1)}
-            className="public-additional-qty-btn"
+            className="public-additional-qty-btn is-plus"
             aria-label={t.addUnit}
           >
             +

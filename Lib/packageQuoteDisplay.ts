@@ -1,6 +1,10 @@
 import type { CatalogItemListItem } from '@/Lib/itemCatalog'
 import { lookupCatalogItemById } from '@/Lib/catalogItemVisual'
 import {
+  PACKAGE_COMMON_ITEMS,
+  SIDES_ITEMS,
+} from '@/Lib/cdlCommercialRules'
+import {
   getDisplayableFixedPackageItems,
   getPackageItemLabel,
   getPackageSideItemLabel,
@@ -8,13 +12,15 @@ import {
   type PackageItem,
   type PackageSideItem,
 } from '@/Lib/packageConfiguration'
-import type {
-  PackageOptionGroup,
-  PackageOptionGroupItem,
+import {
+  getOptionItemLabel,
+  type PackageOptionGroup,
+  type PackageOptionGroupItem,
 } from '@/Lib/packageOptionGroups'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import { tw } from '@/Lib/quoteTranslations'
 import { pickLocalizedText } from '@/Lib/i18n/locales'
+import { translateCdlItemList } from '@/Lib/cdlPackageItemI18n'
 
 const OPTION_GROUP_ORDER: Record<string, number> = {
   SEAFOOD_OPTION: 0,
@@ -222,5 +228,99 @@ export function getQuoteDisplaySideLabels(
 ): string[] {
   return getQuoteDisplaySideItems(packageId, sides).map((side) =>
     getPackageSideItemLabel(side, language),
+  )
+}
+
+function collectSideOptionNormalizedKeys(
+  optionGroups?: ReadonlyArray<PackageOptionGroup>,
+): Set<string> {
+  const keys = new Set<string>()
+  for (const group of optionGroups ?? []) {
+    if (group.option_group_key?.trim().toUpperCase() !== 'SIDE_OPTION') continue
+    if (group.active === false) continue
+    for (const item of group.items ?? []) {
+      if (item.active === false) continue
+      for (const raw of [
+        item.option_item_key,
+        item.label_pt,
+        item.label_en,
+        item.label_es,
+      ]) {
+        const key = normalizeKey(raw)
+        if (key) keys.add(key)
+      }
+    }
+  }
+  return keys
+}
+
+function isCommonPackageItem(name: string): boolean {
+  const key = normalizeKey(name)
+  return PACKAGE_COMMON_ITEMS.some((item) => normalizeKey(item) === key)
+}
+
+function isSideChoiceItem(
+  name: string,
+  optionGroups?: ReadonlyArray<PackageOptionGroup>,
+): boolean {
+  const keys = collectSideOptionNormalizedKeys(optionGroups)
+  const key = normalizeKey(name)
+  if (keys.size === 0) {
+    return key.includes('vinagrete')
+  }
+  for (const choice of keys) {
+    if (choice === key || choice.includes(key) || key.includes(choice)) {
+      return true
+    }
+  }
+  return false
+}
+
+/** Commercial SIDES_ITEMS minus Farofa (already in the common list) and the SIDE_OPTION choice. */
+export function getPlusGuarnicoesFixedSideItems(
+  optionGroups?: ReadonlyArray<PackageOptionGroup>,
+): string[] {
+  return SIDES_ITEMS.filter(
+    (name) =>
+      !isCommonPackageItem(name) && !isSideChoiceItem(name, optionGroups),
+  )
+}
+
+export function getPlusGuarnicoesFixedSideLabels(
+  language: QuoteLanguage,
+  optionGroups?: ReadonlyArray<PackageOptionGroup>,
+): string[] {
+  return translateCdlItemList(
+    getPlusGuarnicoesFixedSideItems(optionGroups),
+    language,
+  )
+}
+
+export function getPlusGuarnicoesChoiceLabels(
+  optionGroups: ReadonlyArray<PackageOptionGroup> | undefined,
+  language: QuoteLanguage,
+): string[] {
+  const group = (optionGroups ?? []).find(
+    (item) =>
+      item.option_group_key?.trim().toUpperCase() === 'SIDE_OPTION' &&
+      item.active !== false,
+  )
+  if (!group) return []
+  return [...(group.items ?? [])]
+    .filter((item) => item.active !== false)
+    .sort(
+      (a, b) =>
+        Number(a.display_order ?? 0) - Number(b.display_order ?? 0) ||
+        (a.label_pt ?? '').localeCompare(b.label_pt ?? '', 'pt-BR'),
+    )
+    .map((item) => getOptionItemLabel(item, language))
+    .filter((label) => label && label !== '—')
+}
+
+export function plusGuarnicoesHasCaesarChoice(
+  optionGroups?: ReadonlyArray<PackageOptionGroup>,
+): boolean {
+  return [...collectSideOptionNormalizedKeys(optionGroups)].some(
+    (key) => key.includes('cesar') || key.includes('caesar'),
   )
 }
