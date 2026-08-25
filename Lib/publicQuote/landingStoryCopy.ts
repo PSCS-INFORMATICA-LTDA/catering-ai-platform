@@ -77,7 +77,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'Muito mais que', highlight: 'red', breakAfter: true },
           { text: 'CATERING.', highlight: 'red' },
         ],
-        body: 'Levamos nossa estrutura completa até o local do seu evento, para que você aproveite a experiência enquanto cuidamos da operação.',
+        body: 'Levamos toda a estrutura necessária para o churrasco até o seu evento, para que você aproveite cada momento sem preocupações.',
       },
       {
         id: 'full-setup',
@@ -115,7 +115,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'Aperfeiçoando essa experiência', breakAfter: true },
           { text: 'DESDE 2017.', highlight: 'red' },
         ],
-        body: 'Qualidade, higiene, organização e técnicas aperfeiçoadas ao longo dos anos para transformar um churrasco em uma experiência que seus convidados lembram.',
+        body: 'Anos aperfeiçoando cada detalhe do nosso serviço, unindo qualidade, higiene, organização e técnicas aprimoradas para transformar seu churrasco em uma experiência memorável',
       },
     ],
     finalCta: {
