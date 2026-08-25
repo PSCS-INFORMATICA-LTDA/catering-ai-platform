@@ -222,9 +222,9 @@ test('PHONE_VALIDATION_UNCHANGED', () => {
   assert.match(phone, /isUsablePublicPhone\(display\)/)
 })
 
-test('CUSTOM_PLUS_MAPPED_TO_V9', () => {
-  assert.match(generated, /bbqpers-plus-pt-v9\.webp/)
-  assert.match(visual, /\?v=art9/)
+test('CUSTOM_PLUS_MAPPED_TO_V10', () => {
+  assert.match(generated, /bbqpers-plus-pt-v10\.webp/)
+  assert.match(visual, /\?v=art10/)
 })
 
 test('NO_QUERYSELECTOR_BY_LABEL', () => {

@@ -66,7 +66,7 @@ test('ACCOMPANIMENTS_COME_FROM_CANONICAL_CONFIG', () => {
 
 test('SIDES_LIST_CANONICAL_AND_BLACK_BEANS', () => {
   assert.match(quoteDisplay, /SIDES_ITEMS/)
-  assert.match(editorial, /getPlusGuarnicoesFixedSideLabels/)
+  assert.match(editorial, /getPresentedPlusSideLabels/)
   for (const item of ['Arroz branco', 'Feijão preto', 'Vinagrete']) {
     assert.match(rules, new RegExp(`'${item}'`), `${item} missing from SIDES_ITEMS`)
   }
@@ -222,7 +222,7 @@ test('PACKAGE_ACCOMPANIMENT_ITEMS_YELLOW', () => {
 
 test('PACKAGE_FIXED_SIDES_YELLOW', () => {
   assert.match(editorial, /data-package-sides-items/)
-  assert.match(editorial, /getPlusGuarnicoesFixedSideLabels/)
+  assert.match(editorial, /getPresentedPlusSideLabels/)
   assert.match(quoteDisplay, /getPlusGuarnicoesFixedSideItems/)
   assert.match(quoteDisplay, /isCommonPackageItem/)
   assert.match(quoteDisplay, /isSideChoiceItem/)
@@ -239,10 +239,10 @@ test('PACKAGE_FIXED_SIDES_DISPLAY', () => {
 })
 
 test('SIDE_CHOICE_HELPER_AND_CANONICAL_LABELS', () => {
-  assert.match(translations, /packageSidesChoiceLead: 'Escolha 1 opção:'/)
-  assert.match(translations, /packageSidesChoiceLead: 'Choose 1 option:'/)
-  assert.match(translations, /packageSidesChoiceLead: 'Elige 1 opción:'/)
-  assert.match(editorial, /getPlusGuarnicoesChoiceLabels/)
+  assert.match(translations, /packageSidesOptionalNote: 'SALADA CÉSAR COMO OPCIONAL\.'/)
+  assert.match(translations, /packageSidesOptionalNote: 'CAESAR SALAD AS AN OPTIONAL ADD-ON\.'/)
+  assert.match(translations, /packageSidesOptionalNote: 'ENSALADA CÉSAR COMO OPCIONAL\.'/)
+  assert.match(editorial, /plusGuarnicoesHasCaesarChoice/)
   assert.match(editorial, /data-package-sides-choice/)
   assert.match(quoteDisplay, /option_group_key\?\.trim\(\)\.toUpperCase\(\) === 'SIDE_OPTION'/)
   assert.match(quoteDisplay, /getOptionItemLabel/)

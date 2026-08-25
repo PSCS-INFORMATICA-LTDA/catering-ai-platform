@@ -438,7 +438,7 @@ test('TEST 27 EN copy', () => {
 })
 
 test('TEST 28 ES copy', () => {
-  assert.equal(tw('es', 'withSidesGroupTitle'), 'CON ACOMPAÑAMIENTOS')
+  assert.equal(tw('es', 'withSidesGroupTitle'), 'CON GUARNICIONES')
   assert.equal(tw('es', 'withoutSidesGroupTitle'), 'SIN ACOMPAÑAMIENTOS')
   assert.equal(tw('es', 'publicPackageExperienceTitle'), 'Elige tu experiencia')
   assert.match(tw('es', 'publicPackageExperienceBody'), /con o sin acompañamientos/)
@@ -447,7 +447,7 @@ test('TEST 28 ES copy', () => {
     'Revisa todas las categorías antes de continuar.',
   )
   assert.equal(additionalLabel(PER_PERSON_ITEM, 'es'), 'Asado de Tira')
-  assert.match(translationsSrc, /CON ACOMPAÑAMIENTOS/)
+  assert.match(translationsSrc, /CON GUARNICIONES/)
 })
 
 test('TEST 29 collapsed category uses a full-card hit area', () => {
