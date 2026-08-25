@@ -5,8 +5,9 @@
  * `package-images/cdl-folders-v3`, the bucket the runtime already reads from; the host
  * comes from the environment so this map is portable.
  *
- * Cleaned arts use *-v4.webp / *-v5.webp / the plus-PT custom mark uses *-v8.webp.
- * Older plus-PT masters stay on disk for rollback.
+ * Cleaned arts use *-v4.webp / *-v5.webp / *-v6.webp / the plus-PT custom mark uses *-v8.webp.
+ * Official CDL stamps are new filenames so CDN cache cannot serve the old mark.
+ * Older masters stay on disk for rollback.
  */
 export const PACKAGE_FOLDER_BUCKET = 'package-images'
 export const PACKAGE_FOLDER_PREFIX = 'cdl-folders-v3'
@@ -18,7 +19,7 @@ export const PACKAGE_FOLDER_ART_V2: Record<
   "BBQCHO": {
     "en": "bbqcho-en-v4.webp",
     "es": "bbqcho-es-v4.webp",
-    "pt": "bbqcho-pt-v3.webp"
+    "pt": "bbqcho-pt-v6.webp"
   },
   "BBQCHO+": {
     "en": "bbqcho-plus-en-v4.webp",
@@ -26,19 +27,19 @@ export const PACKAGE_FOLDER_ART_V2: Record<
     "pt": "bbqcho-plus-pt-v3.webp"
   },
   "BBQPERS": {
-    "en": "bbqpers-en-v5.webp",
-    "es": "bbqpers-es-v4.webp",
-    "pt": "bbqpers-pt-v5.webp"
+    "en": "bbqpers-en-v6.webp",
+    "es": "bbqpers-es-v6.webp",
+    "pt": "bbqpers-pt-v6.webp"
   },
   "BBQPERS+": {
-    "en": "bbqpers-plus-en-v4.webp",
-    "es": "bbqpers-plus-es-v4.webp",
+    "en": "bbqpers-plus-en-v6.webp",
+    "es": "bbqpers-plus-es-v6.webp",
     "pt": "bbqpers-plus-pt-v8.webp"
   },
   "BBQPRI": {
-    "en": "bbqpri-en-v5.webp",
+    "en": "bbqpri-en-v6.webp",
     "es": "bbqpri-es-v4.webp",
-    "pt": "bbqpri-pt-v5.webp"
+    "pt": "bbqpri-pt-v6.webp"
   },
   "BBQPRI+": {
     "en": "bbqpri-plus-en-v4.webp",
@@ -58,7 +59,7 @@ export const PACKAGE_FOLDER_ART_V2: Record<
   "BBQTRAD": {
     "en": "bbqtrad-en-v3.webp",
     "es": "bbqtrad-es-v4.webp",
-    "pt": "bbqtrad-pt-v5.webp"
+    "pt": "bbqtrad-pt-v6.webp"
   },
   "BBQTRAD+": {
     "en": "bbqtrad-plus-en-v4.webp",

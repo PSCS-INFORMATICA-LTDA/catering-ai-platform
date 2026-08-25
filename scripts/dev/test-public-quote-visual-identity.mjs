@@ -696,11 +696,11 @@ test('ADDRESS_AUTO_KEYBOARD_HIDES_CHILDREN', () => {
 test('WITHOUT_SIDES_ALL_ARTS_AUDITED', () => {
   const generated = read('Lib/publicQuote/packageFolderArt.generated.ts')
   for (const [key, files] of [
-    ['BBQTRAD', ['bbqtrad-en-v3.webp', 'bbqtrad-es-v4.webp', 'bbqtrad-pt-v5.webp']],
+    ['BBQTRAD', ['bbqtrad-en-v3.webp', 'bbqtrad-es-v4.webp', 'bbqtrad-pt-v6.webp']],
     ['BBQSEL', ['bbqsel-en-v3.webp', 'bbqsel-es-v5.webp', 'bbqsel-pt-v4.webp']],
-    ['BBQCHO', ['bbqcho-en-v4.webp', 'bbqcho-es-v4.webp', 'bbqcho-pt-v3.webp']],
-    ['BBQPRI', ['bbqpri-en-v5.webp', 'bbqpri-es-v4.webp', 'bbqpri-pt-v5.webp']],
-    ['BBQPERS', ['bbqpers-en-v5.webp', 'bbqpers-es-v4.webp', 'bbqpers-pt-v5.webp']],
+    ['BBQCHO', ['bbqcho-en-v4.webp', 'bbqcho-es-v4.webp', 'bbqcho-pt-v6.webp']],
+    ['BBQPRI', ['bbqpri-en-v6.webp', 'bbqpri-es-v4.webp', 'bbqpri-pt-v6.webp']],
+    ['BBQPERS', ['bbqpers-en-v6.webp', 'bbqpers-es-v6.webp', 'bbqpers-pt-v6.webp']],
   ]) {
     for (const file of files) {
       assert.match(generated, new RegExp(`"${key}":[\\s\\S]{0,400}?${file}`), `${key} ${file}`)
@@ -709,6 +709,32 @@ test('WITHOUT_SIDES_ALL_ARTS_AUDITED', () => {
   const polish = read('scripts/dev/polish-without-sides-final.py')
   assert.match(polish, /cdl-badge-official\.png/)
   assert.doesNotMatch(polish, /Pioneer|Since 2017/)
+})
+
+test('OFFICIAL_CDL_LOGO_USED', () => {
+  const stamp = read('scripts/dev/stamp-official-cdl-logos-v6.py')
+  assert.match(stamp, /cdl-badge-official\.png/)
+  assert.match(stamp, /bbqpers-pt-v6\.webp/)
+  assert.match(stamp, /bbqpers-plus-en-v6\.webp/)
+  assert.doesNotMatch(stamp, /GenerateImage|openai|dall.?e|Pioneer|Since 2017/)
+  const generated = read('Lib/publicQuote/packageFolderArt.generated.ts')
+  assert.match(generated, /bbqpers-plus-en-v6\.webp/)
+  assert.match(generated, /bbqpers-plus-es-v6\.webp/)
+  assert.match(generated, /bbqpers-plus-pt-v8\.webp/)
+})
+
+test('PACKAGE_ART_IDENTITY_PRESERVED', () => {
+  const generated = read('Lib/publicQuote/packageFolderArt.generated.ts')
+  assert.match(generated, /"BBQPRI":/)
+  assert.match(generated, /"BBQCHO":/)
+  assert.match(generated, /"BBQSEL":/)
+  assert.match(generated, /"BBQTRAD":/)
+  assert.match(generated, /"BBQPERS":/)
+  assert.match(generated, /"BBQPRI\+":/)
+  assert.match(generated, /"BBQCHO\+":/)
+  assert.match(generated, /"BBQSEL\+":/)
+  assert.match(generated, /"BBQTRAD\+":/)
+  assert.match(generated, /"BBQPERS\+":/)
 })
 
 if (failed > 0) {
