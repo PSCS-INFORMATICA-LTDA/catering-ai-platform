@@ -3,25 +3,22 @@
 import { PACKAGE_COMMON_ITEMS } from '@/Lib/cdlCommercialRules'
 import { translateCdlItemList } from '@/Lib/cdlPackageItemI18n'
 import {
-  getPlusGuarnicoesChoiceLabels,
-  getPlusGuarnicoesFixedSideLabels,
+  getPresentedPlusSideLabels,
+  plusGuarnicoesHasCaesarChoice,
+  toPublicSidesDisplayLabel,
 } from '@/Lib/packageQuoteDisplay'
 import type { PackageOptionGroup } from '@/Lib/packageOptionGroups'
 import { tw } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 /**
- * Tells the customer what every package already includes before they choose
- * between with and without sides — two things that were easy to confuse.
+ * Tells the customer what every package already includes — and which four
+ * sides the COM GUARNIÇÕES arts present — before they choose between with
+ * and without sides.
  *
- * Both lists come from the commercial rules, and the price is the same
- * `sidesPricePerPerson` the cards price with, so nothing here can drift from
- * what is actually charged.
- *
- * PLUS composition is display-only: Farofa stays in the commercial SIDES_ITEMS
- * list but is not repeated here because it already appears under ACOMPANHAM.
- * The optional SIDE_OPTION choice uses the live group labels, never a
- * parallel array.
+ * The four presented names are display-only. SIDES_ITEMS, SIDE_OPTION and
+ * sidesPricePerPerson stay the commercial source; Caesar remains a live
+ * option group, shown here only as optional text, never inside the photos.
  */
 export default function PackageSidesEditorial({
   language,
@@ -34,9 +31,10 @@ export default function PackageSidesEditorial({
   formatMoney: (value: number) => string
   optionGroups?: ReadonlyArray<PackageOptionGroup>
 }) {
-  const included = translateCdlItemList([...PACKAGE_COMMON_ITEMS], language)
-  const fixedSides = getPlusGuarnicoesFixedSideLabels(language, optionGroups)
-  const choiceLabels = getPlusGuarnicoesChoiceLabels(optionGroups, language)
+  const included = translateCdlItemList([...PACKAGE_COMMON_ITEMS], language).map(
+    (label) => toPublicSidesDisplayLabel(label, language),
+  )
+  const presentedSides = getPresentedPlusSideLabels(language)
   const price = formatMoney(sidesPricePerPerson)
   const upsell = tw(language, 'packageSidesUpsellText', { price })
   const priceAt = upsell.indexOf(price)
@@ -50,11 +48,59 @@ export default function PackageSidesEditorial({
           upsell.slice(priceAt + price.length),
         ]
       : [upsell]
-  const choiceLead = tw(language, 'packageSidesChoiceLead')
-  const choiceOptions = choiceLabels.join(` ${tw(language, 'listOr')} `)
-
   return (
-    <section data-package-sides-editorial className="public-package-editorial">
+    <section
+      data-package-sides-editorial
+      data-side-option-live={
+        plusGuarnicoesHasCaesarChoice(optionGroups) ? 'caesar' : 'none'
+      }
+      className="public-package-editorial"
+    >
+      <div
+        data-package-presented-sides
+        className="public-package-presented-sides"
+      >
+        <p className="public-package-presented-badge">
+          {tw(language, 'withSidesGroupTitle')}
+        </p>
+        <p className="public-package-presented-headline">
+          {tw(language, 'packagePresentedSidesHeadline')}
+        </p>
+        <p className="public-package-presented-support">
+          {tw(language, 'packagePresentedSidesSupport')}
+        </p>
+        <p className="public-package-editorial-title">
+          {tw(language, 'packagePresentedSidesTitle')}
+        </p>
+        <p
+          data-package-sides-items
+          className="public-package-editorial-names public-package-presented-names"
+        >
+          {presentedSides.join(' · ')}
+        </p>
+        <p
+          data-package-sides-choice
+          className="public-package-editorial-choice"
+        >
+          <span className="public-package-editorial-choice-lead">
+            {tw(language, 'packageSidesOptionalNote')}
+          </span>
+        </p>
+        {sidesPricePerPerson > 0 ? (
+          <p
+            data-package-sides-upsell
+            className="public-package-editorial-items"
+          >
+            <span className="public-package-presented-kicker">
+              {tw(language, 'packageSidesUpsellTitle')}
+            </span>
+            {upsellNodes}
+          </p>
+        ) : null}
+        <p className="public-package-presented-footer">
+          {tw(language, 'packagePresentedSidesFooter')}
+        </p>
+      </div>
       <div>
         <p className="public-package-editorial-title">
           {tw(language, 'packageIncludedTitle')}
@@ -69,40 +115,6 @@ export default function PackageSidesEditorial({
           {tw(language, 'packageIncludedHelper')}
         </p>
       </div>
-      {sidesPricePerPerson > 0 ? (
-        <div className="public-package-editorial-upsell">
-          <p className="public-package-editorial-title">
-            {tw(language, 'packageSidesUpsellTitle')}
-          </p>
-          <p
-            data-package-sides-upsell
-            className="public-package-editorial-items"
-          >
-            {upsellNodes}
-          </p>
-          {fixedSides.length > 0 ? (
-            <p
-              data-package-sides-items
-              className="public-package-editorial-names"
-            >
-              {fixedSides.join(' · ')}
-            </p>
-          ) : null}
-          {choiceOptions ? (
-            <p
-              data-package-sides-choice
-              className="public-package-editorial-choice"
-            >
-              <span className="public-package-editorial-choice-lead">
-                {choiceLead}{' '}
-              </span>
-              <span className="public-package-editorial-choice-options">
-                {choiceOptions}.
-              </span>
-            </p>
-          ) : null}
-        </div>
-      ) : null}
     </section>
   )
 }

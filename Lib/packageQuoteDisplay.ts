@@ -296,6 +296,37 @@ export function getPlusGuarnicoesFixedSideLabels(
   )
 }
 
+/**
+ * Display-only names for the four sides shown on COM GUARNIÇÕES arts and
+ * the editorial block. Vinagrete is presented here even though the live
+ * SIDE_OPTION group still offers Caesar as a later choice. Farofa stays
+ * under ACOMPANHAM. Keys stay in SIDES_ITEMS — this does not change charge.
+ */
+export const PRESENTED_PLUS_SIDE_KEYS = [
+  'Arroz branco',
+  'Feijão preto',
+  'Maionese',
+  'Vinagrete',
+] as const
+
+const PRESENTED_PLUS_SIDE_LABELS: Record<QuoteLanguage, readonly string[]> = {
+  pt: ['ARROZ BRANCO', 'FEIJÃO PRETO', 'MAIONESE', 'VINAGRETE'],
+  en: ['WHITE RICE', 'BLACK BEANS', 'POTATO SALAD', 'VINAIGRETTE'],
+  es: ['ARROZ BLANCO', 'FRIJOLES NEGROS', 'ENSALADA DE PAPA', 'VINAGRETA'],
+}
+
+export function getPresentedPlusSideLabels(language: QuoteLanguage): string[] {
+  return [...PRESENTED_PLUS_SIDE_LABELS[language]]
+}
+
+export function toPublicSidesDisplayLabel(
+  label: string,
+  language: QuoteLanguage,
+): string {
+  const locale = language === 'pt' ? 'pt-BR' : language
+  return label.toLocaleUpperCase(locale)
+}
+
 export function getPlusGuarnicoesChoiceLabels(
   optionGroups: ReadonlyArray<PackageOptionGroup> | undefined,
   language: QuoteLanguage,

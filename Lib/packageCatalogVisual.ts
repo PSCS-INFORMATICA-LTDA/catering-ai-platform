@@ -133,6 +133,9 @@ export function getPackageFolderArt(
   const url = `${base}/storage/v1/object/public/${PACKAGE_FOLDER_BUCKET}/${PACKAGE_FOLDER_PREFIX}/${file}`
   // New filenames plus a query keep CDN caches from serving an older upload
   // of the same key during this DEV pass.
+  if (file.endsWith('-v10.webp')) {
+    return `${url}?v=art10`
+  }
   if (file.endsWith('-v9.webp')) {
     return `${url}?v=art9`
   }
@@ -319,12 +322,12 @@ export function formatPackageCatalogPriceLabel(
 
 export function getPackageSidesDescription(language: QuoteLanguage): string {
   if (language === 'en') {
-    return 'Sides: white rice, black beans, vinaigrette, farofa and potato salad.'
+    return 'Presented sides: WHITE RICE, BLACK BEANS, POTATO SALAD and VINAIGRETTE. CAESAR SALAD as an optional add-on.'
   }
   if (language === 'es') {
-    return 'Guarniciones: arroz blanco, frijoles negros, vinagreta, farofa y ensalada de papa.'
+    return 'Guarniciones presentadas: ARROZ BLANCO, FRIJOLES NEGROS, ENSALADA DE PAPA y VINAGRETA. ENSALADA CÉSAR como opcional.'
   }
-  return 'Guarnições: arroz branco, feijão preto, vinagrete, farofa e maionese.'
+  return 'Guarnições apresentadas: ARROZ BRANCO, FEIJÃO PRETO, MAIONESE e VINAGRETE. SALADA CÉSAR como opcional.'
 }
 
 export function getPackageSidesIncludedLabel(language: QuoteLanguage): string {

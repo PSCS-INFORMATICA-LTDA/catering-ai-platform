@@ -246,6 +246,12 @@ type QuoteStrings = {
     packageSidesUpsellText: string
     /** Lead before the live SIDE_OPTION labels on the PLUS block. */
     packageSidesChoiceLead: string
+    packagePresentedSidesTitle: string
+    packagePresentedSidesHeadline: string
+    packagePresentedSidesSupport: string
+    packagePresentedSidesFooter: string
+    /** Caesar is optional text only — never inside the package photos. */
+    packageSidesOptionalNote: string
     /** Featured virtual extras category — merchandising only. */
     suggestedExtrasTitle: string
     suggestedExtrasBody: string
@@ -668,7 +674,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Toque no pacote para selecionar. Depois complete apenas as opções obrigatórias.',
       publicPackageExperienceTitle: 'Escolha sua experiência',
       publicPackageExperienceBody:
-        'Escolha o estilo do seu churrasco: com ou sem guarnições. Explore os pacotes, encontre o que combina com o seu evento e personalize só o que fizer sentido. O valor atualiza na hora.',
+        'Escolha o estilo do seu churrasco: com ou sem guarnições. As guarnições completam a experiência, com acompanhamentos preparados para deixar tudo ainda mais delicioso. Explore os pacotes, encontre o que combina com o seu evento e personalize só o que fizer sentido. O valor atualiza na hora.',
       publicPackageEditorialHeadline: 'ESCOLHA SEU PACOTE',
       footerSincePioneer: 'Desde 2017 · Pioneira em Orlando, Flórida',
       publicAdditionalsKicker: 'Adicionais',
@@ -679,6 +685,13 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packageSidesUpsellTitle: 'PLUS GUARNIÇÕES',
       packageSidesUpsellText: 'Adicione guarnições por {price} por pessoa.',
       packageSidesChoiceLead: 'Escolha 1 opção:',
+      packagePresentedSidesTitle: 'ACOMPANHAMENTOS APRESENTADOS NO PACOTE',
+      packagePresentedSidesHeadline:
+        'Guarnições que completam a experiência do seu churrasco.',
+      packagePresentedSidesSupport:
+        'Acompanhamentos preparados com carinho para deixar tudo ainda mais delicioso.',
+      packagePresentedSidesFooter: 'ACOMPANHAMENTOS INCLUSOS NO PACOTE',
+      packageSidesOptionalNote: 'SALADA CÉSAR COMO OPCIONAL.',
       suggestedExtrasTitle: 'EXTRAS SUGERIDOS',
       suggestedExtrasBody:
         'Selecionamos alguns dos cortes e extras premium mais procurados para você personalizar seu evento.',
@@ -1123,7 +1136,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Tap a package to select it. Then complete only the required options.',
       publicPackageExperienceTitle: 'Choose your experience',
       publicPackageExperienceBody:
-        'Choose the style of your barbecue: with or without sides. Explore the packages, find what fits your event, and customize only what applies. Pricing updates as you go.',
+        'Choose the style of your barbecue: with or without sides. Sides complete the experience, prepared with care to make everything even more delicious. Explore the packages, find what fits your event, and customize only what applies. Pricing updates as you go.',
       publicPackageEditorialHeadline: 'CHOOSE YOUR PACKAGE',
       footerSincePioneer: 'Since 2017 · Pioneer in Orlando, Florida',
       publicAdditionalsKicker: 'Add-ons',
@@ -1134,6 +1147,13 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packageSidesUpsellTitle: 'PLUS SIDES',
       packageSidesUpsellText: 'Add sides for {price} per person.',
       packageSidesChoiceLead: 'Choose 1 option:',
+      packagePresentedSidesTitle: 'SIDES PRESENTED IN THE PACKAGE',
+      packagePresentedSidesHeadline:
+        'Sides that complete your barbecue experience.',
+      packagePresentedSidesSupport:
+        'Accompaniments prepared with care to make everything even more delicious.',
+      packagePresentedSidesFooter: 'SIDES INCLUDED IN THE PACKAGE',
+      packageSidesOptionalNote: 'CAESAR SALAD AS AN OPTIONAL ADD-ON.',
       suggestedExtrasTitle: 'SUGGESTED EXTRAS',
       suggestedExtrasBody:
         'Explore a selection of premium cuts and extras to personalize your event.',
@@ -1578,17 +1598,24 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Toque el paquete para seleccionarlo. Luego complete solo las opciones obligatorias.',
       publicPackageExperienceTitle: 'Elige tu experiencia',
       publicPackageExperienceBody:
-        'Elige el estilo de tu asado: con o sin acompañamientos. Explora los paquetes, encuentra lo que combina con tu evento y personaliza solo lo que aplique. El precio se actualiza al momento.',
+        'Elige el estilo de tu asado: con o sin acompañamientos. Las guarniciones completan la experiencia, con acompañamientos preparados para dejarlo todo aún más delicioso. Explora los paquetes, encuentra lo que combina con tu evento y personaliza solo lo que aplique. El precio se actualiza al momento.',
       publicPackageEditorialHeadline: 'ELIGE TU PAQUETE',
       footerSincePioneer: 'Desde 2017 · Pionera en Orlando, Florida',
       publicAdditionalsKicker: 'Adicionales',
       additionalPriceKicker: 'Precio',
-      withSidesGroupTitle: 'CON ACOMPAÑAMIENTOS',
+      withSidesGroupTitle: 'CON GUARNICIONES',
       packageIncludedTitle: 'INCLUIDO EN TODOS LOS PAQUETES',
       packageIncludedHelper: 'Incluido sin costo adicional.',
       packageSidesUpsellTitle: 'PLUS GUARNICIONES',
       packageSidesUpsellText: 'Agrega guarniciones por {price} por persona.',
       packageSidesChoiceLead: 'Elige 1 opción:',
+      packagePresentedSidesTitle: 'ACOMPAÑAMIENTOS PRESENTADOS EN EL PAQUETE',
+      packagePresentedSidesHeadline:
+        'Guarniciones que completan la experiencia de tu asado.',
+      packagePresentedSidesSupport:
+        'Acompañamientos preparados con cariño para dejarlo todo aún más delicioso.',
+      packagePresentedSidesFooter: 'ACOMPAÑAMIENTOS INCLUIDOS EN EL PAQUETE',
+      packageSidesOptionalNote: 'ENSALADA CÉSAR COMO OPCIONAL.',
       suggestedExtrasTitle: 'EXTRAS SUGERIDOS',
       suggestedExtrasBody:
         'Descubre una selección de cortes premium y extras para personalizar tu evento.',
