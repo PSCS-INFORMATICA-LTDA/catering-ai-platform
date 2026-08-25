@@ -1,5 +1,13 @@
 'use client'
 
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
+import { createPortal } from 'react-dom'
 import { getAdditionalItemCategoryKey } from '@/Lib/additionalItemFieldAccess'
 import {
   getPublicAdditionalImageObjectPosition,
@@ -22,6 +30,60 @@ import { getCategoryLabel, getQuoteStrings } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 const formatCurrency = formatAdditionalPrice
+
+const LONG_PRESS_MS = 420
+const MOVE_CANCEL_PX = 12
+
+function AdditionalPhotoLightbox({
+  src,
+  alt,
+  onClose,
+}: {
+  src: string
+  alt: string
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = previous
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [onClose])
+
+  return createPortal(
+    <div
+      className="public-additional-photo-lightbox"
+      data-additional-photo-lightbox
+      role="dialog"
+      aria-modal="true"
+      aria-label={alt}
+      onClick={onClose}
+    >
+      <button
+        type="button"
+        className="public-additional-photo-lightbox-close"
+        aria-label="Close"
+        onClick={onClose}
+      >
+        ×
+      </button>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        className="public-additional-photo-lightbox-image"
+        onClick={(event) => event.stopPropagation()}
+      />
+    </div>,
+    document.body,
+  )
+}
 
 function formatWeightUom(uom: string) {
   if (uom === 'LB') return 'lb'
@@ -68,11 +130,82 @@ export default function AdditionalItemCard({
   const cardClass = `public-additional-card grid grid-cols-[7.5rem_minmax(0,1fr)] ${
     isSelected ? 'is-selected' : ''
   }`
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const pressRef = useRef<{
+    timer: number | null
+    x: number
+    y: number
+    opened: boolean
+  } | null>(null)
+
+  const closePreview = useCallback(() => setPreviewOpen(false), [])
+
+  function clearPress() {
+    const press = pressRef.current
+    if (press?.timer) window.clearTimeout(press.timer)
+    pressRef.current = null
+  }
+
+  useEffect(() => {
+    const cancel = () => clearPress()
+    window.addEventListener('scroll', cancel, true)
+    return () => window.removeEventListener('scroll', cancel, true)
+  }, [])
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!image || event.button !== 0) return
+    const isMouse = event.pointerType === 'mouse'
+    pressRef.current = {
+      timer: isMouse
+        ? null
+        : window.setTimeout(() => {
+            if (!pressRef.current) return
+            pressRef.current.opened = true
+            pressRef.current.timer = null
+            setPreviewOpen(true)
+          }, LONG_PRESS_MS),
+      x: event.clientX,
+      y: event.clientY,
+      opened: false,
+    }
+  }
+
+  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const press = pressRef.current
+    if (!press) return
+    if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > MOVE_CANCEL_PX) {
+      clearPress()
+    }
+  }
+
+  function handlePointerUp(event: ReactPointerEvent<HTMLDivElement>) {
+    const press = pressRef.current
+    if (!press) return
+    const opened = press.opened
+    const isMouse = event.pointerType === 'mouse'
+    const moved =
+      Math.hypot(event.clientX - press.x, event.clientY - press.y) > MOVE_CANCEL_PX
+    clearPress()
+    if (isMouse && !opened && !moved) setPreviewOpen(true)
+  }
 
   const media = (
     <div
       className="public-additional-card-media bg-neutral-100"
       data-additional-image-crop={grillCrop ? 'operational-grill' : undefined}
+      data-additional-photo={image ? '' : undefined}
+      onPointerDown={image ? handlePointerDown : undefined}
+      onPointerMove={image ? handlePointerMove : undefined}
+      onPointerUp={image ? handlePointerUp : undefined}
+      onPointerCancel={image ? clearPress : undefined}
+      onPointerLeave={image ? clearPress : undefined}
+      onContextMenu={
+        image
+          ? (event) => {
+              event.preventDefault()
+            }
+          : undefined
+      }
     >
       {image ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -83,6 +216,7 @@ export default function AdditionalItemCard({
           style={imagePosition ? { objectPosition: imagePosition } : undefined}
           loading="lazy"
           decoding="async"
+          draggable={false}
         />
       ) : (
         <div className="flex h-full flex-col items-center justify-center px-1 text-center">
@@ -98,6 +232,9 @@ export default function AdditionalItemCard({
         >
           ✓
         </span>
+      ) : null}
+      {previewOpen && image ? (
+        <AdditionalPhotoLightbox src={image} alt={label} onClose={closePreview} />
       ) : null}
     </div>
   )

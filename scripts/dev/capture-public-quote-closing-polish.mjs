@@ -193,7 +193,7 @@ for (const [w, h] of [
     quality: 90,
   })
   const art = await page.$eval('[data-package-key="BBQPERS+"] img', (img) => img.src)
-  record(`CUSTOM_PLUS_ART_${w}`, /bbqpers-plus-pt-v7\.webp/.test(art), { art })
+  record(`CUSTOM_PLUS_ART_${w}`, /bbqpers-plus-pt-v8\.webp/.test(art), { art })
 
   await page.evaluate(() => {
     document.querySelector('[data-package-key="BBQPERS+"]')?.click()

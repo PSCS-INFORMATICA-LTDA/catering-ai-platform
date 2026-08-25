@@ -113,24 +113,24 @@ test('ADULTS_VALIDATION_UNCHANGED', () => {
 })
 
 test('ADULTS_TO_ADDRESS_FLOW', () => {
-  assert.match(wizard, /focusWizardField\(addressSearchInputRef\.current\)/)
   assert.match(wizard, /guestField/)
   assert.match(wizard, /data-guest-field/)
   assert.match(wizard, /shouldAdvanceFromFieldBlur/)
+  assert.match(wizard, /data-guest-address-transition/)
   const adultsCommit = wizard.match(
-    /inputRef=\{adultsInputRef\}[\s\S]{0,400}onCommit=\{[\s\S]{0,220}focusWizardField\(([^)]+)\)/,
+    /inputRef=\{adultsInputRef\}[\s\S]{0,1600}onCommit=\{[\s\S]{0,1200}scrollIntoView/,
   )
   assert.ok(adultsCommit)
-  assert.match(adultsCommit[1], /addressSearchInputRef\.current/)
-  assert.doesNotMatch(adultsCommit[1], /streetNumberInputRef/)
+  assert.match(adultsCommit[0], /guestAddressTransitionRef/)
+  assert.doesNotMatch(adultsCommit[0], /streetNumberInputRef/)
 })
 
 test('ADULTS_TO_STREET_NUMBER', () => {
   const adultsCommit = wizard.match(
-    /inputRef=\{adultsInputRef\}[\s\S]{0,400}onCommit=\{[\s\S]{0,220}focusWizardField\(([^)]+)\)/,
+    /inputRef=\{adultsInputRef\}[\s\S]{0,1600}onCommit=\{[\s\S]{0,1200}scrollIntoView/,
   )
   assert.ok(adultsCommit)
-  assert.doesNotMatch(adultsCommit[1], /streetNumberInputRef/)
+  assert.doesNotMatch(adultsCommit[0], /streetNumberInputRef/)
 })
 
 test('STREET_NUMBER_NUMERIC_KEYBOARD_HINT', () => {
@@ -222,9 +222,9 @@ test('PHONE_VALIDATION_UNCHANGED', () => {
   assert.match(phone, /isUsablePublicPhone\(display\)/)
 })
 
-test('CUSTOM_PLUS_MAPPED_TO_V7', () => {
-  assert.match(generated, /bbqpers-plus-pt-v7\.webp/)
-  assert.match(visual, /\?v=art7/)
+test('CUSTOM_PLUS_MAPPED_TO_V8', () => {
+  assert.match(generated, /bbqpers-plus-pt-v8\.webp/)
+  assert.match(visual, /\?v=art8b/)
 })
 
 test('NO_QUERYSELECTOR_BY_LABEL', () => {

@@ -254,6 +254,7 @@ type QuoteStrings = {
     suggestedExtrasClose: string
     postSuggestedCategoryHintTitle: string
     postSuggestedCategoryHintBody: string
+    photoEnlargeHint: string
     additionalQuantityLabel: string
     withoutSidesGroupTitle: string
     withSidesGroupHint: string
@@ -686,6 +687,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       suggestedExtrasClose: 'Escolha seus favoritos abaixo.',
       postSuggestedCategoryHintTitle: 'Explore mais opções',
       postSuggestedCategoryHintBody: 'Toque em uma categoria abaixo para visualizar todos os itens disponíveis.',
+      photoEnlargeHint: 'Toque e segure a foto para ampliar.',
       additionalQuantityLabel: 'Quantidade',
       withoutSidesGroupTitle: 'SEM GUARNIÇÕES',
       withSidesGroupHint:
@@ -1140,6 +1142,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       suggestedExtrasClose: 'Choose your favorites below.',
       postSuggestedCategoryHintTitle: 'Explore more options',
       postSuggestedCategoryHintBody: 'Tap a category below to view all available items.',
+      photoEnlargeHint: 'Touch and hold the photo to enlarge.',
       additionalQuantityLabel: 'Quantity',
       withoutSidesGroupTitle: 'WITHOUT SIDES',
       withSidesGroupHint:
@@ -1594,6 +1597,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       suggestedExtrasClose: 'Elige tus favoritos abajo.',
       postSuggestedCategoryHintTitle: 'Explora más opciones',
       postSuggestedCategoryHintBody: 'Toca una categoría abajo para ver todos los artículos disponibles.',
+      photoEnlargeHint: 'Mantén pulsada la foto para ampliarla.',
       additionalQuantityLabel: 'Cantidad',
       withoutSidesGroupTitle: 'SIN ACOMPAÑAMIENTOS',
       withSidesGroupHint:

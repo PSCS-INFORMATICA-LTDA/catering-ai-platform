@@ -271,14 +271,37 @@ await page.screenshot({
 
 await page.keyboard.type('25', { delay: 20 })
 await page.keyboard.press('Enter')
-await wait(250)
-const afterAdults = await page.evaluate(activeInfo)
-record('ADULTS_TO_ADDRESS_SEARCH', afterAdults)
+await wait(700)
+const afterAdults = await page.evaluate(() => {
+  const vis = (sel) => {
+    const el = document.querySelector(sel)
+    if (!el) return { present: false, visible: false }
+    const r = el.getBoundingClientRect()
+    const vh = window.innerHeight
+    return {
+      present: true,
+      visible: r.bottom > 70 && r.top < vh - 24 && r.height > 0,
+      top: Math.round(r.top),
+      bottom: Math.round(r.bottom),
+    }
+  }
+  const active = document.activeElement
+  return {
+    addressSearchFocused: Boolean(active?.hasAttribute?.('data-address-search')),
+    addressNumberFocused: Boolean(active?.hasAttribute?.('data-address-number')),
+    transition: vis('[data-guest-address-transition]'),
+    children03: vis('[data-guest-children-under-3]'),
+    children412: vis('[data-guest-children-4-12]'),
+    addressSection: vis('[data-event-address-section]'),
+  }
+})
+record('ADULT_COMMIT_SCROLLS_TO_GUEST_ADDRESS_TRANSITION', afterAdults)
 if (
-  !afterAdults.addressSearch ||
-  afterAdults.addressNumber ||
-  afterAdults.inputMode === 'numeric' ||
-  afterAdults.type === 'tel'
+  afterAdults.addressSearchFocused ||
+  afterAdults.addressNumberFocused ||
+  !afterAdults.children03.visible ||
+  !afterAdults.children412.visible ||
+  !afterAdults.addressSection.visible
 ) {
   report.ok = false
 }
@@ -295,7 +318,7 @@ if (!numberField.present || numberField.focused || numberField.inputMode !== 'nu
   report.ok = false
 }
 await page.screenshot({
-  path: join(OUT, 'event-address-search-focused-390.jpg'),
+  path: join(OUT, 'event-guest-address-transition-390.jpg'),
   type: 'jpeg',
   quality: 88,
 })

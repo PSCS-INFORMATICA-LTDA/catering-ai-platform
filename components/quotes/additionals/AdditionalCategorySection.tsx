@@ -121,7 +121,14 @@ function FeaturedCategoryHeaderCopy({
         className="public-suggested-extras-title-band"
         data-suggested-extras-title-band
       >
-        <p className="public-suggested-extras-title">{title}</p>
+        <p className="public-suggested-extras-title">
+          <span
+            className="public-suggested-extras-title-mark"
+            data-suggested-extras-title-tag
+          >
+            {title}
+          </span>
+        </p>
         <span className="public-suggested-extras-chevron" aria-hidden>
           ▲
         </span>
@@ -370,6 +377,18 @@ export default function AdditionalCategorySection({
             aria-label={categoryLabel}
             className="border-t border-cdl-border-subtle bg-cdl-surface p-3 sm:p-4"
           >
+            <p
+              className="public-additional-photo-enlarge-hint"
+              data-photo-enlarge-hint
+            >
+              <span className="public-additional-photo-enlarge-icon" aria-hidden>
+                <svg viewBox="0 0 16 16" width="11" height="11" fill="none">
+                  <circle cx="6.5" cy="6.5" r="4.2" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M9.6 9.6 14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </span>
+              {t.wizard.photoEnlargeHint}
+            </p>
             <div
               data-additional-items-grid
               className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"

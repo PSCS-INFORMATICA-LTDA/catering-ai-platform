@@ -38,10 +38,21 @@ const wizard = read('app/quotes/new/QuoteWizard.tsx')
 const translations = read('Lib/quoteTranslations.ts')
 const review = read('components/quote-review/PublicQuoteConfirmationStep.tsx')
 
-test('EXTRAS_SUGERIDOS_TITLE_RED_BG', () => {
+test('SUGGESTED_EXTRAS_RED_FULL_WIDTH_BAR', () => {
   const band = css.match(/\.public-suggested-extras-title-band \{[\s\S]*?\n\}/)?.[0]
   assert.ok(band, 'title band missing')
-  assert.match(band, /background: #e21b1b/)
+  assert.doesNotMatch(band, /background: #e21b1b/)
+  assert.match(band, /background: #0a0a0a/)
+})
+
+test('SUGGESTED_EXTRAS_RED_TEXT_TAG', () => {
+  const mark = css.match(/\.public-suggested-extras-title-mark \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(mark, 'title mark missing')
+  assert.match(mark, /background: #e21b1b/)
+  assert.match(mark, /color: #fff/)
+  assert.match(mark, /width: fit-content/)
+  assert.match(mark, /border-radius/)
+  assert.match(extras, /data-suggested-extras-title-tag/)
   assert.match(extras, /data-suggested-extras-title-band/)
 })
 
@@ -182,7 +193,7 @@ test('PACKAGE_YELLOW_TEXT_HIGHLIGHTS', () => {
 
 test('PACKAGE_AND_EXTRAS_VISUAL_FAMILY_MATCH', () => {
   const stamp = css.match(/\.public-package-headline-mark \{[\s\S]*?\n\}/)?.[0]
-  const extrasStamp = css.match(/\.public-suggested-extras-title-band \{[\s\S]*?\n\}/)?.[0]
+  const extrasStamp = css.match(/\.public-suggested-extras-title-mark \{[\s\S]*?\n\}/)?.[0]
   assert.ok(stamp && extrasStamp)
   assert.match(stamp, /background: #e21b1b/)
   assert.match(stamp, /color: #fff/)
@@ -199,7 +210,7 @@ test('PACKAGE_VISUAL_MATCHES_EXTRAS_FAMILY', () => {
   assert.ok(packageIntro && extrasFeatured)
   assert.match(packageIntro, /#0a0a0a/)
   assert.match(css, /\.public-package-headline-mark \{[\s\S]*?#e21b1b/)
-  assert.match(css, /\.public-suggested-extras-title-band \{[\s\S]*?#e21b1b/)
+  assert.match(css, /\.public-suggested-extras-title-mark \{[\s\S]*?#e21b1b/)
   assert.match(css, /\.public-package-title-corner \{[\s\S]*?--cdl-yellow/)
   assert.match(css, /\.public-suggested-extras-chevron \{[\s\S]*?--cdl-yellow/)
 })
@@ -325,16 +336,19 @@ print(gray.mean(), lap)
 test('ADICIONAIS_UNCHANGED', () => {
   assert.match(extras, /data-suggested-extras-title-band/)
   assert.match(extras, /cortes e extras premium/)
-  assert.match(css, /\.public-suggested-extras-title-band \{[\s\S]*?#e21b1b/)
+  assert.match(css, /\.public-suggested-extras-title-mark \{[\s\S]*?#e21b1b/)
   assert.match(wizard, /if \(category === SUGGESTED_EXTRAS_DISPLAY_KEY\) return/)
 })
 
 test('SUGGESTED_EXTRAS_VISUAL_UNCHANGED', () => {
   const band = css.match(/\.public-suggested-extras-title-band \{[\s\S]*?\n\}/)?.[0]
-  assert.ok(band)
-  assert.match(band, /background: #e21b1b/)
-  assert.match(band, /border-bottom: 3px solid var\(--cdl-yellow\)/)
+  const mark = css.match(/\.public-suggested-extras-title-mark \{[\s\S]*?\n\}/)?.[0]
+  assert.ok(band && mark)
+  assert.match(band, /background: #0a0a0a/)
+  assert.match(band, /border-bottom: 1px solid var\(--cdl-yellow\)/)
+  assert.match(mark, /background: #e21b1b/)
   assert.match(extras, /data-suggested-extras-title-band/)
+  assert.match(extras, /data-suggested-extras-title-tag/)
   assert.match(extras, /public-suggested-extras-mark/)
 })
 
@@ -371,15 +385,12 @@ test('CATEGORY_HINT_ES', () => {
 })
 
 test('CUSTOM_PLUS_REBUILT_FROM_CLEAN_BASE', () => {
-  const script = read('scripts/dev/rebuild-custom-plus-pt-v7.py')
-  assert.match(script, /bbqpers-pt-v4\.webp/)
-  assert.match(script, /bbqtrad-plus-pt-v4\.webp/)
-  assert.match(script, /cdl-badge-official\.png/)
+  const script = read('scripts/dev/rebuild-custom-plus-pt-v8.py')
   assert.match(script, /bbqpers-plus-pt-v7\.webp/)
-  assert.match(script, /bbqpers-pt-v4\.webp/)
-  assert.doesNotMatch(script, /BASE = .*bbqpers-plus/)
-  assert.match(read('Lib/publicQuote/packageFolderArt.generated.ts'), /bbqpers-plus-pt-v7\.webp/)
-  assert.match(visual, /\?v=art7/)
+  assert.match(script, /cdl-badge-official\.png/)
+  assert.match(script, /bbqpers-plus-pt-v8\.webp/)
+  assert.match(read('Lib/publicQuote/packageFolderArt.generated.ts'), /bbqpers-plus-pt-v8\.webp/)
+  assert.match(visual, /\?v=art8b/)
 })
 
 test('CUSTOM_PLUS_BASE_IS_CUSTOM_WITHOUT_SIDES', () => {
@@ -390,7 +401,7 @@ test('CUSTOM_PLUS_BASE_IS_CUSTOM_WITHOUT_SIDES', () => {
       input: `
 import cv2, numpy as np
 base = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-pt-v4.webp')}')
-new = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v7.webp')}')
+new = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v8.webp')}')
 assert base is not None and new is not None
 assert base.shape == new.shape == (1536, 1024, 3)
 diff = np.abs(new[:1035].astype(np.int16) - base[:1035].astype(np.int16)).mean()
@@ -411,7 +422,7 @@ test('CUSTOM_PLUS_SIDES_PRESENT', () => {
       input: `
 import cv2, numpy as np
 trad = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqtrad-plus-pt-v4.webp')}')
-new = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v7.webp')}')
+new = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v8.webp')}')
 diff = np.abs(new[1107:1348].astype(np.int16) - trad[1107:1348].astype(np.int16)).mean()
 assert diff < 3.0, diff
 print(diff)
@@ -429,7 +440,7 @@ function plaqueProbe(name, y0, y1, x0, x1) {
     {
       input: `
 import cv2, numpy as np
-im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v7.webp')}')
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v8.webp')}')
 roi = cv2.cvtColor(im[${y0}:${y1}, ${x0}:${x1}], cv2.COLOR_BGR2GRAY)
 assert roi.mean() < 70, roi.mean()
 assert (roi > 140).sum() > 400, (roi > 140).sum()
@@ -461,7 +472,7 @@ test('CUSTOM_PLUS_BLACK_BEANS_SIGN_READABLE', () => {
     {
       input: `
 import cv2, numpy as np
-im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v7.webp')}')
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v8.webp')}')
 plaque = cv2.cvtColor(im[1242:1324, 266:476], cv2.COLOR_BGR2GRAY)
 arroz = cv2.cvtColor(im[1208:1290, 50:250], cv2.COLOR_BGR2GRAY)
 assert plaque.mean() < 55, plaque.mean()
@@ -476,8 +487,35 @@ print(plaque.mean(), arroz.mean(), int((plaque > 140).sum()))
   assert.equal(probe.status, 0, probe.stderr || probe.stdout)
 })
 
+test('CUSTOM_PLUS_CDL_LOGO_CLEAN', () => {
+  const probe = spawnSync(
+    'python3',
+    ['-'],
+    {
+      input: `
+import cv2, numpy as np
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v8.webp')}')
+cx, cy, r = 106, 1436, 88
+yy, xx = np.ogrid[:im.shape[0], :im.shape[1]]
+dist = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2)
+ring = (dist > r + 3) & (dist < r + 14)
+far = (dist > r + 28) & (dist < r + 52) & (xx > 200)
+gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+# halo must not be a much darker smear than the nearby table
+assert gray[ring].mean() + 8 >= gray[far].mean(), (gray[ring].mean(), gray[far].mean())
+# official mark: pale field above the grill
+pale = im[cy-50:cy-22, cx-14:cx+14]
+assert pale.mean() > 140, pale.mean()
+print(gray[ring].mean(), gray[far].mean(), pale.mean())
+`,
+      encoding: 'utf8',
+    },
+  )
+  assert.equal(probe.status, 0, probe.stderr || probe.stdout)
+})
+
 test('CUSTOM_PLUS_OFFICIAL_CDL_LOGO', () => {
-  const script = read('scripts/dev/rebuild-custom-plus-pt-v7.py')
+  const script = read('scripts/dev/rebuild-custom-plus-pt-v8.py')
   assert.match(script, /cdl-badge-official\.png/)
   assert.doesNotMatch(script, /Pioneer in Orlando|Since 2017/)
   const probe = spawnSync(
@@ -486,7 +524,7 @@ test('CUSTOM_PLUS_OFFICIAL_CDL_LOGO', () => {
     {
       input: `
 import cv2, numpy as np
-im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v7.webp')}')
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v8.webp')}')
 cx, cy, r = 106, 1436, 88
 # official mark: pale field above the grill, not a black smear
 pale = im[cy-50:cy-22, cx-14:cx+14]
@@ -502,7 +540,7 @@ print(pale.mean())
 })
 
 test('CUSTOM_PLUS_PIONEER_ABSENT', () => {
-  const script = read('scripts/dev/rebuild-custom-plus-pt-v7.py')
+  const script = read('scripts/dev/rebuild-custom-plus-pt-v8.py')
   assert.doesNotMatch(script, /Pioneer|Since 2017/)
   assert.match(script, /cdl-badge-official\.png/)
 })
@@ -514,7 +552,7 @@ test('CUSTOM_PLUS_VISIBLE_PATCH_ABSENT', () => {
     {
       input: `
 import cv2, numpy as np
-im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v7.webp')}')
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v8.webp')}')
 trad = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqtrad-plus-pt-v4.webp')}')
 # sides below the seam match the real buffet — no painted patch
 diff = np.abs(im[1107:1348].astype(np.int16) - trad[1107:1348].astype(np.int16)).mean()
@@ -534,7 +572,7 @@ test('CUSTOM_PLUS_BLACK_BOX_ARTIFACT_ABSENT', () => {
     {
       input: `
 import cv2, numpy as np
-im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v7.webp')}')
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v8.webp')}')
 roi = cv2.cvtColor(im[1360:1500, 210:420], cv2.COLOR_BGR2GRAY)
 assert roi.std() > 8, roi.std()
 assert roi.mean() > 12, roi.mean()
@@ -547,21 +585,21 @@ print(roi.mean(), roi.std())
 })
 
 test('CUSTOM_PLUS_PRICE_IN_IMAGE_ABSENT', () => {
-  const script = read('scripts/dev/rebuild-custom-plus-pt-v7.py')
+  const script = read('scripts/dev/rebuild-custom-plus-pt-v8.py')
   assert.match(script, /'price_in_image': False/)
   assert.doesNotMatch(script, /putText|US\\$|Sob consulta/)
 })
 
 test('CUSTOM_PACKAGE_IMAGE_ART_NOT_DEGRADED', () => {
-  assert.match(read('Lib/publicQuote/packageFolderArt.generated.ts'), /bbqpers-plus-pt-v7\.webp/)
-  assert.match(visual, /\?v=art7/)
+  assert.match(read('Lib/publicQuote/packageFolderArt.generated.ts'), /bbqpers-plus-pt-v8\.webp/)
+  assert.match(visual, /\?v=art8b/)
   const probe = spawnSync(
     'python3',
     ['-'],
     {
       input: `
 import cv2
-im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v7.webp')}')
+im = cv2.imread('${join(ROOT, 'assets/packages/folders-v3/bbqpers-plus-pt-v8.webp')}')
 assert im.shape == (1536, 1024, 3)
 top = im[80:1000]
 assert top.std() > 25
@@ -600,6 +638,77 @@ test('PROD_UNCHANGED', () => {
   assert.match(read('scripts/dev/upload-cdl-package-folders-v3.mjs'), /yasprgtlqclwsjcshtls/)
   assert.match(read('scripts/dev/upload-cdl-package-folders-v3.mjs'), /BLOCKED: expected the DEV project/)
   assert.doesNotMatch(visual, /vercel\.app/)
+})
+
+test('PHOTO_ENLARGE_HINT_PT', () => {
+  assert.match(translations, /photoEnlargeHint: 'Toque e segure a foto para ampliar\.'/)
+})
+
+test('PHOTO_ENLARGE_HINT_EN', () => {
+  assert.match(translations, /photoEnlargeHint: 'Touch and hold the photo to enlarge\.'/)
+})
+
+test('PHOTO_ENLARGE_HINT_ES', () => {
+  assert.match(translations, /photoEnlargeHint: 'Mantén pulsada la foto para ampliarla\.'/)
+})
+
+test('PHOTO_LONG_PRESS_PREVIEW', () => {
+  const card = read('components/quotes/additionals/AdditionalItemCard.tsx')
+  assert.match(card, /LONG_PRESS_MS = 420/)
+  assert.match(card, /data-additional-photo-lightbox/)
+  assert.match(card, /createPortal/)
+  assert.match(card, /pointerType === 'mouse'/)
+  assert.match(extras, /data-photo-enlarge-hint/)
+  assert.match(css, /\.public-additional-photo-lightbox \{/)
+  assert.match(css, /object-fit: contain/)
+})
+
+test('PHOTO_PREVIEW_DOES_NOT_CHANGE_SELECTION', () => {
+  const card = read('components/quotes/additionals/AdditionalItemCard.tsx')
+  assert.doesNotMatch(card, /onChangeQty\([^)]*preview/)
+  assert.match(card, /onClick=\{\(\) => onChangeQty/)
+  assert.match(card, /setPreviewOpen\(true\)/)
+  assert.doesNotMatch(card, /onChangeQty\(.*setPreviewOpen/)
+})
+
+test('ADULT_COMMIT_SCROLLS_TO_GUEST_ADDRESS_TRANSITION', () => {
+  assert.match(wizard, /guestAddressTransitionRef/)
+  assert.match(wizard, /data-guest-address-transition/)
+  assert.match(wizard, /data-guest-children-under-3/)
+  assert.match(wizard, /data-guest-children-4-12/)
+  const adultsCommit = wizard.match(
+    /inputRef=\{adultsInputRef\}[\s\S]{0,1600}onCommit=\{[\s\S]{0,1400}scrollIntoView\(\{[\s\S]{0,180}?block: 'start'/,
+  )
+  assert.ok(adultsCommit, 'adults commit must scroll the guest/address transition')
+  assert.doesNotMatch(adultsCommit[0], /scrollBy/)
+})
+
+test('ADDRESS_AUTO_KEYBOARD_HIDES_CHILDREN', () => {
+  const adultsCommit = wizard.match(
+    /inputRef=\{adultsInputRef\}[\s\S]{0,1600}onCommit=\{[\s\S]{0,1400}?undefined/,
+  )
+  assert.ok(adultsCommit)
+  assert.match(adultsCommit[0], /childrenReviewed/)
+  assert.match(adultsCommit[0], /scrollIntoView/)
+  assert.match(adultsCommit[0], /guestAddressTransitionRef/)
+})
+
+test('WITHOUT_SIDES_ALL_ARTS_AUDITED', () => {
+  const generated = read('Lib/publicQuote/packageFolderArt.generated.ts')
+  for (const [key, files] of [
+    ['BBQTRAD', ['bbqtrad-en-v3.webp', 'bbqtrad-es-v4.webp', 'bbqtrad-pt-v5.webp']],
+    ['BBQSEL', ['bbqsel-en-v3.webp', 'bbqsel-es-v5.webp', 'bbqsel-pt-v4.webp']],
+    ['BBQCHO', ['bbqcho-en-v4.webp', 'bbqcho-es-v4.webp', 'bbqcho-pt-v3.webp']],
+    ['BBQPRI', ['bbqpri-en-v5.webp', 'bbqpri-es-v4.webp', 'bbqpri-pt-v5.webp']],
+    ['BBQPERS', ['bbqpers-en-v5.webp', 'bbqpers-es-v4.webp', 'bbqpers-pt-v5.webp']],
+  ]) {
+    for (const file of files) {
+      assert.match(generated, new RegExp(`"${key}":[\\s\\S]{0,400}?${file}`), `${key} ${file}`)
+    }
+  }
+  const polish = read('scripts/dev/polish-without-sides-final.py')
+  assert.match(polish, /cdl-badge-official\.png/)
+  assert.doesNotMatch(polish, /Pioneer|Since 2017/)
 })
 
 if (failed > 0) {

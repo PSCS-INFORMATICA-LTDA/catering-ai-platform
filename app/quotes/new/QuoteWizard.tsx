@@ -1265,6 +1265,7 @@ export default function QuoteWizardCore({
   const lastNameInputRef = useRef<HTMLInputElement>(null)
   const phoneInputRef = useRef<HTMLInputElement>(null)
   const adultsInputRef = useRef<HTMLInputElement>(null)
+  const guestAddressTransitionRef = useRef<HTMLDivElement>(null)
   const streetNumberInputRef = useRef<HTMLInputElement>(null)
   const addressSearchInputRef = useRef<HTMLInputElement>(null)
   const [startTimePickerOpen, setStartTimePickerOpen] = useState(false)
@@ -3213,27 +3214,51 @@ export default function QuoteWizardCore({
                     isPublicMode
                       ? (value) => {
                           if (value <= 0) return
-                          focusWizardField(addressSearchInputRef.current)
+                          const childrenReviewed =
+                            state.childrenUnder3Count > 0 ||
+                            state.children4To12Count > 0
+                          if (childrenReviewed) {
+                            focusWizardField(addressSearchInputRef.current)
+                            return
+                          }
+                          const node = guestAddressTransitionRef.current
+                          if (!node) return
+                          const reduced = window.matchMedia?.(
+                            '(prefers-reduced-motion: reduce)',
+                          ).matches
+                          node.scrollIntoView({
+                            behavior: reduced ? 'auto' : 'smooth',
+                            block: 'start',
+                          })
                         }
                       : undefined
                   }
                 />
-                <QuantityField
-                  label={w.childrenUnder3}
-                  value={state.childrenUnder3Count}
-                  onChange={(v) => updateState({ childrenUnder3Count: v })}
-                  blankZero={isPublicMode}
-                  placeholder={isPublicMode ? w.publicChildrenPlaceholder : ''}
-                  guestField
-                />
-                <QuantityField
-                  label={w.children4to12}
-                  value={state.children4To12Count}
-                  onChange={(v) => updateState({ children4To12Count: v })}
-                  blankZero={isPublicMode}
-                  placeholder={isPublicMode ? w.publicChildrenPlaceholder : ''}
-                  guestField
-                />
+                <div
+                  ref={guestAddressTransitionRef}
+                  data-guest-address-transition
+                  data-guest-children-under-3
+                  className="guest-address-transition"
+                >
+                  <QuantityField
+                    label={w.childrenUnder3}
+                    value={state.childrenUnder3Count}
+                    onChange={(v) => updateState({ childrenUnder3Count: v })}
+                    blankZero={isPublicMode}
+                    placeholder={isPublicMode ? w.publicChildrenPlaceholder : ''}
+                    guestField
+                  />
+                </div>
+                <div data-guest-children-4-12>
+                  <QuantityField
+                    label={w.children4to12}
+                    value={state.children4To12Count}
+                    onChange={(v) => updateState({ children4To12Count: v })}
+                    blankZero={isPublicMode}
+                    placeholder={isPublicMode ? w.publicChildrenPlaceholder : ''}
+                    guestField
+                  />
+                </div>
               </div>
               {/* Without this the address reads as more guest fields. */}
               <p
