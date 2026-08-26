@@ -22,6 +22,16 @@ const CDL_ITEM_I18N: Record<string, CdlItemTranslation> = {
   },
   'Salmão ou camarão': { en: 'Salmon or shrimp', es: 'Salmón o camarón' },
   'Carré de cordeiro': { en: 'Rack of lamb', es: 'Costillar de cordero' },
+  'Picanha Wagyu': { en: 'Wagyu picanha', es: 'Picaña Wagyu' },
+  'Fraldinha Angus': { en: 'Angus fraldinha', es: 'Entraña Angus' },
+  'Lagosta ou Vieira com bacon': {
+    en: 'Lobster or scallops with bacon',
+    es: 'Langosta o Vieira con bacon',
+  },
+  'Experiência luxury completa': {
+    en: 'Full luxury experience',
+    es: 'Experiencia luxury completa',
+  },
   Chimichurri: { en: 'Chimichurri', es: 'Chimichurri' },
   Farofa: { en: 'Farofa', es: 'Farofa' },
   Mel: { en: 'Honey', es: 'Miel' },

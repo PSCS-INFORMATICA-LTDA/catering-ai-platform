@@ -213,6 +213,13 @@ export default function SelectedPackageDetails({
           {optionProps ? (
             <PackageIncludedOptions
               {...optionProps}
+              onlyGroupKeys={['LUXURY_LOBSTER_SCALLOP_CHOICE']}
+            />
+          ) : null}
+
+          {optionProps ? (
+            <PackageIncludedOptions
+              {...optionProps}
               onlyGroupKeys={['SEAFOOD_OPTION']}
             />
           ) : null}

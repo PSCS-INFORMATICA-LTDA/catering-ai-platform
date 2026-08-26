@@ -120,7 +120,7 @@ const { data: packages, error: pkgError } = await sb
   .from('packages')
   .select('package_key,price_per_person,active')
   .eq('company_id', COMPANY_ID)
-  .in('package_key', ['BBQTRAD', 'BBQSEL', 'BBQCHO', 'BBQPRI', 'BBQTRAD+', 'BBQSEL+', 'BBQCHO+', 'BBQPRI+', 'BBQPERS', 'BBQPERS+'])
+  .in('package_key', ['BBQTRAD', 'BBQSEL', 'BBQCHO', 'BBQPRI', 'BBQLUX', 'BBQTRAD+', 'BBQSEL+', 'BBQCHO+', 'BBQPRI+', 'BBQLUX+', 'BBQPERS', 'BBQPERS+'])
 if (pkgError) throw pkgError
 
 const publicItems = (items ?? []).filter(
@@ -234,11 +234,12 @@ test('PACKAGES_UNCHANGED', () => {
   assert.equal(Number(byKey['BBQPERS+']?.price_per_person), 0)
 })
 
-test('LUXURY_NOT_CREATED', () => {
-  assert.equal(
-    (packages ?? []).some((row) => /LUXURY/i.test(row.package_key || '')),
-    false,
-  )
+test('LUXURY_OFFICIAL_PRICES', () => {
+  const byKey = Object.fromEntries((packages ?? []).map((row) => [row.package_key, row]))
+  assert.equal(Number(byKey.BBQLUX?.price_per_person), 150)
+  assert.equal(Number(byKey['BBQLUX+']?.price_per_person), 163)
+  assert.equal(byKey.BBQLUX?.active, true)
+  assert.equal(byKey['BBQLUX+']?.active, true)
 })
 
 if (failed > 0) {

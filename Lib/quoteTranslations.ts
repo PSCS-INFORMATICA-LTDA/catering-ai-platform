@@ -449,6 +449,7 @@ type QuoteStrings = {
     listOr: string
     optionFallback: string
     seafoodOption: string
+    lobsterScallopOption: string
     ribOption: string
     sideOption: string
     comingSoon: string
@@ -902,6 +903,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       listOr: 'ou',
       optionFallback: 'Opção',
       seafoodOption: 'Frutos do mar',
+      lobsterScallopOption: 'Lagosta ou Vieira com bacon',
       ribOption: 'Costela',
       sideOption: 'Guarnição',
       comingSoon: 'Em breve',
@@ -1355,6 +1357,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       listOr: 'or',
       optionFallback: 'Option',
       seafoodOption: 'Seafood',
+      lobsterScallopOption: 'Lobster or scallops with bacon',
       ribOption: 'Ribs',
       sideOption: 'Side',
       comingSoon: 'Coming soon',
@@ -1811,6 +1814,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       listOr: 'o',
       optionFallback: 'Opción',
       seafoodOption: 'Mariscos',
+      lobsterScallopOption: 'Langosta o Vieira con bacon',
       ribOption: 'Costilla',
       sideOption: 'Guarnición',
       comingSoon: 'Próximamente',

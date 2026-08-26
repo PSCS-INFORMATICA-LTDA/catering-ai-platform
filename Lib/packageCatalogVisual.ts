@@ -53,13 +53,14 @@ export function getPublicPackageSidesGroup(
     : 'without_sides'
 }
 
-const FAMILY_EXAMPLE_ORDER = ['PRI', 'CHO', 'SEL', 'TRAD'] as const
+const FAMILY_EXAMPLE_ORDER = ['PRI', 'LUX', 'CHO', 'SEL', 'TRAD'] as const
 
 const FAMILY_EXAMPLE_NAMES: Record<
   (typeof FAMILY_EXAMPLE_ORDER)[number],
   Record<QuoteLanguage, string>
 > = {
   PRI: { pt: 'Prime', en: 'Prime', es: 'Prime' },
+  LUX: { pt: 'Luxury', en: 'Luxury', es: 'Luxury' },
   CHO: { pt: 'Choice', en: 'Choice', es: 'Choice' },
   SEL: { pt: 'Select', en: 'Select', es: 'Select' },
   TRAD: { pt: 'Tradicional', en: 'Traditional', es: 'Tradicional' },
@@ -411,6 +412,20 @@ const PACKAGE_HERO_ITEMS_PT: Record<string, readonly string[]> = {
     'Queijo',
     'Milho',
   ],
+  BBQLUX: [
+    'Picanha Angus',
+    'Picanha Wagyu',
+    'Fraldinha Angus',
+    'Carré de cordeiro',
+    'Linguiça',
+    'Frango sobrecoxa desossada',
+    'Pão de alho',
+    'Queijo',
+    'Milho',
+    'Lagosta ou Vieira com bacon',
+    'Salmão ou camarão',
+    'Costela de porco ou boi',
+  ],
 }
 
 const PACKAGE_HERO_COMMON_PT = [
@@ -446,6 +461,12 @@ const PACKAGE_HERO_ITEM_I18N: Record<string, { en: string; es: string }> = {
   },
   'Salmão ou camarão': { en: 'Salmon or shrimp', es: 'Salmón o camarón' },
   'Carré de cordeiro': { en: 'Rack of lamb', es: 'Costillar de cordero' },
+  'Picanha Wagyu': { en: 'Wagyu picanha', es: 'Picaña Wagyu' },
+  'Fraldinha Angus': { en: 'Angus fraldinha', es: 'Entraña Angus' },
+  'Lagosta ou Vieira com bacon': {
+    en: 'Lobster or scallops with bacon',
+    es: 'Langosta o Vieira con bacon',
+  },
   Chimichurri: { en: 'Chimichurri', es: 'Chimichurri' },
   Farofa: { en: 'Farofa', es: 'Farofa' },
   Mel: { en: 'Honey', es: 'Miel' },

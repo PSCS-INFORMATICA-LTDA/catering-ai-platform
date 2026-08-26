@@ -144,7 +144,7 @@ test('NO_FAKE_PACKAGE_CREATED', () => {
   const keys = [...rules.matchAll(/package_key: '(BBQ[A-Z+]+)'/g)].map((m) => m[1])
   assert.deepEqual(
     [...new Set(keys)].sort(),
-    ['BBQCHO', 'BBQCHO+', 'BBQPRI', 'BBQPRI+', 'BBQSEL', 'BBQSEL+', 'BBQTRAD', 'BBQTRAD+'],
+    ['BBQCHO', 'BBQCHO+', 'BBQLUX', 'BBQLUX+', 'BBQPRI', 'BBQPRI+', 'BBQSEL', 'BBQSEL+', 'BBQTRAD', 'BBQTRAD+'],
   )
   // Nothing invented a package or a variant in the presentation layer.
   assert.doesNotMatch(catalog, /BBQ(TRAD|SEL|CHO|PRI|PERS)/)
