@@ -69,18 +69,18 @@ function categoryKeyOf(item) {
 const CANONICAL_ORDER = [
   'BOVINO_NOBRE',
   'BOVINO_TRADICIONAL',
-  'FRANGO',
   'PORCO',
-  'LINGUICAS',
-  'PEIXES',
-  'FRUTOS_DO_MAR',
   'CORDEIRO',
-  'GUARNICOES',
-  'ACOMPANHAMENTOS',
-  'LEGUMES_E_SALADAS',
+  'FRANGO',
+  'LINGUICAS',
+  'FRUTOS_DO_MAR',
   'LEGUMES_E_VEGETAIS',
   'FRUTAS',
+  'ACOMPANHAMENTOS',
+  'GUARNICOES',
   'EQUIPAMENTOS',
+  'PEIXES',
+  'LEGUMES_E_SALADAS',
   'OUTROS',
 ]
 
@@ -301,8 +301,8 @@ test('CATEGORY_ORDER_AFTER_SUGGESTED', () => {
     [
       'SUGGESTED_EXTRAS',
       'BOVINO_NOBRE',
-      'FRANGO',
       'PORCO',
+      'FRANGO',
       'EQUIPAMENTOS',
     ],
   )
@@ -311,9 +311,9 @@ test('CATEGORY_ORDER_AFTER_SUGGESTED', () => {
   assert.deepEqual(order.slice(0, 5), [
     'BOVINO_NOBRE',
     'BOVINO_TRADICIONAL',
-    'FRANGO',
     'PORCO',
-    'LINGUICAS',
+    'CORDEIRO',
+    'FRANGO',
   ])
 })
 

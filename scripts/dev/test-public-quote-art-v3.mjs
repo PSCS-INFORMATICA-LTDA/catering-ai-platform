@@ -214,12 +214,12 @@ test('CATEGORY_ORDER_UNCHANGED_FROM_APPROVED', () => {
   assert.deepEqual(keys.slice(0, 8), [
     'BOVINO_NOBRE',
     'BOVINO_TRADICIONAL',
-    'FRANGO',
     'PORCO',
-    'LINGUICAS',
-    'PEIXES',
-    'FRUTOS_DO_MAR',
     'CORDEIRO',
+    'FRANGO',
+    'LINGUICAS',
+    'FRUTOS_DO_MAR',
+    'LEGUMES_E_VEGETAIS',
   ])
   assert.equal(keys[keys.length - 1], 'OUTROS')
 })

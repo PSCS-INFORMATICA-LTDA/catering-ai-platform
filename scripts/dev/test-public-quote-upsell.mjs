@@ -143,9 +143,9 @@ test('CATEGORY_ORDER_COMMERCIAL', () => {
   const order = [...block.matchAll(/'([A-Z_]+)'/g)].map((m) => m[1])
   // The twelve the brief asked for, in that relative order...
   const asked = [
-    'BOVINO_NOBRE', 'BOVINO_TRADICIONAL', 'FRANGO', 'PORCO', 'LINGUICAS',
-    'PEIXES', 'FRUTOS_DO_MAR', 'CORDEIRO', 'GUARNICOES',
-    'LEGUMES_E_SALADAS', 'EQUIPAMENTOS', 'OUTROS',
+    'BOVINO_NOBRE', 'BOVINO_TRADICIONAL', 'PORCO', 'CORDEIRO', 'FRANGO',
+    'LINGUICAS', 'FRUTOS_DO_MAR', 'LEGUMES_E_VEGETAIS', 'FRUTAS',
+    'ACOMPANHAMENTOS', 'GUARNICOES', 'EQUIPAMENTOS', 'OUTROS',
   ]
   assert.deepEqual(order.filter((k) => asked.includes(k)), asked)
   // ...plus the live categories the catalog actually has, all before OUTROS.
@@ -159,9 +159,9 @@ test('CATEGORY_ORDER_COMMERCIAL', () => {
   assert.equal(order[order.length - 1], 'OUTROS')
   assert.equal(order[0], 'BOVINO_NOBRE')
   assert.equal(order[1], 'BOVINO_TRADICIONAL')
-  assert.equal(order[2], 'FRANGO')
-  assert.equal(order[3], 'PORCO')
-  assert.equal(order[4], 'LINGUICAS')
+  assert.equal(order[2], 'PORCO')
+  assert.equal(order[3], 'CORDEIRO')
+  assert.equal(order[4], 'FRANGO')
 })
 
 test('CATEGORY_ORDER_IS_DISPLAY_ONLY', () => {

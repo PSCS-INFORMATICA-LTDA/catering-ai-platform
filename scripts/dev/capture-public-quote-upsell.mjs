@@ -291,10 +291,10 @@ for (const locale of LOCALES) {
       dupes.length === 0, dupes.map((i) => i.label).join(', '))
 
     const WANT = [
-      'SUGGESTED_EXTRAS', 'BOVINO_NOBRE', 'BOVINO_TRADICIONAL', 'FRANGO', 'PORCO',
-      'LINGUICAS', 'PEIXES', 'FRUTOS_DO_MAR', 'CORDEIRO', 'GUARNICOES',
-      'ACOMPANHAMENTOS', 'LEGUMES_E_SALADAS', 'LEGUMES_E_VEGETAIS', 'FRUTAS',
-      'EQUIPAMENTOS', 'OUTROS',
+      'SUGGESTED_EXTRAS', 'BOVINO_NOBRE', 'BOVINO_TRADICIONAL', 'PORCO', 'CORDEIRO',
+      'FRANGO', 'LINGUICAS', 'FRUTOS_DO_MAR', 'LEGUMES_E_VEGETAIS', 'FRUTAS',
+      'ACOMPANHAMENTOS', 'GUARNICOES', 'EQUIPAMENTOS', 'PEIXES',
+      'LEGUMES_E_SALADAS', 'OUTROS',
     ]
     const rank = (k) => (WANT.indexOf(k) === -1 ? WANT.length : WANT.indexOf(k))
     const ordered = keys.every((k, i) => i === 0 || rank(keys[i - 1]) <= rank(k))

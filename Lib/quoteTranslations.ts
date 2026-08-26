@@ -96,27 +96,25 @@ const CATEGORY_LABEL_MAP: Record<string, Record<QuoteLanguage, string>> = {
 /**
  * Canonical extras order AFTER the virtual Suggested Extras row.
  * Display only — it never touches an item's category, price, eligibility
- * or the review requirement.
+ * or the review requirement. Empty groups are never invented.
  *
- * Live catalog extras that are not in the commercial list
- * (ACOMPANHAMENTOS, LEGUMES_E_VEGETAIS, FRUTAS) sit next to the nearest
- * food group and always before OUTROS. Empty groups are never invented.
+ * Order matches the CDL 2026 commercial source provided by the PO.
  */
 const CATEGORY_SORT_ORDER = [
   'BOVINO_NOBRE',
   'BOVINO_TRADICIONAL',
-  'FRANGO',
   'PORCO',
-  'LINGUICAS',
-  'PEIXES',
-  'FRUTOS_DO_MAR',
   'CORDEIRO',
-  'GUARNICOES',
-  'ACOMPANHAMENTOS',
-  'LEGUMES_E_SALADAS',
+  'FRANGO',
+  'LINGUICAS',
+  'FRUTOS_DO_MAR',
   'LEGUMES_E_VEGETAIS',
   'FRUTAS',
+  'ACOMPANHAMENTOS',
+  'GUARNICOES',
   'EQUIPAMENTOS',
+  'PEIXES',
+  'LEGUMES_E_SALADAS',
   'OUTROS',
 ] as const
 
