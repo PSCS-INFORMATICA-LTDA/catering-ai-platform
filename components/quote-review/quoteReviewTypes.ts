@@ -37,6 +37,7 @@ export type QuoteReviewData = {
   packageImageUrl?: string | null
   packageUnitPrice: number | null
   packageTotal: number | null
+  includedSidesTotal?: number | null
   packageSummary?: QuoteReviewPackageSummary | null
   packageSelections?: PackageSelectionLabel[]
   guestCounts: GuestCounts

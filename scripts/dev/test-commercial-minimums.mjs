@@ -75,10 +75,40 @@ check('US July 4 MID 1350 → 2700', () => {
 
 check('CDL Dec 24 / 25 / 31 / Jan 1', () => {
   for (const date of ['2026-12-24', '2026-12-25', '2026-12-31', '2027-01-01']) {
-    const r = applyCommercialMinimums(360, date, RULES)
+    const r = applyCommercialMinimums(360, date, RULES, {
+      packageSurchargeBase: 360,
+    })
     assert.equal(r.holidaySurchargeAmount, 360, date)
     assert.equal(r.quoteTotal, 2000, date)
+    assert.equal(r.isSpecialCdlDate, true, date)
   }
+})
+
+check('Special date surcharge is package-only', () => {
+  const r = applyCommercialMinimums(710, '2026-12-24', RULES, {
+    packageSurchargeBase: 450,
+  })
+  assert.equal(r.holidaySurchargeAmount, 450)
+  assert.equal(r.minimumOrderAmount, 2000)
+  assert.equal(r.quoteTotal, 2000)
+})
+
+check('December 10 minimum 900 without package double', () => {
+  const r = applyCommercialMinimums(500, '2026-12-10', RULES, {
+    packageSurchargeBase: 450,
+  })
+  assert.equal(r.holidaySurchargeAmount, 0)
+  assert.equal(r.minimumOrderAmount, 900)
+  assert.equal(r.quoteTotal, 900)
+})
+
+check('January 10 minimum 900 without package double', () => {
+  const r = applyCommercialMinimums(500, '2026-01-10', RULES, {
+    packageSurchargeBase: 450,
+  })
+  assert.equal(r.holidaySurchargeAmount, 0)
+  assert.equal(r.minimumOrderAmount, 900)
+  assert.equal(r.quoteTotal, 900)
 })
 
 check('Thanksgiving 2026-11-26 — surcharge', () => {
@@ -100,11 +130,14 @@ check('Labor Day 2026-09-07 — surcharge', () => {
   assert.equal(r.quoteTotal, 2000)
 })
 
-check('MLK Day 2026-01-19 — surcharge (overrides dec/jan min)', () => {
-  const r = applyCommercialMinimums(360, '2026-01-19', RULES)
-  assert.equal(r.isHolidaySurchargeDate, true)
-  assert.equal(r.minimumOrderAmount, 2000)
-  assert.equal(r.quoteTotal, 2000)
+check('MLK Day 2026-01-19 — December/January minimum, no package double', () => {
+  const r = applyCommercialMinimums(360, '2026-01-19', RULES, {
+    packageSurchargeBase: 360,
+  })
+  assert.equal(r.isHolidaySurchargeDate, false)
+  assert.equal(r.holidaySurchargeAmount, 0)
+  assert.equal(r.minimumOrderAmount, 900)
+  assert.equal(r.quoteTotal, 900)
 })
 
 check('2026 federal holiday map covers expected keys', () => {

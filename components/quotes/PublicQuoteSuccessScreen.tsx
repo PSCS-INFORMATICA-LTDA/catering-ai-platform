@@ -65,6 +65,7 @@ export default function PublicQuoteSuccessScreen({
   support: {
     phone: string | null
     whatsappUrl: string | null
+    email?: string | null
     instagramUrl?: string | null
     instagramHandle?: string | null
   }
@@ -191,6 +192,17 @@ export default function PublicQuoteSuccessScreen({
                 >
                   <WhatsAppIcon />
                   <span>{phoneDisplay || companyName}</span>
+                </a>
+              </li>
+            ) : null}
+            {contacts.email ? (
+              <li>
+                <a
+                  href={`mailto:${contacts.email}`}
+                  data-success-email
+                  aria-label={contacts.email}
+                >
+                  <span>{contacts.email}</span>
                 </a>
               </li>
             ) : null}

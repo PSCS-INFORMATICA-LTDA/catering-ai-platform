@@ -223,9 +223,11 @@ const dict = {
     viewInAgenda: 'Ver na Agenda',
     packageLabel: 'Pacote',
     additionalsLabel: 'Adicionais',
+    docSidesLine: 'Guarnições (Plus)',
     mileageLabel: 'Milhagem',
     docMileageChargedSummaryLine:
       'Milhagem ({charged} mi cobradas além de {free} mi cortesia)',
+    docMileageFullTripLine: 'Milhagem ({charged} mi do trajeto total)',
     docGrillRentalLine: 'Aluguel de churrasqueira',
     docGrillRentalLineQty: 'Aluguel de churrasqueira ({qty}×)',
     reservationLabel: 'Reserva',
@@ -450,24 +452,26 @@ const dict = {
     ruleMinWeekend: 'Sexta a domingo: pedido mínimo de ${amount}.',
     ruleMileageBase: 'Base de cálculo: {base}.',
     ruleMileageFree: '{limit} {unit} gratuitos.',
-    ruleMileageRate: '${rate}/{unit} acima do limite gratuito.',
+    ruleMileageRate:
+      'Até {limit} {unit}: sem taxa. Acima de {limit} {unit}: ${rate} por {unit} sobre o trajeto total. Ex.: 30 {unit} = $60.',
     ruleReservationPct: '{pct}% antecipado para reservar a data.',
     ruleBalancePct: '{pct}% restante até o término do evento.',
     ruleFoodStorage:
       'Não é permitido armazenar comida para consumir após o serviço.',
     ruleFoodFine: 'Multa por descumprimento: ${amount}.',
     ruleLatePayment: 'Multa por atraso no pagamento: ${amount} por dia.',
-    ruleDecJanMin: 'Dezembro e janeiro (fora de feriado): pedido mínimo de ${amount}.',
+    ruleDecJanMin:
+      'Dezembro e janeiro (exceto 24, 25 e 31 de dezembro e 1º de janeiro): pedido mínimo de ${amount}.',
     ruleHolidaySurcharge:
-      'Acréscimo de {pct}% e pedido mínimo de ${min} em: 24, 25 e 31 de dezembro, 1º de janeiro, e demais feriados federais dos EUA (MLK, Presidents’ Day, Memorial Day, Juneteenth, Independence Day / 4 de julho, Labor Day, Columbus Day, Veterans Day, Thanksgiving e Christmas).',
+      'Em 24, 25 e 31 de dezembro e 1º de janeiro: acréscimo de {pct}% somente no pacote e pedido mínimo de ${min}. Demais feriados federais dos EUA fora de dezembro/janeiro mantêm o adicional comercial vigente.',
     ruleNoRefundDates:
       'Em 24, 25 e 31 de dezembro e 1º de janeiro não há reembolso nem reagendamento.',
     cancelPolicy1:
-      'Cancelamentos e reagendamentos seguem as condições acordadas no momento da reserva.',
+      'Até 72 horas antes: reagendamento em até 3 meses; o adiantamento pago pode ser considerado no próximo evento.',
     cancelPolicy2:
-      'Em 24, 25 e 31 de dezembro e 1º de janeiro não há reembolso nem reagendamento.',
+      'Até 48 horas antes: desconta-se 50% do adiantamento pago; reagendamento em até 3 meses com 50% de crédito.',
     cancelPolicy3:
-      'Eventos em feriados federais dos EUA e datas comemorativas (24, 25 e 31 de dezembro e 1º de janeiro) têm acréscimo de {pct}% e pedido mínimo de ${min}.',
+      'Com menos de 48 horas: o adiantamento é perdido, sem reembolso e sem reagendamento.',
     minOrderAppliedWithMin: '{label} (mín. {min})',
     quoteLoadError: 'Erro ao carregar cotação',
     conferenceLink: 'Link de conferência: {url}',
@@ -692,9 +696,11 @@ const dict = {
     viewInAgenda: 'View in Agenda',
     packageLabel: 'Package',
     additionalsLabel: 'Add-ons',
+    docSidesLine: 'Sides (Plus)',
     mileageLabel: 'Mileage',
     docMileageChargedSummaryLine:
       'Mileage ({charged} mi charged beyond {free} mi courtesy)',
+    docMileageFullTripLine: 'Mileage ({charged} mi of the full trip)',
     docGrillRentalLine: 'Grill rental',
     docGrillRentalLineQty: 'Grill rental ({qty}×)',
     reservationLabel: 'Deposit',
@@ -913,23 +919,25 @@ const dict = {
     ruleMinWeekend: 'Friday to Sunday: minimum order of ${amount}.',
     ruleMileageBase: 'Calculation base: {base}.',
     ruleMileageFree: '{limit} {unit} free.',
-    ruleMileageRate: '${rate}/{unit} above the free limit.',
+    ruleMileageRate:
+      'Up to {limit} {unit}: no travel fee. Over {limit} {unit}: ${rate} per {unit} on the full trip. Example: 30 {unit} = $60.',
     ruleReservationPct: '{pct}% in advance to reserve the date.',
     ruleBalancePct: '{pct}% remaining by the end of the event.',
     ruleFoodStorage: 'Food may not be stored to consume after service.',
     ruleFoodFine: 'Fine for non-compliance: ${amount}.',
     ruleLatePayment: 'Late payment fee: ${amount} per day.',
-    ruleDecJanMin: 'December and January (non-holiday): minimum order of ${amount}.',
+    ruleDecJanMin:
+      'December and January (except Dec 24, 25, 31 and Jan 1): minimum order of ${amount}.',
     ruleHolidaySurcharge:
-      '{pct}% surcharge and ${min} minimum on: Dec 24, 25 and 31, Jan 1, and other US federal holidays (MLK, Presidents’ Day, Memorial Day, Juneteenth, Independence Day / July 4, Labor Day, Columbus Day, Veterans Day, Thanksgiving and Christmas).',
+      'On Dec 24, 25 and 31 and Jan 1: {pct}% surcharge on the package only and a ${min} minimum. Other US federal holidays outside December/January keep the current commercial surcharge.',
     ruleNoRefundDates:
       'On Dec 24, 25 and 31 and Jan 1 there is no refund or reschedule.',
     cancelPolicy1:
-      'Cancellations and reschedules follow the conditions agreed at the time of the deposit.',
+      'Up to 72 hours before: reschedule within 3 months; the paid deposit may apply to the next event.',
     cancelPolicy2:
-      'On Dec 24, 25 and 31 and Jan 1 there is no refund or reschedule.',
+      'Up to 48 hours before: 50% of the paid deposit is deducted; reschedule within 3 months with 50% credit.',
     cancelPolicy3:
-      'Events on US federal holidays and commemorative dates (Dec 24, 25 and 31 and Jan 1) have a {pct}% surcharge and a ${min} minimum order.',
+      'Less than 48 hours: the deposit is forfeited, with no refund and no reschedule.',
     minOrderAppliedWithMin: '{label} (min. {min})',
     quoteLoadError: 'Error loading quote',
     conferenceLink: 'Check link: {url}',
@@ -1154,9 +1162,11 @@ const dict = {
     viewInAgenda: 'Ver en la Agenda',
     packageLabel: 'Paquete',
     additionalsLabel: 'Adicionales',
+    docSidesLine: 'Guarniciones (Plus)',
     mileageLabel: 'Kilometraje',
     docMileageChargedSummaryLine:
       'Kilometraje ({charged} mi cobradas además de {free} mi de cortesía)',
+    docMileageFullTripLine: 'Kilometraje ({charged} mi del trayecto total)',
     docGrillRentalLine: 'Alquiler de parrilla',
     docGrillRentalLineQty: 'Alquiler de parrilla ({qty}×)',
     reservationLabel: 'Reserva',
@@ -1377,24 +1387,26 @@ const dict = {
     ruleMinWeekend: 'Viernes a domingo: pedido mínimo de ${amount}.',
     ruleMileageBase: 'Base de cálculo: {base}.',
     ruleMileageFree: '{limit} {unit} gratuitos.',
-    ruleMileageRate: '${rate}/{unit} por encima del límite gratuito.',
+    ruleMileageRate:
+      'Hasta {limit} {unit}: sin cargo. Más de {limit} {unit}: ${rate} por {unit} sobre el trayecto total. Ejemplo: 30 {unit} = $60.',
     ruleReservationPct: '{pct}% anticipado para reservar la fecha.',
     ruleBalancePct: '{pct}% restante hasta el final del evento.',
     ruleFoodStorage:
       'No está permitido almacenar comida para consumir después del servicio.',
     ruleFoodFine: 'Multa por incumplimiento: ${amount}.',
     ruleLatePayment: 'Multa por atraso en el pago: ${amount} por día.',
-    ruleDecJanMin: 'Diciembre y enero (fuera de feriado): pedido mínimo de ${amount}.',
+    ruleDecJanMin:
+      'Diciembre y enero (excepto 24, 25 y 31 de diciembre y 1 de enero): pedido mínimo de ${amount}.',
     ruleHolidaySurcharge:
-      'Recargo del {pct}% y pedido mínimo de ${min} en: 24, 25 y 31 de diciembre, 1 de enero, y demás feriados federales de EE. UU. (MLK, Presidents’ Day, Memorial Day, Juneteenth, Independence Day / 4 de julio, Labor Day, Columbus Day, Veterans Day, Thanksgiving y Christmas).',
+      'El 24, 25 y 31 de diciembre y el 1 de enero: recargo del {pct}% solo en el paquete y pedido mínimo de ${min}. Los demás feriados federales de EE. UU. fuera de diciembre/enero mantienen el adicional comercial vigente.',
     ruleNoRefundDates:
       'El 24, 25 y 31 de diciembre y el 1 de enero no hay reembolso ni reprogramación.',
     cancelPolicy1:
-      'Las cancelaciones y reprogramaciones siguen las condiciones acordadas en el momento de la reserva.',
+      'Hasta 72 horas antes: reprogramación en hasta 3 meses; el anticipo pagado puede aplicarse al próximo evento.',
     cancelPolicy2:
-      'El 24, 25 y 31 de diciembre y el 1 de enero no hay reembolso ni reprogramación.',
+      'Hasta 48 horas antes: se descuenta el 50% del anticipo pagado; reprogramación en hasta 3 meses con 50% de crédito.',
     cancelPolicy3:
-      'Los eventos en feriados federales de EE. UU. y fechas conmemorativas (24, 25 y 31 de diciembre y 1 de enero) tienen un recargo del {pct}% y un pedido mínimo de ${min}.',
+      'Con menos de 48 horas: el anticipo se pierde, sin reembolso y sin reprogramación.',
     minOrderAppliedWithMin: '{label} (mín. {min})',
     quoteLoadError: 'Error al cargar el presupuesto',
     conferenceLink: 'Enlace de conferencia: {url}',

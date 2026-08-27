@@ -150,7 +150,7 @@ export function buildEventSavePayload(
     has_grill: input.hasGrill,
     grill_photo_required: input.grillPhotoRequired,
     grill_rental_required: input.grillRentalRequired,
-    grill_rental_qty: input.grillRentalRequired ? input.grillRentalQty : 0,
+    grill_rental_qty: input.grillRentalRequired ? 1 : 0,
     grill_notes: input.grillNotes.trim() || null,
     distance_from_base: input.distance,
     active: true,
@@ -178,7 +178,7 @@ function buildQuoteGrillAndMileagePayload(
     has_grill: input.hasGrill,
     grill_photo_required: input.grillPhotoRequired,
     grill_rental_required: input.grillRentalRequired,
-    grill_rental_qty: input.grillRentalRequired ? input.grillRentalQty : 0,
+    grill_rental_qty: input.grillRentalRequired ? 1 : 0,
     grill_notes: input.grillNotes.trim() || null,
     mileage_base_location:
       input.baseLocation.trim() || input.pricing.mileageBaseLocation,

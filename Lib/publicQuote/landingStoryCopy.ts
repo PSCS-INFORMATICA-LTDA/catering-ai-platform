@@ -106,7 +106,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'Seu ritmo.' },
         ],
         badge: { text: 'BUFFET', tone: 'yellow' },
-        body: 'Nosso serviço é no formato buffet, trazendo liberdade e praticidade para que cada convidado se sirva de acordo com seu gosto.',
+        body: 'Serviço de churrasco no formato buffet / all you can eat, por até 4 horas, para que cada convidado se sirva de acordo com seu gosto.',
       },
       {
         id: 'since-2017',
@@ -195,7 +195,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'Your pace.' },
         ],
         badge: { text: 'BUFFET', tone: 'yellow' },
-        body: 'Our service is buffet-style, giving every guest the freedom and convenience to serve themselves according to their taste.',
+        body: 'BBQ buffet / all-you-can-eat service for up to 4 hours, so every guest can serve themselves according to their taste.',
       },
       {
         id: 'since-2017',
@@ -284,7 +284,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'A tu ritmo.' },
         ],
         badge: { text: 'BUFFET', tone: 'yellow' },
-        body: 'Nuestro servicio es estilo buffet, ofreciendo libertad y practicidad para que cada invitado se sirva según su gusto.',
+        body: 'Servicio de BBQ tipo buffet / all you can eat por hasta 4 horas, para que cada invitado se sirva según su gusto.',
       },
       {
         id: 'since-2017',

@@ -62,6 +62,9 @@ import {
 } from '../../../Lib/packageFieldAccess'
 import QuoteWizardConfirmationStep from '../../../components/quote-review/QuoteWizardConfirmationStep'
 import PublicQuoteConfirmationStep from '../../../components/quote-review/PublicQuoteConfirmationStep'
+import SpecialEventDateNotice from '../../../components/quotes/SpecialEventDateNotice'
+import { CDL_CANCEL_POLICY_VERSION } from '@/Lib/cdlCancellationPolicy'
+import { normalizeGrillRentalQty } from '@/Lib/grillRental'
 import {
   getPublicPackageSidesGroup,
   resolvePackageCatalogImageUrl,
@@ -313,8 +316,16 @@ function buildPublicIntakeDraft(
       hasGrill: state.hasGrill,
       photoReference: state.grillPhotoReference,
       rentalRequired: state.grillRentalRequired,
-      rentalQty: state.grillRentalQty,
+      rentalQty: normalizeGrillRentalQty(state.grillRentalRequired),
       notes: state.grillNotes.trim() || null,
+    },
+    consents: {
+      cancellation: {
+        accepted: state.cancellationPolicyAccepted,
+        version: CDL_CANCEL_POLICY_VERSION,
+        locale: state.language,
+        acceptedAt: state.cancellationPolicyAcceptedAt,
+      },
     },
   }
 }
@@ -1800,7 +1811,7 @@ export default function QuoteWizardCore({
     eventDate: state.eventDate,
     mileageDistance: isPublicMode ? 0 : state.distance,
     grillRentalRequired: state.grillRentalRequired,
-    grillRentalQty: state.grillRentalQty,
+    grillRentalQty: normalizeGrillRentalQty(state.grillRentalRequired),
     reservationPercentage: isPublicMode ? null : state.reservationPercentage,
     language: state.language,
     enabled:
@@ -2603,9 +2614,18 @@ export default function QuoteWizardCore({
     }
 
     if (isPublicMode) {
-      if (!state.publicConsentAccepted || !publicContext?.consentVersion) {
+      if (!state.cancellationPolicyAccepted || !state.publicConsentAccepted || !publicContext?.consentVersion) {
         setSaveErrorInfo(
-          buildSaveQuoteError('validation', new Error(w.consentRequired)),
+          buildSaveQuoteError(
+            'validation',
+            new Error(
+              !state.cancellationPolicyAccepted && !state.publicConsentAccepted
+                ? w.bothConsentsRequired
+                : !state.cancellationPolicyAccepted
+                  ? w.cancellationPolicyRequired
+                  : w.consentRequired,
+            ),
+          ),
         )
         return
       }
@@ -2639,6 +2659,13 @@ export default function QuoteWizardCore({
             consent: {
               accepted: true,
               version: publicContext.consentVersion,
+            },
+            cancellationConsent: {
+              accepted: true,
+              version: CDL_CANCEL_POLICY_VERSION,
+              locale: state.language,
+              acceptedAt:
+                state.cancellationPolicyAcceptedAt || new Date().toISOString(),
             },
             website: '',
           }),
@@ -3149,6 +3176,12 @@ export default function QuoteWizardCore({
                       : undefined
                   }
                 />
+                {isPublicMode ? (
+                  <SpecialEventDateNotice
+                    eventDate={state.eventDate}
+                    language={uiLocale}
+                  />
+                ) : null}
                 <TimePickerField
                   label={w.startTime}
                   language={uiLocale}
@@ -3324,6 +3357,12 @@ export default function QuoteWizardCore({
 
         {step === 2 && (
           <div className="space-y-4">
+            {isPublicMode ? (
+              <SpecialEventDateNotice
+                eventDate={state.eventDate}
+                language={uiLocale}
+              />
+            ) : null}
             {packages.length === 0 ? (
               <div className="rounded-2xl border border-red-500/40 bg-cdl-surface p-6 text-sm text-red-300">
                 {fetchErrors.some((e) => /pacote|package/i.test(e))
@@ -3586,36 +3625,37 @@ export default function QuoteWizardCore({
               ) : null}
 
               {state.grillSetupAnswered && !state.hasGrill ? (
-                <>
-                  <div className="sm:col-span-1">
-                    <CheckboxField
-                      label={w.grillRentalRequired}
-                      checked={state.grillRentalRequired}
-                      onChange={(value) =>
-                        updateState({
-                          grillRentalRequired: value,
-                          grillRentalQty: value
-                            ? Math.max(1, state.grillRentalQty)
-                            : 0,
-                        })
-                      }
-                    />
+                <fieldset className="sm:col-span-2" data-grill-rental>
+                  <legend className="cdl-eyebrow">{w.grillRentalRequired}</legend>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    {[
+                      { value: true, label: w.yes },
+                      { value: false, label: w.no },
+                    ].map((option) => {
+                      const selected = state.grillRentalRequired === option.value
+                      return (
+                        <button
+                          key={String(option.value)}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() =>
+                            updateState({
+                              grillRentalRequired: option.value,
+                              grillRentalQty: normalizeGrillRentalQty(option.value),
+                            })
+                          }
+                          className={`min-h-16 rounded-2xl border px-4 py-3 text-sm font-bold transition ${
+                            selected
+                              ? 'border-[var(--brand-primary-2)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,white)] text-[var(--brand-primary)] ring-2 ring-[color-mix(in_srgb,var(--brand-primary-2)_24%,transparent)]'
+                              : 'border-cdl-border bg-cdl-surface text-cdl-title hover:border-cdl-accent-border'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      )
+                    })}
                   </div>
-                  <QuantityField
-                    label={w.grillRentalQty}
-                    value={state.grillRentalQty}
-                    min={state.grillRentalRequired ? 1 : 0}
-                    disabled={!state.grillRentalRequired}
-                    placeholder={state.grillRentalRequired ? '1' : '0'}
-                    onChange={(value) =>
-                      updateState({
-                        grillRentalQty: state.grillRentalRequired
-                          ? Math.max(1, value)
-                          : 0,
-                      })
-                    }
-                  />
-                </>
+                </fieldset>
               ) : null}
               <div className="sm:col-span-2">
                 <label className="flex flex-col gap-2">
@@ -3672,6 +3712,8 @@ export default function QuoteWizardCore({
               language={uiLocale}
               consentLabel={publicContext?.consentLabel || ''}
               privacyUrl={publicContext?.privacyUrl}
+              cancellationPolicyAccepted={state.cancellationPolicyAccepted}
+              cancellationPolicyLabel={w.cancellationPolicyAccept}
               mileageReviewRequired={
                 pricingPreview.data?.mileage?.status === 'pending_review'
               }
@@ -3689,6 +3731,17 @@ export default function QuoteWizardCore({
                   publicConsentAccepted: accepted,
                   publicConsentVersion:
                     publicContext?.consentVersion ?? null,
+                })
+              }
+              onCancellationPolicyChange={(accepted) =>
+                updateState({
+                  cancellationPolicyAccepted: accepted,
+                  cancellationPolicyVersion: accepted
+                    ? CDL_CANCEL_POLICY_VERSION
+                    : null,
+                  cancellationPolicyAcceptedAt: accepted
+                    ? new Date().toISOString()
+                    : null,
                 })
               }
               onGoToStep={(nextStep) => {

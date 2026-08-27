@@ -57,6 +57,9 @@ export type WizardState = {
   reservationNotes: string
   publicConsentAccepted: boolean
   publicConsentVersion: string | null
+  cancellationPolicyAccepted: boolean
+  cancellationPolicyVersion: string | null
+  cancellationPolicyAcceptedAt: string | null
 }
 
 export function createInitialWizardState(
@@ -113,6 +116,9 @@ export function createInitialWizardState(
     reservationNotes: '',
     publicConsentAccepted: false,
     publicConsentVersion: null,
+    cancellationPolicyAccepted: false,
+    cancellationPolicyVersion: null,
+    cancellationPolicyAcceptedAt: null,
   }
 }
 

@@ -47,6 +47,7 @@ import {
 } from '@/Lib/publicQuote/successSession'
 import PublicQuoteSuccessScreen from '@/components/quotes/PublicQuoteSuccessScreen'
 import { tw } from '@/Lib/quoteTranslations'
+import { resolvePublicCompanyContacts } from '@/Lib/publicQuote/companyContacts'
 
 export type PublicQuotePageBootstrap = {
   company: {
@@ -103,6 +104,7 @@ export type PublicQuotePageBootstrap = {
     support: {
       phone: string | null
       whatsappUrl: string | null
+      email?: string | null
       instagramUrl?: string | null
       instagramHandle?: string | null
     }
@@ -165,6 +167,14 @@ type IntakeDraft = {
     rentalRequired?: boolean
     rentalQty?: number
     notes?: string | null
+  }
+  consents?: {
+    cancellation?: {
+      accepted?: boolean
+      version?: string
+      locale?: string
+      acceptedAt?: string | null
+    }
   }
 }
 
@@ -287,9 +297,12 @@ function hydrateDraft(
     grillPhotoAnswered: !hasGrill || Boolean(photoReference),
     grillPhotoReference: photoReference,
     grillRentalRequired: Boolean(draft.grill?.rentalRequired),
-    grillRentalQty: draft.grill?.rentalQty || 0,
+    grillRentalQty: draft.grill?.rentalRequired ? 1 : 0,
     grillNotes: draft.grill?.notes || '',
     publicConsentVersion: consentVersion,
+    cancellationPolicyAccepted: draft.consents?.cancellation?.accepted === true,
+    cancellationPolicyVersion: draft.consents?.cancellation?.version || null,
+    cancellationPolicyAcceptedAt: draft.consents?.cancellation?.acceptedAt || null,
   }
 }
 
@@ -318,6 +331,10 @@ export default function PublicQuoteExperience({
     [bootstrap.company.slug, storedSuccessRaw],
   )
   const success = liveSuccess ?? storedSuccess
+  const publicContacts = resolvePublicCompanyContacts(
+    bootstrap.settings.support,
+    bootstrap.company.slug,
+  )
   const activeStorageKey = publicQuoteActiveStorageKey(bootstrap.company.slug)
   const autoResumeAttemptedRef = useRef(false)
   const defaultBranch =
@@ -630,9 +647,14 @@ export default function PublicQuoteExperience({
             {bootstrap.settings.consent.privacyUrl ? (
               <a href={bootstrap.settings.consent.privacyUrl}>{copy.privacy}</a>
             ) : null}
-            {bootstrap.settings.support.phone ? (
-              <a href={`tel:${bootstrap.settings.support.phone}`}>
-                {copy.support} {bootstrap.settings.support.phone}
+            {publicContacts.phone ? (
+              <a href={`tel:${publicContacts.phone}`}>
+                {copy.support} {publicContacts.phone}
+              </a>
+            ) : null}
+            {publicContacts.email ? (
+              <a href={`mailto:${publicContacts.email}`} data-public-contact-email>
+                {publicContacts.email}
               </a>
             ) : null}
           </div>

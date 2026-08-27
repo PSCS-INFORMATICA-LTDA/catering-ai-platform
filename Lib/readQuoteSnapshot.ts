@@ -212,7 +212,7 @@ export function getChargedMilesFromSnapshot(
   freeLimit: number | null,
 ) {
   if (distance == null || freeLimit == null) return null
-  return Math.max(0, distance - freeLimit)
+  return distance > freeLimit ? distance : 0
 }
 
 /** Preferencial: breakdown canônico persistido; legado: colunas flat via readQuoteSnapshot. */

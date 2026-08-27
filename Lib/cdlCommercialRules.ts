@@ -290,9 +290,13 @@ export const RESERVATION_PAYMENT_TEXT =
   'Para reservar a data, é necessário pagamento antecipado de 30%. O saldo restante deve ser pago até o término do evento.'
 
 export const CANCELLATION_POLICY_SUMMARY = [
-  'Cancelamentos e reagendamentos seguem as condições acordadas no momento da reserva.',
-  'Em 24, 25 e 31 de dezembro e 1º de janeiro não há reembolso nem reagendamento.',
-  `Eventos em feriados federais dos EUA e datas comemorativas (24, 25 e 31 de dezembro e 1º de janeiro) têm acréscimo de ${HOLIDAY_SURCHARGE_PERCENT}% e pedido mínimo de $${HOLIDAY_MIN_ORDER}.`,
+  'Até 72 horas antes: reagendamento em até 3 meses; o adiantamento pago pode ser considerado no próximo evento.',
+  'Até 48 horas antes: desconta-se 50% do adiantamento pago; reagendamento em até 3 meses com 50% de crédito.',
+  'Com menos de 48 horas: o adiantamento é perdido, sem reembolso e sem reagendamento.',
+  'Reagendamento sujeito à disponibilidade, com limite de 1 reagendamento. Não há reembolso.',
+  'O crédito pode ser transferido para terceiros, respeitando esta política.',
+  'Em caso de clima, o reagendamento pode ser solicitado até 72 horas antes.',
+  'Solicitação por WhatsApp ou mensagem de texto para +1 (407) 915-2242, sujeita a aprovação.',
 ] as const
 
 export const IMPORTANT_RULES = {
@@ -302,8 +306,8 @@ export const IMPORTANT_RULES = {
   ],
   mileage: [
     `Base de cálculo: ${MILEAGE_BASE_LOCATION}.`,
-    `${MILEAGE_FREE_LIMIT} ${MILEAGE_UNIT} gratuitos.`,
-    `$${MILEAGE_RATE}/${MILEAGE_UNIT} acima do limite gratuito.`,
+    `Até ${MILEAGE_FREE_LIMIT} ${MILEAGE_UNIT}: sem taxa de deslocamento.`,
+    `Acima de ${MILEAGE_FREE_LIMIT} ${MILEAGE_UNIT}: $${MILEAGE_RATE} por ${MILEAGE_UNIT} sobre o trajeto total. Exemplo: 30 ${MILEAGE_UNIT} = $60.`,
   ],
   reservation: [
     `${RESERVATION_PERCENTAGE}% antecipado para reservar a data.`,
@@ -318,9 +322,9 @@ export const IMPORTANT_RULES = {
   ],
   /** Adicional de datas comemorativas / feriados EUA. */
   decemberJanuary: [
-    `Dezembro e janeiro (fora de feriado): pedido mínimo de $${MIN_ORDER_DEC_JAN}.`,
-    `Acréscimo de ${HOLIDAY_SURCHARGE_PERCENT}% e pedido mínimo de $${HOLIDAY_MIN_ORDER} em: 24, 25 e 31 de dezembro, 1º de janeiro, e demais feriados federais dos EUA (MLK, Presidents’ Day, Memorial Day, Juneteenth, Independence Day / 4 de julho, Labor Day, Columbus Day, Veterans Day, Thanksgiving e Christmas).`,
-    'Em 24, 25 e 31 de dezembro e 1º de janeiro não há reembolso nem reagendamento.',
+    `Dezembro e janeiro (exceto 24, 25 e 31 de dezembro e 1º de janeiro): pedido mínimo de $${MIN_ORDER_DEC_JAN}.`,
+    `Em 24, 25 e 31 de dezembro e 1º de janeiro: acréscimo de ${HOLIDAY_SURCHARGE_PERCENT}% somente no pacote e pedido mínimo de $${HOLIDAY_MIN_ORDER}. Sem reembolso ou reagendamento.`,
+    'Demais feriados federais dos EUA fora de dezembro/janeiro mantêm o adicional comercial vigente.',
   ],
 } as const
 
@@ -328,7 +332,7 @@ export const CUSTOMER_QUOTE_SECTIONS = [
   {
     title: 'Como funciona o serviço',
     body: [
-      `Até ${SERVICE_DURATION_HOURS} horas no estilo all you can eat.`,
+      `Serviço de churrasco no formato buffet / all you can eat, por até ${SERVICE_DURATION_HOURS} horas.`,
       'Não trabalhamos com bebidas.',
       `Serviço de garçom opcional: $${WAITER_SERVICE_FEE}.`,
       `Churrasqueira não inclusa — aluguel $${GRILL_RENTAL_FEE}.`,

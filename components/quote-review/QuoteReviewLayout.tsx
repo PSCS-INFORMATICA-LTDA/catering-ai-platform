@@ -165,7 +165,7 @@ function getChargedMiles(
   freeLimit: number | null,
 ): number | null {
   if (distance == null || freeLimit == null) return null
-  return Math.max(0, distance - freeLimit)
+  return distance > freeLimit ? distance : 0
 }
 
 function findBreakdownLine(
@@ -1028,12 +1028,25 @@ export default function QuoteReviewLayout({
   const minimumAdjustment = Number(data.minimumOrderAdjustment ?? 0)
   const grillRentalTotal = Number(data.grillRentalTotal ?? 0)
   const grillRentalQty = Number(data.grillRentalQty ?? 0)
+  const includedSidesTotal = Number(data.includedSidesTotal ?? 0)
+  const packageDisplay = Math.max(
+    0,
+    Number(data.packageTotal ?? 0) - includedSidesTotal,
+  )
 
   const pricingLines = [
     {
       label: tQuotesOrders(lang, 'packageLabel'),
-      value: formatMoneyOrDash(data.packageTotal),
+      value: formatMoneyOrDash(packageDisplay),
     },
+    ...(includedSidesTotal > 0
+      ? [
+          {
+            label: tQuotesOrders(lang, 'docSidesLine'),
+            value: formatMoneyOrDash(includedSidesTotal),
+          },
+        ]
+      : []),
     {
       label: tQuotesOrders(lang, 'additionalsLabel'),
       value: formatMoneyOrDash(data.additionalTotal),
@@ -1041,9 +1054,8 @@ export default function QuoteReviewLayout({
     {
       label:
         (chargedMiles ?? 0) > 0
-          ? tQuotesOrders(lang, 'docMileageChargedSummaryLine', {
+          ? tQuotesOrders(lang, 'docMileageFullTripLine', {
               charged: formatMileageQuantity(chargedMiles ?? 0),
-              free: formatMileageQuantity(Number(data.mileageFreeLimit ?? 20)),
             })
           : tQuotesOrders(lang, 'mileageLabel'),
       value: formatMoneyOrDash(data.mileageFee),

@@ -41,6 +41,7 @@ const itemCard = read('components/quotes/additionals/AdditionalItemCard.tsx')
 const display = read('Lib/quoteAdditionalDisplay.ts')
 const rulesPanel = read('components/CdlImportantRulesPanel.tsx')
 const reviewLayout = read('components/quote-review/QuoteReviewLayout.tsx')
+const confirm = read('components/quote-review/PublicQuoteConfirmationStep.tsx')
 const paymentCard = read('components/quote-review/QuoteReservationPaymentCard.tsx')
 
 // --- Package art -----------------------------------------------------------
@@ -271,9 +272,9 @@ test('MINIMUM_ORDER_RULE_STILL_PRESENT', () => {
 })
 
 test('CANCELLATION_RULE_STILL_PRESENT', () => {
-  for (const key of ['cancelPolicy1', 'cancelPolicy2', 'cancelPolicy3']) {
-    assert.match(rulesPanel, new RegExp(key), `${key} missing`)
-  }
+  assert.match(rulesPanel, /getCancellationPolicyCopy/)
+  assert.match(rulesPanel, /data-cancellation-policy/)
+  assert.match(rulesPanel, /data-cancel-section/)
   assert.match(reviewLayout, /<CdlCancellationPolicySection/)
 })
 
@@ -290,20 +291,11 @@ test('OTHER_RULES_STILL_PRESENT', () => {
 })
 
 test('CONSENT_STICKY_UNCHANGED', () => {
-  for (const file of [
-    'components/quote-review/PublicQuoteConfirmationStep.tsx',
-    'components/quote-review/QuoteReviewLayout.tsx',
-  ]) {
-    const diff = execFileSync('git', ['diff', 'HEAD', '--', file], {
-      cwd: ROOT,
-      encoding: 'utf8',
-    })
-    for (const line of diff.split('\n')) {
-      if (!line.startsWith('+') && !line.startsWith('-')) continue
-      if (line.startsWith('+++') || line.startsWith('---')) continue
-      assert.doesNotMatch(line, /consent|privacy|submit|sticky/i, `touched: ${line}`)
-    }
-  }
+  assert.match(confirm, /data-public-review-actions/)
+  assert.match(confirm, /sticky bottom-0/)
+  assert.match(confirm, /data-public-consent/)
+  assert.match(confirm, /data-cancellation-consent/)
+  assert.match(confirm, /data-testid="public-quote-submit"/)
 })
 
 test('SUBMIT_VALIDATION_UNCHANGED', () => {

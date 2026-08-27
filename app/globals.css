@@ -3495,4 +3495,62 @@ body {
   }
 }
 
+.cdl-special-date-notice {
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 28%, #e8d2a8);
+  background: color-mix(in srgb, var(--brand-primary) 8%, #fff8ee);
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.cdl-special-date-notice-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brand-primary);
+}
+
+.cdl-special-date-notice ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.28rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: #3f2c1d;
+}
+
+.cdl-cancel-policy-item {
+  border: 1px solid var(--cdl-border, #eadfce);
+  border-radius: 0.9rem;
+  background: #fffdf8;
+  padding: 0.15rem 0.85rem 0.15rem;
+}
+
+.cdl-cancel-policy-summary {
+  cursor: pointer;
+  list-style: none;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--cdl-title, #1f140c);
+}
+
+.cdl-cancel-policy-summary::-webkit-details-marker {
+  display: none;
+}
+
+.cdl-cancel-policy-list {
+  margin: 0 0 0.75rem;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--cdl-text-secondary, #5a4636);
+}
+
 

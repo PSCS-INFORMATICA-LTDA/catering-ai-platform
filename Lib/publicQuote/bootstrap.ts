@@ -35,6 +35,7 @@ export type PublicQuoteCompanyRow = {
   default_language?: string | null
   currency_code?: string | null
   default_currency?: string | null
+  billing_email?: string | null
   logo_url?: string | null
   brand_logo_url?: string | null
   primary_color?: string | null
@@ -134,7 +135,7 @@ export async function resolvePublicQuoteTenant(
   const { data, error } = await supabase
     .from('companies')
     .select(
-      'id, company_name, trade_name, slug, default_language, currency_code, default_currency, logo_url, brand_logo_url, primary_color, secondary_color, active',
+      'id, company_name, trade_name, slug, default_language, currency_code, default_currency, billing_email, logo_url, brand_logo_url, primary_color, secondary_color, active',
     )
     .eq('slug', companySlug)
     .eq('active', true)
@@ -158,7 +159,7 @@ export async function resolvePublicQuoteTenantByCompanyId(
   const { data, error } = await supabase
     .from('companies')
     .select(
-      'id, company_name, trade_name, slug, default_language, currency_code, default_currency, logo_url, brand_logo_url, primary_color, secondary_color, active',
+      'id, company_name, trade_name, slug, default_language, currency_code, default_currency, billing_email, logo_url, brand_logo_url, primary_color, secondary_color, active',
     )
     .eq('id', companyId)
     .eq('active', true)
@@ -529,6 +530,7 @@ export async function getPublicQuoteBootstrap(
       support: {
         phone: settings.support_phone?.trim() || null,
         whatsappUrl: safePublicUrl(settings.support_whatsapp_url),
+        email: company.billing_email?.trim() || null,
       },
       serviceDurationMinutes,
       locationBias: resolvePublicLocationBias({ companySlug: company.slug }),

@@ -244,6 +244,10 @@ type QuoteStrings = {
     packageSidesUpsellText: string
     /** Lead before the live SIDE_OPTION labels on the PLUS block. */
     packageSidesChoiceLead: string
+    packageSidesDisposables: string
+    cancellationPolicyAccept: string
+    cancellationPolicyRequired: string
+    bothConsentsRequired: string
     /** Featured virtual extras category — merchandising only. */
     suggestedExtrasTitle: string
     suggestedExtrasBody: string
@@ -678,6 +682,12 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packageSidesUpsellTitle: 'PLUS GUARNIÇÕES',
       packageSidesUpsellText: 'Adicione guarnições por {price} por pessoa.',
       packageSidesChoiceLead: 'Escolha 1 opção:',
+      packageSidesDisposables:
+        'Inclui estrutura de mesa com rechauds e descartáveis: pratos, talheres e guardanapos.',
+      cancellationPolicyAccept: 'Li e concordo com a Política de Cancelamento.',
+      cancellationPolicyRequired: 'Aceite a Política de Cancelamento para enviar.',
+      bothConsentsRequired:
+        'Aceite a Política de Cancelamento e o consentimento de contato para enviar.',
       suggestedExtrasTitle: 'EXTRAS SUGERIDOS',
       suggestedExtrasBody:
         'Selecionamos alguns dos cortes e extras premium mais procurados para você personalizar seu evento.',
@@ -713,7 +723,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       mileageDistanceKm: '{km} km',
       mileageRuleLabel: 'Regra aplicada',
       mileageRuleSummary:
-        'Até {included} mi inclusas. Acima disso, {rate} por milha.',
+        'Até {included} mi: sem taxa. Acima disso, {rate} por milha sobre o trajeto total. Ex.: 30 mi = US$60.',
       adults: 'Adultos',
       childrenUnder3: 'Crianças até 3 anos',
       children4to12: 'Crianças 4 a 12 anos',
@@ -729,7 +739,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       attachGrillPhoto: 'Anexar foto da churrasqueira',
       grillPhotoHint:
         'Se o cliente possui churrasqueira própria, confirme se a foto foi recebida para validar tamanho, condição e estrutura antes do evento.',
-      grillRentalRequired: 'Necessário alugar churrasqueira?',
+      grillRentalRequired: 'Alugar churrasqueira?',
       grillRentalQty: 'Quantidade de churrasqueiras para aluguel',
       grillNotes: 'Observações sobre a churrasqueira',
       grillNotesPlaceholder:
@@ -1134,6 +1144,12 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packageSidesUpsellTitle: 'PLUS SIDES',
       packageSidesUpsellText: 'Add sides for {price} per person.',
       packageSidesChoiceLead: 'Choose 1 option:',
+      packageSidesDisposables:
+        'Includes table setup with chafing dishes and disposables: plates, cutlery and napkins.',
+      cancellationPolicyAccept: 'I have read and agree to the Cancellation Policy.',
+      cancellationPolicyRequired: 'Accept the Cancellation Policy to submit.',
+      bothConsentsRequired:
+        'Accept the Cancellation Policy and the contact consent to submit.',
       suggestedExtrasTitle: 'SUGGESTED EXTRAS',
       suggestedExtrasBody:
         'Explore a selection of premium cuts and extras to personalize your event.',
@@ -1168,7 +1184,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       mileageDistanceKm: '{km} km',
       mileageRuleLabel: 'Applied rule',
       mileageRuleSummary:
-        'Up to {included} mi included. Above that, {rate} per mile.',
+        'Up to {included} mi: no travel fee. Over that, {rate} per mile on the full trip. Example: 30 mi = US$60.',
       adults: 'Adults',
       childrenUnder3: 'Children up to 3 years',
       children4to12: 'Children 4 to 12 years',
@@ -1184,7 +1200,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       attachGrillPhoto: 'Attach grill photo',
       grillPhotoHint:
         'If the customer has their own grill, confirm the photo was received to validate size, condition and structure before the event.',
-      grillRentalRequired: 'Grill rental required?',
+      grillRentalRequired: 'Rent a grill?',
       grillRentalQty: 'Number of grills to rent',
       grillNotes: 'Grill notes',
       grillNotesPlaceholder:
@@ -1590,6 +1606,12 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packageSidesUpsellTitle: 'PLUS GUARNICIONES',
       packageSidesUpsellText: 'Agrega guarniciones por {price} por persona.',
       packageSidesChoiceLead: 'Elige 1 opción:',
+      packageSidesDisposables:
+        'Incluye estructura de mesa con chafing dishes y desechables: platos, cubiertos y servilletas.',
+      cancellationPolicyAccept: 'He leído y acepto la Política de Cancelación.',
+      cancellationPolicyRequired: 'Acepta la Política de Cancelación para enviar.',
+      bothConsentsRequired:
+        'Acepta la Política de Cancelación y el consentimiento de contacto para enviar.',
       suggestedExtrasTitle: 'EXTRAS SUGERIDOS',
       suggestedExtrasBody:
         'Descubre una selección de cortes premium y extras para personalizar tu evento.',
@@ -1624,7 +1646,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       mileageDistanceKm: '{km} km',
       mileageRuleLabel: 'Regla aplicada',
       mileageRuleSummary:
-        'Hasta {included} mi incluidas. Por encima, {rate} por milla.',
+        'Hasta {included} mi: sin cargo. Por encima, {rate} por milla sobre el trayecto total. Ej.: 30 mi = US$60.',
       adults: 'Adultos',
       childrenUnder3: 'Niños hasta 3 años',
       children4to12: 'Niños de 4 a 12 años',
@@ -1640,7 +1662,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       attachGrillPhoto: 'Adjuntar foto de la parrilla',
       grillPhotoHint:
         'Si el cliente tiene parrilla propia, confirme si la foto fue recibida para validar tamaño, condición y estructura antes del evento.',
-      grillRentalRequired: '¿Necesita alquilar parrilla?',
+      grillRentalRequired: '¿Alquilar parrilla?',
       grillRentalQty: 'Cantidad de parrillas para alquiler',
       grillNotes: 'Observaciones sobre la parrilla',
       grillNotesPlaceholder:

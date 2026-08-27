@@ -217,7 +217,7 @@ export function getPackageDescription(
 export function getChargedMiles(quote: QuoteDetail) {
   const distance = Number(quote.mileage_distance ?? 0)
   const freeLimit = Number(quote.mileage_free_limit ?? 0)
-  return Math.max(0, distance - freeLimit)
+  return distance > freeLimit ? distance : 0
 }
 
 export function getDiscount(quote: QuoteDetail) {

@@ -79,7 +79,7 @@ export function mapQuoteDetailToWizardState(
     grillPhotoAnswered: quote.has_grill != null,
     grillPhotoUrl,
     grillRentalRequired: quote.grill_rental_required ?? false,
-    grillRentalQty: quote.grill_rental_qty ?? 0,
+    grillRentalQty: quote.grill_rental_required ? 1 : 0,
     grillNotes: quote.grill_notes ?? '',
     packageId: quote.package_id ?? null,
     branchId:

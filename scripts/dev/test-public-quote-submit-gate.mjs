@@ -61,9 +61,17 @@ test('TEST 8 Privacy unchecked blocks submit', () => {
   assert.match(wizard, /!state\.publicConsentAccepted/)
 })
 
+test('TEST 8b Cancellation unchecked blocks submit', () => {
+  assert.match(confirm, /cancellationPolicyAccepted/)
+  assert.match(confirm, /data-cancellation-consent/)
+  assert.match(wizard, /!state\.cancellationPolicyAccepted/)
+  assert.match(wizard, /cancellationConsent:/)
+})
+
 test('TEST 9 Privacy checked allows submit', () => {
   assert.match(confirm, /canSubmit =/)
   assert.match(confirm, /state\.publicConsentAccepted/)
+  assert.match(confirm, /cancellationPolicyAccepted/)
   assert.match(wizard, /consent: \{\s*accepted: true/)
 })
 

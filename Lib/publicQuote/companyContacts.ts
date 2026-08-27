@@ -3,6 +3,7 @@ export type PublicSupportContacts = {
   whatsappUrl?: string | null
   instagramUrl?: string | null
   instagramHandle?: string | null
+  email?: string | null
 }
 
 export type PublicCompanyContacts = {
@@ -10,6 +11,7 @@ export type PublicCompanyContacts = {
   whatsappUrl: string | null
   instagramUrl: string | null
   instagramHandle: string | null
+  email: string | null
 }
 
 /**
@@ -19,6 +21,7 @@ export type PublicCompanyContacts = {
 const COMPANY_CONTACT_FALLBACKS: Record<string, Partial<PublicCompanyContacts>> = {
   cdl: {
     phone: '+14079152242',
+    email: 'cdlbbqatendimento@gmail.com',
     instagramUrl: 'https://www.instagram.com/cdl.bbq/',
     instagramHandle: '@cdl.bbq',
   },
@@ -42,6 +45,7 @@ export function resolvePublicCompanyContacts(
   const phone = clean(support?.phone) ?? clean(fallback.phone)
   return {
     phone,
+    email: clean(support?.email) ?? clean(fallback.email),
     whatsappUrl:
       clean(support?.whatsappUrl) ??
       clean(fallback.whatsappUrl) ??

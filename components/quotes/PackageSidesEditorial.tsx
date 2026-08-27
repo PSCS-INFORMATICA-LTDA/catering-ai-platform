@@ -101,6 +101,12 @@ export default function PackageSidesEditorial({
               </span>
             </p>
           ) : null}
+          <p
+            data-package-sides-disposables
+            className="public-package-editorial-helper"
+          >
+            {tw(language, 'packageSidesDisposables')}
+          </p>
         </div>
       ) : null}
     </section>

@@ -39,12 +39,12 @@ function calcBillableGuestCount(g) {
 }
 
 function calcMileageFee(distance, free = MILEAGE_FREE_LIMIT, rate = MILEAGE_RATE) {
-  return roundMoney(Math.max(0, distance - free) * rate)
+  return distance > free ? roundMoney(distance * rate) : 0
 }
 
-function calcGrillRentalFee(required, qty, fee = GRILL_RENTAL_FEE) {
+function calcGrillRentalFee(required, _qty, fee = GRILL_RENTAL_FEE) {
   if (!required) return 0
-  return roundMoney(Math.max(0, qty) * fee)
+  return roundMoney(fee)
 }
 
 function calcPackageTotal(pricePerPerson, billableGuests) {
@@ -209,7 +209,9 @@ async function main() {
 
   // T09 mileage
   try {
-    assert.equal(calcMileageFee(30), 20)
+    assert.equal(calcMileageFee(20), 0)
+    assert.equal(calcMileageFee(21), 42)
+    assert.equal(calcMileageFee(30), 60)
     pass('T09 mileage')
   } catch (e) {
     fail('T09 mileage', e)
@@ -218,9 +220,9 @@ async function main() {
   // T10 grill
   try {
     assert.equal(calcGrillRentalFee(false, 2), 0)
-    assert.equal(calcGrillRentalFee(true, 0), 0)
+    assert.equal(calcGrillRentalFee(true, 0), 100)
     assert.equal(calcGrillRentalFee(true, 1), 100)
-    assert.equal(calcGrillRentalFee(true, 2), 200)
+    assert.equal(calcGrillRentalFee(true, 2), 100)
     pass('T10 grill rental qty')
   } catch (e) {
     fail('T10 grill rental qty', e)
@@ -365,7 +367,7 @@ async function main() {
     assert.match(pdfSrc, /calcGrillRentalFee/)
     assert.doesNotMatch(pdfSrc, /\* 100 \* 100/)
     const pdfTotal = calcGrillRentalFee(true, 2)
-    assert.equal(pdfTotal, 200)
+    assert.equal(pdfTotal, 100)
     pass('T17 PDF total = persisted total (grill helper)')
   } catch (e) {
     fail('T17 PDF total = persisted total', e)

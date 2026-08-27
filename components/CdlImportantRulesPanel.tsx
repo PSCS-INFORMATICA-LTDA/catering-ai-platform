@@ -1,3 +1,4 @@
+import { getCancellationPolicyCopy } from '../Lib/cdlCancellationPolicy'
 import {
   FOOD_STORAGE_FINE,
   HOLIDAY_MIN_ORDER,
@@ -77,7 +78,11 @@ function importantRuleItems(language: QuoteLanguage) {
     mileage: [
       t('ruleMileageBase', { base: MILEAGE_BASE_LOCATION }),
       t('ruleMileageFree', { limit: MILEAGE_FREE_LIMIT, unit: MILEAGE_UNIT }),
-      t('ruleMileageRate', { rate: MILEAGE_RATE, unit: MILEAGE_UNIT }),
+      t('ruleMileageRate', {
+        rate: MILEAGE_RATE,
+        unit: MILEAGE_UNIT,
+        limit: MILEAGE_FREE_LIMIT,
+      }),
     ],
     foodPolicy: [
       t('ruleFoodStorage'),
@@ -170,43 +175,55 @@ export function CdlCancellationPolicySection({
   language?: string | null
 }) {
   const locale = loc(language)
-  const items = [
-    tQuotesOrders(locale, 'cancelPolicy1'),
-    tQuotesOrders(locale, 'cancelPolicy2'),
-    tQuotesOrders(locale, 'cancelPolicy3', {
-      pct: HOLIDAY_SURCHARGE_PERCENT,
-      min: HOLIDAY_MIN_ORDER,
-    }),
-  ]
+  const policy = getCancellationPolicyCopy(locale)
+  const sections = [...policy.windows, ...policy.extras]
 
   if (variant === 'summary') {
     return (
-      <section className="rounded-2xl border border-cdl-border bg-cdl-surface p-7 shadow-cdl sm:p-9">
-        <h2 className="cdl-section-title-lg">{tw(locale, 'cancellationPolicy')}</h2>
-        <ul className="mt-4 space-y-2 text-sm text-cdl-text-secondary">
-          {items.map((item) => (
-            <li key={item} className="flex gap-2">
-              <span className="text-cdl-title" aria-hidden>
-                •
-              </span>
-              <span>{emphasizeRuleText(item)}</span>
-            </li>
+      <section
+        data-cancellation-policy
+        className="rounded-2xl border border-cdl-border bg-cdl-surface p-5 shadow-cdl sm:p-7"
+      >
+        <h2 className="cdl-section-title-lg">{policy.title}</h2>
+        <div className="cdl-cancel-policy mt-4 space-y-2">
+          {sections.map((section, index) => (
+            <details
+              key={section.id}
+              data-cancel-section={section.id}
+              className="cdl-cancel-policy-item"
+              open={index < 3}
+            >
+              <summary className="cdl-cancel-policy-summary">
+                {section.label}
+              </summary>
+              <ul className="cdl-cancel-policy-list">
+                {section.items.map((item) => (
+                  <li key={item}>{emphasizeRuleText(item)}</li>
+                ))}
+              </ul>
+            </details>
           ))}
-        </ul>
+        </div>
       </section>
     )
   }
 
   return (
-    <section className="quote-proposal-rules quote-print-section">
-      <h2 className="quote-proposal-section-title">
-        {tw(locale, 'cancellationPolicy')}
-      </h2>
-      <ul className="quote-proposal-rules-list">
-        {items.map((item) => (
-          <li key={item}>{emphasizeRuleText(item)}</li>
-        ))}
-      </ul>
+    <section
+      data-cancellation-policy
+      className="quote-proposal-rules quote-print-section"
+    >
+      <h2 className="quote-proposal-section-title">{policy.title}</h2>
+      {sections.map((section) => (
+        <div key={section.id} data-cancel-section={section.id}>
+          <h3 className="quote-proposal-rules-subtitle">{section.label}</h3>
+          <ul className="quote-proposal-rules-list">
+            {section.items.map((item) => (
+              <li key={item}>{emphasizeRuleText(item)}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
     </section>
   )
 }

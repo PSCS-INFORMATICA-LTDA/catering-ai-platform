@@ -411,6 +411,7 @@ export function mapQuoteDetailToQuoteReview(
   const snapshot = readQuoteSnapshot(quote)
   const breakdown = buildSavedQuotePresentationBreakdown(quote)
   const packageLine = firstBreakdownLine(breakdown, 'package')
+  const sidesLine = firstBreakdownLine(breakdown, 'package_sides')
   const mileageLine = firstBreakdownLine(breakdown, 'mileage')
   const grillRentalLine = firstBreakdownLine(breakdown, 'grill_rental')
   const holidayLine = firstBreakdownLine(breakdown, 'holiday_surcharge')
@@ -448,7 +449,8 @@ export function mapQuoteDetailToQuoteReview(
     packageName: getPackageName(quote, lang) ?? null,
     packageImageUrl: resolveQuoteDetailPackageImageUrl(quote),
     packageUnitPrice: packageLine?.unit_price ?? snapshot.packageUnitPrice,
-    packageTotal: packageLine?.amount ?? snapshot.packageTotal,
+    packageTotal: snapshot.packageTotal ?? packageLine?.amount ?? null,
+    includedSidesTotal: sidesLine?.amount ?? 0,
     packageSummary: buildQuoteReviewPackageSummaryFromQuote(
       quote,
       snapshot,

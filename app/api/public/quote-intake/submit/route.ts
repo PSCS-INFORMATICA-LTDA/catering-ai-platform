@@ -18,6 +18,8 @@ import {
 import { validateCompletePublicQuoteDraft } from '@/Lib/publicQuote/validation'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { fetchSupabaseCommercialRules } from '@/Lib/supabaseCommercialRules'
+import { CDL_CANCEL_POLICY_VERSION } from '@/Lib/cdlCancellationPolicy'
+import { normalizeGrillRentalQty } from '@/Lib/grillRental'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -28,6 +30,12 @@ type SubmitBody = {
   idempotencyKey?: unknown
   submission?: unknown
   consent?: { accepted?: unknown; version?: unknown } | null
+  cancellationConsent?: {
+    accepted?: unknown
+    version?: unknown
+    locale?: unknown
+    acceptedAt?: unknown
+  } | null
   website?: unknown
 }
 
@@ -75,10 +83,17 @@ export async function POST(request: NextRequest) {
       typeof body.consent?.version === 'string'
         ? body.consent.version.trim()
         : ''
+    const cancellationAccepted = body.cancellationConsent?.accepted === true
+    const cancellationVersion =
+      typeof body.cancellationConsent?.version === 'string'
+        ? body.cancellationConsent.version.trim()
+        : ''
     if (
       !contactConsent ||
       !privacyPolicyVersion ||
-      privacyPolicyVersion !== tenant.settings.consent_version
+      privacyPolicyVersion !== tenant.settings.consent_version ||
+      !cancellationAccepted ||
+      cancellationVersion !== CDL_CANCEL_POLICY_VERSION
     ) {
       throw new PublicQuoteHttpError(422, 'invalid_payload')
     }
@@ -107,7 +122,7 @@ export async function POST(request: NextRequest) {
       eventDate: draft.event.eventDate,
       mileageDistance: mileage.distance,
       grillRentalRequired: draft.grill.rentalRequired,
-      grillRentalQty: draft.grill.rentalQty,
+      grillRentalQty: normalizeGrillRentalQty(draft.grill.rentalRequired),
       reservationPercentage: null,
       reservationAmountOverride: null,
       useCustomReservation: false,
@@ -127,6 +142,7 @@ export async function POST(request: NextRequest) {
     const submissionHash = stableJsonHash({
       draft,
       consentVersion: privacyPolicyVersion,
+      cancellationPolicyVersion: CDL_CANCEL_POLICY_VERSION,
     })
     const supabase = getSupabaseServerClient()
     const { data, error } = await supabase.rpc('finalize_public_quote', {

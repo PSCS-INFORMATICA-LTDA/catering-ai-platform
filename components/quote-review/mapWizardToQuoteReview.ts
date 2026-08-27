@@ -183,6 +183,7 @@ export function mapWizardToQuoteReview(
     packageImageUrl,
     packageUnitPrice: input.packageUnitPrice,
     packageTotal: quoteTotals.packageTotal,
+    includedSidesTotal: quoteTotals.includedSidesTotal,
     packageSummary,
     packageSelections: packageSelectionLabels,
     guestCounts: {
@@ -295,7 +296,10 @@ export function mapWizardBreakdownToQuoteReview(
     halfPriceChildren: 0,
     billableGuestCount: guestCounts.billable_guest_count,
     physicalGuestCount: guestCounts.physical_guest_count,
-    packageTotal: Number(packageLine?.amount ?? 0),
+    packageTotal:
+      Number(packageLine?.amount ?? 0) +
+      breakdownLineTotal(breakdown, 'package_sides'),
+    includedSidesTotal: breakdownLineTotal(breakdown, 'package_sides'),
     additionalTotal: breakdownLineTotal(breakdown, 'additional_item'),
     mileageFee: Number(mileageLine?.amount ?? 0),
     grillRentalTotal: Number(grillRentalLine?.amount ?? 0),

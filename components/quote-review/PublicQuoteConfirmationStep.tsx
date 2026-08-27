@@ -38,11 +38,14 @@ export default function PublicQuoteConfirmationStep({
   language,
   consentLabel,
   privacyUrl,
+  cancellationPolicyAccepted,
+  cancellationPolicyLabel,
   mileageReviewRequired = false,
   saving,
   submitError,
   submitErrorMessage,
   onConsentChange,
+  onCancellationPolicyChange,
   onGoToStep,
   onBack,
   onSubmit,
@@ -67,11 +70,14 @@ export default function PublicQuoteConfirmationStep({
   language: QuoteLanguage
   consentLabel: string
   privacyUrl?: string | null
+  cancellationPolicyAccepted: boolean
+  cancellationPolicyLabel: string
   mileageReviewRequired?: boolean
   saving: boolean
   submitError: boolean
   submitErrorMessage?: string | null
   onConsentChange: (accepted: boolean) => void
+  onCancellationPolicyChange: (accepted: boolean) => void
   onGoToStep: (step: number) => void
   onBack: () => void
   onSubmit: () => void
@@ -134,15 +140,19 @@ export default function PublicQuoteConfirmationStep({
     Boolean(breakdown) &&
     !pricingLoading &&
     !pricingError &&
+    cancellationPolicyAccepted &&
     state.publicConsentAccepted &&
     !saving
-  // Same conditions as before; only the rendering moved into the action shell.
   const blockedReason =
     canSubmit || saving
       ? null
       : !breakdown || pricingLoading || pricingError
         ? pricingMessage || w.pricingCalcError
-        : w.consentRequired
+        : !cancellationPolicyAccepted && !state.publicConsentAccepted
+          ? w.bothConsentsRequired
+          : !cancellationPolicyAccepted
+            ? w.cancellationPolicyRequired
+            : w.consentRequired
   void currency
 
   return (
@@ -241,6 +251,22 @@ export default function PublicQuoteConfirmationStep({
         data-public-review-actions
         className="sticky bottom-0 z-20 -mx-4 border-t border-cdl-border bg-cdl-bg/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:mx-0 sm:rounded-t-2xl sm:px-5"
       >
+        <label
+          data-cancellation-consent
+          className="mb-3 flex cursor-pointer items-start gap-2.5"
+        >
+          <input
+            type="checkbox"
+            checked={cancellationPolicyAccepted}
+            onChange={(event) =>
+              onCancellationPolicyChange(event.target.checked)
+            }
+            className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--brand-primary)]"
+          />
+          <span className="text-xs leading-5 text-cdl-text-secondary">
+            {cancellationPolicyLabel}
+          </span>
+        </label>
         <label
           data-public-consent
           className="mb-3 flex cursor-pointer items-start gap-2.5"
