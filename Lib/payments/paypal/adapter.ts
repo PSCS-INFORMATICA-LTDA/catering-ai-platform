@@ -197,8 +197,8 @@ export async function getPaypalSandboxAccessToken(input?: {
   clientSecret?: string | null
 }): Promise<string | null> {
   const config = readPaypalRuntimeConfig()
-  const clientId = input?.clientId ?? config.clientId
-  const secret = input?.clientSecret ?? readPaypalClientSecret()
+  const clientId = input ? input.clientId : config.clientId
+  const secret = input ? input.clientSecret : readPaypalClientSecret()
   if (!clientId || !secret) return null
   try {
     return await paypalAccessToken(clientId, secret)
@@ -212,8 +212,14 @@ export function createPaypalAdapter(
   company?: { clientId?: string | null; clientSecret?: string | null },
 ): PaypalOrdersAdapter {
   assertSandboxOnly(config)
-  const clientId = company?.clientId ?? (config.mode === 'sandbox' ? config.clientId : null)
-  const secret = company?.clientSecret ?? readPaypalClientSecret()
+  if (company) {
+    if (company.clientId && company.clientSecret) {
+      return new SandboxPaypalAdapter(company.clientId, company.clientSecret)
+    }
+    return new MockPaypalAdapter()
+  }
+  const clientId = config.mode === 'sandbox' ? config.clientId : null
+  const secret = readPaypalClientSecret()
   if (clientId && secret) {
     return new SandboxPaypalAdapter(clientId, secret)
   }

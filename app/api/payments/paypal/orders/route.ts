@@ -86,6 +86,9 @@ export async function POST(request: Request) {
 
   const requestId = randomUUID()
   const companyPaypal = await loadCompanyPaypalCredentials(companyId)
+  if (!companyPaypal.clientId || !companyPaypal.clientSecret) {
+    return Response.json({ error: 'paypal_not_configured' }, { status: 409 })
+  }
   const adapter = createPaypalAdapter(runtime, {
     clientId: companyPaypal.clientId,
     clientSecret: companyPaypal.clientSecret,

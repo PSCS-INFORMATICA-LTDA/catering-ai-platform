@@ -1,10 +1,14 @@
 import PaymentSettingsDashboard from '@/components/settings/PaymentSettingsDashboard'
 import { hasPermission } from '@/Lib/auth/permissions'
-import { resolveAuthorizedCompanyId } from '@/Lib/auth/requireApi'
+import { requireSessionCompanyId } from '@/Lib/auth/requireApi'
 import { getAuthSession } from '@/Lib/auth/session'
 import { tPaymentSettings } from '@/Lib/i18n/paymentSettings'
 import { resolveAuthLocale } from '@/Lib/i18n/authUsers'
-import { toPublicPaypalSettings } from '@/Lib/payments/companyPaypal'
+import {
+  ensurePaypalWebhookRouteKey,
+  PAYMENT_SETTINGS_PERMISSION,
+  toPublicPaypalSettings,
+} from '@/Lib/payments/companyPaypal'
 import {
   ensureOfflineMethods,
   loadCompanyPaymentMethods,
@@ -21,10 +25,19 @@ export default async function PaymentSettingsPage() {
 
   const allowed =
     session.isPlatformAdmin ||
-    hasPermission(session.permissions, 'company.settings')
+    hasPermission(session.permissions, PAYMENT_SETTINGS_PERMISSION)
   if (!allowed) redirect('/quotes')
 
-  const companyId = resolveAuthorizedCompanyId(session)
+  const companyContext = requireSessionCompanyId(session)
+  if (!companyContext.ok) {
+    return (
+      <main className="p-6">
+        <h1 className="text-xl font-bold text-red-500">Pagamentos</h1>
+        <p className="mt-3 text-sm text-neutral-600">company_context_required</p>
+      </main>
+    )
+  }
+  const companyId = companyContext.companyId
   const locale = resolveAuthLocale(session.appUser?.preferred_language)
 
   const { data: company, error } = await getSupabaseServerClient()
@@ -45,6 +58,7 @@ export default async function PaymentSettingsPage() {
   }
 
   await ensureOfflineMethods(companyId)
+  await ensurePaypalWebhookRouteKey(companyId)
   const paypal = await toPublicPaypalSettings(companyId)
   const methods = await loadCompanyPaymentMethods(companyId)
 

@@ -1,11 +1,13 @@
 import {
-  rejectSpoofedCompanyId,
+  rejectSpoofedTenantCompanyId,
   requireApiPermission,
-  resolveAuthorizedCompanyId,
+  requireSessionCompanyId,
 } from '@/Lib/auth/requireApi'
 import {
   createWebhookRouteKey,
+  ensurePaypalWebhookRouteKey,
   loadCompanyPaypalRow,
+  PAYMENT_SETTINGS_PERMISSION,
   toPublicPaypalSettings,
   type CompanyPaypalMetadata,
 } from '@/Lib/payments/companyPaypal'
@@ -20,24 +22,27 @@ import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
-  const auth = await requireApiPermission('company.settings')
+  const auth = await requireApiPermission(PAYMENT_SETTINGS_PERMISSION)
   if (!auth.ok) return auth.response
-  const companyId = resolveAuthorizedCompanyId(auth.session)
-  const spoofed = rejectSpoofedCompanyId(
-    auth.session,
+  const company = requireSessionCompanyId(auth.session)
+  if (!company.ok) return company.response
+  const spoofed = rejectSpoofedTenantCompanyId(
+    company.companyId,
     new URL(request.url).searchParams.get('company_id'),
   )
   if (spoofed) return spoofed
-  await ensureOfflineMethods(companyId)
-  const data = await toPublicPaypalSettings(companyId)
-  const methods = await loadCompanyPaymentMethods(companyId)
+  await ensureOfflineMethods(company.companyId)
+  await ensurePaypalWebhookRouteKey(company.companyId)
+  const data = await toPublicPaypalSettings(company.companyId)
+  const methods = await loadCompanyPaymentMethods(company.companyId)
   return Response.json({ data, methods })
 }
 
 export async function PUT(request: Request) {
-  const auth = await requireApiPermission('company.settings')
+  const auth = await requireApiPermission(PAYMENT_SETTINGS_PERMISSION)
   if (!auth.ok) return auth.response
-  const companyId = resolveAuthorizedCompanyId(auth.session)
+  const company = requireSessionCompanyId(auth.session)
+  if (!company.ok) return company.response
   const body = (await request.json().catch(() => null)) as {
     company_id?: string
     environment?: string
@@ -45,27 +50,27 @@ export async function PUT(request: Request) {
     clientId?: string
     clientSecret?: string
   } | null
-  const spoofed = rejectSpoofedCompanyId(auth.session, body?.company_id)
+  const spoofed = rejectSpoofedTenantCompanyId(company.companyId, body?.company_id)
   if (spoofed) return spoofed
   if (body?.environment === 'live') {
     return Response.json({ error: 'paypal_live_blocked' }, { status: 403 })
   }
 
-  const existing = await loadCompanyPaypalRow(companyId)
+  const existing = await loadCompanyPaypalRow(company.companyId)
   const metadata = (existing?.metadata || {}) as CompanyPaypalMetadata
   const routeKey = existing?.webhook_route_key || createWebhookRouteKey()
-  const clientId = typeof body?.clientId === 'string' ? body.clientId.trim() : existing?.public_client_id
+  const clientId =
+    typeof body?.clientId === 'string' ? body.clientId.trim() : existing?.public_client_id
   const secret = typeof body?.clientSecret === 'string' ? body.clientSecret.trim() : ''
 
   if (secret) {
-    const stored = await storeCompanyPaypalSecret(companyId, secret)
+    const stored = await storeCompanyPaypalSecret(company.companyId, secret)
     metadata.client_secret_vault_id = stored.id
   }
 
   if (clientId && (secret || metadata.client_secret_vault_id)) {
-    metadata.connection_status = metadata.connection_status === 'validated'
-      ? 'validated'
-      : 'configured'
+    metadata.connection_status =
+      metadata.connection_status === 'validated' ? 'validated' : 'configured'
   } else {
     metadata.connection_status = 'not_configured'
   }
@@ -74,7 +79,7 @@ export async function PUT(request: Request) {
     .from('company_payment_providers')
     .upsert(
       {
-        company_id: companyId,
+        company_id: company.companyId,
         provider: 'paypal',
         environment: 'sandbox',
         enabled: body?.enabled === true,
@@ -90,10 +95,10 @@ export async function PUT(request: Request) {
   }
 
   await writeOperationalAudit({
-    companyId,
+    companyId: company.companyId,
     actorUserId: auth.session.userId,
     entityType: 'company_payment_provider',
-    entityId: companyId,
+    entityId: company.companyId,
     action: 'paypal_provider_config_updated',
     newData: {
       enabled: body?.enabled === true,
@@ -102,5 +107,5 @@ export async function PUT(request: Request) {
     },
   })
 
-  return Response.json({ data: await toPublicPaypalSettings(companyId) })
+  return Response.json({ data: await toPublicPaypalSettings(company.companyId) })
 }

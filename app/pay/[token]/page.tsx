@@ -32,7 +32,7 @@ export default async function PublicPayPage({
     <PublicPaymentPage
       invoice={resolved.invoice}
       purpose={resolved.link.purpose}
-      publicCheckout={runtime.publicCheckout}
+      publicCheckout={false}
       paypalReady={runtime.mode === 'sandbox'}
       locale={locale}
     />

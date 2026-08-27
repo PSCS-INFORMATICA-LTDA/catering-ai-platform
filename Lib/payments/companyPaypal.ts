@@ -16,6 +16,8 @@ export type {
   PaypalConnectionStatus,
 }
 
+export const PAYMENT_SETTINGS_PERMISSION = 'company.settings'
+
 export type CompanyPaypalCredentials = {
   companyId: string
   environment: 'sandbox'
@@ -42,6 +44,39 @@ export function publicPaypalWebhookUrl(routeKey: string | null) {
     'https://catering-ai-agenda-dev.vercel.app'
   ).replace(/\/$/, '')
   return `${origin}/api/payments/paypal/webhook/${routeKey}`
+}
+
+export async function ensurePaypalWebhookRouteKey(companyId: string) {
+  const existing = await loadCompanyPaypalRow(companyId)
+  if (existing?.webhook_route_key) return existing
+  const routeKey = createWebhookRouteKey()
+  const supabase = getSupabaseServerClient()
+  if (existing) {
+    await supabase
+      .from('company_payment_providers')
+      .update({
+        webhook_route_key: routeKey,
+        environment: 'sandbox',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('company_id', companyId)
+      .eq('provider', 'paypal')
+  } else {
+    await supabase.from('company_payment_providers').upsert(
+      {
+        company_id: companyId,
+        provider: 'paypal',
+        environment: 'sandbox',
+        enabled: false,
+        public_client_id: null,
+        webhook_route_key: routeKey,
+        metadata: {},
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'company_id,provider' },
+    )
+  }
+  return loadCompanyPaypalRow(companyId)
 }
 
 export async function loadCompanyPaypalRow(companyId: string) {

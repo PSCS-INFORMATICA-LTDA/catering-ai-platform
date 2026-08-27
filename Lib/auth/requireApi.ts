@@ -19,6 +19,39 @@ export function resolveAuthorizedCompanyId(session: AuthSessionContext): string 
   )
 }
 
+/** Payment settings must not fall back to a hardcoded CDL merchant. */
+export function resolveSessionCompanyId(session: AuthSessionContext): string | null {
+  return (
+    session.supportSession?.target_company_id ||
+    session.activeMembership?.company_id ||
+    null
+  )
+}
+
+export function requireSessionCompanyId(
+  session: AuthSessionContext,
+): { ok: true; companyId: string } | { ok: false; response: Response } {
+  const companyId = resolveSessionCompanyId(session)
+  if (!companyId) {
+    return { ok: false, response: jsonError(403, 'company_context_required') }
+  }
+  return { ok: true, companyId }
+}
+
+export function rejectSpoofedTenantCompanyId(
+  authorizedCompanyId: string,
+  bodyCompanyId: unknown,
+): Response | null {
+  if (bodyCompanyId === undefined || bodyCompanyId === null || bodyCompanyId === '') {
+    return null
+  }
+  if (typeof bodyCompanyId !== 'string') {
+    return jsonError(400, 'company_id inválido')
+  }
+  if (bodyCompanyId === authorizedCompanyId) return null
+  return jsonError(403, 'Forbidden')
+}
+
 export async function requireApiAuth(): Promise<ApiAuthResult> {
   const session = await getAuthSession()
   if (!session) {

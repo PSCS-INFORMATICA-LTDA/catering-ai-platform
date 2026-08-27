@@ -36,7 +36,9 @@ export function readPaypalRuntimeConfig(): PaypalRuntimeConfig {
   const hasSecret = Boolean(read('PAYPAL_CLIENT_SECRET'))
   const credentialsPresent = Boolean(clientId && hasSecret)
   const webhookId = read('PAYPAL_WEBHOOK_ID')
-  const publicCheckout = enabledFlag && flag('PAYPAL_PUBLIC_CHECKOUT')
+  const publicCheckoutRequested = enabledFlag && flag('PAYPAL_PUBLIC_CHECKOUT')
+  // This round: public checkout stays off even if the env flag is set.
+  const publicCheckout = publicCheckoutRequested && false
   const mode: PaypalRuntimeConfig['mode'] = !enabledFlag
     ? 'disabled'
     : credentialsPresent

@@ -1,8 +1,9 @@
+import { requireApiPermission, requireSessionCompanyId } from '@/Lib/auth/requireApi'
 import {
-  requireApiPermission,
-  resolveAuthorizedCompanyId,
-} from '@/Lib/auth/requireApi'
-import { loadCompanyPaypalCredentials, loadCompanyPaypalRow } from '@/Lib/payments/companyPaypal'
+  loadCompanyPaypalCredentials,
+  loadCompanyPaypalRow,
+  PAYMENT_SETTINGS_PERMISSION,
+} from '@/Lib/payments/companyPaypal'
 import { getPaypalSandboxAccessToken } from '@/Lib/payments/paypal/adapter'
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
@@ -10,10 +11,11 @@ import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 export const dynamic = 'force-dynamic'
 
 export async function POST() {
-  const auth = await requireApiPermission('company.settings')
+  const auth = await requireApiPermission(PAYMENT_SETTINGS_PERMISSION)
   if (!auth.ok) return auth.response
-  const companyId = resolveAuthorizedCompanyId(auth.session)
-  const creds = await loadCompanyPaypalCredentials(companyId)
+  const company = requireSessionCompanyId(auth.session)
+  if (!company.ok) return company.response
+  const creds = await loadCompanyPaypalCredentials(company.companyId)
   if (!creds.clientId || !creds.clientSecret) {
     return Response.json({ error: 'paypal_not_configured' }, { status: 409 })
   }
@@ -23,7 +25,7 @@ export async function POST() {
     clientSecret: creds.clientSecret,
   })
   const ok = Boolean(token)
-  const existing = await loadCompanyPaypalRow(companyId)
+  const existing = await loadCompanyPaypalRow(company.companyId)
   const metadata = {
     ...((existing?.metadata as Record<string, unknown>) || {}),
     connection_status: ok ? 'validated' : 'error',
@@ -34,14 +36,14 @@ export async function POST() {
   await getSupabaseServerClient()
     .from('company_payment_providers')
     .update({ metadata, updated_at: new Date().toISOString() })
-    .eq('company_id', companyId)
+    .eq('company_id', company.companyId)
     .eq('provider', 'paypal')
 
   await writeOperationalAudit({
-    companyId,
+    companyId: company.companyId,
     actorUserId: auth.session.userId,
     entityType: 'company_payment_provider',
-    entityId: companyId,
+    entityId: company.companyId,
     action: 'paypal_connection_tested',
     newData: { ok, environment: 'sandbox' },
   })
