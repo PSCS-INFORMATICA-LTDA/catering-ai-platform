@@ -26,18 +26,63 @@ type TenantContextValue = TenantContext & {
 
 const TenantCtx = createContext<TenantContextValue | null>(null)
 
-export function TenantProvider({ children }: { children: ReactNode }) {
+function applyStoredBranch(
+  data: TenantContext,
+): Pick<TenantContext, 'branchId' | 'branch'> {
+  const stored =
+    typeof window !== 'undefined'
+      ? window.localStorage.getItem(BRANCH_STORAGE_KEY)
+      : null
+  const resolvedBranchId =
+    stored && data.branches.some((branch) => branch.id === stored)
+      ? stored
+      : data.branchId
+  return {
+    branchId: resolvedBranchId,
+    branch: data.branches.find((row) => row.id === resolvedBranchId) ?? null,
+  }
+}
+
+export function TenantProvider({
+  children,
+  initialTenantContext = null,
+}: {
+  children: ReactNode
+  initialTenantContext?: TenantContext | null
+}) {
   const pathname = usePathname() ?? '/'
   const publicRoute = isPublicRoutePathname(pathname)
   const locale = useAuthLocaleFromMe(undefined, { disabled: publicRoute })
   const localeRef = useRef(locale)
-  const [loading, setLoading] = useState(() => !publicRoute)
-  const [companyId, setCompanyId] = useState('')
-  const [company, setCompany] = useState<Company | null>(null)
-  const [branches, setBranches] = useState<Branch[]>([])
-  const [branchId, setBranchIdState] = useState<string | null>(null)
-  const [role, setRole] = useState<CompanyRole | null>(null)
-  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({})
+  const [loading, setLoading] = useState(
+    () => !publicRoute && !initialTenantContext,
+  )
+  const [companyId, setCompanyId] = useState(initialTenantContext?.companyId ?? '')
+  const [company, setCompany] = useState<Company | null>(
+    initialTenantContext?.company ?? null,
+  )
+  const [branches, setBranches] = useState<Branch[]>(
+    initialTenantContext?.branches ?? [],
+  )
+  const [branchId, setBranchIdState] = useState<string | null>(
+    initialTenantContext?.branchId ?? null,
+  )
+  const [role, setRole] = useState<CompanyRole | null>(
+    initialTenantContext?.role ?? null,
+  )
+  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>(
+    initialTenantContext?.featureFlags ?? {},
+  )
+
+  const applyContext = useCallback((data: TenantContext) => {
+    const resolved = applyStoredBranch(data)
+    setCompanyId(data.companyId)
+    setCompany(data.company)
+    setBranches(data.branches)
+    setRole(data.role)
+    setFeatureFlags(data.featureFlags)
+    setBranchIdState(resolved.branchId)
+  }, [])
 
   const refresh = useCallback(async () => {
     if (publicRoute) return
@@ -53,40 +98,21 @@ export function TenantProvider({ children }: { children: ReactNode }) {
           result.error ?? tCommon(localeRef.current, 'tenantLoadError'),
         )
       }
-
-      const data = result.data
-      setCompanyId(data.companyId)
-      setCompany(data.company)
-      setBranches(data.branches)
-      setRole(data.role)
-      setFeatureFlags(data.featureFlags)
-
-      const stored =
-        typeof window !== 'undefined'
-          ? window.localStorage.getItem(BRANCH_STORAGE_KEY)
-          : null
-      const resolvedBranchId =
-        stored && data.branches.some((b) => b.id === stored)
-          ? stored
-          : data.branchId
-
-      setBranchIdState(resolvedBranchId)
+      applyContext(result.data)
     } finally {
       setLoading(false)
     }
-  }, [publicRoute])
+  }, [applyContext, publicRoute])
 
   useEffect(() => {
     localeRef.current = locale
   }, [locale])
 
   useEffect(() => {
-    if (publicRoute) return
-    const timer = window.setTimeout(() => {
-      void refresh()
-    }, 0)
-    return () => window.clearTimeout(timer)
-  }, [publicRoute, refresh])
+    if (publicRoute || !initialTenantContext) return
+    const resolved = applyStoredBranch(initialTenantContext)
+    setBranchIdState(resolved.branchId)
+  }, [publicRoute, initialTenantContext])
 
   const setBranchId = useCallback((next: string | null) => {
     setBranchIdState(next)

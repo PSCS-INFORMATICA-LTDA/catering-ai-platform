@@ -1,17 +1,5 @@
-import type { QuoteDetail, QuoteAdditionalItem } from '@/app/quotes/[id]/quoteDetailTypes'
-import { enrichQuoteAdditionalsFromCatalog } from '@/Lib/catalogItemVisual'
-import {
-  buildCatalogItemsListSelect,
-  CATALOG_ITEMS_TABLE,
-} from '@/Lib/catalogItemsTableSchema'
-import { fetchQuoteLinkedPackageCatalog } from '@/Lib/fetchQuoteLinkedPackageCatalog'
-import { fetchPackageOptionGroups, fetchQuotePackageSelections } from '@/Lib/fetchPackageOptionGroups'
+import type { QuoteDetail } from '@/app/quotes/[id]/quoteDetailTypes'
 import type { CustomerNameSource } from '@/Lib/getCustomerDisplayName'
-import type { CatalogItemListItem } from '@/Lib/itemCatalog'
-import {
-  buildPackageSelectionLabels,
-  packageSelectionsFromRows,
-} from '@/Lib/packageOptionGroups'
 import { getActiveCompanyId } from '@/Lib/tenant/resolveTenant'
 import { getSupabaseServerClient } from './supabaseServer'
 
@@ -138,9 +126,10 @@ async function loadQuoteTableExtras(
 export async function fetchQuoteDetail(
   id: string,
   displayLanguage?: string | null,
+  options?: { companyId?: string },
 ) {
   const startedAt = Date.now()
-  const companyId = getActiveCompanyId()
+  const companyId = options?.companyId?.trim() || getActiveCompanyId()
   const supabase = getSupabaseServerClient()
 
   const [viewRes, quoteExtras] = await Promise.all([
@@ -162,110 +151,14 @@ export async function fetchQuoteDetail(
     ...quoteExtras,
   })
 
-  const additionalItems = quote.additional_items ?? []
-  const catalogIds = [
-    ...new Set(
-      additionalItems
-        .map((row) => row.item_id?.trim())
-        .filter((itemId): itemId is string => Boolean(itemId)),
-    ),
-  ]
-
-  const [packageCatalog, selectionsRes, catalogRes] = await Promise.all([
-    fetchQuoteLinkedPackageCatalog({
-      packageId: quote.package_id,
-      packageKey: quote.package_key,
-      companyId,
-    }),
-    fetchQuotePackageSelections(id),
-    catalogIds.length > 0
-      ? supabase
-          .from(CATALOG_ITEMS_TABLE)
-          .select(buildCatalogItemsListSelect())
-          .in('id', catalogIds)
-      : Promise.resolve({ data: null, error: null }),
-  ])
-
-  const linkedPackage = packageCatalog.linkedPackage
-
-  let data: QuoteDetail = {
-    ...quote,
-    package_key: quote.package_key ?? linkedPackage?.package_key ?? null,
-    package_name_pt:
-      quote.package_name_pt ??
-      linkedPackage?.label_pt ??
-      linkedPackage?.package_name ??
-      null,
-    package_name_en: quote.package_name_en ?? linkedPackage?.label_en ?? null,
-    package_name_es: quote.package_name_es ?? linkedPackage?.label_es ?? null,
-    package_description_pt:
-      quote.package_description_pt ?? linkedPackage?.description_pt ?? null,
-    package_description_en:
-      quote.package_description_en ?? linkedPackage?.description_en ?? null,
-    package_description_es:
-      quote.package_description_es ?? linkedPackage?.description_es ?? null,
-    package_price_per_person:
-      quote.package_price_per_person ??
-      quote.package_unit_price ??
-      linkedPackage?.price_per_person ??
-      null,
-    package_image_url:
-      quote.package_image_url?.trim() ||
-      packageCatalog.resolvedImageUrl ||
-      linkedPackage?.image_url?.trim() ||
-      null,
-    packageCatalogPackages: packageCatalog.catalogPackages,
-  }
-
-  if (!catalogRes.error && catalogRes.data?.length) {
-    data = {
-      ...data,
-      additional_items: enrichQuoteAdditionalsFromCatalog(
-        additionalItems as QuoteAdditionalItem[],
-        catalogRes.data as unknown as CatalogItemListItem[],
-      ),
-    }
-  }
-
-  const packageId = data.package_id?.trim() || null
-  if (!selectionsRes.error && (selectionsRes.data?.length ?? 0) > 0) {
-    const selectionRows = selectionsRes.data ?? []
-    data = {
-      ...data,
-      package_selections: selectionRows.map((row) => ({
-        option_group_id: row.option_group_id,
-        option_item_id: row.option_item_id,
-        package_id: row.package_id,
-      })),
-    }
-
-    if (packageId) {
-      const groupsRes = await fetchPackageOptionGroups({ packageId })
-      if (!groupsRes.error && groupsRes.data?.length) {
-        const lang =
-          displayLanguage === 'en' ||
-          displayLanguage === 'es' ||
-          displayLanguage === 'pt'
-            ? displayLanguage
-            : data.language === 'en' || data.language === 'es'
-              ? data.language
-              : 'pt'
-        data = {
-          ...data,
-          package_selection_labels: buildPackageSelectionLabels(
-            packageSelectionsFromRows(selectionRows),
-            groupsRes.data,
-            lang,
-          ),
-        }
-      }
-    }
-  }
+  const data: QuoteDetail = { ...quote }
 
   if (process.env.NODE_ENV !== 'production') {
     console.info('[quote-detail-timing]', {
       quoteId: id,
       ms: Date.now() - startedAt,
+      coreRoundTrips: 2,
+      waves: 1,
     })
   }
 

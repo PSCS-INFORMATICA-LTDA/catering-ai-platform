@@ -22,24 +22,12 @@ export async function fetchTenantContext(options?: {
     'id, franchise_group_id, company_name, company_code, legal_name, trade_name, slug, currency_code, default_language, timezone, subscription_status, google_calendar_enabled, google_calendar_id, google_calendar_timezone, active'
   const companyColumnsWithLogo = `${companyColumnsBase}, logo_url, brand_logo_url`
 
-  let companyRes = await supabase
-    .from('companies')
-    .select(companyColumnsWithLogo)
-    .eq('id', companyId)
-    .maybeSingle()
-
-  if (
-    companyRes.error &&
-    /logo_url|brand_logo_url|schema cache/i.test(companyRes.error.message)
-  ) {
-    companyRes = await supabase
+  const [companyWithLogo, branchesRes, flagsRes] = await Promise.all([
+    supabase
       .from('companies')
-      .select(companyColumnsBase)
+      .select(companyColumnsWithLogo)
       .eq('id', companyId)
-      .maybeSingle()
-  }
-
-  const [branchesRes, flagsRes] = await Promise.all([
+      .maybeSingle(),
     supabase
       .from('branches')
       .select(
@@ -53,6 +41,18 @@ export async function fetchTenantContext(options?: {
       .select('feature_key, enabled')
       .eq('company_id', companyId),
   ])
+
+  let companyRes = companyWithLogo
+  if (
+    companyRes.error &&
+    /logo_url|brand_logo_url|schema cache/i.test(companyRes.error.message)
+  ) {
+    companyRes = await supabase
+      .from('companies')
+      .select(companyColumnsBase)
+      .eq('id', companyId)
+      .maybeSingle()
+  }
 
   const company = (companyRes.data as Company | null) ?? null
   const branches = (branchesRes.data ?? []) as Branch[]

@@ -102,8 +102,8 @@ test('VIEW_OPENS', () => {
 
 test('VIEW_NO_FULL_PAGE_RELOAD', () => {
   assert.match(dashboard, /from 'next\/link'/)
-  assert.doesNotMatch(dashboard, /window\.location/)
   assert.doesNotMatch(dashboard, /location\.href/)
+  assert.doesNotMatch(dashboard, /location\.assign/)
   assert.doesNotMatch(dashboard, /router\.refresh/)
 })
 
@@ -125,15 +125,18 @@ test('VIEW_SKELETON', () => {
 })
 
 test('VIEW_PREFETCH_CONTROLLED', () => {
-  assert.match(dashboard, /router\.prefetch\(`\/quotes\/\$\{quoteId\}`\)/)
-  assert.match(dashboard, /prefetch/)
+  assert.match(dashboard, /prefetch=\{false\}/)
+  assert.match(dashboard, /IDLE_PREFETCH_DELAY_MS = 2000/)
+  assert.match(dashboard, /IDLE_PREFETCH_MAX = 2/)
+  assert.doesNotMatch(dashboard, /onTouchStart=\{/)
   assert.doesNotMatch(dashboard, /fetchQuoteDetail/)
 })
 
 test('VIEW_REDUNDANT_QUERIES_REMOVED', () => {
   assert.match(detailFetch, /QUOTE_TABLE_COLUMNS/)
   assert.match(detailFetch, /loadQuoteTableExtras/)
-  assert.match(detailFetch, /Promise\.all\(\[\s*fetchQuoteLinkedPackageCatalog/)
+  assert.match(detailFetch, /from\('quote_detail_view'\)/)
+  assert.doesNotMatch(detailFetch, /fetchQuoteLinkedPackageCatalog/)
 })
 
 test('CONVERT_SERVER_SIDE', () => {

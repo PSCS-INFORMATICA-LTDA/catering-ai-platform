@@ -19,9 +19,11 @@ import {
   readQuoteSnapshot,
 } from '../../../Lib/readQuoteSnapshot'
 import QuoteConvertPanel from '@/components/quotes/QuoteConvertPanel'
+import { QuoteSecondaryPanels } from '@/components/quotes/QuoteSecondaryPanels'
 import QuoteDetailToolbar from './QuoteDetailToolbar'
 import QuoteFlashBanner from '@/components/QuoteFlashBanner'
 import QuoteDebugPanel from './QuoteDebugPanel'
+import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
 import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
 
@@ -128,7 +130,16 @@ export default function QuoteDetailView({
             editHref={`/quotes/${quote.id}/edit?step=churrasqueira`}
           />
           <div className="mt-4">
+            <QuoteConvertPanel
+              quoteId={quote.id}
+              quoteNumber={quote.quote_number}
+              proposalResponse={quote.proposal_response}
+              convertedServiceOrderId={quote.converted_service_order_id}
+              canConvert={canConvert}
+            />
+            <QuoteSecondaryPanels label={tQuotesOrders(lang, 'openShare')}>
             <QuoteProposalSharePanel
+              uiLocale={lang}
               quoteId={quote.id}
               quoteNumber={quoteNumber}
               customerName={customerDisplayName}
@@ -193,18 +204,15 @@ export default function QuoteDetailView({
                 quote_status: quote.quote_status ?? null,
               }}
             />
+            </QuoteSecondaryPanels>
+            <QuoteSecondaryPanels label={tQuotesOrders(lang, 'openTeam')}>
             <QuoteTeamAssignmentPanel
               quoteId={quote.id}
               proposalResponse={quote.proposal_response}
               quoteStatus={quote.quote_status}
             />
-            <QuoteConvertPanel
-              quoteId={quote.id}
-              quoteNumber={quote.quote_number}
-              proposalResponse={quote.proposal_response}
-              convertedServiceOrderId={quote.converted_service_order_id}
-              canConvert={canConvert}
-            />
+            </QuoteSecondaryPanels>
+            <QuoteSecondaryPanels label={tQuotesOrders(lang, 'openInvoice')}>
             <QuoteInvoicePanel
               quoteId={quote.id}
               canManage={canManageInvoice}
@@ -216,6 +224,7 @@ export default function QuoteDetailView({
                 quote.quote_status === 'converted'
               }
             />
+            </QuoteSecondaryPanels>
           </div>
           <Suspense fallback={null}>
             <QuoteFlashBanner />

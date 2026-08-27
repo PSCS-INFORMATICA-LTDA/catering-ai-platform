@@ -14,6 +14,7 @@ import {
 import DeleteQuoteButton from '@/components/DeleteQuoteButton'
 import {
   getQuoteListPackageName,
+  QUOTE_LIST_PAGE_SIZE,
   type QuoteListItem,
 } from '@/Lib/fetchQuoteList'
 import { glassBtn } from '@/Lib/liquidGlass'
@@ -23,6 +24,7 @@ import {
   quoteStatusLabel,
   tQuotesOrders,
 } from '@/Lib/i18n/quotesOrders'
+import { CANONICAL_STATUSES } from '@/Lib/quotes/statusMachine'
 
 type StatusFilter = 'all' | string
 type AcceptanceFilter = 'all' | 'pending' | 'accepted' | 'rejected'
@@ -41,6 +43,9 @@ const EMPTY_FILTERS: QuotesFilters = {
   acceptance: 'all',
   hasOrder: 'all',
 }
+
+const IDLE_PREFETCH_DELAY_MS = 2000
+const IDLE_PREFETCH_MAX = 2
 
 function formatMoney(value: number | null | undefined) {
   if (value == null) return '—'
@@ -131,27 +136,37 @@ function readStoredFilters(): QuotesFilters {
   }
 }
 
-function buildQuery(filters: QuotesFilters) {
+function buildQuery(filters: QuotesFilters, cursor?: string | null) {
   const params = new URLSearchParams()
   if (filters.q.trim()) params.set('q', filters.q.trim())
   if (filters.status !== 'all') params.set('status', filters.status)
   if (filters.acceptance !== 'all') params.set('has_acceptance', filters.acceptance)
   if (filters.hasOrder !== 'all') params.set('has_order', filters.hasOrder)
-  params.set('pageSize', '200')
+  params.set('pageSize', String(QUOTE_LIST_PAGE_SIZE))
+  if (cursor) params.set('cursor', cursor)
   return params
+}
+
+type QuoteListApiPage = {
+  items: QuoteListItem[]
+  hasMore: boolean
+  nextCursor: string | null
 }
 
 async function fetchQuotesFromApi(
   filters: QuotesFilters,
   locale: Parameters<typeof tQuotesOrders>[0],
-): Promise<QuoteListItem[]> {
-  const params = buildQuery(filters)
+  cursor?: string | null,
+): Promise<QuoteListApiPage> {
+  const params = buildQuery(filters, cursor)
   const response = await fetch(`/api/quotes?${params.toString()}`, {
     cache: 'no-store',
     headers: { 'Cache-Control': 'no-cache' },
   })
   const result = (await response.json()) as {
     data?: QuoteListItem[]
+    hasMore?: boolean
+    nextCursor?: string | null
     error?: string
   }
 
@@ -159,7 +174,11 @@ async function fetchQuotesFromApi(
     throw new Error(result.error ?? tQuotesOrders(locale, 'fetchQuotesError'))
   }
 
-  return result.data ?? []
+  return {
+    items: result.data ?? [],
+    hasMore: Boolean(result.hasMore),
+    nextCursor: result.nextCursor ?? null,
+  }
 }
 
 function isConvertEligible(quote: QuoteListItem) {
@@ -169,27 +188,31 @@ function isConvertEligible(quote: QuoteListItem) {
 export default function QuotesDashboard({
   initialQuotes,
   canConvert = false,
+  hasMore: initialHasMore = false,
+  nextCursor: initialNextCursor = null,
+  initialFilters = EMPTY_FILTERS,
 }: {
   initialQuotes: QuoteListItem[]
   canConvert?: boolean
+  hasMore?: boolean
+  nextCursor?: string | null
+  initialFilters?: QuotesFilters
 }) {
   const router = useRouter()
   const locale = useAuthLocaleFromMe()
   const [quotes, setQuotes] = useState<QuoteListItem[]>(initialQuotes)
-  const [filters, setFilters] = useState<QuotesFilters>(EMPTY_FILTERS)
+  const [filters, setFilters] = useState<QuotesFilters>(initialFilters)
   const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [convertingId, setConvertingId] = useState<string | null>(null)
   const [convertHint, setConvertHint] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(initialHasMore)
+  const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor)
   const skipFirstEmptyRefresh = useRef(true)
+  const idlePrefetchDone = useRef(false)
 
-  const availableStatuses = useMemo(() => {
-    const set = new Set<string>()
-    for (const quote of initialQuotes) {
-      if (quote.quote_status) set.add(quote.quote_status)
-    }
-    return Array.from(set).sort()
-  }, [initialQuotes])
+  const availableStatuses = useMemo(() => [...CANONICAL_STATUSES], [])
 
   const refreshQuotes = useCallback(
     async (nextFilters: QuotesFilters) => {
@@ -197,7 +220,9 @@ export default function QuotesDashboard({
       setError(null)
       try {
         const next = await fetchQuotesFromApi(nextFilters, locale)
-        setQuotes(next)
+        setQuotes(next.items)
+        setHasMore(next.hasMore)
+        setNextCursor(next.nextCursor)
       } catch (refreshError) {
         setError(
           refreshError instanceof Error
@@ -210,6 +235,28 @@ export default function QuotesDashboard({
     },
     [locale],
   )
+
+  const loadMore = useCallback(async () => {
+    if (!hasMore || !nextCursor || loadingMore) return
+    setLoadingMore(true)
+    try {
+      const next = await fetchQuotesFromApi(filters, locale, nextCursor)
+      setQuotes((current) => {
+        const seen = new Set(current.map((row) => row.id))
+        return [...current, ...next.items.filter((row) => !seen.has(row.id))]
+      })
+      setHasMore(next.hasMore)
+      setNextCursor(next.nextCursor)
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : tQuotesOrders(locale, 'fetchQuotesError'),
+      )
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [filters, hasMore, locale, loadingMore, nextCursor])
 
   useEffect(() => {
     const stored = readStoredFilters()
@@ -230,6 +277,12 @@ export default function QuotesDashboard({
 
   useEffect(() => {
     sessionStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters))
+    const params = buildQuery(filters)
+    const next = params.toString()
+    const current = window.location.search.replace(/^\?/, '')
+    if (next !== current) {
+      window.history.replaceState(null, '', next ? `/quotes?${next}` : '/quotes')
+    }
     if (skipFirstEmptyRefresh.current && isDefaultFilters(filters)) {
       skipFirstEmptyRefresh.current = false
       return
@@ -240,16 +293,29 @@ export default function QuotesDashboard({
     return () => clearTimeout(timeout)
   }, [filters, refreshQuotes])
 
+  useEffect(() => {
+    if (idlePrefetchDone.current || quotes.length === 0) return
+    const ids = quotes.slice(0, IDLE_PREFETCH_MAX).map((quote) => quote.id)
+    const timer = window.setTimeout(() => {
+      const start = () => {
+        if (idlePrefetchDone.current) return
+        idlePrefetchDone.current = true
+        ids.forEach((id) => {
+          void router.prefetch(`/quotes/${id}`)
+        })
+      }
+      if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(start, { timeout: 1500 })
+      } else {
+        start()
+      }
+    }, IDLE_PREFETCH_DELAY_MS)
+    return () => window.clearTimeout(timer)
+  }, [quotes, router])
+
   const handleQuoteDeleted = useCallback((quoteId: string) => {
     setQuotes((current) => current.filter((quote) => quote.id !== quoteId))
   }, [])
-
-  const prefetchQuote = useCallback(
-    (quoteId: string) => {
-      router.prefetch(`/quotes/${quoteId}`)
-    },
-    [router],
-  )
 
   const handleConvert = useCallback(
     async (quote: QuoteListItem) => {
@@ -451,7 +517,6 @@ export default function QuotesDashboard({
                     convertingId={convertingId}
                     onConvert={handleConvert}
                     onDeleted={handleQuoteDeleted}
-                    onPrefetch={prefetchQuote}
                   />
                 </div>
               </li>
@@ -546,7 +611,6 @@ export default function QuotesDashboard({
                         convertingId={convertingId}
                         onConvert={handleConvert}
                         onDeleted={handleQuoteDeleted}
-                        onPrefetch={prefetchQuote}
                       />
                     </td>
                   </tr>
@@ -554,6 +618,20 @@ export default function QuotesDashboard({
               </tbody>
             </table>
           </div>
+          {hasMore ? (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => void loadMore()}
+                disabled={loadingMore}
+                className={glassBtn('secondary', 'min-h-[44px] px-5')}
+              >
+                {loadingMore
+                  ? tQuotesOrders(locale, 'loadingQuotes')
+                  : tQuotesOrders(locale, 'loadMore')}
+              </button>
+            </div>
+          ) : null}
         </>
       )}
     </div>
@@ -567,7 +645,6 @@ const QuoteListActions = memo(function QuoteListActions({
   convertingId,
   onConvert,
   onDeleted,
-  onPrefetch,
 }: {
   quote: QuoteListItem
   locale: Parameters<typeof tQuotesOrders>[0]
@@ -575,7 +652,6 @@ const QuoteListActions = memo(function QuoteListActions({
   convertingId: string | null
   onConvert: (quote: QuoteListItem) => void
   onDeleted: (quoteId: string) => void
-  onPrefetch: (quoteId: string) => void
 }) {
   const eligible = isConvertEligible(quote)
   const converting = convertingId === quote.id
@@ -584,22 +660,21 @@ const QuoteListActions = memo(function QuoteListActions({
     'liquid-glass-btn liquid-glass-btn--secondary !min-h-[28px] !px-2 !py-1 !text-[10px] !font-bold uppercase tracking-wide'
   return (
     <div className="flex flex-wrap items-center justify-center gap-1">
-      <Link
-        href={viewHref}
-        prefetch
-        onPointerEnter={() => onPrefetch(quote.id)}
-        onTouchStart={() => onPrefetch(quote.id)}
-        className={actionBtn}
-      >
+      <Link href={viewHref} prefetch={false} className={actionBtn}>
         {tQuotesOrders(locale, 'view')}
       </Link>
       <Link
         href={`/quotes/${quote.id}/edit?step=churrasqueira`}
+        prefetch={false}
         className={actionBtn}
       >
         {tQuotesOrders(locale, 'edit')}
       </Link>
-      <Link href={`/quotes/${quote.id}?pdf=1`} className={actionBtn}>
+      <Link
+        href={`/quotes/${quote.id}?pdf=1`}
+        prefetch={false}
+        className={actionBtn}
+      >
         {tQuotesOrders(locale, 'pdf')}
       </Link>
       {canConvert && quote.converted_service_order_id ? (

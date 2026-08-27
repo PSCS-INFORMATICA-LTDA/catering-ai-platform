@@ -1,5 +1,4 @@
 import { pickLocalizedText } from './i18n/locales'
-import { getCdlCompanyId } from './cdlCompany'
 import {
   buildCustomersSelect,
   type CustomersNameSourceColumn,
@@ -9,7 +8,17 @@ import {
   getCustomerDisplayName,
   type CustomerNameSource,
 } from './getCustomerDisplayName'
+import {
+  decodeQuoteListCursor,
+  encodeQuoteListCursor,
+  quoteListCursorOrFilter,
+  type QuoteListCursor,
+} from './quotes/listCursor'
+import { normalizeQuoteStatus } from './quotes/statusMachine'
 import { getSupabaseServerClient } from './supabaseServer'
+
+export const QUOTE_LIST_PAGE_SIZE = 25
+export const QUOTE_LIST_MAX_PAGE_SIZE = 30
 
 export type QuoteListGrillFields = {
   has_grill: boolean
@@ -50,16 +59,49 @@ export type QuoteListItem = {
   converted_service_order_id: string | null
 }
 
-type QuoteRow = {
+export type QuoteListQuery = {
+  companyId: string
+  q?: string | null
+  status?: string | null
+  hasAcceptance?: 'pending' | 'accepted' | 'rejected' | null
+  hasOrder?: 'yes' | 'no' | null
+  cursor?: QuoteListCursor | string | null
+  limit?: number
+}
+
+export type QuoteListPage = {
+  data: QuoteListItem[]
+  error: { message: string } | null
+  hasMore: boolean
+  nextCursor: QuoteListCursor | null
+  nextCursorToken: string | null
+}
+
+type CustomerRow = { id: string } & Pick<
+  CustomerNameSource,
+  CustomersNameSourceColumn
+>
+
+type EventRow = {
+  event_date?: string | null
+  city?: string | null
+  state?: string | null
+}
+
+type PackageRow = {
+  package_name?: string | null
+  label_pt?: string | null
+  label_en?: string | null
+  label_es?: string | null
+}
+
+type QuoteListRow = {
   id: string
+  company_id?: string
   quote_number: string | null
   quote_total: number | null
   quote_status: string | null
   created_at: string
-  customer_id: string | null
-  event_id: string | null
-  package_id: string | null
-  active: boolean | null
   reservation_amount: number | null
   balance_due: number | null
   physical_guest_count: number | null
@@ -69,39 +111,36 @@ type QuoteRow = {
   mileage_distance: number | null
   proposal_response: string | null
   converted_service_order_id: string | null
+  has_grill?: boolean | null
+  grill_photo_required?: boolean | null
+  grill_rental_required?: boolean | null
+  customers?: CustomerRow | CustomerRow[] | null
+  events?: EventRow | EventRow[] | null
+  packages?: PackageRow | PackageRow[] | null
 }
 
-type ListViewRow = {
-  id: string
-  event_date?: string | null
-  /** De `vw_customer_display` via quote_list_view */
-  customer_display_name?: string | null
-  /** Legado — views antigas com `ab_name AS customer_name` */
-  customer_name?: string | null
-  city?: string | null
-  state?: string | null
-  package_name?: string | null
-}
+const QUOTE_LIST_COLUMNS = [
+  'id',
+  'company_id',
+  'quote_number',
+  'quote_total',
+  'quote_status',
+  'created_at',
+  'reservation_amount',
+  'balance_due',
+  'physical_guest_count',
+  'billable_guest_count',
+  'additional_total',
+  'mileage_fee',
+  'mileage_distance',
+  'proposal_response',
+  'converted_service_order_id',
+  'has_grill',
+  'grill_photo_required',
+  'grill_rental_required',
+].join(', ')
 
-type CustomerRow = { id: string } & Pick<
-  CustomerNameSource,
-  CustomersNameSourceColumn
->
-
-type EventRow = {
-  id: string
-  event_date?: string | null
-  city?: string | null
-  state?: string | null
-}
-
-type PackageRow = {
-  id: string
-  package_name?: string | null
-  label_pt?: string | null
-  label_en?: string | null
-  label_es?: string | null
-}
+const QUOTE_LIST_EMBED_SELECT = `${QUOTE_LIST_COLUMNS}, customers ( ${buildCustomersSelect()} ), events ( event_date, city, state ), packages ( package_name, label_pt, label_en, label_es )`
 
 export function getQuoteListPackageName(
   quote: Pick<
@@ -124,246 +163,183 @@ export function getQuoteListPackageName(
   )
 }
 
-type GrillViewRow = {
-  id: string
-  has_grill?: boolean | null
-  grill_photo_required?: boolean | null
-  grill_rental_required?: boolean | null
+export function sortQuoteListItems(items: QuoteListItem[]): QuoteListItem[] {
+  return [...items].sort((left, right) => {
+    const created = new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+    if (created !== 0) return created
+    return right.id.localeCompare(left.id)
+  })
 }
 
-/** Colunas base de `quotes` — sem filtro por source ou quote_status. */
-const QUOTE_LIST_SELECT =
-  'id, quote_number, quote_total, quote_status, created_at, customer_id, event_id, package_id, active, reservation_amount, balance_due, physical_guest_count, billable_guest_count, additional_total, mileage_fee, mileage_distance, proposal_response, converted_service_order_id'
-
-function resolveCustomerDisplayName(
-  customer: CustomerRow | undefined,
-  view: ListViewRow | undefined,
-): string {
-  const fromViewColumn =
-    view?.customer_display_name?.trim() ||
-    view?.customer_name?.trim() ||
-    ''
-  if (fromViewColumn) return fromViewColumn
-
-  const fromCustomer = getCustomerDisplayName(customer)
-  if (fromCustomer !== CUSTOMER_DISPLAY_NAME_EMPTY) return fromCustomer
-
-  return CUSTOMER_DISPLAY_NAME_EMPTY
+function one<T>(value: T | T[] | null | undefined): T | undefined {
+  if (!value) return undefined
+  return Array.isArray(value) ? value[0] : value
 }
 
-function resolvePackageName(
-  viewName: string | null | undefined,
-  packageRow: PackageRow | undefined,
-): string | null {
-  return (
-    viewName?.trim() ||
-    packageRow?.package_name?.trim() ||
-    packageRow?.label_pt?.trim() ||
-    null
+function sanitizeIlike(raw: string): string {
+  return raw.replace(/[%_,()"]/g, ' ').trim().slice(0, 80)
+}
+
+function clampPageSize(limit?: number): number {
+  return Math.min(
+    QUOTE_LIST_MAX_PAGE_SIZE,
+    Math.max(1, limit ?? QUOTE_LIST_PAGE_SIZE),
   )
 }
 
-function resolveGrillFields(
-  row: GrillViewRow | undefined,
-): QuoteListGrillFields {
-  if (!row) return QUOTE_LIST_GRILL_DEFAULTS
-
+function mapQuoteListRow(row: QuoteListRow): QuoteListItem {
+  const customer = one(row.customers)
+  const event = one(row.events)
+  const pkg = one(row.packages)
   return {
+    id: row.id,
+    quote_number: row.quote_number ?? '—',
+    customer_name: customer
+      ? getCustomerDisplayName(customer)
+      : CUSTOMER_DISPLAY_NAME_EMPTY,
+    quote_status: row.quote_status,
+    event_date: event?.event_date ?? null,
+    created_at: row.created_at,
+    city: event?.city ?? null,
+    state: event?.state ?? null,
+    package_name:
+      pkg?.package_name?.trim() || pkg?.label_pt?.trim() || null,
+    package_label_en: pkg?.label_en?.trim() || null,
+    package_label_es: pkg?.label_es?.trim() || null,
+    quote_total: row.quote_total,
+    reservation_amount: row.reservation_amount,
+    balance_due: row.balance_due,
+    physical_guest_count: row.physical_guest_count,
+    billable_guest_count: row.billable_guest_count,
+    has_additionals: Number(row.additional_total ?? 0) > 0,
     has_grill: row.has_grill ?? false,
     grill_photo_required: row.grill_photo_required ?? false,
     grill_rental_required: row.grill_rental_required ?? false,
+    mileage_fee: row.mileage_fee,
+    mileage_distance: row.mileage_distance,
+    proposal_response: row.proposal_response ?? null,
+    converted_service_order_id: row.converted_service_order_id ?? null,
   }
 }
 
-async function fetchGrillFieldsByQuoteId(
-  quoteIds: string[],
-): Promise<Map<string, QuoteListGrillFields>> {
-  if (quoteIds.length === 0) return new Map()
-
-  const supabase = getSupabaseServerClient()
-  const { data, error } = await supabase
-    .from('quote_detail_view')
-    .select('id, has_grill, grill_photo_required, grill_rental_required')
-    .in('id', quoteIds)
-
-  if (error) {
-    console.warn(
-      '[CDL Quote] grill fields unavailable in quote_detail_view; using defaults:',
-      error.message,
-    )
-    return new Map()
+function applyServerFilters<T extends { or: Function; eq: Function; is: Function; not: Function }>(
+  query: T,
+  options: QuoteListQuery,
+  allowCustomerSearch = true,
+): T {
+  let next = query
+  const needle = options.q?.trim() ? sanitizeIlike(options.q) : ''
+  if (needle) {
+    next = (
+      allowCustomerSearch
+        ? next.or(
+            `quote_number.ilike.%${needle}%,customers.ab_name.ilike.%${needle}%,customers.full_name.ilike.%${needle}%,customers.contact_name.ilike.%${needle}%`,
+          )
+        : next.or(`quote_number.ilike.%${needle}%`)
+    ) as T
   }
-
-  return new Map(
-    ((data ?? []) as GrillViewRow[]).map((row) => [
-      row.id,
-      resolveGrillFields(row),
-    ]),
-  )
+  if (options.status?.trim() && options.status !== 'all') {
+    const status = normalizeQuoteStatus(options.status)
+    if (status === 'accepted') {
+      next = next.or('quote_status.eq.accepted,quote_status.eq.approved') as T
+    } else if (status === 'cancelled') {
+      next = next.or('quote_status.eq.cancelled,quote_status.eq.canceled') as T
+    } else {
+      next = next.eq('quote_status', status) as T
+    }
+  }
+  if (options.hasAcceptance === 'pending') {
+    next = next.or('proposal_response.is.null,proposal_response.eq.pending') as T
+  } else if (options.hasAcceptance === 'accepted' || options.hasAcceptance === 'rejected') {
+    next = next.eq('proposal_response', options.hasAcceptance) as T
+  }
+  if (options.hasOrder === 'yes') {
+    next = next.not('converted_service_order_id', 'is', null) as T
+  } else if (options.hasOrder === 'no') {
+    next = next.is('converted_service_order_id', null) as T
+  }
+  return next
 }
 
-export function sortQuoteListItems(items: QuoteListItem[]): QuoteListItem[] {
-  return [...items].sort(
-    (a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-  )
+function toCursor(value: QuoteListQuery['cursor']): QuoteListCursor | null {
+  if (!value) return null
+  if (typeof value === 'string') return decodeQuoteListCursor(value)
+  return value
 }
 
 /**
- * Lista cotações ativas da tabela `quotes` (active = true).
- * Inclui draft, wizard e qualquer source — sem filtrar quote_status ou source.
+ * Página de cotações ativas da empresa autorizada.
+ * Um único HTTP PostgREST (quotes + embeds). Company filter obrigatório.
  */
-export async function fetchQuoteList() {
-  const companyId = getCdlCompanyId()
-  const supabase = getSupabaseServerClient()
-
-  const { data: quotes, error } = await supabase
-    .from('quotes')
-    .select(QUOTE_LIST_SELECT)
-    .eq('active', true)
-    .eq('company_id', companyId)
-    .order('created_at', { ascending: false })
-
-  if (error) {
-    return { data: null as QuoteListItem[] | null, error }
-  }
-
-  const rows = (quotes ?? []) as QuoteRow[]
-  if (rows.length === 0) {
-    return { data: [], error: null }
-  }
-
-  const quoteIds = rows.map((row) => row.id)
-  const customerIds = [
-    ...new Set(rows.map((row) => row.customer_id).filter(Boolean)),
-  ] as string[]
-  const eventIds = [
-    ...new Set(rows.map((row) => row.event_id).filter(Boolean)),
-  ] as string[]
-  const packageIds = [
-    ...new Set(rows.map((row) => row.package_id).filter(Boolean)),
-  ] as string[]
-
-  const [customersRes, listViewRes, eventsRes, packagesRes, grillMap] =
-    await Promise.all([
-      customerIds.length > 0
-        ? supabase
-            .from('customers')
-            .select(buildCustomersSelect())
-            .in('id', customerIds)
-        : Promise.resolve({ data: [] as CustomerRow[], error: null }),
-      supabase
-        .from('quote_list_view')
-        .select(
-          'id, event_date, customer_display_name, customer_name, city, state, package_name',
-        )
-        .in('id', quoteIds),
-      eventIds.length > 0
-        ? supabase
-            .from('events')
-            .select('id, event_date, city, state')
-            .in('id', eventIds)
-        : Promise.resolve({ data: [] as EventRow[], error: null }),
-      packageIds.length > 0
-        ? supabase
-            .from('packages')
-            .select('id, package_name, label_pt, label_en, label_es')
-            .in('id', packageIds)
-        : Promise.resolve({ data: [] as PackageRow[], error: null }),
-      fetchGrillFieldsByQuoteId(quoteIds),
-    ])
-
-  if (customersRes.error) {
-    console.warn(
-      '[CDL Quote] customers enrichment failed; using fallbacks:',
-      customersRes.error.message,
-    )
-  }
-
-  let listViewRows = (listViewRes.data ?? []) as ListViewRow[]
-  if (listViewRes.error) {
-    console.warn(
-      '[CDL Quote] quote_list_view enrichment failed:',
-      listViewRes.error.message,
-    )
-    const { data: detailRows } = await supabase
-      .from('quote_detail_view')
-      .select('id, event_date, customer_name, city, state, package_name_pt')
-      .in('id', quoteIds)
-    listViewRows = (detailRows ?? []).map((row) => ({
-      id: row.id as string,
-      event_date: row.event_date as string | null,
-      customer_name: row.customer_name as string | null,
-      city: row.city as string | null,
-      state: row.state as string | null,
-      package_name: row.package_name_pt as string | null,
-    }))
-  }
-
-  if (eventsRes.error) {
-    console.warn(
-      '[CDL Quote] events enrichment failed:',
-      eventsRes.error.message,
-    )
-  }
-
-  if (packagesRes.error) {
-    console.warn(
-      '[CDL Quote] packages enrichment failed:',
-      packagesRes.error.message,
-    )
-  }
-
-  const customerMap = new Map(
-    ((customersRes.data ?? []) as CustomerRow[]).map((customer) => [
-      customer.id,
-      customer,
-    ]),
-  )
-  const listViewMap = new Map(listViewRows.map((row) => [row.id, row]))
-  const eventMap = new Map(
-    ((eventsRes.data ?? []) as EventRow[]).map((row) => [row.id, row]),
-  )
-  const packageMap = new Map(
-    ((packagesRes.data ?? []) as PackageRow[]).map((row) => [row.id, row]),
-  )
-
-  const data = rows.map((row) => {
-    const view = listViewMap.get(row.id)
-    const event = row.event_id ? eventMap.get(row.event_id) : undefined
-    const pkg = row.package_id ? packageMap.get(row.package_id) : undefined
-    const customer = row.customer_id
-      ? customerMap.get(row.customer_id)
-      : undefined
-    const grill = grillMap.get(row.id) ?? QUOTE_LIST_GRILL_DEFAULTS
-
+export async function fetchQuoteList(
+  options: QuoteListQuery,
+): Promise<QuoteListPage> {
+  const companyId = options.companyId?.trim()
+  if (!companyId) {
     return {
-      id: row.id,
-      quote_number: row.quote_number ?? '—',
-      customer_name: resolveCustomerDisplayName(customer, view),
-      quote_status: row.quote_status,
-      event_date: view?.event_date ?? event?.event_date ?? null,
-      created_at: row.created_at,
-      city: view?.city ?? event?.city ?? null,
-      state: view?.state ?? event?.state ?? null,
-      package_name: resolvePackageName(view?.package_name, pkg),
-      package_label_en: pkg?.label_en?.trim() || null,
-      package_label_es: pkg?.label_es?.trim() || null,
-      quote_total: row.quote_total,
-      reservation_amount: row.reservation_amount,
-      balance_due: row.balance_due,
-      physical_guest_count: row.physical_guest_count,
-      billable_guest_count: row.billable_guest_count,
-      has_additionals: Number(row.additional_total ?? 0) > 0,
-      has_grill: grill.has_grill,
-      grill_photo_required: grill.grill_photo_required,
-      grill_rental_required: grill.grill_rental_required,
-      mileage_fee: row.mileage_fee,
-      mileage_distance: row.mileage_distance,
-      proposal_response: row.proposal_response ?? null,
-      converted_service_order_id: row.converted_service_order_id ?? null,
-    } satisfies QuoteListItem
-  })
+      data: [],
+      error: { message: 'company_context_required' },
+      hasMore: false,
+      nextCursor: null,
+      nextCursorToken: null,
+    }
+  }
 
-  return { data: sortQuoteListItems(data), error: null }
+  const supabase = getSupabaseServerClient()
+  const pageSize = clampPageSize(options.limit)
+  const cursor = toCursor(options.cursor)
+
+  const run = async (select: string, allowCustomerSearch: boolean) => {
+    let query = supabase
+      .from('quotes')
+      .select(select)
+      .eq('active', true)
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(pageSize + 1)
+
+    query = applyServerFilters(query, options, allowCustomerSearch)
+    if (cursor) {
+      query = query.or(quoteListCursorOrFilter(cursor))
+    }
+    return query
+  }
+
+  let result = await run(QUOTE_LIST_EMBED_SELECT, true)
+  if (result.error) {
+    console.warn(
+      '[CDL Quote] embed list query failed; retrying without embeds:',
+      result.error.message,
+    )
+    result = await run(QUOTE_LIST_COLUMNS, false)
+  }
+
+  if (result.error) {
+    return {
+      data: null as unknown as QuoteListItem[],
+      error: { message: result.error.message },
+      hasMore: false,
+      nextCursor: null,
+      nextCursorToken: null,
+    }
+  }
+
+  const rows = ((result.data ?? []) as unknown as QuoteListRow[]).filter(
+    (row) => row.company_id === companyId,
+  )
+  const hasMore = rows.length > pageSize
+  const pageRows = hasMore ? rows.slice(0, pageSize) : rows
+  const data = pageRows.map(mapQuoteListRow)
+  const last = data[data.length - 1]
+  const nextCursor =
+    hasMore && last ? { created_at: last.created_at, id: last.id } : null
+
+  return {
+    data,
+    error: null,
+    hasMore,
+    nextCursor,
+    nextCursorToken: nextCursor ? encodeQuoteListCursor(nextCursor) : null,
+  }
 }
