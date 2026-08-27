@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/generate-build-info.mjs && node scripts/guard-sso-dev-supabase.mjs",
+    "prebuild": "node scripts/generate-build-info.mjs && node --experimental-strip-types scripts/guard-sso-dev-supabase.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
