@@ -144,7 +144,7 @@ try {
     packageItemsDescription:
       'Picanha Angus / Fraldinha / Linguiça Toscana / Frango',
     garnishDescription:
-      'Arroz branco, Feijão preto, Vinagrete, Farofa, Mandioca',
+      'Arroz branco, Feijão preto, Vinagrete, Farofa, Maionese',
     packageSelectionLines: [
       { groupTitle: 'Escolha de Proteína', itemLabel: 'Picanha Angus' },
     ],

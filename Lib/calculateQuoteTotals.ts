@@ -4,6 +4,7 @@ import {
   MILEAGE_RATE,
   RESERVATION_PERCENTAGE,
 } from './cdlCommercialRules'
+import { calcNormalizedGrillRentalFee } from './grillRental'
 import {
   applyCommercialMinimums,
   type CommercialMinimumRules,
@@ -40,6 +41,8 @@ export type CalculateQuoteTotalsInput = {
   /** Data do evento (YYYY-MM-DD) — necessária para mínimo/feriado. */
   eventDate?: string | null
   commercialMinimums?: CommercialMinimumRules | null
+  /** Plus packages include this in packagePricePerPerson; holiday +100% excludes it. */
+  includedSidesPricePerPerson?: number | null
 }
 
 export type QuoteTotals = {
@@ -51,9 +54,10 @@ export type QuoteTotals = {
   /** adult_count + children_under_3_count + children_4_to_12_count */
   physicalGuestCount: number
   packageTotal: number
+  includedSidesTotal: number
   additionalTotal: number
   mileageFee: number
-  /** Aluguel de churrasqueira (qty × taxa). */
+  /** Aluguel de churrasqueira (sim = US$100, não = 0). */
   grillRentalTotal: number
   /** Pacote + adicionais + milhagem + churrasqueira (antes de regras comerciais). */
   quoteSubtotal: number
@@ -75,22 +79,29 @@ function toNumber(value: number | null | undefined) {
   return Math.max(0, Number(value ?? 0))
 }
 
+/** Miles billed after the free-limit gate. Over the limit, the full trip is billed. */
+export function calcBillableMileageDistance(
+  distance: number,
+  freeLimit: number = MILEAGE_FREE_LIMIT,
+) {
+  const miles = toNumber(distance)
+  return miles > toNumber(freeLimit) ? miles : 0
+}
+
 export function calcMileageFee(
   distance: number,
   freeLimit: number = MILEAGE_FREE_LIMIT,
   rate: number = MILEAGE_RATE,
 ) {
-  const billableMiles = Math.max(0, toNumber(distance) - toNumber(freeLimit))
-  return roundMoney(billableMiles * toNumber(rate))
+  return roundMoney(calcBillableMileageDistance(distance, freeLimit) * toNumber(rate))
 }
 
 export function calcGrillRentalFee(
   required: boolean,
-  qty: number,
+  _qty?: number,
   feePerUnit: number = GRILL_RENTAL_FEE,
 ) {
-  if (!required) return 0
-  return roundMoney(Math.max(0, toNumber(qty)) * toNumber(feePerUnit))
+  return calcNormalizedGrillRentalFee(Boolean(required), feePerUnit)
 }
 
 export function calcAdditionalLineTotal(
@@ -123,7 +134,12 @@ export function calculateQuoteTotals(
   const physicalGuestCount = calcPhysicalGuestCount(guestCounts)
 
   const packagePricePerPerson = toNumber(input.packagePricePerPerson)
+  const includedSidesUnit = toNumber(input.includedSidesPricePerPerson)
+  const includedSidesTotal = roundMoney(includedSidesUnit * billableGuestCount)
   const packageTotal = roundMoney(packagePricePerPerson * billableGuestCount)
+  const packageMeatTotal = roundMoney(
+    Math.max(0, packageTotal - includedSidesTotal),
+  )
 
   const additionalTotal =
     input.additionalTotalOverride != null
@@ -162,6 +178,7 @@ export function calculateQuoteTotals(
         quoteSubtotal,
         input.eventDate,
         input.commercialMinimums,
+        { packageSurchargeBase: packageMeatTotal },
       )
     : {
         holidaySurchargeAmount: 0,
@@ -190,6 +207,7 @@ export function calculateQuoteTotals(
     billableGuestCount,
     physicalGuestCount,
     packageTotal,
+    includedSidesTotal,
     additionalTotal,
     mileageFee,
     grillRentalTotal,

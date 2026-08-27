@@ -1,8 +1,9 @@
 import {
-  isHolidaySurchargeDate,
+  isCdlHolidayDate,
   matchHolidaySurchargeDate,
+  parseEventDateParts,
   type HolidayDateParts,
-} from '@/Lib/usHolidays'
+} from '../usHolidays'
 
 export type CommercialMinimumRules = {
   minOrderWeekday: number
@@ -14,8 +15,17 @@ export type CommercialMinimumRules = {
 
 export type EventDateParts = HolidayDateParts
 
+export type CommercialAdjustmentOptions = {
+  /**
+   * Package meat component only. Special CDL dates apply +100% to this base,
+   * never to sides, extras, mileage, grill or waiter.
+   */
+  packageSurchargeBase?: number
+}
+
 export type CommercialAdjustmentResult = {
   isHolidaySurchargeDate: boolean
+  isSpecialCdlDate: boolean
   /** @deprecated use isHolidaySurchargeDate */
   isCdlHoliday: boolean
   holidayKey: string | null
@@ -42,22 +52,7 @@ function roundMoney(value: number) {
   return Math.round(value * 100) / 100
 }
 
-/** Parse YYYY-MM-DD without UTC timezone shift. */
-export function parseEventDateParts(
-  isoDate: string | null | undefined,
-): EventDateParts | null {
-  if (!isoDate) return null
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(isoDate.trim())
-  if (!match) return null
-  const year = Number(match[1])
-  const month = Number(match[2])
-  const day = Number(match[3])
-  if (!year || month < 1 || month > 12 || day < 1 || day > 31) return null
-  return { year, month, day }
-}
-
-/** @deprecated use isHolidaySurchargeDate from Lib/usHolidays */
-export { isHolidaySurchargeDate as isCdlHolidayDate } from '@/Lib/usHolidays'
+export { parseEventDateParts } from '../usHolidays'
 
 /** 0=Sun … 6=Sat, using local calendar date. */
 export function getWeekdayFromParts(parts: EventDateParts): number {
@@ -72,16 +67,20 @@ export function resolveApplicableMinimum(
     return { amount: rules.minOrderWeekday, reasonLabelKey: 'weekday' }
   }
 
+  if (isCdlHolidayDate(parts)) {
+    return { amount: rules.holidayMinOrder, reasonLabelKey: 'cdl_holiday' }
+  }
+
+  if (parts.month === 12 || parts.month === 1) {
+    return { amount: rules.minOrderDecJan, reasonLabelKey: 'dec_jan' }
+  }
+
   const holiday = matchHolidaySurchargeDate(parts)
   if (holiday) {
     return {
       amount: rules.holidayMinOrder,
       reasonLabelKey: holiday.federal ? 'us_holiday' : 'cdl_holiday',
     }
-  }
-
-  if (parts.month === 12 || parts.month === 1) {
-    return { amount: rules.minOrderDecJan, reasonLabelKey: 'dec_jan' }
   }
 
   const weekday = getWeekdayFromParts(parts)
@@ -94,31 +93,47 @@ export function resolveApplicableMinimum(
 }
 
 /**
- * Aplica acréscimo de feriado (federais EUA + datas CDL 24/31 dez)
- * e eleva ao pedido mínimo (opção 2).
- * `baseSubtotal` = pacote + adicionais + milhagem (antes de regras comerciais).
+ * Applies CDL 2026 seasonal floors and surcharges.
+ * Special dates (Dec 24/25/31, Jan 1): +100% on the package meat component only.
+ * Other US federal holidays outside Dec/Jan keep the previous full-subtotal surcharge.
+ * `baseSubtotal` = package + sides + extras + mileage + grill.
  */
 export function applyCommercialMinimums(
   baseSubtotal: number,
   eventDate: string | null | undefined,
   rules: CommercialMinimumRules,
+  options?: CommercialAdjustmentOptions,
 ): CommercialAdjustmentResult {
   const base = roundMoney(Math.max(0, Number(baseSubtotal) || 0))
   const parts = parseEventDateParts(eventDate)
   const holiday = parts ? matchHolidaySurchargeDate(parts) : null
-  const isHoliday = Boolean(holiday)
+  const isSpecialCdlDate = parts ? isCdlHolidayDate(parts) : false
   const isDecemberOrJanuary = parts
     ? parts.month === 12 || parts.month === 1
     : false
   const isWeekend = parts
     ? [0, 5, 6].includes(getWeekdayFromParts(parts))
     : false
+  const isOutsideDecJanUsHoliday = Boolean(holiday) && !isDecemberOrJanuary
+  const appliesSurcharge = isSpecialCdlDate || isOutsideDecJanUsHoliday
 
-  const holidaySurchargePercent = isHoliday
+  const holidaySurchargePercent = appliesSurcharge
     ? Math.max(0, Number(rules.holidaySurchargePercent) || 0)
     : 0
+  const surchargeBase = isSpecialCdlDate
+    ? roundMoney(
+        Math.max(
+          0,
+          Number(
+            options?.packageSurchargeBase != null
+              ? options.packageSurchargeBase
+              : base,
+          ) || 0,
+        ),
+      )
+    : base
   const holidaySurchargeAmount = roundMoney(
-    base * (holidaySurchargePercent / 100),
+    surchargeBase * (holidaySurchargePercent / 100),
   )
   const commercialAfterSurcharge = roundMoney(base + holidaySurchargeAmount)
 
@@ -133,19 +148,28 @@ export function applyCommercialMinimums(
     commercialAfterSurcharge + minimumOrderAdjustment,
   )
 
-  const reasonLabelKey: CommercialAdjustmentResult['reasonLabelKey'] = isHoliday
-    ? holiday?.federal
+  const reasonLabelKey: CommercialAdjustmentResult['reasonLabelKey'] = isSpecialCdlDate
+    ? 'cdl_holiday'
+    : isOutsideDecJanUsHoliday
       ? 'us_holiday'
-      : 'cdl_holiday'
-    : minimumOrderApplied
-      ? minReason
-      : 'none'
+      : minimumOrderApplied
+        ? minReason
+        : 'none'
 
   return {
-    isHolidaySurchargeDate: isHoliday,
-    isCdlHoliday: isHoliday,
-    holidayKey: holiday?.key ?? null,
-    holidayLabel: holiday?.label ?? null,
+    isHolidaySurchargeDate: appliesSurcharge,
+    isSpecialCdlDate,
+    isCdlHoliday: appliesSurcharge,
+    holidayKey: isSpecialCdlDate
+      ? holiday?.key ?? 'cdl_special_date'
+      : isOutsideDecJanUsHoliday
+        ? holiday?.key ?? null
+        : null,
+    holidayLabel: isSpecialCdlDate
+      ? holiday?.label ?? 'Data especial CDL'
+      : isOutsideDecJanUsHoliday
+        ? holiday?.label ?? null
+        : null,
     isDecemberOrJanuary,
     isWeekend,
     holidaySurchargePercent,

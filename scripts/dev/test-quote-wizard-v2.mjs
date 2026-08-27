@@ -740,7 +740,7 @@ async function main() {
     assert.match(reviewLayoutSrc, /mileageMetadata\?\.base_location/)
     pass('M01 mileage origin comes from breakdown')
 
-    assert.match(reviewLayoutSrc, /displayValue\(eventLocation\)/)
+    assert.match(reviewLayoutSrc, /mileageDestinationAddress\(eventAddressText\)/)
     pass('M02 mileage destination uses event location')
 
     assert.match(reviewLayoutSrc, /mileageMetadata\?\.distance/)

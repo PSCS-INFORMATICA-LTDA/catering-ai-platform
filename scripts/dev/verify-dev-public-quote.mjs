@@ -7,7 +7,10 @@
  * Run: node scripts/dev/verify-dev-public-quote.mjs
  */
 const CANONICAL = 'https://catering-ai-agenda-dev.vercel.app'
-const DEV_GIT_BRANCH = 'feat/public-self-service-quote-dev'
+// Overridable like bind-canonical-dev-alias-to-head.mjs, so the check follows
+// whichever DEV branch currently owns the canonical alias.
+const DEV_GIT_BRANCH =
+  process.env.CANONICAL_ALIAS_BRANCH || 'feat/public-self-service-quote-dev'
 const PROJECT_ID = 'prj_sSQ2wfVen9FeKpsEPFw7Vj8SBE9v'
 const TEAM_ID = 'team_Fvr3LpYcuZFW3PS6l0lkTtnu'
 const HOST = 'catering-ai-agenda-dev.vercel.app'

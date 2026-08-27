@@ -116,29 +116,57 @@ export function getWeekdayFromParts(parts) {
   return new Date(parts.year, parts.month - 1, parts.day).getDay()
 }
 
-export function applyCommercialMinimums(baseSubtotal, eventDate, rules) {
+function isCdlSpecialDate(parts) {
+  return (
+    (parts.month === 12 &&
+      (parts.day === 24 || parts.day === 25 || parts.day === 31)) ||
+    (parts.month === 1 && parts.day === 1)
+  )
+}
+
+export function applyCommercialMinimums(baseSubtotal, eventDate, rules, options = {}) {
   const roundMoney = (n) => Math.round(Number(n) * 100) / 100
   const base = roundMoney(Math.max(0, Number(baseSubtotal) || 0))
   const parts = parseEventDateParts(eventDate)
   const holiday = parts ? matchHolidaySurchargeDate(parts) : null
-  const isHoliday = Boolean(holiday)
-  const holidaySurchargePercent = isHoliday
+  const isSpecialCdlDate = parts ? isCdlSpecialDate(parts) : false
+  const isDecemberOrJanuary = parts
+    ? parts.month === 12 || parts.month === 1
+    : false
+  const isOutsideDecJanUsHoliday = Boolean(holiday) && !isDecemberOrJanuary
+  const appliesSurcharge = isSpecialCdlDate || isOutsideDecJanUsHoliday
+  const holidaySurchargePercent = appliesSurcharge
     ? Math.max(0, Number(rules.holidaySurchargePercent) || 0)
     : 0
+  const surchargeBase = isSpecialCdlDate
+    ? roundMoney(
+        Math.max(
+          0,
+          Number(
+            options.packageSurchargeBase != null
+              ? options.packageSurchargeBase
+              : base,
+          ) || 0,
+        ),
+      )
+    : base
   const holidaySurchargeAmount = roundMoney(
-    (base * holidaySurchargePercent) / 100,
+    (surchargeBase * holidaySurchargePercent) / 100,
   )
   const commercialAfterSurcharge = roundMoney(base + holidaySurchargeAmount)
 
   let minimumOrderAmount = rules.minOrderWeekday
   let minKey = 'weekday'
   if (parts) {
-    if (holiday) {
+    if (isSpecialCdlDate) {
       minimumOrderAmount = rules.holidayMinOrder
-      minKey = holiday.federal ? 'us_holiday' : 'cdl_holiday'
-    } else if (parts.month === 12 || parts.month === 1) {
+      minKey = 'cdl_holiday'
+    } else if (isDecemberOrJanuary) {
       minimumOrderAmount = rules.minOrderDecJan
       minKey = 'dec_jan'
+    } else if (holiday) {
+      minimumOrderAmount = rules.holidayMinOrder
+      minKey = holiday.federal ? 'us_holiday' : 'cdl_holiday'
     } else {
       const weekday = getWeekdayFromParts(parts)
       if (weekday === 0 || weekday === 5 || weekday === 6) {
@@ -155,8 +183,9 @@ export function applyCommercialMinimums(baseSubtotal, eventDate, rules) {
     commercialAfterSurcharge + minimumOrderAdjustment,
   )
   return {
-    isHolidaySurchargeDate: isHoliday,
-    isCdlHoliday: isHoliday,
+    isHolidaySurchargeDate: appliesSurcharge,
+    isSpecialCdlDate,
+    isCdlHoliday: appliesSurcharge,
     holidayKey: holiday?.key ?? null,
     holidayLabel: holiday?.label ?? null,
     holidaySurchargeAmount,
@@ -165,6 +194,12 @@ export function applyCommercialMinimums(baseSubtotal, eventDate, rules) {
     minimumOrderApplied: minimumOrderAdjustment > 0,
     minimumOrderAdjustment,
     quoteTotal,
-    minKey: minimumOrderAdjustment > 0 ? minKey : 'none',
+    minKey: appliesSurcharge
+      ? isSpecialCdlDate
+        ? 'cdl_holiday'
+        : 'us_holiday'
+      : minimumOrderAdjustment > 0
+        ? minKey
+        : 'none',
   }
 }

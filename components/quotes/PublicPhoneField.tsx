@@ -1,5 +1,6 @@
 'use client'
 
+import type { Ref } from 'react'
 import { getQuoteStrings } from '@/Lib/quoteTranslations'
 import {
   displayPublicPhone,
@@ -7,15 +8,22 @@ import {
   isUsablePublicPhone,
 } from '@/Lib/publicQuote/phone'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import PublicRequiredMark from '@/components/quotes/PublicRequiredMark'
 
 export default function PublicPhoneField({
   value,
   language,
   onChange,
+  required = false,
+  requiredLabel,
+  inputRef,
 }: {
   value: string
   language: QuoteLanguage
   onChange: (value: string) => void
+  required?: boolean
+  requiredLabel?: string
+  inputRef?: Ref<HTMLInputElement>
 }) {
   const t = getQuoteStrings(language).wizard
   const display = displayPublicPhone(value)
@@ -24,9 +32,13 @@ export default function PublicPhoneField({
 
   return (
     <label className="flex flex-col gap-2">
-      <span className="cdl-eyebrow">{t.customerPhone}</span>
+      <span className="cdl-eyebrow">
+        {t.customerPhone}
+        {required ? <PublicRequiredMark label={requiredLabel || ''} /> : null}
+      </span>
       <div className="relative">
         <input
+          ref={inputRef}
           type="tel"
           inputMode="tel"
           autoComplete="tel"

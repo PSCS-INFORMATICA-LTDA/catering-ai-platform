@@ -1,4 +1,9 @@
 import type { QuoteLanguage } from './quoteWizardTypes'
+import {
+  PACKAGE_FOLDER_ART_V2,
+  PACKAGE_FOLDER_BUCKET,
+  PACKAGE_FOLDER_PREFIX,
+} from './publicQuote/packageFolderArt.generated.ts'
 
 export type PackageCatalogVariant = 'without_sides' | 'with_sides' | 'custom'
 
@@ -48,13 +53,14 @@ export function getPublicPackageSidesGroup(
     : 'without_sides'
 }
 
-const FAMILY_EXAMPLE_ORDER = ['PRI', 'CHO', 'SEL', 'TRAD'] as const
+const FAMILY_EXAMPLE_ORDER = ['PRI', 'LUX', 'CHO', 'SEL', 'TRAD'] as const
 
 const FAMILY_EXAMPLE_NAMES: Record<
   (typeof FAMILY_EXAMPLE_ORDER)[number],
   Record<QuoteLanguage, string>
 > = {
   PRI: { pt: 'Prime', en: 'Prime', es: 'Prime' },
+  LUX: { pt: 'Luxury', en: 'Luxury', es: 'Luxury' },
   CHO: { pt: 'Choice', en: 'Choice', es: 'Choice' },
   SEL: { pt: 'Select', en: 'Select', es: 'Select' },
   TRAD: { pt: 'Tradicional', en: 'Traditional', es: 'Tradicional' },
@@ -105,10 +111,58 @@ export function getPackageCatalogName(
   )
 }
 
+/**
+ * V2 folder for this package in this locale, if one has been published.
+ *
+ * The folders carry text, so each package, variant and locale has its own file.
+ * They live in the same package-images bucket as everything else — this only
+ * picks the right key. Falls back to packages.image_url when a locale has no
+ * folder yet, so the catalog can never end up with a blank card.
+ */
+export function getPackageFolderArt(
+  pkg: PackageCatalogFields,
+  language?: string | null,
+): string | null {
+  const key = pkg.package_key?.trim().toUpperCase()
+  if (!key) return null
+  const locale = language === 'en' || language === 'es' ? language : 'pt'
+  const byLocale = PACKAGE_FOLDER_ART_V2[key]
+  const file = byLocale?.[locale] ?? byLocale?.pt
+  if (!file) return null
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '')
+  if (!base) return null
+  const url = `${base}/storage/v1/object/public/${PACKAGE_FOLDER_BUCKET}/${PACKAGE_FOLDER_PREFIX}/${file}`
+  // New filenames plus a query keep CDN caches from serving an older upload
+  // of the same key during this DEV pass.
+  if (file.endsWith('-v9.webp')) {
+    return `${url}?v=art9`
+  }
+  if (file.endsWith('-v8.webp')) {
+    return `${url}?v=art8b`
+  }
+  if (file.endsWith('-v7.webp')) {
+    return `${url}?v=art7`
+  }
+  if (file.endsWith('-v6.webp')) {
+    return `${url}?v=art6b`
+  }
+  if (file.endsWith('-v5.webp')) {
+    return `${url}?v=art5`
+  }
+  if (file.endsWith('-v4.webp')) {
+    return `${url}?v=art4`
+  }
+  return url
+}
+
 export function getPackageCatalogImage(
   pkg: PackageCatalogFields,
   allPackages?: ReadonlyArray<PackageCatalogFields>,
+  language?: string | null,
 ): string | null {
+  const folder = getPackageFolderArt(pkg, language)
+  if (folder) return folder
+
   const direct = pkg.image_url?.trim() || null
   if (direct) return direct
 
@@ -266,12 +320,12 @@ export function formatPackageCatalogPriceLabel(
 
 export function getPackageSidesDescription(language: QuoteLanguage): string {
   if (language === 'en') {
-    return 'Sides: white rice, black beans, vinaigrette, farofa and cassava.'
+    return 'Sides: white rice, black beans, vinaigrette, farofa and potato salad.'
   }
   if (language === 'es') {
-    return 'Guarniciones: arroz blanco, frijoles negros, vinagreta, farofa y yuca.'
+    return 'Guarniciones: arroz blanco, frijoles negros, vinagreta, farofa y ensalada de papa.'
   }
-  return 'Guarnições: arroz branco, feijão preto, vinagrete, farofa e mandioca.'
+  return 'Guarnições: arroz branco, feijão preto, vinagrete, farofa e maionese.'
 }
 
 export function getPackageSidesIncludedLabel(language: QuoteLanguage): string {
@@ -358,6 +412,20 @@ const PACKAGE_HERO_ITEMS_PT: Record<string, readonly string[]> = {
     'Queijo',
     'Milho',
   ],
+  BBQLUX: [
+    'Picanha Angus',
+    'Picanha Wagyu',
+    'Fraldinha Angus',
+    'Carré de cordeiro',
+    'Linguiça',
+    'Frango sobrecoxa desossada',
+    'Pão de alho',
+    'Queijo',
+    'Milho',
+    'Lagosta ou Vieira com bacon',
+    'Salmão ou camarão',
+    'Costela de porco ou boi',
+  ],
 }
 
 const PACKAGE_HERO_COMMON_PT = [
@@ -393,6 +461,12 @@ const PACKAGE_HERO_ITEM_I18N: Record<string, { en: string; es: string }> = {
   },
   'Salmão ou camarão': { en: 'Salmon or shrimp', es: 'Salmón o camarón' },
   'Carré de cordeiro': { en: 'Rack of lamb', es: 'Costillar de cordero' },
+  'Picanha Wagyu': { en: 'Wagyu picanha', es: 'Picaña Wagyu' },
+  'Fraldinha Angus': { en: 'Angus fraldinha', es: 'Entraña Angus' },
+  'Lagosta ou Vieira com bacon': {
+    en: 'Lobster or scallops with bacon',
+    es: 'Langosta o Vieira con bacon',
+  },
   Chimichurri: { en: 'Chimichurri', es: 'Chimichurri' },
   Farofa: { en: 'Farofa', es: 'Farofa' },
   Mel: { en: 'Honey', es: 'Miel' },

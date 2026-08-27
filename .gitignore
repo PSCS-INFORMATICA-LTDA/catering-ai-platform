@@ -68,5 +68,7 @@ assets/_video_review/
 
 # Seed/preview run outputs (DEV local only)
 scripts/dev/reports/
+scripts/dev/fonts/
+scripts/dev/__pycache__/
 
 !.env.example

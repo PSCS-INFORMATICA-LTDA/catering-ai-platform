@@ -16,7 +16,10 @@ export default function PublicLandingTitle({
   const lines = groupLandingTitleLines(parts)
 
   return (
-    <Tag data-landing-title className={className}>
+    <Tag
+      data-landing-title
+      className={className}
+    >
       {lines.map((line, lineIndex) => (
         <span
           key={`line-${lineIndex}-${line.map((part) => part.text).join('')}`}

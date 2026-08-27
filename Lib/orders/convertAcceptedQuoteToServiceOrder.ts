@@ -342,13 +342,15 @@ export async function convertAcceptedQuoteToServiceOrder(input: {
       return { data: null, error: { message: existingError.message, status: 500 } }
     }
     if (existing) {
-      await attachAgendaToConvertedOrder({
-        companyId,
-        quoteId,
-        serviceOrderId: existing.id,
-        actorUserId,
-        order: existing as ServiceOrderRow,
-      })
+      if (!(existing as ServiceOrderRow).event_id) {
+        await attachAgendaToConvertedOrder({
+          companyId,
+          quoteId,
+          serviceOrderId: existing.id,
+          actorUserId,
+          order: existing as ServiceOrderRow,
+        })
+      }
       return { data: { ...(existing as ServiceOrderRow), already_existed: true }, error: null }
     }
   }
@@ -387,13 +389,15 @@ export async function convertAcceptedQuoteToServiceOrder(input: {
         .eq('id', quoteId)
         .eq('company_id', companyId)
     }
-    await attachAgendaToConvertedOrder({
-      companyId,
-      quoteId,
-      serviceOrderId: existingByVersion.id,
-      actorUserId,
-      order: existingByVersion,
-    })
+    if (!existingByVersion.event_id) {
+      await attachAgendaToConvertedOrder({
+        companyId,
+        quoteId,
+        serviceOrderId: existingByVersion.id,
+        actorUserId,
+        order: existingByVersion,
+      })
+    }
     return { data: { ...existingByVersion, already_existed: true }, error: null }
   }
 

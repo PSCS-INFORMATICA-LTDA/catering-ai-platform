@@ -32,6 +32,7 @@ import {
   formatEventAddressLines,
   isSameEventDestination,
 } from '@/Lib/formatEventAddress'
+import { mileageDestinationAddress } from '@/Lib/publicQuote/mileageDestination'
 import PricingBreakdownView from './PricingBreakdownView'
 import type {
   PricingBreakdown,
@@ -164,7 +165,7 @@ function getChargedMiles(
   freeLimit: number | null,
 ): number | null {
   if (distance == null || freeLimit == null) return null
-  return Math.max(0, distance - freeLimit)
+  return distance > freeLimit ? distance : 0
 }
 
 function findBreakdownLine(
@@ -444,12 +445,9 @@ function ConfirmationProposalBody({
                 <p
                   className="quote-proposal-value"
                   data-mileage-destination
+                  data-mileage-destination-source="event-address"
                 >
-                  {mileageDestinationCopy(
-                    lang,
-                    eventAddressText,
-                    eventAddressText,
-                  )}
+                  {mileageDestinationAddress(eventAddressText)}
                 </p>
               </div>
             </div>
@@ -544,15 +542,18 @@ function ConfirmationProposalBody({
         balanceAmount={breakdown.balance}
         reservationPercentage={breakdown.rules_applied.reservationPercentage}
         ruleHint={tw(lang, 'reservationRuleHint')}
+        // The amount labels already carry the percentages, and the rules panel
+        // right below states the policy again.
+        showPercentSplit={false}
       />
 
-      <CdlImportantRulesPanel
+      <CdlImportantRulesPanel variant="summary" language={lang} />
+
+      <CdlCancellationPolicySection
         variant="summary"
-        showReservationText
         language={lang}
+        eventDate={data.eventDate}
       />
-
-      <CdlCancellationPolicySection variant="summary" language={lang} />
 
       <footer className="quote-proposal-signature">
         <p className="quote-proposal-footer-brand">BBQ AT HOME</p>
@@ -975,13 +976,13 @@ function DefaultProposalBody({
 
       <CdlImportantRulesPanel
         variant={rulesVariant === 'pdf' ? 'pdf' : 'summary'}
-        showReservationText
         language={lang}
       />
 
       <CdlCancellationPolicySection
         variant={rulesVariant === 'pdf' ? 'pdf' : 'summary'}
         language={lang}
+        eventDate={data.eventDate}
       />
     </>
   )
@@ -1032,12 +1033,25 @@ export default function QuoteReviewLayout({
   const minimumAdjustment = Number(data.minimumOrderAdjustment ?? 0)
   const grillRentalTotal = Number(data.grillRentalTotal ?? 0)
   const grillRentalQty = Number(data.grillRentalQty ?? 0)
+  const includedSidesTotal = Number(data.includedSidesTotal ?? 0)
+  const packageDisplay = Math.max(
+    0,
+    Number(data.packageTotal ?? 0) - includedSidesTotal,
+  )
 
   const pricingLines = [
     {
       label: tQuotesOrders(lang, 'packageLabel'),
-      value: formatMoneyOrDash(data.packageTotal),
+      value: formatMoneyOrDash(packageDisplay),
     },
+    ...(includedSidesTotal > 0
+      ? [
+          {
+            label: tQuotesOrders(lang, 'docSidesLine'),
+            value: formatMoneyOrDash(includedSidesTotal),
+          },
+        ]
+      : []),
     {
       label: tQuotesOrders(lang, 'additionalsLabel'),
       value: formatMoneyOrDash(data.additionalTotal),
@@ -1045,9 +1059,8 @@ export default function QuoteReviewLayout({
     {
       label:
         (chargedMiles ?? 0) > 0
-          ? tQuotesOrders(lang, 'docMileageChargedSummaryLine', {
+          ? tQuotesOrders(lang, 'docMileageFullTripLine', {
               charged: formatMileageQuantity(chargedMiles ?? 0),
-              free: formatMileageQuantity(Number(data.mileageFreeLimit ?? 20)),
             })
           : tQuotesOrders(lang, 'mileageLabel'),
       value: formatMoneyOrDash(data.mileageFee),

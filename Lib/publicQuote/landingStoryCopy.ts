@@ -24,6 +24,10 @@ export type LandingStoryCopy = {
     microcopy: string
     quickCta: string
   }
+  /** Invitation shown once, under the first chapter, so the fold reads as a start. */
+  scrollHint: string
+  /** Accessible name for the quiet per-chapter continuity arrows. */
+  scrollNext: string
   howItWorksTitle: readonly LandingTitlePart[]
   stories: readonly LandingStoryChapter[]
   finalCta: {
@@ -49,8 +53,7 @@ export const PUBLIC_LANDING_STORY = {
       title: [
         { text: 'O melhor do', breakAfter: true },
         { text: 'churrasco', highlight: 'red', breakAfter: true },
-        { text: 'brasileiro', highlight: 'red' },
-        { text: ',', breakAfter: true },
+        { text: 'brasileiro,', highlight: 'red', breakAfter: true },
         { text: 'onde você estiver.' },
       ],
       subtitle:
@@ -59,6 +62,8 @@ export const PUBLIC_LANDING_STORY = {
         'Monte seu evento em poucos minutos. Nossa equipe revisa tudo antes da confirmação.',
       quickCta: 'COMEÇAR COTAÇÃO',
     },
+    scrollHint: 'Conheça nosso churrasco',
+    scrollNext: 'Ver a próxima seção',
     howItWorksTitle: [
       { text: 'ENTENDA', breakAfter: true },
       { text: 'COMO', breakAfter: true },
@@ -72,7 +77,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'Muito mais que', highlight: 'red', breakAfter: true },
           { text: 'CATERING.', highlight: 'red' },
         ],
-        body: 'Levamos nossa estrutura completa até o local do seu evento, para que você aproveite a experiência enquanto cuidamos da operação.',
+        body: 'Levamos toda a estrutura necessária para o churrasco até o seu evento, para que você aproveite cada momento sem preocupações.',
       },
       {
         id: 'full-setup',
@@ -91,7 +96,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'Churrasco preparado', breakAfter: true },
           { text: 'AO VIVO.', highlight: 'red' },
         ],
-        body: 'O chef churrasqueiro fica disponível durante o serviço, preparando o churrasco em tempo real para você e seus convidados.',
+        body: 'O chef churrasqueiro fica disponível durante o serviço, preparando o churrasco em tempo real para você e seus convidados, por até 4 horas.',
       },
       {
         id: 'buffet',
@@ -101,7 +106,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'Seu ritmo.' },
         ],
         badge: { text: 'BUFFET', tone: 'yellow' },
-        body: 'Nosso serviço é no formato buffet, trazendo liberdade e praticidade para que cada convidado se sirva de acordo com seu gosto.',
+        body: 'Serviço de churrasco no formato buffet / all you can eat, por até 4 horas, para que cada convidado se sirva de acordo com seu gosto.',
       },
       {
         id: 'since-2017',
@@ -110,7 +115,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'Aperfeiçoando essa experiência', breakAfter: true },
           { text: 'DESDE 2017.', highlight: 'red' },
         ],
-        body: 'Qualidade, higiene, organização e técnicas aperfeiçoadas ao longo dos anos para transformar um churrasco em uma experiência que seus convidados lembram.',
+        body: 'Anos aperfeiçoando cada detalhe do nosso serviço, unindo qualidade, higiene, organização e técnicas aprimoradas para transformar seu churrasco em uma experiência memorável',
       },
     ],
     finalCta: {
@@ -137,8 +142,7 @@ export const PUBLIC_LANDING_STORY = {
       title: [
         { text: 'The best of', breakAfter: true },
         { text: 'Brazilian', highlight: 'red', breakAfter: true },
-        { text: 'barbecue', highlight: 'red' },
-        { text: ',', breakAfter: true },
+        { text: 'barbecue,', highlight: 'red', breakAfter: true },
         { text: 'wherever you are.' },
       ],
       subtitle:
@@ -147,6 +151,8 @@ export const PUBLIC_LANDING_STORY = {
         'Build your event in just a few minutes. Our team reviews everything before confirmation.',
       quickCta: 'START QUOTE',
     },
+    scrollHint: 'Discover our BBQ experience',
+    scrollNext: 'See the next section',
     howItWorksTitle: [
       { text: 'SEE', breakAfter: true },
       { text: 'HOW IT', breakAfter: true },
@@ -179,7 +185,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'Brazilian BBQ,', breakAfter: true },
           { text: 'PREPARED LIVE.', highlight: 'red' },
         ],
-        body: 'Your grill chef remains available throughout the service, preparing the barbecue in real time for you and your guests.',
+        body: 'Your grill chef remains available throughout the service, preparing the barbecue in real time for you and your guests, for up to 4 hours.',
       },
       {
         id: 'buffet',
@@ -189,7 +195,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'Your pace.' },
         ],
         badge: { text: 'BUFFET', tone: 'yellow' },
-        body: 'Our service is buffet-style, giving every guest the freedom and convenience to serve themselves according to their taste.',
+        body: 'BBQ buffet / all-you-can-eat service for up to 4 hours, so every guest can serve themselves according to their taste.',
       },
       {
         id: 'since-2017',
@@ -225,8 +231,7 @@ export const PUBLIC_LANDING_STORY = {
       title: [
         { text: 'Lo mejor de la', breakAfter: true },
         { text: 'parrilla', highlight: 'red', breakAfter: true },
-        { text: 'brasileña', highlight: 'red' },
-        { text: ',', breakAfter: true },
+        { text: 'brasileña,', highlight: 'red', breakAfter: true },
         { text: 'donde tú estés.' },
       ],
       subtitle:
@@ -235,6 +240,8 @@ export const PUBLIC_LANDING_STORY = {
         'Arma tu evento en pocos minutos. Nuestro equipo revisa todo antes de la confirmación.',
       quickCta: 'COMENZAR COTIZACIÓN',
     },
+    scrollHint: 'Conoce nuestra experiencia BBQ',
+    scrollNext: 'Ver la siguiente sección',
     howItWorksTitle: [
       { text: 'CONOCE', breakAfter: true },
       { text: 'CÓMO', breakAfter: true },
@@ -267,7 +274,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'Parrilla brasileña,', breakAfter: true },
           { text: 'PREPARADA EN VIVO.', highlight: 'red' },
         ],
-        body: 'El chef parrillero permanece disponible durante el servicio, preparando la parrilla en tiempo real para ti y tus invitados.',
+        body: 'El chef parrillero permanece disponible durante el servicio, preparando la parrilla en tiempo real para ti y tus invitados, por hasta 4 horas.',
       },
       {
         id: 'buffet',
@@ -277,7 +284,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'A tu ritmo.' },
         ],
         badge: { text: 'BUFFET', tone: 'yellow' },
-        body: 'Nuestro servicio es estilo buffet, ofreciendo libertad y practicidad para que cada invitado se sirva según su gusto.',
+        body: 'Servicio de BBQ tipo buffet / all you can eat por hasta 4 horas, para que cada invitado se sirva según su gusto.',
       },
       {
         id: 'since-2017',

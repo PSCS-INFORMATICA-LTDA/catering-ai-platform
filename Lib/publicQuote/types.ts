@@ -52,6 +52,9 @@ export type PublicQuoteBootstrap = {
     support: {
       phone: string | null
       whatsappUrl: string | null
+      email?: string | null
+      instagramUrl?: string | null
+      instagramHandle?: string | null
     }
     serviceDurationMinutes: number
     locationBias: PublicLocationBias | null
@@ -133,5 +136,13 @@ export type PublicQuoteDraft = {
     rentalRequired: boolean
     rentalQty: number
     notes: string | null
+  }
+  consents?: {
+    cancellation?: {
+      accepted: boolean
+      version: string
+      locale: PublicQuoteLocale
+      acceptedAt: string | null
+    }
   }
 }

@@ -26,7 +26,7 @@ const LEGACY_ALIASES: Record<string, CanonicalQuoteStatus> = {
   canceled: 'cancelled',
 }
 
-const CANONICAL_STATUSES: CanonicalQuoteStatus[] = [
+export const CANONICAL_STATUSES: CanonicalQuoteStatus[] = [
   'draft',
   'ready_for_review',
   'sent',

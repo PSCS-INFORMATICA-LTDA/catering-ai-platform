@@ -1,6 +1,6 @@
 import { isUsablePhone, toE164Digits } from '../normalizePhone.ts'
 
-export const PUBLIC_PHONE_EXAMPLE = '+1 407 555 0123'
+export const PUBLIC_PHONE_EXAMPLE = '+1 407 555 1234'
 const NANP_E164 = /^1[2-9]\d{2}[2-9]\d{6}$/
 const BRAZIL_E164 = /^55[1-9]\d{9,10}$/
 

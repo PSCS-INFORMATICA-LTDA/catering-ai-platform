@@ -13,6 +13,7 @@ export type QuoteDraftInput = {
   mileageDistance: number
   grillRentalRequired?: boolean
   grillRentalQty?: number
+  includedSidesPricePerPerson?: number | null
   pricing: CommercialRulesSnapshot
   reservationPercentage?: number
   reservationAmountOverride?: number
@@ -34,6 +35,7 @@ export function calculateQuoteDraftFromSupabasePricing(
     mileageRate: pricing.mileageRate,
     grillRentalRequired: input.grillRentalRequired,
     grillRentalQty: input.grillRentalQty,
+    includedSidesPricePerPerson: input.includedSidesPricePerPerson,
     reservationPercentage:
       input.reservationPercentage ?? pricing.reservationPercentage,
     reservationAmountOverride: input.reservationAmountOverride,

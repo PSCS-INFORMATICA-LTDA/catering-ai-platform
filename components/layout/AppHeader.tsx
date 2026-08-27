@@ -1,7 +1,8 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useAppSession } from '@/components/auth/AppSessionProvider'
 import { useTenant } from '@/components/tenant/TenantProvider'
 import { glassBtn } from '@/Lib/liquidGlass'
 import { createClient } from '@/Lib/supabase/client'
@@ -9,31 +10,11 @@ import { resolveAuthLocale, tAuth } from '@/Lib/i18n/authUsers'
 import { tChrome } from '@/Lib/i18n/chrome'
 import { resolveTenantCompanyDisplayName } from '@/Lib/tenant/companyDisplayName'
 
-type MeResponse = {
-  email?: string | null
-  displayName?: string | null
-  isPlatformAdmin?: boolean
-  locale?: string
-}
-
 export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
   const router = useRouter()
+  const { session } = useAppSession()
   const { company, loading } = useTenant()
-  const [me, setMe] = useState<MeResponse | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      const res = await fetch('/api/auth/me', { cache: 'no-store' })
-      if (!res.ok) return
-      const data = (await res.json()) as MeResponse
-      if (!cancelled) setMe(data)
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   async function logout() {
     if (loggingOut) return
@@ -49,7 +30,7 @@ export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
     }
   }
 
-  const locale = resolveAuthLocale(me?.locale)
+  const locale = resolveAuthLocale(session?.locale)
   const resolvedCompanyName = resolveTenantCompanyDisplayName(company)
   const companyLabel = loading
     ? '…'
@@ -57,7 +38,6 @@ export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
 
   return (
     <header className="catering-app-header flex shrink-0 items-center gap-3 border-b border-cdl-border px-3 py-2.5 sm:px-4">
-      {/* Só mobile — no desktop o menu lateral já fica aberto (padrão Logistics). */}
       <button
         type="button"
         className="catering-header-menu-btn"
@@ -85,9 +65,9 @@ export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
 
       <div className="hidden min-w-0 text-right text-xs text-cdl-muted sm:block">
         <p className="truncate font-semibold text-cdl-fg">
-          {me?.displayName || me?.email || '…'}
+          {session?.displayName || session?.email || '…'}
         </p>
-        {me?.isPlatformAdmin ? (
+        {session?.isPlatformAdmin ? (
           <p className="text-[0.65rem] uppercase tracking-wider">
             {tAuth(locale, 'platformAdmin')}
           </p>

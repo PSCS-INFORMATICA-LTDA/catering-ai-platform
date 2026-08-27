@@ -1,0 +1,182 @@
+{
+  "bbqcho-en-v2.webp": {
+    "x": 56,
+    "y": 936,
+    "size": 202,
+    "score": 0.2504110634326935
+  },
+  "bbqcho-es-v2.webp": {
+    "x": 48,
+    "y": 914,
+    "size": 186,
+    "score": 0.3079183101654053
+  },
+  "bbqcho-plus-en-v2.webp": {
+    "x": 66,
+    "y": 754,
+    "size": 174,
+    "score": 0.21674610674381256
+  },
+  "bbqcho-plus-es-v2.webp": {
+    "x": 59,
+    "y": 787,
+    "size": 174,
+    "score": 0.21221640706062317
+  },
+  "bbqcho-plus-pt-v2.webp": {
+    "x": 38,
+    "y": 1354,
+    "size": 142,
+    "score": 0.23353448510169983
+  },
+  "bbqcho-pt-v2.webp": {
+    "x": 61,
+    "y": 943,
+    "size": 190,
+    "score": 0.31919965147972107
+  },
+  "bbqpers-en-v2.webp": {
+    "x": 68,
+    "y": 1318,
+    "size": 170,
+    "score": 0.2787499725818634
+  },
+  "bbqpers-es-v2.webp": {
+    "x": 42,
+    "y": 1287,
+    "size": 214,
+    "score": 0.15800213813781738
+  },
+  "bbqpers-plus-en-v2.webp": {
+    "x": 50,
+    "y": 1364,
+    "size": 146,
+    "score": 0.3459181785583496
+  },
+  "bbqpers-plus-es-v2.webp": {
+    "x": 61,
+    "y": 1357,
+    "size": 142,
+    "score": 0.3549613356590271
+  },
+  "bbqpers-plus-pt-v2.webp": {
+    "x": 40,
+    "y": 1337,
+    "size": 162,
+    "score": 0.306562215089798
+  },
+  "bbqpers-pt-v2.webp": {
+    "x": 69,
+    "y": 1311,
+    "size": 182,
+    "score": 0.23462681472301483
+  },
+  "bbqpri-en-v2.webp": {
+    "x": 46,
+    "y": 1038,
+    "size": 198,
+    "score": 0.33149248361587524
+  },
+  "bbqpri-es-v2.webp": {
+    "x": 59,
+    "y": 1182,
+    "size": 202,
+    "score": 0.24213957786560059
+  },
+  "bbqpri-plus-en-v2.webp": {
+    "x": 32,
+    "y": 1348,
+    "size": 166,
+    "score": 0.2725341320037842
+  },
+  "bbqpri-plus-es-v2.webp": {
+    "x": 37,
+    "y": 1357,
+    "size": 162,
+    "score": 0.3085654079914093
+  },
+  "bbqpri-plus-pt-v2.webp": {
+    "x": 40,
+    "y": 1301,
+    "size": 170,
+    "score": 0.293811172246933
+  },
+  "bbqpri-pt-v2.webp": {
+    "x": 65,
+    "y": 1034,
+    "size": 218,
+    "score": 0.26889726519584656
+  },
+  "bbqsel-en-v2.webp": {
+    "x": 62,
+    "y": 918,
+    "size": 186,
+    "score": 0.30765801668167114
+  },
+  "bbqsel-es-v2.webp": {
+    "x": 69,
+    "y": 923,
+    "size": 198,
+    "score": 0.364440381526947
+  },
+  "bbqsel-plus-en-v2.webp": {
+    "x": 52,
+    "y": 762,
+    "size": 178,
+    "score": 0.277876079082489
+  },
+  "bbqsel-plus-es-v2.webp": {
+    "x": 48,
+    "y": 916,
+    "size": 186,
+    "score": 0.2602979838848114
+  },
+  "bbqsel-plus-pt-v2.webp": {
+    "x": 35,
+    "y": 830,
+    "size": 186,
+    "score": 0.3184638023376465
+  },
+  "bbqsel-pt-v2.webp": {
+    "x": 57,
+    "y": 835,
+    "size": 198,
+    "score": 0.2983899414539337
+  },
+  "bbqtrad-en-v2.webp": {
+    "x": 447,
+    "y": 1160,
+    "size": 102,
+    "score": 0.08385433256626129
+  },
+  "bbqtrad-es-v2.webp": {
+    "x": 47,
+    "y": 881,
+    "size": 190,
+    "score": 0.35702821612358093
+  },
+  "bbqtrad-plus-en-v2.webp": {
+    "x": 55,
+    "y": 801,
+    "size": 178,
+    "score": 0.16944146156311035
+  },
+  "bbqtrad-plus-es-v2.webp": {
+    "x": 48,
+    "y": 825,
+    "size": 186,
+    "score": 0.3199387788772583
+  },
+  "bbqtrad-plus-pt-v2.webp": {
+    "x": 46,
+    "y": 812,
+    "size": 174,
+    "score": 0.3234110176563263
+  },
+  "bbqtrad-pt-v2.webp": {
+    "x": 43,
+    "y": 1235,
+    "size": 218,
+    "score": 0.3088968098163605
+  }
+}

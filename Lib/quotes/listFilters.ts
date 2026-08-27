@@ -23,8 +23,10 @@ export type QuoteListFilterResult = {
   pageSize: number
 }
 
-const DEFAULT_PAGE_SIZE = 20
-const MAX_PAGE_SIZE = 100
+export const DEFAULT_QUOTE_LIST_PAGE_SIZE = 25
+export const MAX_QUOTE_LIST_PAGE_SIZE = 30
+const DEFAULT_PAGE_SIZE = DEFAULT_QUOTE_LIST_PAGE_SIZE
+const MAX_PAGE_SIZE = MAX_QUOTE_LIST_PAGE_SIZE
 
 const SORTABLE_FIELDS = new Set([
   'created_at',

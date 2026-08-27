@@ -4,6 +4,8 @@ import { isPublicEventDateBookable } from './eventDate'
 import { toPublicPhoneE164 } from './phone'
 import { parsePublicQuoteLocale, PublicQuoteHttpError } from './security'
 import type { PublicQuoteDraft } from './types'
+import { normalizeGrillRentalQty } from '@/Lib/grillRental'
+import { CDL_CANCEL_POLICY_VERSION } from '@/Lib/cdlCancellationPolicy'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -143,8 +145,28 @@ export function sanitizePublicQuoteDraft(value: unknown): PublicQuoteDraft {
       hasGrill: grill.hasGrill === true,
       photoReference: nullableText(grill.photoReference, 500),
       rentalRequired: grill.rentalRequired === true,
-      rentalQty: nonNegativeInteger(grill.rentalQty, 20),
+      rentalQty: normalizeGrillRentalQty(grill.rentalRequired === true),
       notes: nullableText(grill.notes, 1000),
+    },
+    consents: sanitizeCancellationConsent(root.consents, parsePublicQuoteLocale(root.locale) ?? 'pt'),
+  }
+}
+
+function sanitizeCancellationConsent(
+  value: unknown,
+  locale: PublicQuoteDraft['locale'],
+): PublicQuoteDraft['consents'] {
+  const root = record(value)
+  const cancellation = record(root.cancellation)
+  const accepted = cancellation.accepted === true
+  return {
+    cancellation: {
+      accepted,
+      version: accepted ? CDL_CANCEL_POLICY_VERSION : '',
+      locale,
+      acceptedAt: accepted
+        ? nullableText(cancellation.acceptedAt, 40)
+        : null,
     },
   }
 }
@@ -236,11 +258,9 @@ export function validateCompletePublicQuoteDraft(
     }
     draft.grill.rentalRequired = false
     draft.grill.rentalQty = 0
-  } else if (
-    draft.grill.rentalRequired &&
-    draft.grill.rentalQty < 1
-  ) {
-    throw new PublicQuoteHttpError(400, 'invalid_payload')
+  } else {
+    draft.grill.rentalRequired = true
+    draft.grill.rentalQty = 1
   }
 
   draft.event.eventName = deriveEventName(

@@ -647,7 +647,7 @@ export default function AdditionalItemsDashboard({
             {tPackages(locale, 'newItem')}
           </button>
           <Link
-            href="/packages/images#catalogo-itens"
+            href="/media/packages"
             className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-bold text-neutral-800 shadow-sm"
           >
             {tCommon(locale, 'images')}

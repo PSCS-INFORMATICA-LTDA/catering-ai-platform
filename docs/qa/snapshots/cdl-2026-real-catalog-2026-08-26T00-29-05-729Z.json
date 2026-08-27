@@ -1,0 +1,963 @@
+{
+  "at": "2026-08-26T00:29:05.729Z",
+  "env": {
+    "host": "yasprgtlqclwsjcshtls.supabase.co",
+    "ref": "yasprgtlqclwsjcshtls",
+    "companyId": "65fd576f-8d97-49ba-bf38-61bc1e94e94a"
+  },
+  "apply": true,
+  "countsBefore": {
+    "items": 120,
+    "prices": 89,
+    "public": 75
+  },
+  "plan": [
+    {
+      "item": "ALCATRA (ANGUS)",
+      "item_key": "ITEM_002",
+      "category": "BOVINO_TRADICIONAL",
+      "old_price": 7,
+      "new_price": 10,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "ASSADO DE TIRAS",
+      "item_key": "ITEM_006",
+      "category": "BOVINO_TRADICIONAL",
+      "old_price": 10,
+      "new_price": 12,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "COSTELA BOVINA (ANGUS)",
+      "item_key": "ITEM_003",
+      "category": "BOVINO_TRADICIONAL",
+      "old_price": 10,
+      "new_price": 12,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "FRALDINHA (ANGUS)",
+      "item_key": "ITEM_004",
+      "category": "BOVINO_TRADICIONAL",
+      "old_price": 10,
+      "new_price": 15,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "PICANHA (ANGUS)",
+      "item_key": "ITEM_001",
+      "category": "BOVINO_TRADICIONAL",
+      "old_price": 10,
+      "new_price": 15,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "FRALDINHA (WAGYU)",
+      "item_key": "ITEM_010",
+      "category": "BOVINO_NOBRE",
+      "old_price": 25,
+      "new_price": 35,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "NEW YORK",
+      "item_key": "ITEM_007",
+      "category": "BOVINO_NOBRE",
+      "old_price": 13,
+      "new_price": 13,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "PICANHA (WAGYU)",
+      "item_key": "ITEM_009",
+      "category": "BOVINO_NOBRE",
+      "old_price": 20,
+      "new_price": 30,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "RIBEYE",
+      "item_key": "ITEM_008",
+      "category": "BOVINO_NOBRE",
+      "old_price": 15,
+      "new_price": 15,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "T-BONE (ANGUS)",
+      "item_key": "ITEM_011",
+      "category": "BOVINO_NOBRE",
+      "old_price": 80,
+      "new_price": 100,
+      "pricing_type": "PER_UNIT",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "TOMAHAWK (ANGUS)",
+      "item_key": "ITEM_012",
+      "category": "BOVINO_NOBRE",
+      "old_price": 150,
+      "new_price": 200,
+      "pricing_type": "PER_UNIT",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "TOMAHAWK (WAGYU)",
+      "item_key": "ITEM_013",
+      "category": "BOVINO_NOBRE",
+      "old_price": 250,
+      "new_price": 400,
+      "pricing_type": "PER_UNIT",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "COSTELA",
+      "item_key": "ITEM_014",
+      "category": "PORCO",
+      "old_price": 8,
+      "new_price": 12,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "CARRÉ",
+      "item_key": "ITEM_015",
+      "category": "PORCO",
+      "old_price": 10,
+      "new_price": 12,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "PURURUCA",
+      "item_key": "ITEM_016",
+      "category": "PORCO",
+      "old_price": 120,
+      "new_price": 120,
+      "pricing_type": "PER_UNIT",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "CARRÉ",
+      "item_key": "ITEM_047",
+      "category": "CORDEIRO",
+      "old_price": 15,
+      "new_price": 20,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "PERNIL",
+      "item_key": "ITEM_044",
+      "category": "CORDEIRO",
+      "old_price": 8,
+      "new_price": 10,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "T-BONE",
+      "item_key": "ITEM_045",
+      "category": "CORDEIRO",
+      "old_price": 7,
+      "new_price": 10,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "ASA",
+      "item_key": "ITEM_017",
+      "category": "FRANGO",
+      "old_price": 5,
+      "new_price": 5,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "COXA",
+      "item_key": "ITEM_018",
+      "category": "FRANGO",
+      "old_price": 5,
+      "new_price": 5,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "CORAÇÃO",
+      "item_key": "ITEM_019",
+      "category": "FRANGO",
+      "old_price": 4,
+      "new_price": 4,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "FILÉ DO PEITO",
+      "item_key": "ITEM_020",
+      "category": "FRANGO",
+      "old_price": 5,
+      "new_price": 5,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "FILÉ COM BACON",
+      "item_key": "ITEM_021",
+      "category": "FRANGO",
+      "old_price": 6,
+      "new_price": 6,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "FRANGO SOBRECOXA DESOSSADA",
+      "item_key": "ITEM_FRANGO_SOBRECOXA",
+      "category": "FRANGO",
+      "old_price": 5,
+      "new_price": 5,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "LINGUIÇA APIMENTADA",
+      "item_key": "ITEM_026",
+      "category": "LINGUICAS",
+      "old_price": 7,
+      "new_price": 7,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "LINGUIÇA ALHO E ERVAS",
+      "item_key": "ITEM_027",
+      "category": "LINGUICAS",
+      "old_price": 7,
+      "new_price": 7,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "LINGUIÇA CALABRESA",
+      "item_key": "ITEM_025",
+      "category": "LINGUICAS",
+      "old_price": 7,
+      "new_price": 7,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "FRANGO (TRADICIONAL)",
+      "item_key": "ITEM_024",
+      "category": "LINGUICAS",
+      "old_price": 5,
+      "new_price": 5,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "Linguiça Toscana (Tradicional)",
+      "item_key": "ITEM_LINGUICA_TOSCANA_TRADICIONAL",
+      "category": "LINGUICAS",
+      "old_price": 5,
+      "new_price": 5,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "BOVINA (COM QUEIJO)",
+      "item_key": "ITEM_028",
+      "category": "LINGUICAS",
+      "old_price": 8,
+      "new_price": 8,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "ATUM",
+      "item_key": "ITEM_049",
+      "category": "FRUTOS_DO_MAR",
+      "old_price": 15,
+      "new_price": 15,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "CAMARÃO",
+      "item_key": "ITEM_050",
+      "category": "FRUTOS_DO_MAR",
+      "old_price": 10,
+      "new_price": 12,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "LAGOSTA",
+      "item_key": "ITEM_051",
+      "category": "FRUTOS_DO_MAR",
+      "old_price": 25,
+      "new_price": 30,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "POLVO",
+      "item_key": "ITEM_052",
+      "category": "FRUTOS_DO_MAR",
+      "old_price": 20,
+      "new_price": 25,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "SALMAO",
+      "item_key": "ITEM_048",
+      "category": "FRUTOS_DO_MAR",
+      "old_price": 10,
+      "new_price": 12,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "VIEIRA",
+      "item_key": "ITEM_053",
+      "category": "FRUTOS_DO_MAR",
+      "old_price": 25,
+      "new_price": 30,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "ABROBINHA",
+      "item_key": "ITEM_043",
+      "category": "LEGUMES_E_VEGETAIS",
+      "old_price": 3,
+      "new_price": 3,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "ALHO",
+      "item_key": "ITEM_032",
+      "category": "LEGUMES_E_VEGETAIS",
+      "old_price": 2,
+      "new_price": 3,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "ASPARGOS",
+      "item_key": "ITEM_042",
+      "category": "LEGUMES_E_VEGETAIS",
+      "old_price": 3,
+      "new_price": 3,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "BATATA",
+      "item_key": "ITEM_035",
+      "category": "LEGUMES_E_VEGETAIS",
+      "old_price": 2,
+      "new_price": 3,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "BATATA DOCE",
+      "item_key": "ITEM_036",
+      "category": "LEGUMES_E_VEGETAIS",
+      "old_price": 2,
+      "new_price": 3,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "BERINGELA",
+      "item_key": "ITEM_038",
+      "category": "LEGUMES_E_VEGETAIS",
+      "old_price": 3,
+      "new_price": 3,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "BROCCOLI",
+      "item_key": "ITEM_033",
+      "category": "LEGUMES_E_VEGETAIS",
+      "old_price": 2,
+      "new_price": 3,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "CEBOLA",
+      "item_key": "ITEM_031",
+      "category": "LEGUMES_E_VEGETAIS",
+      "old_price": 2,
+      "new_price": 3,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "CENOURA",
+      "item_key": "ITEM_040",
+      "category": "LEGUMES_E_VEGETAIS",
+      "old_price": 2,
+      "new_price": 3,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "COGUMELO",
+      "item_key": "ITEM_041",
+      "category": "LEGUMES_E_VEGETAIS",
+      "old_price": 2,
+      "new_price": 3,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "COUVE FLOR",
+      "item_key": "ITEM_034",
+      "category": "LEGUMES_E_VEGETAIS",
+      "old_price": 2,
+      "new_price": 3,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "MILHO",
+      "item_key": "ITEM_037",
+      "category": "LEGUMES_E_VEGETAIS",
+      "old_price": 2,
+      "new_price": 3,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "PIMENTÃO",
+      "item_key": "ITEM_039",
+      "category": "LEGUMES_E_VEGETAIS",
+      "old_price": 2,
+      "new_price": 3,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "ABACAXI",
+      "item_key": "ITEM_055",
+      "category": "FRUTAS",
+      "old_price": 3,
+      "new_price": 4,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "BANANA",
+      "item_key": "ITEM_057_BANANA",
+      "category": "FRUTAS",
+      "old_price": 3,
+      "new_price": 4,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "PÃO DE ALHO",
+      "item_key": "ITEM_058",
+      "category": "ACOMPANHAMENTOS",
+      "old_price": 5,
+      "new_price": 5,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "CHEESEBURGUER",
+      "item_key": "ITEM_068",
+      "category": "ACOMPANHAMENTOS",
+      "old_price": 5,
+      "new_price": 5,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "HOT DOG",
+      "item_key": "ITEM_063",
+      "category": "ACOMPANHAMENTOS",
+      "old_price": 4,
+      "new_price": 4,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "BATATA FRITA",
+      "item_key": "ITEM_069",
+      "category": "ACOMPANHAMENTOS",
+      "old_price": 5,
+      "new_price": 5,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "FAROFA",
+      "item_key": "ITEM_059",
+      "category": "ACOMPANHAMENTOS",
+      "old_price": 0,
+      "new_price": 1,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "QUEIJO COALHO",
+      "item_key": "ITEM_065",
+      "category": "ACOMPANHAMENTOS",
+      "old_price": 5,
+      "new_price": 5,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "PIMENTA DE BICO",
+      "item_key": "ITEM_066",
+      "category": "ACOMPANHAMENTOS",
+      "old_price": 0,
+      "new_price": 1,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "GELÉIA DE PIMENTA",
+      "item_key": "ITEM_067",
+      "category": "ACOMPANHAMENTOS",
+      "old_price": 0,
+      "new_price": 1,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "GOIABADA",
+      "item_key": "ITEM_061",
+      "category": "ACOMPANHAMENTOS",
+      "old_price": 0,
+      "new_price": 1,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "MEL",
+      "item_key": "ITEM_060",
+      "category": "ACOMPANHAMENTOS",
+      "old_price": 0,
+      "new_price": 1,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "Arroz Branco",
+      "item_key": "ITEM_075",
+      "category": "GUARNICOES",
+      "old_price": 4,
+      "new_price": 4,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "Feijão Preto",
+      "item_key": "ITEM_FEIJAO_PRETO",
+      "category": "GUARNICOES",
+      "old_price": 5,
+      "new_price": 5,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "SALPICAO DE FRANGO",
+      "item_key": "ITEM_078",
+      "category": "GUARNICOES",
+      "old_price": 7,
+      "new_price": 7,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "Vinagrete",
+      "item_key": "ITEM_082",
+      "category": "GUARNICOES",
+      "old_price": 5,
+      "new_price": 5,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "Maionese",
+      "item_key": "ITEM_076",
+      "category": "GUARNICOES",
+      "old_price": 5,
+      "new_price": 5,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "Salada César",
+      "item_key": "ITEM_077",
+      "category": "GUARNICOES",
+      "old_price": 3,
+      "new_price": 3,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "FAROFA TEMPERADA",
+      "item_key": "ITEM_079",
+      "category": "GUARNICOES",
+      "old_price": 3,
+      "new_price": 3,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "MANDIOCA COZIDA",
+      "item_key": "ITEM_080",
+      "category": "GUARNICOES",
+      "old_price": 3,
+      "new_price": 3,
+      "pricing_type": "PER_PERSON",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "ALUGUEL DA CHURRASQUEIRA",
+      "item_key": "ITEM_084",
+      "category": "EQUIPAMENTOS",
+      "old_price": 100,
+      "new_price": 100,
+      "pricing_type": "PER_UNIT",
+      "action": "UPDATE_REAL"
+    },
+    {
+      "item": "CHIMICHURRI",
+      "item_key": "ITEM_CHIMICHURRI",
+      "category": "ACOMPANHAMENTOS",
+      "old_price": null,
+      "new_price": 1,
+      "pricing_type": "PER_PERSON",
+      "action": "CREATE_REAL"
+    },
+    {
+      "item": "FILÉ MIGNON",
+      "item_key": "ITEM_FILE_MIGNON_BOVINO",
+      "category": "BOVINO_NOBRE",
+      "old_price": null,
+      "new_price": 15,
+      "pricing_type": "PER_PERSON",
+      "action": "CREATE_REAL"
+    },
+    {
+      "item": "FILÉ MIGNON",
+      "item_key": "ITEM_FILE_MIGNON_PORCO",
+      "category": "PORCO",
+      "old_price": null,
+      "new_price": 12,
+      "pricing_type": "PER_PERSON",
+      "action": "CREATE_REAL"
+    },
+    {
+      "item": "CARANGUEJO REI",
+      "item_key": "ITEM_CARANGUEJO_REI",
+      "category": "FRUTOS_DO_MAR",
+      "old_price": null,
+      "new_price": 50,
+      "pricing_type": "PER_PERSON",
+      "action": "CREATE_REAL"
+    },
+    {
+      "item": "PURÊ DE BATATA",
+      "item_key": "ITEM_PURE_DE_BATATA",
+      "category": "GUARNICOES",
+      "old_price": null,
+      "new_price": 3,
+      "pricing_type": "PER_PERSON",
+      "action": "CREATE_REAL"
+    },
+    {
+      "item": "QUEIJO MUSSARELA",
+      "item_key": "ITEM_062",
+      "category": "ACOMPANHAMENTOS",
+      "old_price": 5,
+      "new_price": null,
+      "pricing_type": "PER_PERSON",
+      "action": "DELETE_SYNTHETIC"
+    },
+    {
+      "item": "COSTELA",
+      "item_key": "ITEM_046",
+      "category": "CORDEIRO",
+      "old_price": 8,
+      "new_price": null,
+      "pricing_type": "PER_PERSON",
+      "action": "DELETE_SYNTHETIC"
+    },
+    {
+      "item": "LIMAO",
+      "item_key": "ITEM_056",
+      "category": "FRUTAS",
+      "old_price": 0,
+      "new_price": null,
+      "pricing_type": "PER_PERSON",
+      "action": "DELETE_SYNTHETIC"
+    },
+    {
+      "item": "TOMATE",
+      "item_key": "ITEM_057",
+      "category": "FRUTAS",
+      "old_price": 3,
+      "new_price": null,
+      "pricing_type": "PER_PERSON",
+      "action": "DELETE_SYNTHETIC"
+    },
+    {
+      "item": "SALPICAO DE CARNE SECA",
+      "item_key": "ITEM_083",
+      "category": "GUARNICOES",
+      "old_price": 8,
+      "new_price": null,
+      "pricing_type": "PER_PERSON",
+      "action": "DELETE_SYNTHETIC"
+    },
+    {
+      "item": "SOBRECOXA (SEM OSSO)",
+      "item_key": "ITEM_022",
+      "category": "FRANGO",
+      "old_price": 5,
+      "new_price": null,
+      "pricing_type": "PER_PERSON",
+      "action": "DELETE_SYNTHETIC"
+    },
+    {
+      "item": "PORCO  (COM QUEIJO)",
+      "item_key": "ITEM_030",
+      "category": "LINGUICAS",
+      "old_price": 8,
+      "new_price": null,
+      "pricing_type": "PER_PERSON",
+      "action": "DELETE_SYNTHETIC"
+    },
+    {
+      "item": "GELÉIA DE HORTELÃ",
+      "item_key": "ITEM_085",
+      "category": "CONDIMENTOS",
+      "old_price": 0,
+      "new_price": null,
+      "pricing_type": "PER_PERSON",
+      "action": "DELETE_SYNTHETIC"
+    },
+    {
+      "item": "PIMENTA DO REINO",
+      "item_key": "ITEM_071",
+      "category": "CONDIMENTOS",
+      "old_price": 0,
+      "new_price": null,
+      "pricing_type": "PER_PERSON",
+      "action": "DELETE_SYNTHETIC"
+    },
+    {
+      "item": "BARBECUE",
+      "item_key": "ITEM_064",
+      "category": "CONDIMENTOS",
+      "old_price": 0,
+      "new_price": null,
+      "pricing_type": "PER_PERSON",
+      "action": "DELETE_SYNTHETIC"
+    },
+    {
+      "item": "Linguiça Tradicional - Duplicado Inativo",
+      "item_key": "ITEM_LINGUICA_TRADICIONAL_DUPLICATE_OLD",
+      "category": "LINGUICAS",
+      "old_price": 5,
+      "new_price": null,
+      "pricing_type": "PER_PERSON",
+      "action": "DELETE_SYNTHETIC"
+    },
+    {
+      "item": "FRALDINHA",
+      "item_key": "ITEM_FRALDINHA",
+      "category": "BOVINO_TRADICIONAL",
+      "old_price": 10,
+      "new_price": null,
+      "pricing_type": "PER_PERSON",
+      "action": "REMOVE_FROM_CURRENT_CATALOG_KEEP_HISTORY"
+    },
+    {
+      "item": "HAMBURGUER (ANGUS)",
+      "item_key": "ITEM_005",
+      "category": "BOVINO_TRADICIONAL",
+      "old_price": 10,
+      "new_price": null,
+      "pricing_type": "PER_PERSON",
+      "action": "REMOVE_FROM_CURRENT_CATALOG_KEEP_HISTORY"
+    },
+    {
+      "item": "FRANGO (COM QUEIJO)",
+      "item_key": "ITEM_029",
+      "category": "LINGUICAS",
+      "old_price": 8,
+      "new_price": null,
+      "pricing_type": "PER_PERSON",
+      "action": "REMOVE_FROM_CURRENT_CATALOG_KEEP_HISTORY"
+    },
+    {
+      "item": "FEIJÃO TROPEIRO",
+      "item_key": "ITEM_081",
+      "category": "GUARNICOES",
+      "old_price": 5,
+      "new_price": null,
+      "pricing_type": "PER_PERSON",
+      "action": "REMOVE_FROM_CURRENT_CATALOG_KEEP_HISTORY"
+    }
+  ],
+  "applied": {
+    "created": [
+      {
+        "id": "1899ddcd-946e-422a-b1d0-2c0e1dfff8b3",
+        "item_key": "ITEM_CHIMICHURRI"
+      },
+      {
+        "id": "d69b6ee1-a516-4a19-9471-6bdc98414447",
+        "item_key": "ITEM_FILE_MIGNON_BOVINO"
+      },
+      {
+        "id": "973a4d39-92ae-4929-aac1-8c5587890556",
+        "item_key": "ITEM_FILE_MIGNON_PORCO"
+      },
+      {
+        "id": "ab3cde77-ea25-4a01-964c-f0fbe2c7c817",
+        "item_key": "ITEM_CARANGUEJO_REI"
+      },
+      {
+        "id": "6302eb5d-de26-4de9-963b-c9180bb31f27",
+        "item_key": "ITEM_PURE_DE_BATATA"
+      }
+    ],
+    "updated": [
+      "ITEM_002",
+      "ITEM_006",
+      "ITEM_003",
+      "ITEM_004",
+      "ITEM_001",
+      "ITEM_010",
+      "ITEM_007",
+      "ITEM_009",
+      "ITEM_008",
+      "ITEM_011",
+      "ITEM_012",
+      "ITEM_013",
+      "ITEM_014",
+      "ITEM_015",
+      "ITEM_016",
+      "ITEM_047",
+      "ITEM_044",
+      "ITEM_045",
+      "ITEM_017",
+      "ITEM_018",
+      "ITEM_019",
+      "ITEM_020",
+      "ITEM_021",
+      "ITEM_FRANGO_SOBRECOXA",
+      "ITEM_026",
+      "ITEM_027",
+      "ITEM_025",
+      "ITEM_024",
+      "ITEM_LINGUICA_TOSCANA_TRADICIONAL",
+      "ITEM_028",
+      "ITEM_049",
+      "ITEM_050",
+      "ITEM_051",
+      "ITEM_052",
+      "ITEM_048",
+      "ITEM_053",
+      "ITEM_043",
+      "ITEM_032",
+      "ITEM_042",
+      "ITEM_035",
+      "ITEM_036",
+      "ITEM_038",
+      "ITEM_033",
+      "ITEM_031",
+      "ITEM_040",
+      "ITEM_041",
+      "ITEM_034",
+      "ITEM_037",
+      "ITEM_039",
+      "ITEM_055",
+      "ITEM_057_BANANA",
+      "ITEM_058",
+      "ITEM_068",
+      "ITEM_063",
+      "ITEM_069",
+      "ITEM_059",
+      "ITEM_065",
+      "ITEM_066",
+      "ITEM_067",
+      "ITEM_061",
+      "ITEM_060",
+      "ITEM_075",
+      "ITEM_FEIJAO_PRETO",
+      "ITEM_078",
+      "ITEM_082",
+      "ITEM_076",
+      "ITEM_077",
+      "ITEM_079",
+      "ITEM_080",
+      "ITEM_084"
+    ],
+    "deleted": [
+      "ITEM_062",
+      "ITEM_046",
+      "ITEM_056",
+      "ITEM_057",
+      "ITEM_083",
+      "ITEM_022",
+      "ITEM_030",
+      "ITEM_085",
+      "ITEM_071",
+      "ITEM_064",
+      "ITEM_LINGUICA_TRADICIONAL_DUPLICATE_OLD"
+    ],
+    "preserved": [
+      "ITEM_FRALDINHA",
+      "ITEM_005",
+      "ITEM_029",
+      "ITEM_081"
+    ]
+  },
+  "countsAfter": {
+    "items": 114,
+    "prices": 121,
+    "public": 75
+  },
+  "gates": {
+    "failures": [],
+    "publicCount": 75,
+    "publicNonSource": 0,
+    "placeholderEvent": 0,
+    "guarnicoes": [
+      "SALADA CÉSAR",
+      "PURÊ DE BATATA",
+      "ARROZ BRANCO",
+      "FAROFA TEMPERADA",
+      "VINAGRETE",
+      "SALPICÃO DE FRANGO",
+      "FEIJÃO PRETO",
+      "MAIONESE",
+      "MANDIOCA COZIDA"
+    ]
+  }
+}

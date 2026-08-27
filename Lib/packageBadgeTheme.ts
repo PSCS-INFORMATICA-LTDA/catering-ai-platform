@@ -77,6 +77,11 @@ export function resolvePackageBadgeTheme(
   } else if (upper.includes('CHOICE') || upper.includes('BBQCHO')) {
     tier = 'choice'
   } else if (
+    upper.includes('LUXURY') ||
+    upper.includes('BBQLUX')
+  ) {
+    tier = 'prime'
+  } else if (
     upper.includes('PRIME') ||
     upper.includes('PREMIUM') ||
     upper.includes('BBQPRI')

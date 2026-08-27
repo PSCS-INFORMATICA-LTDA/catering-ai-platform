@@ -182,6 +182,16 @@ html[data-public-landing-theme="dark"],
     color: var(--cdl-muted);
   }
 
+  .public-field-required {
+    display: inline-block;
+    margin-left: 0.28em;
+    color: #f6d000;
+    font-size: 0.95em;
+    font-weight: 900;
+    line-height: 1;
+    vertical-align: 0.05em;
+  }
+
   .cdl-hero-tag {
     display: inline-flex;
     align-items: center;
@@ -457,6 +467,437 @@ body {
 
 .package-detail-card {
   scroll-margin-top: 120px;
+}
+
+/*
+ * What every package includes, and what the sides upgrade adds. Compact, on the
+ * existing surface — it explains a commercial distinction rather than promoting
+ * one, so the yellow appears only as a rule beside each title.
+ */
+.public-package-editorial {
+  display: grid;
+  gap: 0.9rem;
+  max-width: 42rem;
+  padding: 0.95rem 1.05rem;
+  border: 1px solid rgba(246, 208, 0, 0.22);
+  border-radius: 1rem;
+  background: #0a0a0a;
+  box-shadow: 0 14px 32px -18px rgba(0, 0, 0, 0.85);
+  color: #fff;
+}
+
+.public-package-editorial-title {
+  position: relative;
+  margin: 0 0 0.35rem;
+  padding-left: 0.6rem;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.public-package-editorial-title::before {
+  position: absolute;
+  left: 0;
+  top: 0.12em;
+  bottom: 0.12em;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--cdl-yellow);
+  content: '';
+}
+
+.public-package-editorial-items {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.public-package-editorial-names {
+  margin: 0;
+  color: #f6d000;
+  background: none;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.public-package-editorial-helper {
+  margin: 0.25rem 0 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.public-package-editorial-choice {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.public-package-editorial-choice-lead {
+  color: #d6d0c7;
+}
+
+.public-package-editorial-choice-options {
+  color: #f6d000;
+  background: none;
+  font-weight: 700;
+}
+
+.public-package-editorial-price {
+  color: #f6d000;
+  font-weight: 800;
+}
+
+.public-package-editorial-upsell {
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+@media (min-width: 640px) {
+  .public-package-editorial {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.4rem;
+  }
+
+  .public-package-editorial-upsell {
+    padding-top: 0;
+    padding-left: 1.4rem;
+    border-top: 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+  }
+}
+
+/*
+ * Commercial opening for the extras step. CDL red with white type so it reads
+ * as an offer rather than another instruction; the yellow rule is the only
+ * accent. Compact enough that it never pushes the first category off screen.
+ */
+.public-extras-intro {
+  position: relative;
+  overflow: hidden;
+  max-width: 42rem;
+  padding: 1rem 1.15rem 1.05rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #c8102e 0%, #9d0b22 100%);
+  box-shadow: 0 10px 24px -16px rgba(0, 0, 0, 0.75);
+  color: #fff;
+}
+
+/* A single sweep of light so the red is not a flat slab. */
+.public-extras-intro::after {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    120% 90% at 88% 0%,
+    rgba(255, 255, 255, 0.16) 0%,
+    transparent 62%
+  );
+  content: '';
+  pointer-events: none;
+}
+
+.public-extras-intro-title {
+  position: relative;
+  margin: 0 0 0.55rem;
+  padding-bottom: 0.5rem;
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.public-extras-intro-title::after {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 2.25rem;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--cdl-yellow);
+  content: '';
+}
+
+.public-extras-intro-lead {
+  position: relative;
+  margin: 0 0 0.3rem;
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.public-extras-intro-body {
+  position: relative;
+  margin: 0;
+  max-width: 34rem;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.public-extras-intro-close {
+  position: relative;
+  margin: 0.4rem 0 0;
+  max-width: 34rem;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/*
+ * Featured merchandising category: charcoal plate like the success screen,
+ * yellow rule as the primary accent, red used only as a secondary wash.
+ */
+.public-additional-category.is-featured {
+  border-color: rgba(246, 208, 0, 0.28);
+  background: #070707;
+  box-shadow: 0 14px 32px -18px rgba(0, 0, 0, 0.85);
+  color: #fff;
+  scroll-margin-top: calc(var(--public-header-h, 3.5rem) + 0.75rem);
+}
+
+.public-additional-category.is-featured.is-expanded {
+  background: #070707;
+  color: #fff;
+}
+
+.public-suggested-extras-header {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  background:
+    linear-gradient(to bottom, #070707 0, rgba(7, 7, 7, 0.2) 100%),
+    radial-gradient(ellipse 42% 70% at 16% 18%, rgba(226, 27, 27, 0.1), transparent 64%),
+    radial-gradient(ellipse 36% 58% at 88% 6%, rgba(246, 208, 0, 0.08), transparent 58%),
+    #0a0a0a;
+  color: #fff;
+  border-bottom: 1px solid rgba(246, 208, 0, 0.22);
+}
+
+.public-suggested-extras-title-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.72rem 1rem;
+  background: #0a0a0a;
+  color: #fff;
+  border-bottom: 1px solid var(--cdl-yellow);
+}
+
+.public-suggested-extras-title {
+  position: relative;
+  margin: 0;
+  color: #fff;
+  font-size: 1.12rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.public-suggested-extras-title-mark {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  background: #e21b1b;
+  color: #fff;
+  padding: 0.32rem 0.58rem;
+  border-radius: 0.28rem;
+}
+
+.public-suggested-extras-copy {
+  position: relative;
+  padding: 0.95rem 1.1rem 1.05rem 1.25rem;
+}
+
+.public-suggested-extras-copy::before {
+  position: absolute;
+  top: 0.95rem;
+  bottom: 1.05rem;
+  left: 0;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--cdl-yellow);
+  content: '';
+  pointer-events: none;
+}
+
+.public-suggested-extras-mark {
+  color: #f6d000;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.public-suggested-extras-lead {
+  position: relative;
+  margin: 0 0 0.3rem;
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.public-suggested-extras-body {
+  position: relative;
+  margin: 0;
+  max-width: 34rem;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.public-suggested-extras-close {
+  position: relative;
+  margin: 0.4rem 0 0;
+  max-width: 34rem;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.public-suggested-extras-count {
+  position: relative;
+  margin: 0.45rem 0 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.public-suggested-extras-selected {
+  position: relative;
+  display: inline-block;
+  border-radius: 999px;
+  background: rgba(226, 27, 27, 0.28);
+  padding: 0.15rem 0.65rem;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.public-suggested-extras-chevron {
+  position: relative;
+  color: var(--cdl-yellow);
+  font-size: 0.85rem;
+}
+
+.public-suggested-extras-summary {
+  position: relative;
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.public-suggested-extras-bullet,
+.public-suggested-extras-qty {
+  color: #ffd54a;
+}
+
+.public-suggested-extras-item-name,
+.public-suggested-extras-item-price {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.public-additional-photo-enlarge-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.7rem;
+  color: #8a8580;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.public-additional-photo-enlarge-icon {
+  display: inline-flex;
+  color: #9a9590;
+}
+
+.public-additional-card-media {
+  -webkit-touch-callout: none;
+}
+
+.public-additional-card-media img {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  pointer-events: none;
+}
+
+.public-additional-photo-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(0, 0, 0, 0.9);
+}
+
+.public-additional-photo-lightbox-image {
+  max-width: min(100%, 92vw);
+  max-height: min(100%, 88vh);
+  object-fit: contain;
+}
+
+.public-additional-photo-lightbox-close {
+  position: absolute;
+  top: calc(0.7rem + env(safe-area-inset-top, 0px));
+  right: calc(0.8rem + env(safe-area-inset-right, 0px));
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.guest-address-transition {
+  scroll-margin-top: calc(var(--public-header-h, 3.5rem) + 0.75rem);
+}
+
+.public-additional-card-media[data-additional-image-crop='operational-grill'] img {
+  object-fit: cover;
+  object-position: 42% 55%;
+}
+
+/* Says out loud that the stepper number is a quantity. */
+.public-additional-card-qty-label {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: var(--cdl-subtle);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/*
+ * Group heading between field groups inside a wizard step.
+ *
+ * It has to outrank the field labels sitting right under it, which are 11px/700
+ * uppercase on the same left edge — at the same size it read as just another
+ * field label, and being lighter it read as a weaker one. Larger, darker, and
+ * with far more room above than below so it binds to the block it introduces.
+ */
+.wizard-section-label {
+  margin: 1.75rem 0 0.2rem;
+  /* Not --cdl-title: that is the orange step-title accent in the light wizard. */
+  color: var(--cdl-fg);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .package-highlights-box {
@@ -1834,11 +2275,117 @@ body {
   margin-top: calc((var(--public-header-h) - 100svh));
 }
 
+/*
+ * Continuity cues. In flow rather than absolutely positioned, so they can never
+ * sit on top of the chapter copy. Orientation only — scrolling stays free.
+ */
+.public-landing-cue {
+  display: inline-flex;
+  align-items: center;
+  color: var(--cdl-yellow);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  /* Touch target without visual weight. */
+  padding: 0.5rem;
+  margin: 0;
+}
+
+.public-landing-cue--lead {
+  flex-direction: column;
+  gap: 0.3rem;
+  align-self: center;
+  margin-top: 1.5rem;
+}
+
+/*
+ * One rail for every corner cue. `margin-top: auto` pins them to the bottom of
+ * the chapter: the chapters centre their content on desktop, so without it the
+ * cue drifted with the copy length and sat anywhere from 0 to 90px off the edge.
+ * Matching boxes put the arrow glyph and the closing dot on the same centre.
+ */
+.public-landing-cue--arrow,
+.public-landing-cue--end {
+  align-self: flex-end;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin-top: auto;
+  margin-right: -0.75rem;
+  padding-top: 1.1rem;
+}
+
+.public-landing-cue--lead {
+  min-height: 2.75rem;
+}
+
+.public-landing-cue-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  opacity: 0.9;
+  /* The chapters sit over photography; this keeps the cue legible where a
+     bright frame shows through, without putting a plate behind it. */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.public-landing-cue-arrow {
+  width: 1.35rem;
+  height: 1.35rem;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55));
+  animation: public-landing-cue-drift 2.4s ease-in-out infinite;
+}
+
+.public-landing-cue--arrow .public-landing-cue-arrow {
+  width: 1.15rem;
+  height: 1.15rem;
+  opacity: 0.72;
+}
+
+.public-landing-cue--arrow:hover .public-landing-cue-arrow {
+  opacity: 1;
+}
+
+.public-landing-cue-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--cdl-yellow);
+  opacity: 0.6;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55));
+}
+
+/* The UA ring is near-black, which disappears on this surface. */
+.public-landing-cue:focus-visible {
+  outline: 2px solid var(--cdl-yellow);
+  outline-offset: 3px;
+  border-radius: 0.75rem;
+}
+
+@keyframes public-landing-cue-drift {
+  0%,
+  100% {
+    transform: translateY(-0.12rem);
+  }
+  50% {
+    transform: translateY(0.12rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-landing-cue-arrow {
+    animation: none;
+  }
+}
+
 .public-cinematic-chapter {
   min-height: 66svh;
   display: flex;
   flex-direction: column;
   justify-content: safe flex-end;
+  /* Cues scroll chapters to the top, so clear the sticky header. */
+  scroll-margin-top: var(--public-header-h, 3.5rem);
   padding: 1.9rem 1.1rem calc(1.75rem + env(safe-area-inset-bottom));
   background: linear-gradient(
     180deg,
@@ -1883,7 +2430,7 @@ body {
   font-weight: 900;
   line-height: 1.06;
   letter-spacing: -0.03em;
-  text-wrap: balance;
+  text-wrap: pretty;
 }
 
 .public-cinematic-editorial,
@@ -1903,11 +2450,21 @@ body {
   overflow-wrap: break-word;
   word-break: normal;
   padding-block: 0.12em;
-  text-wrap: balance;
+  text-wrap: pretty;
 }
 
 .public-landing-title-line + .public-landing-title-line {
   margin-top: 0.22em;
+}
+
+/* Keep the approved 4-line hero; balance was forcing the last line to split. */
+[data-landing-chapter='intro']
+  .public-cinematic-display
+  > .public-landing-title-line:last-child {
+  overflow-wrap: normal;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+  text-wrap: nowrap;
 }
 
 .public-cinematic-lead,
@@ -1991,6 +2548,23 @@ body {
   color: #111;
 }
 
+.cdl-brazil-accent {
+  display: inline-block;
+  width: 0.78rem;
+  height: 0.34rem;
+  margin-left: 0.48rem;
+  vertical-align: 0.14em;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #009b3a 0 32%,
+    #ffdf00 32% 64%,
+    #002776 64% 100%
+  );
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  opacity: 0.78;
+}
+
 .public-landing-reveal {
   opacity: 0;
   transform: translateY(18px);
@@ -2014,7 +2588,7 @@ body {
 
 @media (max-width: 360px) {
   .public-cinematic-display {
-    font-size: clamp(2.15rem, 10vw, 3.2rem);
+    font-size: clamp(2rem, 9.8vw, 3.1rem);
   }
 
   .public-cinematic-editorial,
@@ -2024,43 +2598,146 @@ body {
 }
 
 .public-package-intro {
+  overflow: hidden;
   width: 100%;
-  max-width: 40rem;
+  max-width: 42rem;
   margin-inline: auto;
   text-align: left;
+  border-radius: 1rem;
+  background: #0a0a0a;
+  box-shadow: 0 14px 32px -18px rgba(0, 0, 0, 0.85);
+}
+
+.public-package-title-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem 0.7rem;
+  background: #0a0a0a;
+  color: #fff;
+  border-bottom: 1px solid var(--cdl-yellow);
+}
+
+.public-package-intro-copy {
+  position: relative;
+  padding: 0.95rem 1.1rem 1.05rem 1.25rem;
+  background: #070707;
+  color: #fff;
+}
+
+.public-package-intro-copy::before {
+  display: none;
 }
 
 .public-package-kicker {
+  position: relative;
   margin: 0 0 0.45rem;
-  color: #111;
-  font-size: 0.72rem;
-  font-weight: 800;
+  padding-left: 0.65rem;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 900;
   letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 
-.public-package-headline {
+.public-package-kicker::before {
+  position: absolute;
+  left: 0;
+  top: 0.12em;
+  bottom: 0.12em;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--cdl-yellow);
+  content: '';
+}
+
+.public-post-suggested-category-hint {
+  position: relative;
+  margin: 0.1rem 0 0.15rem;
+  padding: 0.2rem 0.2rem 0.15rem 0.7rem;
+}
+
+.public-post-suggested-category-hint::before {
+  position: absolute;
+  top: 0.28rem;
+  bottom: 0.28rem;
+  left: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--cdl-yellow);
+  content: '';
+}
+
+.public-post-suggested-category-hint-title {
   margin: 0;
   color: #111;
-  font-size: clamp(1.85rem, 7vw, 2.6rem);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+}
+
+.public-post-suggested-category-hint-body {
+  margin: 0.12rem 0 0;
+  color: #6b6660;
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.public-package-headline {
+  margin: 0;
+  color: #fff;
+  font-size: 1.12rem;
   font-weight: 900;
-  line-height: 1.06;
-  letter-spacing: -0.03em;
+  line-height: 1.15;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .public-package-headline-mark {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
   background: #e21b1b;
   color: #fff;
-  padding: 0.04em 0.16em;
-  border-radius: 0.08em;
+  padding: 0.32rem 0.58rem;
+  border-radius: 0.28rem;
+}
+
+.public-package-title-corner {
+  flex-shrink: 0;
+  color: var(--cdl-yellow);
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.public-package-intro-body {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.9rem;
+  font-style: normal;
+  line-height: 1.5;
+}
+
+.public-package-intro-mark {
+  color: #f6d000;
+  font-style: normal;
+  font-weight: 800;
 }
 
 .public-package-groups {
+  position: sticky;
+  top: var(--public-header-h);
+  z-index: 18;
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
   width: 100%;
   min-width: 0;
+  padding: 0.4rem 0 0.55rem;
+  background: color-mix(in srgb, #f7f4ef 94%, #fff);
 }
 
 .public-package-group {
@@ -2174,6 +2851,10 @@ body {
     background: transparent;
   }
 
+  .public-cinematic-chapter--intro .public-cinematic-copy {
+    max-width: 46rem;
+  }
+
   .public-cinematic-display {
     font-size: clamp(3.2rem, 5.6vw, 5.2rem);
     line-height: 1.05;
@@ -2204,54 +2885,597 @@ body {
   }
 }
 
-.cdl-success-emblem-halo {
+/*
+ * One dark for the whole confirmation, on the same tone as --cdl-bg so the
+ * header, the fire plate and the confirmation read as a single surface. Kept as
+ * a literal rather than the token itself: the fire vignette paints this exact
+ * colour back over the plate edge, so it must stay dark whatever the theme does.
+ */
+.public-success {
+  --success-bg: #070707;
+  /* Deterministic backdrop for the fire plate's screen blend. */
+  isolation: isolate;
+  background: var(--success-bg);
+  color: #fff;
+}
+
+.public-success-confirm {
+  position: relative;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 0.9rem 1.15rem 1.15rem;
+  /*
+   * The accent is painted inside this section, so wherever it was still lit at
+   * a section edge it drew a hard line — across the top, straight under the
+   * fire, and down both sides once the column is narrower than the viewport.
+   * The ellipses are now small enough to die inside the column, and the first
+   * layer holds the page colour at the top edge, so the plate sits on an
+   * unbroken dark surface.
+   */
+  background:
+    linear-gradient(to bottom, var(--success-bg) 0, rgba(7, 7, 7, 0) 6rem),
+    radial-gradient(ellipse 34% 52% at 30% 30%, rgba(226, 27, 27, 0.17), transparent 66%),
+    radial-gradient(ellipse 28% 42% at 74% 34%, rgba(246, 208, 0, 0.075), transparent 60%);
+}
+
+.public-success-kicker {
+  margin-bottom: 0.7rem;
+}
+
+.public-success-title {
+  font-size: clamp(2.15rem, 9.2vw, 3.6rem);
+}
+
+.public-success-body-copy {
+  margin-top: 1rem;
+}
+
+.public-success-panel {
+  position: relative;
+  z-index: 2;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 0.6rem 1.15rem 0;
+}
+
+.public-success-summary {
+  display: grid;
+  gap: 1rem;
+  padding: 1.2rem 1.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.public-success-summary dt {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.public-success-summary dd {
+  margin: 0.35rem 0 0;
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.public-success-signature-cluster {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 0.35rem 1.15rem 0;
+  background: transparent;
+}
+
+/* Success closes on one centred signature: label above, official mark below. */
+.public-success-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.15rem 1.15rem 2.15rem;
+  background: #070707;
+}
+
+.public-success-powered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  text-align: center;
+}
+
+.public-success-powered-label {
+  color: rgba(255, 255, 255, 0.44);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  line-height: 1;
+}
+
+.public-success-contact-block {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 2.15rem 1.15rem 1.6rem;
+}
+
+.public-success-contacts {
+  width: 100%;
+  max-width: 18.75rem;
+  margin: 0 auto;
+  padding: 0;
+  text-align: center;
+}
+
+.public-success-contact-heading {
+  margin: 0 0 1rem;
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 1.08rem;
+  font-weight: 700;
+  letter-spacing: 0.008em;
+  line-height: 1.25;
+}
+
+.public-success-contacts ul {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.public-success-contacts li {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.public-success-contacts a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  color: #fff;
+  text-decoration: none;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+
+.public-success-contact-icon {
+  width: 1.375rem;
+  height: 1.375rem;
+  flex-shrink: 0;
+}
+
+.public-success-contacts [data-success-whatsapp] .public-success-contact-icon {
+  color: #25d366;
+}
+
+.public-success-contacts [data-success-instagram] .public-success-contact-icon {
+  color: #f5d0c5;
+}
+
+.public-success-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.7rem;
+}
+
+.public-success-cta {
+  margin-top: 0;
+}
+
+.public-landing-cdl-logo {
+  display: block;
+  width: 4.75rem;
+  height: 4.75rem;
+  object-fit: contain;
+  border-radius: 50%;
+  background: #050505;
+}
+
+.public-success-cdl-signature,
+.cdl-fire-signature {
+  display: flex;
+  justify-content: center;
+  padding: 0.75rem 0 0;
+  background: transparent;
+}
+
+/*
+ * Fixed viewport. The plate is re-framed on a constant square canvas, so the box
+ * must never scale, transform or animate — otherwise the mark reads as clipped.
+ */
+.cdl-fire-signature-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(14rem, 70vw, 18rem);
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: transparent;
+  transform: none;
+  animation: none;
+}
+
+/* Barely-there halo, so the fire looks lit from the page and not pasted on it. */
+.cdl-fire-signature-stage::before {
+  position: absolute;
+  z-index: 0;
+  content: '';
+  inset: -8%;
   background: radial-gradient(
-    circle,
-    rgba(249, 115, 22, 0.55),
-    rgba(226, 27, 27, 0.18) 42%,
-    transparent 72%
+    circle closest-side at 50% 50%,
+    rgba(255, 176, 32, 0.05),
+    rgba(226, 27, 27, 0.02) 45%,
+    rgba(255, 176, 32, 0) 72%
+  );
+  pointer-events: none;
+}
+
+/*
+ * The MP4 carries an opaque black matte, so its frame is a rectangle darker than
+ * the page. mask-image alone cannot be trusted to hide it — Safari routinely
+ * drops masks on the video layer — so the periphery is also painted back to the
+ * page background here. Ends past the plate edge, so the corners are page colour
+ * and there is no box left to see.
+ */
+.cdl-fire-signature-stage::after {
+  position: absolute;
+  z-index: 2;
+  content: '';
+  inset: 0;
+  background: radial-gradient(
+    circle closest-side at 50% 50%,
+    rgba(7, 7, 7, 0) 80%,
+    rgba(7, 7, 7, 0.35) 89%,
+    rgba(7, 7, 7, 0.8) 95%,
+    var(--success-bg, #070707) 100%
+  );
+  pointer-events: none;
+}
+
+.cdl-fire-signature-video,
+.cdl-fire-signature-glow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: transparent;
+}
+
+.cdl-fire-signature-video {
+  object-fit: contain;
+  object-position: 50% 50%;
+  transform: none;
+  animation: none;
+  /*
+   * The plate's matte is black at every radius, not just at the rim, so it was
+   * sitting ~1.3 levels under the page and the whole footprint read as a faint
+   * dark disc. Screen maps black to the backdrop exactly, so the matte drops out
+   * and only the flames survive — no radius can be tuned to achieve that.
+   */
+  mix-blend-mode: screen;
+  /*
+   * closest-side, so 100% is the edge of the square box and the plate corners
+   * cannot read as a box. Stays clear of the flames: the treated canvas already
+   * closes its own content by 72% of the radius.
+   */
+  -webkit-mask-image: radial-gradient(
+    circle closest-side at 50% 50%,
+    #000 82%,
+    rgba(0, 0, 0, 0.9) 90%,
+    rgba(0, 0, 0, 0.5) 96%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    circle closest-side at 50% 50%,
+    #000 82%,
+    rgba(0, 0, 0, 0.9) 90%,
+    rgba(0, 0, 0, 0.5) 96%,
+    transparent 100%
+  );
+}
+
+.cdl-fire-signature-glow {
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 52%,
+    rgba(255, 176, 32, 0.16),
+    rgba(226, 27, 27, 0.04) 46%,
+    transparent 70%
   );
   filter: blur(10px);
-  animation: cdl-success-glow 3.8s ease-in-out infinite;
 }
 
-.cdl-success-emblem-mark {
-  animation:
-    cdl-success-reveal 1.15s ease-out both,
-    cdl-success-turn 7.5s ease-in-out infinite;
-  transform-style: preserve-3d;
+.cdl-fire-signature-mark-wrap {
+  position: relative;
+  z-index: 3;
+  display: block;
+  width: 68%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 50%;
+  background: transparent;
 }
 
-@keyframes cdl-success-reveal {
-  from {
-    opacity: 0;
-    transform: scale(0.86);
+.cdl-fire-signature-mark,
+.public-success-cdl-static {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cdl-fire-signature-video {
+    display: none;
   }
-  to {
-    opacity: 1;
-    transform: scale(1);
+
+  .cdl-fire-signature-glow {
+    opacity: 0.2;
   }
 }
 
-@keyframes cdl-success-turn {
-  0%,
-  100% {
-    transform: rotateY(0deg) scale(1);
+@media (min-width: 640px) {
+  .public-success-confirm,
+  .public-success-panel,
+  .public-success-contact-block,
+  .public-success-signature-cluster {
+    padding-left: 2rem;
+    padding-right: 2rem;
   }
-  50% {
-    transform: rotateY(16deg) scale(1.04);
+
+  .public-success-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .cdl-fire-signature-stage {
+    /* Starts where the mobile clamp tops out, so the plate does not jump size
+       across the breakpoint. */
+    width: clamp(18rem, 22vw, 19.5rem);
+  }
+
+  .public-success-contacts {
+    max-width: 18.75rem;
+  }
+
+  .public-success-contacts ul {
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.7rem;
+  }
+
+  .public-landing-cdl-logo {
+    width: 5.25rem;
+    height: 5.25rem;
   }
 }
 
-@keyframes cdl-success-glow {
-  0%,
-  100% {
-    opacity: 0.72;
-    transform: scale(1);
+.public-additional-kicker {
+  margin: 0 0 0.35rem;
+  color: #e21b1b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.public-additional-card {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 0.8rem;
+  height: 100%;
+  padding: 0.7rem;
+  border: 1px solid #e7e2dc;
+  border-radius: 1.15rem;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(17, 17, 17, 0.04);
+}
+
+.public-additional-card.is-selected {
+  border-color: #e21b1b;
+  background: color-mix(in srgb, #e21b1b 6%, #fff);
+  box-shadow: 0 0 0 2px rgba(226, 27, 27, 0.18);
+}
+
+.public-additional-card-media {
+  position: relative;
+  aspect-ratio: 1;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 0.85rem;
+  background: #f3efe9;
+}
+
+.public-additional-card-check {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  display: flex;
+  width: 1.25rem;
+  height: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #e21b1b;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.public-additional-card-body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.public-additional-card-kicker {
+  margin: 0 0 0.28rem;
+  color: #b42318;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.public-additional-card-name {
+  margin: 0;
+  color: #111;
+  font-size: 0.95rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.public-additional-card-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.5rem;
+  margin-top: 0.45rem;
+}
+
+.public-additional-card-price-kicker {
+  width: 100%;
+  color: #6b6560;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.public-additional-card-price-value {
+  color: #e21b1b;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.public-additional-card-price-unit {
+  color: #6b6560;
+  font-size: 0.75rem;
+}
+
+.public-additional-card-line-total {
+  margin: 0.35rem 0 0;
+  color: #e21b1b;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.public-additional-card-select {
+  margin-top: auto;
+  min-height: 44px;
+  width: 100%;
+  border-radius: 0.8rem;
+  border: 1px solid #e7e2dc;
+  background: #f7f4ef;
+  color: #111;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.public-additional-card-select.is-on {
+  border-color: #e21b1b;
+  background: #e21b1b;
+  color: #fff;
+}
+
+.public-additional-qty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin-top: auto;
+  padding-top: 0.65rem;
+}
+
+.public-additional-qty-btn {
+  display: flex;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #0b1f3a;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #0b1f3a;
+  font-size: 1.25rem;
+  font-weight: 800;
+  transition:
+    transform 0.12s ease,
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.public-additional-qty-btn.is-plus:not(:disabled) {
+  background: #0b1f3a;
+  border-color: #0b1f3a;
+  color: #fff;
+}
+
+.public-additional-qty-btn.is-minus:not(:disabled) {
+  background: #fff;
+  border-color: #0b1f3a;
+  color: #0b1f3a;
+}
+
+.public-additional-qty-btn:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+.public-additional-qty-btn:focus-visible {
+  outline: 2px solid #0b1f3a;
+  outline-offset: 2px;
+}
+
+.public-additional-qty-btn:disabled {
+  opacity: 1;
+  background: #f0eeea;
+  border-color: #c9c4bb;
+  color: #8a857c;
+}
+
+@media (min-width: 640px) {
+  .public-additional-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 0.65rem;
   }
-  50% {
-    opacity: 1;
-    transform: scale(1.08);
+
+  .public-additional-card-name {
+    margin-top: 0.55rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .public-success-confirm {
+    padding-top: 1.4rem;
+  }
+
+  .public-success-title {
+    font-size: clamp(2.8rem, 4.6vw, 4.4rem);
   }
 }
 
@@ -2269,11 +3493,64 @@ body {
   .public-hero-caption {
     text-shadow: none;
   }
+}
 
-  .cdl-success-emblem-halo,
-  .cdl-success-emblem-mark {
-    animation: none;
-  }
+.cdl-special-date-notice {
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 28%, #e8d2a8);
+  background: color-mix(in srgb, var(--brand-primary) 8%, #fff8ee);
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.cdl-special-date-notice-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brand-primary);
+}
+
+.cdl-special-date-notice ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.28rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: #3f2c1d;
+}
+
+.cdl-cancel-policy-item {
+  border: 1px solid var(--cdl-border, #eadfce);
+  border-radius: 0.9rem;
+  background: #fffdf8;
+  padding: 0.15rem 0.85rem 0.15rem;
+}
+
+.cdl-cancel-policy-summary {
+  cursor: pointer;
+  list-style: none;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--cdl-title, #1f140c);
+}
+
+.cdl-cancel-policy-summary::-webkit-details-marker {
+  display: none;
+}
+
+.cdl-cancel-policy-list {
+  margin: 0 0 0.75rem;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--cdl-text-secondary, #5a4636);
 }
 
 

@@ -286,9 +286,9 @@ const { t, list } = makeI18nModule('publicOps', 'public', {
     es: 'Iniciar presupuesto',
   },
   howHours: {
-    pt: 'Até {hours} horas no estilo all you can eat.',
-    en: 'Up to {hours} hours, all you can eat.',
-    es: 'Hasta {hours} horas al estilo all you can eat.',
+    pt: 'Serviço de churrasco no formato buffet / all you can eat, por até {hours} horas.',
+    en: 'BBQ buffet / all-you-can-eat service for up to {hours} hours.',
+    es: 'Servicio de BBQ tipo buffet / all you can eat por hasta {hours} horas.',
   },
   howNoDrinks: {
     pt: 'Não trabalhamos com bebidas.',

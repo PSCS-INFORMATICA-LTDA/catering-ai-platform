@@ -75,6 +75,7 @@ export default function QuoteProposalSharePanel({
   minimumOrderAmount,
   commercialReason,
   initial,
+  uiLocale: uiLocaleProp,
 }: {
   quoteId: string
   quoteNumber: string
@@ -131,8 +132,12 @@ export default function QuoteProposalSharePanel({
     | 'none'
     | null
   initial?: Partial<ProposalState> | null
+  uiLocale?: string | null
 }) {
-  const uiLocale = useAuthLocaleFromMe()
+  const sessionLocale = useAuthLocaleFromMe()
+  const uiLocale = uiLocaleProp === 'en' || uiLocaleProp === 'es' || uiLocaleProp === 'pt'
+    ? uiLocaleProp
+    : sessionLocale
   const [state, setState] = useState<ProposalState>({
     proposal_token: initial?.proposal_token ?? null,
     proposal_sent_at: initial?.proposal_sent_at ?? null,

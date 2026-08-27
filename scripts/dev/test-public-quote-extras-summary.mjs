@@ -184,7 +184,7 @@ test('TEST 5 package pricing box stays below the art with canonical math', () =>
 
 test('TEST 6 package options remain inline under the selected package', () => {
   assert.match(catalogSrc, /data-public-package-options/)
-  assert.match(catalogSrc, /active && selectableGroups\.length > 0/)
+  assert.match(catalogSrc, /active && expanded && selectableGroups\.length > 0/)
   assert.match(catalogSrc, /lg:col-span-2/)
 })
 
@@ -255,7 +255,7 @@ test('TEST 13 summary price and expanded price share one source', () => {
 })
 
 test('TEST 14 opening a category still renders the detailed cards', () => {
-  assert.match(sectionSrc, /\{expanded \? \(/)
+  assert.match(sectionSrc, /\{isExpanded \? \(/)
   assert.match(sectionSrc, /data-additional-items-grid/)
   assert.match(sectionSrc, /<AdditionalItemCard/)
   assert.match(cardSrc, /loading="lazy"/)
@@ -459,7 +459,7 @@ test('TEST 29 collapsed category uses a full-card hit area', () => {
 
 test('TEST 30 expanded item controls do not collapse the category', () => {
   const expandedBlock = sectionSrc.slice(
-    sectionSrc.indexOf('{expanded ? ('),
+    sectionSrc.indexOf('{isExpanded ? ('),
     sectionSrc.indexOf('data-additional-category-hitarea'),
   )
   assert.match(expandedBlock, /<AdditionalItemCard/)

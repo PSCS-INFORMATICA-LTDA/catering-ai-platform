@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import AdminCompactMenu from '../../../components/quotes/AdminCompactMenu'
 import { useTenant } from '../../../components/tenant/TenantProvider'
 import CatalogImageFrame from '../../../components/CatalogImageFrame'
@@ -11,17 +11,25 @@ import QuoteStepper from '../../../components/quotes/QuoteStepper'
 import QuotePackageStepExplorer from '../../../components/quotes/QuotePackageStepExplorer'
 import PublicPackageCatalog from '../../../components/quotes/PublicPackageCatalog'
 import PublicPhoneField from '../../../components/quotes/PublicPhoneField'
+import PublicRequiredMark from '../../../components/quotes/PublicRequiredMark'
 import QuoteWizardStepNav from '../../../components/quotes/QuoteWizardStepNav'
-import AdditionalCategorySection from '../../../components/quotes/additionals/AdditionalCategorySection'
+import AdditionalCategorySection, {
+  PostSuggestedCategoryHint,
+} from '../../../components/quotes/additionals/AdditionalCategorySection'
 import { useAutoEventDistance } from '@/Lib/hooks/useAutoEventDistance'
 import {
   calcAdditionalLineTotalForItem,
   getAdditionalUnitPrice,
   getLocalizedAdditionalLabel,
-  groupAdditionalItemsByCategory,
+  getAdditionalImage,
   isPerPersonAdditional,
   normalizeAdditionalQuantity,
 } from '../../../Lib/quoteAdditionalDisplay'
+import {
+  buildPublicAdditionalDisplayGroups,
+  getReviewAdditionalCategoryLabel,
+  SUGGESTED_EXTRAS_DISPLAY_KEY,
+} from '@/Lib/publicQuote/suggestedExtras'
 import { getAdditionalItemCategoryKey } from '@/Lib/additionalItemFieldAccess'
 import {
   buildAdditionalCategoryDisplayLabels,
@@ -30,6 +38,7 @@ import {
   pruneVisitedAdditionalCategories,
 } from '@/Lib/wizardAdditionalCategories'
 import { resolveNextWizardStep, WIZARD_STEP_COUNT } from '@/Lib/wizardStepAdvance'
+import { revealFloatingPanelWhenReady } from '@/Lib/revealFloatingPanel'
 import {
   ADDITIONAL_CATEGORY_EXPOSE_FALLBACK_BOTTOM_PX,
   isExtrasExposeScrollJump,
@@ -53,6 +62,12 @@ import {
 } from '../../../Lib/packageFieldAccess'
 import QuoteWizardConfirmationStep from '../../../components/quote-review/QuoteWizardConfirmationStep'
 import PublicQuoteConfirmationStep from '../../../components/quote-review/PublicQuoteConfirmationStep'
+import SpecialEventDateNotice from '../../../components/quotes/SpecialEventDateNotice'
+import { CDL_CANCEL_POLICY_VERSION } from '@/Lib/cdlCancellationPolicy'
+import { isSpecialCdlEventDate } from '@/Lib/cdlSeasonalRules'
+import { normalizeGrillRentalQty } from '@/Lib/grillRental'
+import { resolveApplicableMinimum } from '@/Lib/quotes/applyCommercialMinimums'
+import { parseEventDateParts } from '@/Lib/usHolidays'
 import {
   getPublicPackageSidesGroup,
   resolvePackageCatalogImageUrl,
@@ -73,7 +88,6 @@ import {
   CUSTOMER_DISPLAY_NAME_EMPTY,
   getCustomerDisplayName,
 } from '../../../Lib/getCustomerDisplayName'
-import { getCatalogItemImageUrl } from '../../../Lib/catalogItemVisual'
 import { isUsablePostalCode } from '../../../Lib/cep'
 import { isUsablePhone, normalizePhone } from '../../../Lib/normalizePhone'
 import {
@@ -305,8 +319,16 @@ function buildPublicIntakeDraft(
       hasGrill: state.hasGrill,
       photoReference: state.grillPhotoReference,
       rentalRequired: state.grillRentalRequired,
-      rentalQty: state.grillRentalQty,
+      rentalQty: normalizeGrillRentalQty(state.grillRentalRequired),
       notes: state.grillNotes.trim() || null,
+    },
+    consents: {
+      cancellation: {
+        accepted: state.cancellationPolicyAccepted,
+        version: CDL_CANCEL_POLICY_VERSION,
+        locale: state.language,
+        acceptedAt: state.cancellationPolicyAcceptedAt,
+      },
     },
   }
 }
@@ -357,6 +379,24 @@ function toDateValue(date: Date) {
 
 type FieldCompletion = 'filled' | 'empty'
 
+function focusWizardField(node: HTMLElement | null) {
+  if (!node) return
+  // Focus first so iOS can still open the keyboard from the same gesture.
+  node.focus({ preventScroll: true })
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  node.scrollIntoView({
+    behavior: reduced ? 'auto' : 'smooth',
+    block: 'center',
+  })
+}
+
+function shouldAdvanceFromFieldBlur(related: EventTarget | null) {
+  if (!(related instanceof HTMLElement)) return true
+  if (related.closest('[data-guest-field]')) return false
+  if (related.matches('input, textarea, select, button, [href]')) return false
+  return true
+}
+
 function getFieldCompletion(value: string | number): FieldCompletion {
   if (typeof value === 'number') return value > 0 ? 'filled' : 'empty'
   return value.trim().length > 0 ? 'filled' : 'empty'
@@ -376,6 +416,23 @@ function FieldCheck({ show }: { show: boolean }) {
       aria-hidden
     >
       ✓
+    </span>
+  )
+}
+
+function WizardFieldLabel({
+  children,
+  required,
+  requiredLabel,
+}: {
+  children: string
+  required?: boolean
+  requiredLabel?: string
+}) {
+  return (
+    <span className="cdl-eyebrow">
+      {children}
+      {required ? <PublicRequiredMark label={requiredLabel || ''} /> : null}
     </span>
   )
 }
@@ -418,6 +475,9 @@ function DatePickerField({
   completion,
   language = 'pt',
   minDate,
+  required,
+  requiredLabel,
+  onCommit,
 }: {
   label: string
   value: string
@@ -426,12 +486,22 @@ function DatePickerField({
   completion?: FieldCompletion
   language?: QuoteLanguage | string | null
   minDate?: string
+  required?: boolean
+  requiredLabel?: string
+  onCommit?: (value: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [viewDate, setViewDate] = useState(() => parseDateValue(value) ?? new Date())
   const containerRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   const selectedDate = parseDateValue(value)
+
+  // The calendar opens below the trigger and often lands past the fold.
+  useEffect(() => {
+    if (!open) return
+    return revealFloatingPanelWhenReady(() => panelRef.current)
+  }, [open])
 
   useEffect(() => {
     const parsed = parseDateValue(value)
@@ -465,8 +535,10 @@ function DatePickerField({
   }, [viewDate])
 
   function selectDay(day: number) {
-    onChange(toDateValue(new Date(calendarDays.year, calendarDays.month, day)))
+    const next = toDateValue(new Date(calendarDays.year, calendarDays.month, day))
+    onChange(next)
     setOpen(false)
+    onCommit?.(next)
   }
 
   function shiftMonth(offset: number) {
@@ -484,7 +556,9 @@ function DatePickerField({
 
   return (
     <div ref={containerRef} className={`relative flex flex-col gap-2 ${className}`}>
-      <span className="cdl-eyebrow">{label}</span>
+      <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
+        {label}
+      </WizardFieldLabel>
       <div className="relative">
         <button
           type="button"
@@ -503,6 +577,8 @@ function DatePickerField({
 
       {open && (
         <div
+          ref={panelRef}
+          data-wizard-datepicker-panel
           role="dialog"
           aria-label={tw(language, 'calendarOf', { label })}
           className="absolute left-0 top-full z-30 mt-2 w-full min-w-[300px] rounded-2xl border border-cdl-border bg-cdl-surface p-4 shadow-cdl-popup sm:w-[320px]"
@@ -612,6 +688,12 @@ function TimePickerField({
   completion,
   language = 'pt',
   readOnly = false,
+  required,
+  requiredLabel,
+  open: openProp,
+  onOpenChange,
+  emptyDefaultHour = 18,
+  onCommit,
 }: {
   label: string
   value: string
@@ -620,20 +702,45 @@ function TimePickerField({
   completion?: FieldCompletion
   language?: QuoteLanguage | string | null
   readOnly?: boolean
+  required?: boolean
+  requiredLabel?: string
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  emptyDefaultHour?: number
+  onCommit?: (value: string) => void
 }) {
-  const [open, setOpen] = useState(false)
+  // Always starts closed, including the end time: it only opens on an explicit
+  // tap, never on step entry, date change or start-time change.
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isControlled = openProp !== undefined
+  const open = isControlled ? Boolean(openProp) : uncontrolledOpen
+  const setOpen = (next: boolean) => {
+    if (!isControlled) setUncontrolledOpen(next)
+    onOpenChange?.(next)
+  }
   const containerRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
   const selected = parseTimeParts(value)
-  const [draftHour, setDraftHour] = useState(selected?.hours ?? 18)
+  const [draftHour, setDraftHour] = useState(selected?.hours ?? emptyDefaultHour)
   const [draftMinute, setDraftMinute] = useState(selected?.minutes ?? 0)
+
+  useEffect(() => {
+    if (!open || readOnly) return
+    return revealFloatingPanelWhenReady(() => panelRef.current)
+  }, [open, readOnly])
 
   useEffect(() => {
     const parsed = parseTimeParts(value)
     if (parsed) {
       setDraftHour(parsed.hours)
       setDraftMinute(parsed.minutes)
+      return
     }
-  }, [value])
+    if (open) {
+      setDraftHour(emptyDefaultHour)
+      setDraftMinute(0)
+    }
+  }, [open, value, emptyDefaultHour])
 
   useEffect(() => {
     if (!open) return
@@ -655,19 +762,23 @@ function TimePickerField({
 
   function selectMinute(minute: number) {
     setDraftMinute(minute)
-    onChange(toTimeValue(draftHour, minute))
+    const next = toTimeValue(draftHour, minute)
+    onChange(next)
     setOpen(false)
+    onCommit?.(next)
   }
 
   return (
     <div ref={containerRef} className={`relative flex flex-col gap-2 ${className}`}>
-      <span className="cdl-eyebrow">{label}</span>
+      <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
+        {label}
+      </WizardFieldLabel>
       <div className="relative">
         <button
           type="button"
           onClick={() => {
             if (readOnly) return
-            setOpen((current) => !current)
+            setOpen(!open)
           }}
           disabled={readOnly}
           className={`flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3.5 pr-10 text-left text-base outline-none transition-colors ${
@@ -689,6 +800,8 @@ function TimePickerField({
 
       {open && !readOnly && (
         <div
+          ref={panelRef}
+          data-wizard-timepicker-panel
           role="dialog"
           aria-label={tw(language, 'timePickerOf', { label })}
           className="absolute left-0 top-full z-30 mt-2 w-full min-w-[300px] rounded-2xl border border-cdl-border bg-cdl-surface p-4 shadow-cdl-popup sm:w-[320px]"
@@ -830,7 +943,12 @@ function InputField({
   completion,
   inputRef,
   onFocus,
+  onBlur,
+  onKeyDown,
   autoComplete,
+  enterKeyHint,
+  required,
+  requiredLabel,
 }: {
   label: string
   type?: string
@@ -844,11 +962,18 @@ function InputField({
   completion?: FieldCompletion
   inputRef?: React.RefObject<HTMLInputElement | null>
   onFocus?: () => void
+  onBlur?: React.FocusEventHandler<HTMLInputElement>
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>
   autoComplete?: string
+  enterKeyHint?: React.HTMLAttributes<HTMLInputElement>['enterKeyHint']
+  required?: boolean
+  requiredLabel?: string
 }) {
   return (
     <label className={`flex flex-col gap-2 ${className}`}>
-      <span className="cdl-eyebrow">{label}</span>
+      <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
+        {label}
+      </WizardFieldLabel>
       <div className="relative">
         <input
           ref={inputRef}
@@ -859,7 +984,10 @@ function InputField({
           min={min}
           max={max}
           onFocus={onFocus}
+          onBlur={onBlur}
+          onKeyDown={onKeyDown}
           autoComplete={autoComplete}
+          enterKeyHint={enterKeyHint}
           onChange={(e) => onChange(e.target.value)}
           className={`w-full rounded-xl border px-4 py-3.5 pr-10 text-base text-cdl-fg shadow-cdl outline-none transition-colors placeholder:text-cdl-faint focus:border-cdl-accent-border ${fieldCompletionClass(completion)}`}
         />
@@ -874,10 +1002,17 @@ function QuantityField({
   value,
   onChange,
   className = '',
-  placeholder = '0',
+  placeholder = '',
   min = 0,
   disabled = false,
   completion,
+  blankZero = false,
+  required,
+  requiredLabel,
+  inputRef,
+  onCommit,
+  enterKeyHint,
+  guestField,
 }: {
   label: string
   value: number
@@ -887,33 +1022,65 @@ function QuantityField({
   min?: number
   disabled?: boolean
   completion?: FieldCompletion
+  blankZero?: boolean
+  required?: boolean
+  requiredLabel?: string
+  inputRef?: React.RefObject<HTMLInputElement | null>
+  onCommit?: (value: number) => void
+  enterKeyHint?: React.HTMLAttributes<HTMLInputElement>['enterKeyHint']
+  guestField?: boolean
 }) {
-  const [draft, setDraft] = useState(String(value))
+  const displayValue = (next: number) =>
+    blankZero && next === 0 ? '' : String(next)
+  const [draft, setDraft] = useState(() => displayValue(value))
   const [focused, setFocused] = useState(false)
+  const [seenValue, setSeenValue] = useState(value)
+  const [seenBlankZero, setSeenBlankZero] = useState(blankZero)
+  if (!focused && (seenValue !== value || seenBlankZero !== blankZero)) {
+    setSeenValue(value)
+    setSeenBlankZero(blankZero)
+    setDraft(displayValue(value))
+  }
 
-  useEffect(() => {
-    if (!focused) setDraft(String(value))
-  }, [value, focused])
+  function commitDraft(): number {
+    const next =
+      draft === ''
+        ? min
+        : Math.max(min, Number.parseInt(draft, 10) || min)
+    onChange(next)
+    setDraft(displayValue(next))
+    return next
+  }
 
   return (
     <label className={`flex flex-col gap-2 ${className}`}>
-      <span className="cdl-eyebrow">{label}</span>
+      <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
+        {label}
+      </WizardFieldLabel>
       <div className="relative">
         <input
+          ref={inputRef}
           type="text"
           inputMode="numeric"
+          pattern="[0-9]*"
+          enterKeyHint={enterKeyHint}
+          data-guest-field={guestField ? '' : undefined}
           value={draft}
           placeholder={placeholder}
           disabled={disabled}
           onFocus={() => setFocused(true)}
-          onBlur={() => {
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter') return
+            event.preventDefault()
+            event.stopPropagation()
+            onCommit?.(commitDraft())
+          }}
+          onBlur={(event) => {
             setFocused(false)
-            const next =
-              draft === ''
-                ? min
-                : Math.max(min, Number.parseInt(draft, 10) || min)
-            onChange(next)
-            setDraft(String(next))
+            const next = commitDraft()
+            if (shouldAdvanceFromFieldBlur(event.relatedTarget)) {
+              onCommit?.(next)
+            }
           }}
           onChange={(e) => {
             const raw = e.target.value.replace(/\D/g, '')
@@ -1108,6 +1275,14 @@ export default function QuoteWizardCore({
   )
   visitedAdditionalCategoriesRef.current = visitedAdditionalCategories
   const grillPhotoInputRef = useRef<HTMLInputElement>(null)
+  const firstNameInputRef = useRef<HTMLInputElement>(null)
+  const lastNameInputRef = useRef<HTMLInputElement>(null)
+  const phoneInputRef = useRef<HTMLInputElement>(null)
+  const adultsInputRef = useRef<HTMLInputElement>(null)
+  const guestAddressTransitionRef = useRef<HTMLDivElement>(null)
+  const streetNumberInputRef = useRef<HTMLInputElement>(null)
+  const addressSearchInputRef = useRef<HTMLInputElement>(null)
+  const [startTimePickerOpen, setStartTimePickerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveErrorInfo, setSaveErrorInfo] = useState<SaveQuoteErrorInfo | null>(
     null,
@@ -1157,6 +1332,7 @@ export default function QuoteWizardCore({
   )
   const wizardSteps = quoteStrings.wizardSteps
   const w = quoteStrings.wizard
+  const requiredLabel = tCommon(uiLocale, 'required')
 
   const debugCompanyId =
     publicContext?.companyId?.trim() ||
@@ -1509,7 +1685,7 @@ export default function QuoteWizardCore({
   )
 
   const additionalItemsByCategory = useMemo(
-    () => groupAdditionalItemsByCategory(visibleAdditionalItems, uiLocale),
+    () => buildPublicAdditionalDisplayGroups(visibleAdditionalItems, uiLocale),
     [visibleAdditionalItems, uiLocale],
   )
 
@@ -1547,6 +1723,7 @@ export default function QuoteWizardCore({
   }
 
   function toggleAdditionalCategory(category: string) {
+    if (category === SUGGESTED_EXTRAS_DISPLAY_KEY) return
     setOpenAdditionalCategories((prev) => {
       const next = new Set(prev)
       if (next.has(category)) {
@@ -1637,7 +1814,7 @@ export default function QuoteWizardCore({
     eventDate: state.eventDate,
     mileageDistance: isPublicMode ? 0 : state.distance,
     grillRentalRequired: state.grillRentalRequired,
-    grillRentalQty: state.grillRentalQty,
+    grillRentalQty: normalizeGrillRentalQty(state.grillRentalRequired),
     reservationPercentage: isPublicMode ? null : state.reservationPercentage,
     language: state.language,
     enabled:
@@ -1699,15 +1876,15 @@ export default function QuoteWizardCore({
 
   const reviewAdditionals = useMemo(
     () =>
-      selectedAdditionalsByCategory.flatMap(({ categoryLabel, items }) =>
+      selectedAdditionalsByCategory.flatMap(({ items }) =>
         items.map(({ item, quantity, unitPrice, perPerson, totalPrice }) => ({
           id: item.id,
           label: getLocalizedAdditionalLabel(item, uiLocale),
-          category: categoryLabel,
+          category: getReviewAdditionalCategoryLabel(item, uiLocale),
           quantity,
           unitPrice,
           totalPrice,
-          imageUrl: getCatalogItemImageUrl(item),
+          imageUrl: getAdditionalImage(item),
           itemType: item.item_type,
           categoryPt: item.category_pt,
           perPerson,
@@ -1771,7 +1948,14 @@ export default function QuoteWizardCore({
     if (step !== 3) {
       setOpenAdditionalCategories(new Set())
       setAdditionalsReviewPrompt(false)
+      return
     }
+    setVisitedAdditionalCategories((prev) => {
+      if (prev.has(SUGGESTED_EXTRAS_DISPLAY_KEY)) return prev
+      const next = new Set(prev)
+      next.add(SUGGESTED_EXTRAS_DISPLAY_KEY)
+      return next
+    })
   }, [step])
 
   useEffect(() => {
@@ -1780,6 +1964,10 @@ export default function QuoteWizardCore({
     if (!isPublicMode || typeof window === 'undefined') return
     window.scrollTo({ top: 0, behavior: 'auto' })
   }, [isPublicMode, step])
+
+  useEffect(() => {
+    if (step !== 1) setStartTimePickerOpen(false)
+  }, [step])
 
   useEffect(() => {
     if (!isPublicMode) return
@@ -2429,9 +2617,18 @@ export default function QuoteWizardCore({
     }
 
     if (isPublicMode) {
-      if (!state.publicConsentAccepted || !publicContext?.consentVersion) {
+      if (!state.cancellationPolicyAccepted || !state.publicConsentAccepted || !publicContext?.consentVersion) {
         setSaveErrorInfo(
-          buildSaveQuoteError('validation', new Error(w.consentRequired)),
+          buildSaveQuoteError(
+            'validation',
+            new Error(
+              !state.cancellationPolicyAccepted && !state.publicConsentAccepted
+                ? w.bothConsentsRequired
+                : !state.cancellationPolicyAccepted
+                  ? w.cancellationPolicyRequired
+                  : w.consentRequired,
+            ),
+          ),
         )
         return
       }
@@ -2465,6 +2662,13 @@ export default function QuoteWizardCore({
             consent: {
               accepted: true,
               version: publicContext.consentVersion,
+            },
+            cancellationConsent: {
+              accepted: true,
+              version: CDL_CANCEL_POLICY_VERSION,
+              locale: state.language,
+              acceptedAt:
+                state.cancellationPolicyAcceptedAt || new Date().toISOString(),
             },
             website: '',
           }),
@@ -2812,8 +3016,22 @@ export default function QuoteWizardCore({
                 onChange={(value) =>
                   updateContactIdentity('customerFirstName', value)
                 }
+                inputRef={firstNameInputRef}
                 autoComplete="given-name"
+                enterKeyHint={isPublicMode ? 'next' : undefined}
+                onKeyDown={
+                  isPublicMode
+                    ? (event) => {
+                        if (event.key !== 'Enter') return
+                        event.preventDefault()
+                        event.stopPropagation()
+                        focusWizardField(lastNameInputRef.current)
+                      }
+                    : undefined
+                }
                 completion={getFieldCompletion(state.customerFirstName)}
+                required={isPublicMode}
+                requiredLabel={requiredLabel}
               />
               <InputField
                 label={w.lastName}
@@ -2821,13 +3039,41 @@ export default function QuoteWizardCore({
                 onChange={(value) =>
                   updateContactIdentity('customerLastName', value)
                 }
+                inputRef={lastNameInputRef}
                 autoComplete="family-name"
+                enterKeyHint={isPublicMode ? 'next' : undefined}
+                onKeyDown={
+                  isPublicMode
+                    ? (event) => {
+                        if (event.key !== 'Enter') return
+                        event.preventDefault()
+                        event.stopPropagation()
+                        focusWizardField(phoneInputRef.current)
+                      }
+                    : undefined
+                }
+                onBlur={
+                  isPublicMode
+                    ? (event) => {
+                        if (!state.customerLastName.trim()) return
+                        if (!shouldAdvanceFromFieldBlur(event.relatedTarget)) {
+                          return
+                        }
+                        focusWizardField(phoneInputRef.current)
+                      }
+                    : undefined
+                }
                 completion={getFieldCompletion(state.customerLastName)}
+                required={isPublicMode}
+                requiredLabel={requiredLabel}
               />
               {isPublicMode ? (
                 <PublicPhoneField
                   value={state.customerDraftPhone}
                   language={uiLocale}
+                  required
+                  requiredLabel={requiredLabel}
+                  inputRef={phoneInputRef}
                   onChange={(value) =>
                     updateState({
                       customerDraftPhone: value,
@@ -2919,7 +3165,26 @@ export default function QuoteWizardCore({
                   minDate={
                     isPublicMode ? calendarDateInTimeZone() : undefined
                   }
+                  required={isPublicMode}
+                  requiredLabel={requiredLabel}
+                  onCommit={
+                    isPublicMode
+                      ? () => {
+                          requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                              setStartTimePickerOpen(true)
+                            })
+                          })
+                        }
+                      : undefined
+                  }
                 />
+                {isPublicMode ? (
+                  <SpecialEventDateNotice
+                    eventDate={state.eventDate}
+                    language={uiLocale}
+                  />
+                ) : null}
                 <TimePickerField
                   label={w.startTime}
                   language={uiLocale}
@@ -2935,6 +3200,20 @@ export default function QuoteWizardCore({
                     }))
                   }
                   completion={getFieldCompletion(state.startTime)}
+                  required={isPublicMode}
+                  requiredLabel={requiredLabel}
+                  open={isPublicMode ? startTimePickerOpen : undefined}
+                  onOpenChange={
+                    isPublicMode ? setStartTimePickerOpen : undefined
+                  }
+                  emptyDefaultHour={isPublicMode ? 11 : 18}
+                  onCommit={
+                    isPublicMode
+                      ? () => {
+                          focusWizardField(adultsInputRef.current)
+                        }
+                      : undefined
+                  }
                 />
                 <div>
                   <TimePickerField
@@ -2960,19 +3239,81 @@ export default function QuoteWizardCore({
                   value={state.adultCount}
                   onChange={(v) => updateState({ adultCount: v })}
                   completion={getFieldCompletion(state.adultCount)}
+                  blankZero={isPublicMode}
+                  placeholder={isPublicMode ? w.publicAdultsPlaceholder : ''}
+                  required={isPublicMode}
+                  requiredLabel={requiredLabel}
+                  inputRef={adultsInputRef}
+                  guestField
+                  enterKeyHint={isPublicMode ? 'next' : undefined}
+                  onCommit={
+                    isPublicMode
+                      ? (value) => {
+                          if (value <= 0) return
+                          const childrenReviewed =
+                            state.childrenUnder3Count > 0 ||
+                            state.children4To12Count > 0
+                          if (childrenReviewed) {
+                            focusWizardField(addressSearchInputRef.current)
+                            return
+                          }
+                          const node = guestAddressTransitionRef.current
+                          if (!node) return
+                          const reduced = window.matchMedia?.(
+                            '(prefers-reduced-motion: reduce)',
+                          ).matches
+                          node.scrollIntoView({
+                            behavior: reduced ? 'auto' : 'smooth',
+                            block: 'start',
+                          })
+                        }
+                      : undefined
+                  }
                 />
-                <QuantityField
-                  label={w.childrenUnder3}
-                  value={state.childrenUnder3Count}
-                  onChange={(v) => updateState({ childrenUnder3Count: v })}
-                />
-                <QuantityField
-                  label={w.children4to12}
-                  value={state.children4To12Count}
-                  onChange={(v) => updateState({ children4To12Count: v })}
-                />
+                <div
+                  ref={guestAddressTransitionRef}
+                  data-guest-address-transition
+                  data-guest-children-under-3
+                  className="guest-address-transition"
+                >
+                  <QuantityField
+                    label={w.childrenUnder3}
+                    value={state.childrenUnder3Count}
+                    onChange={(v) => updateState({ childrenUnder3Count: v })}
+                    blankZero={isPublicMode}
+                    placeholder={isPublicMode ? w.publicChildrenPlaceholder : ''}
+                    guestField
+                  />
+                </div>
+                <div data-guest-children-4-12>
+                  <QuantityField
+                    label={w.children4to12}
+                    value={state.children4To12Count}
+                    onChange={(v) => updateState({ children4To12Count: v })}
+                    blankZero={isPublicMode}
+                    placeholder={isPublicMode ? w.publicChildrenPlaceholder : ''}
+                    guestField
+                  />
+                </div>
               </div>
+              {/* Without this the address reads as more guest fields. */}
+              <p
+                data-event-address-section
+                className="wizard-section-label"
+              >
+                {w.eventAddressSection}
+              </p>
               <AddressAutocompleteFields
+                searchInputRef={addressSearchInputRef}
+                numberInputRef={streetNumberInputRef}
+                onPlaceSelected={
+                  isPublicMode
+                    ? ({ addressNumber }) => {
+                        if (addressNumber.trim()) return
+                        focusWizardField(streetNumberInputRef.current)
+                      }
+                    : undefined
+                }
                 values={{
                   address: state.address,
                   addressNumber: state.addressNumber,
@@ -2999,6 +3340,19 @@ export default function QuoteWizardCore({
                 locationBias={
                   isPublicMode ? publicContext?.locationBias ?? null : null
                 }
+                markRequired={isPublicMode}
+                requiredLabel={requiredLabel}
+                placeholders={
+                  isPublicMode
+                    ? {
+                        search: w.publicAddressPlaceholder,
+                        number: w.publicAddressNumberPlaceholder,
+                        city: w.publicCityPlaceholder,
+                        state: w.publicStatePlaceholder,
+                        postal: w.publicPostalPlaceholder,
+                      }
+                    : undefined
+                }
               />
             </div>
           </SectionCard>
@@ -3006,6 +3360,12 @@ export default function QuoteWizardCore({
 
         {step === 2 && (
           <div className="space-y-4">
+            {isPublicMode ? (
+              <SpecialEventDateNotice
+                eventDate={state.eventDate}
+                language={uiLocale}
+              />
+            ) : null}
             {packages.length === 0 ? (
               <div className="rounded-2xl border border-red-500/40 bg-cdl-surface p-6 text-sm text-red-300">
                 {fetchErrors.some((e) => /pacote|package/i.test(e))
@@ -3026,6 +3386,15 @@ export default function QuoteWizardCore({
                 onSelectionChange={handlePackageSelectionChange}
                 pendingSelectionGroupIds={pendingSelectionGroupIds}
                 onSelect={handlePackageSelect}
+                eventDate={state.eventDate}
+                specialDatePricing={{
+                  active: isSpecialCdlEventDate(state.eventDate),
+                  surchargePercent: commercialRules.holidaySurchargePercent,
+                  minimumOrderAmount: resolveApplicableMinimum(
+                    parseEventDateParts(state.eventDate),
+                    commercialRules,
+                  ).amount,
+                }}
               />
             ) : (
               <QuotePackageStepExplorer
@@ -3084,18 +3453,22 @@ export default function QuoteWizardCore({
               <div className="space-y-4">
                 {additionalItemsByCategory.map(
                   ({ categoryKey, categoryLabel, items }) => (
+                  <Fragment key={categoryKey}>
                   <AdditionalCategorySection
-                    key={categoryKey}
                     categoryKey={categoryKey}
                     categoryLabel={
                       additionalCategoryDisplayLabels.get(categoryKey) ??
                       categoryLabel
                     }
                     items={items}
-                    expanded={openAdditionalCategories.has(categoryKey)}
+                    expanded={
+                      categoryKey === SUGGESTED_EXTRAS_DISPLAY_KEY ||
+                      openAdditionalCategories.has(categoryKey)
+                    }
                     selectedCount={selectedCountByCategory[categoryKey] ?? 0}
                     visited={visitedAdditionalCategories.has(categoryKey)}
                     emphasize={emphasizedAdditionalCategory === categoryKey}
+                    featured={categoryKey === SUGGESTED_EXTRAS_DISPLAY_KEY}
                     quantities={state.additionals}
                     billableGuestCount={billableGuestCount}
                     language={uiLocale}
@@ -3105,6 +3478,13 @@ export default function QuoteWizardCore({
                     onExpose={() => handleAdditionalCategoryExpose(categoryKey)}
                     onChangeQty={setAdditionalQty}
                   />
+                  {categoryKey === SUGGESTED_EXTRAS_DISPLAY_KEY ? (
+                    <PostSuggestedCategoryHint
+                      title={w.postSuggestedCategoryHintTitle}
+                      body={w.postSuggestedCategoryHintBody}
+                    />
+                  ) : null}
+                  </Fragment>
                 ),
                 )}
               </div>
@@ -3184,6 +3564,8 @@ export default function QuoteWizardCore({
                                   grillPhotoAnswered: true,
                                   grillPhotoUrl: null,
                                   grillPhotoReference: null,
+                                  grillRentalRequired: true,
+                                  grillRentalQty: 1,
                                 },
                           )
                         }
@@ -3257,36 +3639,16 @@ export default function QuoteWizardCore({
               ) : null}
 
               {state.grillSetupAnswered && !state.hasGrill ? (
-                <>
-                  <div className="sm:col-span-1">
-                    <CheckboxField
-                      label={w.grillRentalRequired}
-                      checked={state.grillRentalRequired}
-                      onChange={(value) =>
-                        updateState({
-                          grillRentalRequired: value,
-                          grillRentalQty: value
-                            ? Math.max(1, state.grillRentalQty)
-                            : 0,
-                        })
-                      }
-                    />
-                  </div>
-                  <QuantityField
-                    label={w.grillRentalQty}
-                    value={state.grillRentalQty}
-                    min={state.grillRentalRequired ? 1 : 0}
-                    disabled={!state.grillRentalRequired}
-                    placeholder={state.grillRentalRequired ? '1' : '0'}
-                    onChange={(value) =>
-                      updateState({
-                        grillRentalQty: state.grillRentalRequired
-                          ? Math.max(1, value)
-                          : 0,
-                      })
-                    }
-                  />
-                </>
+                <div
+                  className="sm:col-span-2 rounded-2xl border border-cdl-border bg-cdl-inset p-5"
+                  data-grill-rental
+                  data-grill-rental-mandatory="true"
+                >
+                  <p className="cdl-eyebrow">{w.grillRentalMandatory}</p>
+                  <p className="mt-2 text-sm font-semibold text-cdl-title">
+                    {w.grillRentalFixedQty}
+                  </p>
+                </div>
               ) : null}
               <div className="sm:col-span-2">
                 <label className="flex flex-col gap-2">
@@ -3343,6 +3705,8 @@ export default function QuoteWizardCore({
               language={uiLocale}
               consentLabel={publicContext?.consentLabel || ''}
               privacyUrl={publicContext?.privacyUrl}
+              cancellationPolicyAccepted={state.cancellationPolicyAccepted}
+              cancellationPolicyLabel={w.cancellationPolicyAccept}
               mileageReviewRequired={
                 pricingPreview.data?.mileage?.status === 'pending_review'
               }
@@ -3360,6 +3724,17 @@ export default function QuoteWizardCore({
                   publicConsentAccepted: accepted,
                   publicConsentVersion:
                     publicContext?.consentVersion ?? null,
+                })
+              }
+              onCancellationPolicyChange={(accepted) =>
+                updateState({
+                  cancellationPolicyAccepted: accepted,
+                  cancellationPolicyVersion: accepted
+                    ? CDL_CANCEL_POLICY_VERSION
+                    : null,
+                  cancellationPolicyAcceptedAt: accepted
+                    ? new Date().toISOString()
+                    : null,
                 })
               }
               onGoToStep={(nextStep) => {

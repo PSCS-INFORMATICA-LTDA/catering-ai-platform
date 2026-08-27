@@ -1,11 +1,17 @@
-import { rejectSpoofedCompanyId, requireApiPermission } from '@/Lib/auth/requireApi'
+import {
+  rejectSpoofedCompanyId,
+  requireApiPermission,
+  resolveAuthorizedCompanyId,
+} from '@/Lib/auth/requireApi'
 import { createQuote } from '@/Lib/createQuote'
 import type { QuoteSaveInput } from '@/Lib/buildQuoteSavePayload'
-import { fetchQuoteList } from '@/Lib/fetchQuoteList'
 import {
-  applyQuoteListFilters,
-  parseQuoteListFiltersFromSearchParams,
-} from '@/Lib/quotes/listFilters'
+  fetchQuoteList,
+  QUOTE_LIST_MAX_PAGE_SIZE,
+  QUOTE_LIST_PAGE_SIZE,
+} from '@/Lib/fetchQuoteList'
+import { parseQuoteListFiltersFromSearchParams } from '@/Lib/quotes/listFilters'
+import { decodeQuoteListCursor } from '@/Lib/quotes/listCursor'
 import { logSaveQuoteError } from '@/Lib/supabaseSaveError'
 
 export const dynamic = 'force-dynamic'
@@ -14,7 +20,22 @@ export async function GET(request: Request) {
   const auth = await requireApiPermission('quotes.view')
   if (!auth.ok) return auth.response
 
-  const { data, error } = await fetchQuoteList()
+  const url = new URL(request.url)
+  const filters = parseQuoteListFiltersFromSearchParams(url.searchParams)
+  const requestedSize = Number(url.searchParams.get('pageSize') || filters.pageSize || QUOTE_LIST_PAGE_SIZE)
+  const limit = Math.min(
+    QUOTE_LIST_MAX_PAGE_SIZE,
+    Math.max(1, Number.isFinite(requestedSize) ? requestedSize : QUOTE_LIST_PAGE_SIZE),
+  )
+  const { data, error, hasMore, nextCursorToken } = await fetchQuoteList({
+    companyId: resolveAuthorizedCompanyId(auth.session),
+    q: filters.q,
+    status: filters.status,
+    hasAcceptance: filters.hasAcceptance,
+    hasOrder: filters.hasOrder,
+    cursor: decodeQuoteListCursor(url.searchParams.get('cursor')),
+    limit,
+  })
 
   if (error) {
     return Response.json(
@@ -26,31 +47,13 @@ export async function GET(request: Request) {
     )
   }
 
-  const url = new URL(request.url)
-  const hasFilterParams = [
-    'q',
-    'status',
-    'has_acceptance',
-    'has_order',
-    'date_from',
-    'date_to',
-    'page',
-    'pageSize',
-    'sort',
-  ].some((key) => url.searchParams.has(key))
-
-  if (!hasFilterParams) {
-    return Response.json(
-      { data: data ?? [] },
-      { headers: { 'Cache-Control': 'no-store, max-age=0' } },
-    )
-  }
-
-  const filters = parseQuoteListFiltersFromSearchParams(url.searchParams)
-  const { items, total, page, pageSize } = applyQuoteListFilters(data ?? [], filters)
-
   return Response.json(
-    { data: items, total, page, pageSize },
+    {
+      data: data ?? [],
+      hasMore,
+      nextCursor: nextCursorToken,
+      pageSize: limit,
+    },
     { headers: { 'Cache-Control': 'no-store, max-age=0' } },
   )
 }

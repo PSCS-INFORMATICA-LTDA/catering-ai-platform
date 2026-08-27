@@ -3,8 +3,13 @@ import QuoteDetailView from './QuoteDetailView'
 import type { QuoteDetail } from './quoteDetailTypes'
 import { getAuthSession } from '@/Lib/auth/session'
 import { hasPermission } from '@/Lib/auth/permissions'
+import { resolveAuthorizedCompanyId } from '@/Lib/auth/requireApi'
 import { resolveAuthLocale } from '@/Lib/i18n/authUsers'
+import { logDevServerTiming } from '@/Lib/observability/serverTiming'
 import { tw } from '@/Lib/quoteTranslations'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function QuoteDetailPage({
   params,
@@ -12,10 +17,19 @@ export default async function QuoteDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const started = Date.now()
 
   const session = await getAuthSession()
+  const authMs = Date.now() - started
   const uiLocale = resolveAuthLocale(session?.appUser?.preferred_language)
-  const { data, error } = await fetchQuoteDetail(id, uiLocale)
+  const companyId = session ? resolveAuthorizedCompanyId(session) : undefined
+  const dbStarted = Date.now()
+  const { data, error } = await fetchQuoteDetail(id, uiLocale, { companyId })
+  logDevServerTiming(`/quotes/${id}`, {
+    authMs,
+    quoteDbMs: Date.now() - dbStarted,
+    renderMs: Date.now() - started,
+  })
 
   if (error) {
     const locale = resolveAuthLocale(session?.appUser?.preferred_language)
@@ -34,11 +48,15 @@ export default async function QuoteDetailPage({
   const canConvert = Boolean(
     session?.isPlatformAdmin || hasPermission(session?.permissions, 'quotes.convert'),
   )
+  const canManageInvoice = Boolean(
+    session?.isPlatformAdmin || hasPermission(session?.permissions, 'quotes.manage'),
+  )
 
   return (
     <QuoteDetailView
       quote={data as QuoteDetail}
       canConvert={canConvert}
+      canManageInvoice={canManageInvoice}
       uiLocale={uiLocale}
     />
   )

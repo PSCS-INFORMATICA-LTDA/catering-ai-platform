@@ -1,0 +1,58 @@
+{
+  "note": "Logo-only v5 shipped where a known badge seat was dirty. Leftover EN strips on Traditional and Select stay on v3: food is not aligned across locales and reconstruction smeared meat.",
+  "shipped": {
+    "bbqpers-en-v4.webp": {
+      "dest": "bbqpers-en-v5.webp",
+      "reasons": ["logo 68,1318,170"],
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-en-v4.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-en-v5.webp"
+    },
+    "bbqpers-pt-v4.webp": {
+      "dest": "bbqpers-pt-v5.webp",
+      "reasons": ["logo 69,1311,182"],
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-pt-v4.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-pt-v5.webp"
+    },
+    "bbqpri-pt-v3.webp": {
+      "dest": "bbqpri-pt-v5.webp",
+      "reasons": ["logo 65,1034,218"],
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpri-pt-v3.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpri-pt-v5.webp"
+    },
+    "bbqpri-en-v4.webp": {
+      "dest": "bbqpri-en-v5.webp",
+      "reasons": ["logo 46,1038,198"],
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpri-en-v4.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpri-en-v5.webp"
+    },
+    "bbqtrad-pt-v3.webp": {
+      "dest": "bbqtrad-pt-v5.webp",
+      "reasons": ["logo 43,1235,218"],
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqtrad-pt-v3.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqtrad-pt-v5.webp"
+    },
+    "bbqsel-es-v3.webp": {
+      "dest": "bbqsel-es-v5.webp",
+      "reasons": ["logo 69,923,198"],
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqsel-es-v3.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqsel-es-v5.webp"
+    }
+  },
+  "audited_unchanged": {
+    "bbqtrad-en-v3.webp": {
+      "leftover": "vertical menu strip (Q / USAGE / icons) over steak and bread",
+      "reconstruction": "rejected — smeared food"
+    },
+    "bbqsel-en-v3.webp": {
+      "leftover": "duplicate menu text over ribs plus logo smear",
+      "reconstruction": "rejected — smeared food"
+    },
+    "bbqtrad-es-v4.webp": { "status": "clean" },
+    "bbqsel-pt-v4.webp": { "status": "clean" },
+    "bbqcho-en-v4.webp": { "status": "clean" },
+    "bbqcho-es-v4.webp": { "status": "clean" },
+    "bbqcho-pt-v3.webp": { "status": "clean" },
+    "bbqpri-es-v4.webp": { "status": "clean" },
+    "bbqpers-es-v4.webp": { "status": "clean" }
+  }
+}

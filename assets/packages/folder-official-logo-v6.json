@@ -1,0 +1,114 @@
+{
+  "official_badge": "cdl-badge-official.png",
+  "ai_generated_logo": false,
+  "jobs": {
+    "bbqpers-pt-v5.webp": {
+      "dest": "bbqpers-pt-v6.webp",
+      "badge": [
+        69,
+        1311,
+        182
+      ],
+      "mask_px": 69436,
+      "outside_mae": 0.0,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-pt-v5.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-pt-v6.webp"
+    },
+    "bbqpers-en-v5.webp": {
+      "dest": "bbqpers-en-v6.webp",
+      "badge": [
+        68,
+        1318,
+        170
+      ],
+      "mask_px": 74093,
+      "outside_mae": 0.0,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-en-v5.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-en-v6.webp"
+    },
+    "bbqpers-es-v4.webp": {
+      "dest": "bbqpers-es-v6.webp",
+      "badge": [
+        42,
+        1287,
+        214
+      ],
+      "mask_px": 74953,
+      "outside_mae": 0.0,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-es-v4.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-es-v6.webp"
+    },
+    "bbqpers-plus-en-v4.webp": {
+      "dest": "bbqpers-plus-en-v6.webp",
+      "badge": [
+        50,
+        1364,
+        146
+      ],
+      "mask_px": 55476,
+      "outside_mae": 0.0,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-plus-en-v4.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-plus-en-v6.webp"
+    },
+    "bbqpers-plus-es-v4.webp": {
+      "dest": "bbqpers-plus-es-v6.webp",
+      "badge": [
+        61,
+        1357,
+        142
+      ],
+      "mask_px": 35899,
+      "outside_mae": 0.0,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-plus-es-v4.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-plus-es-v6.webp"
+    },
+    "bbqpri-pt-v5.webp": {
+      "dest": "bbqpri-pt-v6.webp",
+      "badge": [
+        65,
+        1034,
+        218
+      ],
+      "mask_px": 65196,
+      "outside_mae": 0.0,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpri-pt-v5.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpri-pt-v6.webp"
+    },
+    "bbqpri-en-v5.webp": {
+      "dest": "bbqpri-en-v6.webp",
+      "badge": [
+        46,
+        1038,
+        198
+      ],
+      "mask_px": 53830,
+      "outside_mae": 0.0,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpri-en-v5.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpri-en-v6.webp"
+    },
+    "bbqtrad-pt-v5.webp": {
+      "dest": "bbqtrad-pt-v6.webp",
+      "badge": [
+        43,
+        1235,
+        218
+      ],
+      "mask_px": 69575,
+      "outside_mae": 0.0,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqtrad-pt-v5.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqtrad-pt-v6.webp"
+    },
+    "bbqcho-pt-v3.webp": {
+      "dest": "bbqcho-pt-v6.webp",
+      "badge": [
+        61,
+        943,
+        190
+      ],
+      "mask_px": 67351,
+      "outside_mae": 0.0,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqcho-pt-v3.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqcho-pt-v6.webp"
+    }
+  }
+}

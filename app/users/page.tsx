@@ -2,6 +2,7 @@
 
 import { FormEvent, Suspense, useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useAppSession } from '@/components/auth/AppSessionProvider'
 import { resolveAuthLocale, tAuth } from '@/Lib/i18n/authUsers'
 import { tCommon } from '@/Lib/i18n/common'
 import { useAuthLocale } from '@/Lib/i18n/useAuthLocale'
@@ -18,6 +19,7 @@ type Row = {
 
 function UsersPageInner() {
   const { locale, setLocale } = useAuthLocale()
+  const { session } = useAppSession()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -62,21 +64,11 @@ function UsersPageInner() {
   }, [q, roleFilter, statusFilter, page, pathname, router])
 
   useEffect(() => {
-    let cancelled = false
-    fetch('/api/auth/me', { cache: 'no-store' })
-      .then(async (me) => {
-        if (!me.ok || cancelled) return
-        const mj = await me.json()
-        if (cancelled) return
-        setIsPlatformAdmin(Boolean(mj.isPlatformAdmin))
-        setMyUserId(mj.userId ?? null)
-        if (mj.locale) setLocale(resolveAuthLocale(mj.locale))
-      })
-      .catch(() => null)
-    return () => {
-      cancelled = true
-    }
-  }, [setLocale])
+    if (!session) return
+    setIsPlatformAdmin(Boolean(session.isPlatformAdmin))
+    setMyUserId(session.userId ?? null)
+    if (session.locale) setLocale(resolveAuthLocale(session.locale))
+  }, [session, setLocale])
 
   useEffect(() => {
     let cancelled = false

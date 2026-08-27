@@ -243,6 +243,82 @@ const { t, list } = makeI18nModule('media', 'ui', {
     en: 'File is too large.',
     es: 'El archivo es demasiado grande.',
   },
+  actionIncludeImage: {
+    pt: '+ INCLUIR IMAGEM',
+    en: '+ ADD IMAGE',
+    es: '+ INCLUIR IMAGEN',
+  },
+  viewLibrary: { pt: 'Biblioteca', en: 'Library', es: 'Biblioteca' },
+  viewPackages: {
+    pt: 'Imagens de Pacotes',
+    en: 'Package images',
+    es: 'Imágenes de paquetes',
+  },
+  viewReview: { pt: 'Em Revisão', en: 'In review', es: 'En revisión' },
+  viewPublished: { pt: 'Publicadas', en: 'Published', es: 'Publicadas' },
+  viewArchived: { pt: 'Arquivadas', en: 'Archived', es: 'Archivadas' },
+  packageKey: { pt: 'PACKAGE KEY', en: 'PACKAGE KEY', es: 'PACKAGE KEY' },
+  usedIn: { pt: 'USADO EM', en: 'USED IN', es: 'USADO EN' },
+  statusPublishedLive: {
+    pt: 'Publicada na cotação',
+    en: 'Published on the quote',
+    es: 'Publicada en la cotización',
+  },
+  draftReady: {
+    pt: 'Versão em rascunho (não publicada)',
+    en: 'Draft version (not published)',
+    es: 'Versión en borrador (no publicada)',
+  },
+  actionPrepareVersion: {
+    pt: 'Nova versão / rascunho',
+    en: 'New version / draft',
+    es: 'Nueva versión / borrador',
+  },
+  actionSubmitReview: {
+    pt: 'Enviar para revisão (em breve)',
+    en: 'Submit for review (soon)',
+    es: 'Enviar a revisión (pronto)',
+  },
+  packageLiveFrozen: {
+    pt: 'As artes publicadas na cotação ficam congeladas aqui. Juninho pode visualizar e preparar rascunhos. Publicar no cliente exige aprovação e não acontece neste fluxo.',
+    en: 'Live quote folder arts stay frozen here. Editors can preview and prepare drafts. Publishing to customers needs approval and does not happen in this flow.',
+    es: 'Las artes publicadas en la cotización quedan congeladas aquí. Se pueden ver y preparar borradores. Publicar al cliente exige aprobación y no ocurre en este flujo.',
+  },
+  isolatedPreviewHint: {
+    pt: 'Preview isolado no admin, no formato mobile da cotação. A página pública não muda.',
+    en: 'Admin-only preview in the quote mobile format. The public page does not change.',
+    es: 'Vista previa aislada en el admin, en el formato mobile de la cotización. La página pública no cambia.',
+  },
+  unusedAssets: {
+    pt: 'Assets não utilizados',
+    en: 'Unused assets',
+    es: 'Assets no utilizados',
+  },
+  unusedAssetsHint: {
+    pt: 'Somente diagnóstico. Nada é apagado automaticamente.',
+    en: 'Diagnostic only. Nothing is deleted automatically.',
+    es: 'Solo diagnóstico. Nada se borra automáticamente.',
+  },
+  unusedAssetsEmpty: {
+    pt: 'Nenhum arquivo órfão listado no prefixo publicado.',
+    en: 'No orphan files listed in the published prefix.',
+    es: 'No hay archivos huérfanos en el prefijo publicado.',
+  },
+  archiveNeedsSchema: {
+    pt: 'Arquivo verdadeiro (ARCHIVED) ainda não existe no banco. Esta lista mostra mídias inativas, o equivalente operacional atual.',
+    en: 'A true ARCHIVED state is not in the database yet. This list shows inactive media, the current operational equivalent.',
+    es: 'El estado ARCHIVED real aún no existe en la base. Esta lista muestra medios inactivos, el equivalente operativo actual.',
+  },
+  reviewNeedsSchema: {
+    pt: 'IN_REVIEW ainda não é um status de banco. Novas mídias entram inativas e ficam aqui até alguém ativar.',
+    en: 'IN_REVIEW is not a database status yet. New media start inactive and stay here until someone activates them.',
+    es: 'IN_REVIEW aún no es un estado de base. Los medios nuevos entran inactivos y quedan aquí hasta que alguien los active.',
+  },
+  workspaceHint: {
+    pt: 'Área operacional de mídia. Preço, regras e cotação pública não se editam aqui.',
+    en: 'Operational media area. Price, rules and the public quote are not edited here.',
+    es: 'Área operativa de medios. Precio, reglas y cotización pública no se editan aquí.',
+  },
 })
 
 export const tMedia = t

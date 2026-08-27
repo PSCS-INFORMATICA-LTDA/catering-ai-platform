@@ -1,5 +1,5 @@
 import { getAdditionalItemCategoryKey } from '@/Lib/additionalItemFieldAccess'
-import { getCatalogItemImageUrl } from '@/Lib/catalogItemVisual'
+import { getPublicAdditionalDisplayImageUrl } from '@/Lib/publicQuote/grillRentalDisplay'
 import { getAdditionalItemPrice } from '@/Lib/additionalItemFieldAccess'
 import { calcAdditionalLineTotal } from '@/Lib/calculateQuoteTotals'
 import {
@@ -134,13 +134,83 @@ export function getAdditionalTotalWeight(
 }
 
 export function getAdditionalImage(item: QuoteAdditionalItem): string | null {
-  return getCatalogItemImageUrl(item)
+  return getPublicAdditionalDisplayImageUrl(item)
 }
 
 export type AdditionalCategoryGroup<T extends QuoteAdditionalItem> = {
   categoryKey: string
   categoryLabel: string
   items: T[]
+}
+
+/**
+ * Names to headline in the suggested-extras teaser, taken from the catalog the
+ * customer is about to browse.
+ *
+ * Reading the names off the live list is the point: the teaser can never
+ * advertise an item that was deactivated, hidden or repriced, and it needs no
+ * separate list to maintain. Premium beef leads, then one pork item, which is
+ * the commercial preference for what to put in front of people first.
+ */
+export function pickSuggestedExtraNames<T extends QuoteAdditionalItem>(
+  items: ReadonlyArray<T>,
+  language: QuoteLanguage,
+  limit = 4,
+): string[] {
+  const byPrice = (a: T, b: T) =>
+    getAdditionalUnitPrice(b) - getAdditionalUnitPrice(a)
+  const inCategory = (key: string) =>
+    items
+      .filter(
+        (item) =>
+          getAdditionalItemCategoryKey(item) === key &&
+          hasAdditionalPrice(item) &&
+          getLocalizedAdditionalLabel(item, language).trim(),
+      )
+      .sort(byPrice)
+
+  const beef = inCategory('BOVINO_NOBRE')
+  const pork = inCategory('PORCO')
+  const picked = [...beef.slice(0, Math.max(1, limit - 1)), ...pork.slice(0, 1)]
+
+  const names: string[] = []
+  for (const item of picked) {
+    const label = getLocalizedAdditionalLabel(item, language).trim()
+    if (label && !names.includes(label)) names.push(label)
+    if (names.length >= limit) break
+  }
+  return names
+}
+
+/**
+ * Catalog labels are stored upper case for the cards, where that reads as a
+ * heading. Dropped into a sentence they read as shouting, so they are cased
+ * down for prose while staying the same words as the card below.
+ */
+function forProse(label: string, language: QuoteLanguage): string {
+  if (label !== label.toUpperCase()) return label
+  const locale = language === 'pt' ? 'pt-BR' : language
+  return label.replace(
+    /\p{Lu}[\p{Lu}\p{M}]*/gu,
+    (word) => word[0] + word.slice(1).toLocaleLowerCase(locale),
+  )
+}
+
+/** "a, b, c e d" in PT, "a, b, c, and d" in EN, "a, b, c y d" in ES. */
+export function formatSuggestedExtraNames(
+  names: ReadonlyArray<string>,
+  language: QuoteLanguage,
+): string {
+  const locale = language === 'pt' ? 'pt-BR' : language
+  const prose = names.map((name) => forProse(name, language))
+  try {
+    return new Intl.ListFormat(locale, {
+      style: 'long',
+      type: 'conjunction',
+    }).format(prose)
+  } catch {
+    return prose.join(', ')
+  }
 }
 
 export function groupAdditionalItemsByCategory<T extends QuoteAdditionalItem>(

@@ -1,4 +1,6 @@
 import { GRILL_RENTAL_FEE } from '@/Lib/cdlCommercialRules'
+import { calcBillableMileageDistance } from '@/Lib/calculateQuoteTotals'
+import { normalizeGrillRentalQty } from '@/Lib/grillRental'
 import type { QuoteTotals } from '@/Lib/calculateQuoteTotals'
 import type { CommercialRulesSnapshot } from '@/Lib/supabaseCommercialRules'
 import { getPackageLabel } from '@/Lib/packageFieldAccess'
@@ -37,13 +39,18 @@ export function buildPricingBreakdown(
     discountAmount = 0,
     mileageDistance,
     grillRentalRequired,
-    grillRentalQty,
   } = input
 
   const pkg = context.package
   const packageLabel = getPackageLabel(pkg, context.language)
   const billableGuests = totals.billableGuestCount
   const packageUnitPrice = context.packagePricePerPerson
+  const includedSidesTotal = Number(totals.includedSidesTotal ?? 0)
+  const packageMeatAmount = roundMoney(
+    Math.max(0, totals.packageTotal - includedSidesTotal),
+  )
+  const sidesUnit =
+    billableGuests > 0 ? roundMoney(includedSidesTotal / billableGuests) : 0
 
   const lines: PricingBreakdownLine[] = [
     {
@@ -53,15 +60,32 @@ export function buildPricingBreakdown(
       description: packageLabel,
       quantity: billableGuests,
       unit: 'guest',
-      unit_price: packageUnitPrice,
-      amount: totals.packageTotal,
+      unit_price:
+        billableGuests > 0
+          ? roundMoney(packageMeatAmount / billableGuests)
+          : packageUnitPrice,
+      amount: packageMeatAmount,
       formula: `${packageUnitPrice} × ${billableGuests}`,
       metadata: {
         package_key: pkg.package_key ?? null,
         physical_guest_count: totals.physicalGuestCount,
+        package_list_price: packageUnitPrice,
       },
     },
   ]
+
+  if (includedSidesTotal > 0) {
+    lines.push({
+      line_key: 'package_sides',
+      source_type: 'package_sides',
+      description: 'Plus guarnições',
+      quantity: billableGuests,
+      unit: 'guest',
+      unit_price: sidesUnit,
+      amount: includedSidesTotal,
+      formula: `${sidesUnit} × ${billableGuests}`,
+    })
+  }
 
   for (const line of resolvedAdditionals) {
     const catalog = context.catalogById.get(line.itemId)
@@ -85,7 +109,10 @@ export function buildPricingBreakdown(
   }
 
   if (totals.mileageFee > 0 || mileageDistance > 0) {
-    const chargedMiles = Math.max(0, mileageDistance - rules.mileageFreeLimit)
+    const chargedMiles = calcBillableMileageDistance(
+      mileageDistance,
+      rules.mileageFreeLimit,
+    )
     lines.push({
       line_key: 'mileage',
       source_type: 'mileage',
@@ -94,41 +121,55 @@ export function buildPricingBreakdown(
       unit: 'mi',
       unit_price: rules.mileageRate,
       amount: totals.mileageFee,
-      formula: `max(0, ${mileageDistance} - ${rules.mileageFreeLimit}) × ${rules.mileageRate}`,
+      formula:
+        chargedMiles > 0
+          ? `${mileageDistance} × ${rules.mileageRate}`
+          : `0 (até ${rules.mileageFreeLimit} mi)`,
       metadata: {
         base_location: rules.mileageBaseLocation,
         distance: mileageDistance,
         free_limit: rules.mileageFreeLimit,
+        full_trip: chargedMiles > 0,
       },
     })
   }
 
   if (totals.grillRentalTotal > 0) {
+    const qty = normalizeGrillRentalQty(grillRentalRequired)
     lines.push({
       line_key: 'grill_rental',
       source_type: 'grill_rental',
       description: 'Aluguel de churrasqueira',
-      quantity: grillRentalRequired ? Math.max(0, grillRentalQty) : 0,
+      quantity: qty,
       unit: 'unit',
       unit_price: GRILL_RENTAL_FEE,
       amount: totals.grillRentalTotal,
-      formula: `${GRILL_RENTAL_FEE} × ${Math.max(0, grillRentalQty)}`,
+      formula: grillRentalRequired ? `${GRILL_RENTAL_FEE} × 1` : '0',
     })
   }
 
   const adjustments: PricingBreakdownLine[] = []
 
   if (totals.holidaySurchargeAmount > 0) {
+    const packageOnlySurcharge = roundMoney(
+      packageMeatAmount * (totals.holidaySurchargePercent / 100),
+    )
+    const packageOnly =
+      Math.abs(packageOnlySurcharge - totals.holidaySurchargeAmount) < 0.009
     adjustments.push({
       line_key: 'holiday_surcharge',
       source_type: 'commercial_rule',
       rule_id: 'holiday_surcharge_percent',
-      description: `Acréscimo feriado (${totals.holidaySurchargePercent}%)`,
+      description: packageOnly
+        ? `Acréscimo data especial (${totals.holidaySurchargePercent}% no pacote)`
+        : `Acréscimo feriado (${totals.holidaySurchargePercent}%)`,
       quantity: 1,
       unit: 'adjustment',
       unit_price: totals.holidaySurchargeAmount,
       amount: totals.holidaySurchargeAmount,
-      formula: `${totals.quoteSubtotal} × ${totals.holidaySurchargePercent}%`,
+      formula: packageOnly
+        ? `${packageMeatAmount} × ${totals.holidaySurchargePercent}%`
+        : `${totals.quoteSubtotal} × ${totals.holidaySurchargePercent}%`,
     })
   }
 

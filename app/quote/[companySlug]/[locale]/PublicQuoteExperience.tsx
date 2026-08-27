@@ -1,7 +1,6 @@
 'use client'
 
-import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import QuoteWizardCore, {
   type CatalogItem,
   type Package,
@@ -23,6 +22,7 @@ import {
 import type { CommercialRulesSnapshot } from '@/Lib/supabaseCommercialRules'
 import { sanitizeStoredPublicPhone } from '@/Lib/publicQuote/phone'
 import { isPublicGrillDraftAnswered } from '@/Lib/publicQuote/grillDraft'
+import { resolveGrillRentalFromSite } from '@/Lib/grillRental'
 import {
   publicQuoteActiveStorageKey,
   publicQuoteSessionHasProgress,
@@ -38,7 +38,17 @@ import {
   PublicQuoteBrandLockup,
 } from '@/components/quotes/PublicQuoteBrandLockup'
 import { collectPublicHeroImages } from '@/Lib/publicQuote/heroMedia'
+import { scrollPublicQuoteToTop } from '@/Lib/publicQuote/scrollPublicQuoteToTop'
+import {
+  clearPublicQuoteSuccess,
+  getPublicQuoteSuccessSnapshot,
+  readPublicQuoteSuccess,
+  subscribePublicQuoteSuccess,
+  writePublicQuoteSuccess,
+} from '@/Lib/publicQuote/successSession'
+import PublicQuoteSuccessScreen from '@/components/quotes/PublicQuoteSuccessScreen'
 import { tw } from '@/Lib/quoteTranslations'
+import { resolvePublicCompanyContacts } from '@/Lib/publicQuote/companyContacts'
 
 export type PublicQuotePageBootstrap = {
   company: {
@@ -95,6 +105,9 @@ export type PublicQuotePageBootstrap = {
     support: {
       phone: string | null
       whatsappUrl: string | null
+      email?: string | null
+      instagramUrl?: string | null
+      instagramHandle?: string | null
     }
   }
   branches: Array<{
@@ -156,6 +169,14 @@ type IntakeDraft = {
     rentalQty?: number
     notes?: string | null
   }
+  consents?: {
+    cancellation?: {
+      accepted?: boolean
+      version?: string
+      locale?: string
+      acceptedAt?: string | null
+    }
+  }
 }
 
 const UI_COPY = {
@@ -165,16 +186,6 @@ const UI_COPY = {
     feature1: 'Monte seu evento no seu ritmo',
     feature2: 'Preço estimado calculado com as regras atuais',
     feature3: 'Nossa equipe revisa tudo antes de confirmar',
-    successEyebrow: 'Solicitação recebida',
-    successTitle: 'Obrigado por escolher CDL Services BBQ At Home',
-    successBody:
-      'Nossa equipe revisará os detalhes e entrará em contato. Guarde este resumo.',
-    quote: 'Solicitação',
-    date: 'Data',
-    name: 'Evento',
-    total: 'Estimativa',
-    whatsapp: 'Falar no WhatsApp',
-    restart: 'Criar outra solicitação',
     privacy: 'Privacidade',
     support: 'Precisa de ajuda?',
     poweredBy: 'Powered by',
@@ -190,16 +201,6 @@ const UI_COPY = {
     feature1: 'Build your event at your own pace',
     feature2: 'Estimate calculated with current pricing rules',
     feature3: 'Our team reviews everything before confirmation',
-    successEyebrow: 'Request received',
-    successTitle: 'Thank you for choosing CDL Services BBQ At Home',
-    successBody:
-      'Our team will review the details and get in touch. Keep this summary.',
-    quote: 'Request',
-    date: 'Date',
-    name: 'Event',
-    total: 'Estimate',
-    whatsapp: 'Chat on WhatsApp',
-    restart: 'Create another request',
     privacy: 'Privacy',
     support: 'Need help?',
     poweredBy: 'Powered by',
@@ -215,16 +216,6 @@ const UI_COPY = {
     feature1: 'Arma tu evento a tu ritmo',
     feature2: 'Estimación calculada con las reglas actuales',
     feature3: 'Nuestro equipo revisa todo antes de confirmar',
-    successEyebrow: 'Solicitud recibida',
-    successTitle: 'Gracias por elegir CDL Services BBQ At Home',
-    successBody:
-      'Nuestro equipo revisará los detalles y se pondrá en contacto. Guarda este resumen.',
-    quote: 'Solicitud',
-    date: 'Fecha',
-    name: 'Evento',
-    total: 'Estimación',
-    whatsapp: 'Hablar por WhatsApp',
-    restart: 'Crear otra solicitud',
     privacy: 'Privacidad',
     support: '¿Necesitas ayuda?',
     poweredBy: 'Powered by',
@@ -264,6 +255,9 @@ function hydrateDraft(
   const photoReference = draft.grill?.photoReference?.trim() || null
   const grillSetupAnswered = isPublicGrillDraftAnswered(draft.grill, currentStep)
   const hasGrill = grillSetupAnswered ? Boolean(draft.grill?.hasGrill) : false
+  const grillRental = resolveGrillRentalFromSite(
+    grillSetupAnswered ? hasGrill : null,
+  )
 
   return {
     ...base,
@@ -306,23 +300,14 @@ function hydrateDraft(
       : 'not_applicable',
     grillPhotoAnswered: !hasGrill || Boolean(photoReference),
     grillPhotoReference: photoReference,
-    grillRentalRequired: Boolean(draft.grill?.rentalRequired),
-    grillRentalQty: draft.grill?.rentalQty || 0,
+    grillRentalRequired: grillRental?.required ?? false,
+    grillRentalQty: grillRental?.qty ?? 0,
     grillNotes: draft.grill?.notes || '',
     publicConsentVersion: consentVersion,
+    cancellationPolicyAccepted: draft.consents?.cancellation?.accepted === true,
+    cancellationPolicyVersion: draft.consents?.cancellation?.version || null,
+    cancellationPolicyAcceptedAt: draft.consents?.cancellation?.acceptedAt || null,
   }
-}
-
-function formatSuccessMoney(
-  value: number,
-  locale: QuoteLanguage,
-  currency: string,
-) {
-  const languageTag = locale === 'en' ? 'en-US' : locale === 'es' ? 'es-US' : 'pt-BR'
-  return new Intl.NumberFormat(languageTag, {
-    style: 'currency',
-    currency,
-  }).format(value)
 }
 
 export default function PublicQuoteExperience({
@@ -338,8 +323,22 @@ export default function PublicQuoteExperience({
   const [startError, setStartError] = useState(false)
   const [restoredDraft, setRestoredDraft] = useState<IntakeDraft | null>(null)
   const [restoredStep, setRestoredStep] = useState(0)
-  const [success, setSuccess] =
+  const [liveSuccess, setLiveSuccess] =
     useState<PublicQuoteSubmissionResult | null>(null)
+  const storedSuccessRaw = useSyncExternalStore(
+    (onChange) => subscribePublicQuoteSuccess(bootstrap.company.slug, onChange),
+    () => getPublicQuoteSuccessSnapshot(bootstrap.company.slug),
+    () => null,
+  )
+  const storedSuccess = useMemo(
+    () => (storedSuccessRaw ? readPublicQuoteSuccess(bootstrap.company.slug) : null),
+    [bootstrap.company.slug, storedSuccessRaw],
+  )
+  const success = liveSuccess ?? storedSuccess
+  const publicContacts = resolvePublicCompanyContacts(
+    bootstrap.settings.support,
+    bootstrap.company.slug,
+  )
   const activeStorageKey = publicQuoteActiveStorageKey(bootstrap.company.slug)
   const autoResumeAttemptedRef = useRef(false)
   const defaultBranch =
@@ -431,8 +430,35 @@ export default function PublicQuoteExperience({
     }
   }
 
+  function handlePublicSuccess(result: PublicQuoteSubmissionResult) {
+    writePublicQuoteSuccess(bootstrap.company.slug, result)
+    try {
+      sessionStorage.removeItem(activeStorageKey)
+    } catch {
+      /* ignore quota / private mode */
+    }
+    setLiveSuccess(result)
+  }
+
+  function handleRestart() {
+    clearPublicQuoteSuccess(bootstrap.company.slug)
+    try {
+      sessionStorage.removeItem(activeStorageKey)
+    } catch {
+      /* ignore quota / private mode */
+    }
+    autoResumeAttemptedRef.current = true
+    setRestoredDraft(null)
+    setRestoredStep(0)
+    setLiveSuccess(null)
+    setStarted(false)
+    scrollPublicQuoteToTop()
+    window.requestAnimationFrame(() => scrollPublicQuoteToTop())
+  }
+
   useEffect(() => {
     if (autoResumeAttemptedRef.current || started || success) return
+    if (readPublicQuoteSuccess(bootstrap.company.slug)) return
     try {
       if (sessionStorage.getItem(activeStorageKey) !== '1') return
     } catch {
@@ -445,7 +471,7 @@ export default function PublicQuoteExperience({
     return () => window.clearTimeout(timer)
     // Public locale routes remount this tree; resume only from the storage flag.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStorageKey, locale])
+  }, [activeStorageKey, locale, success])
 
   const wizardActive = started && !success
   usePublicQuoteThemeLock(wizardActive ? 'wizard-light' : 'landing-dark')
@@ -510,96 +536,17 @@ export default function PublicQuoteExperience({
       </header>
 
       {success ? (
-        <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-3xl items-center px-4 py-12 sm:px-8">
-          <section
-            data-success-screen
-            className="w-full rounded-[2rem] border border-cdl-border bg-cdl-surface p-7 shadow-xl sm:p-10"
-          >
-            {emblemSrc ? (
-              <div
-                data-success-flame-art
-                className="cdl-success-emblem relative mx-auto flex h-28 w-28 items-center justify-center sm:h-32 sm:w-32"
-              >
-                <span
-                  aria-hidden
-                  className="cdl-success-emblem-halo pointer-events-none absolute inset-[-22%] rounded-full"
-                />
-                <div className="cdl-success-emblem-mark relative flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-white shadow-lg">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={emblemSrc}
-                    alt=""
-                    className="h-full w-full scale-[1.08] object-cover object-center"
-                  />
-                </div>
-              </div>
-            ) : (
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-2xl text-emerald-700">
-                ✓
-              </span>
-            )}
-            <p className="mt-6 text-center text-xs font-black uppercase tracking-[0.2em] text-[var(--brand-primary)]">
-              {copy.successEyebrow}
-            </p>
-            <h1 className="mt-2 text-center text-3xl font-black tracking-tight text-cdl-title sm:text-4xl">
-              {copy.successTitle}
-            </h1>
-            <p className="mt-3 text-center text-cdl-muted">{copy.successBody}</p>
-            <dl className="mt-8 grid gap-3 rounded-2xl bg-cdl-inset p-5 sm:grid-cols-2">
-              <div>
-                <dt className="text-xs font-bold uppercase text-cdl-muted">{copy.quote}</dt>
-                <dd className="mt-1 font-black text-cdl-title">
-                  {success.quote.number || '—'}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-bold uppercase text-cdl-muted">{copy.date}</dt>
-                <dd className="mt-1 font-black text-cdl-title">{success.quote.eventDate}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-bold uppercase text-cdl-muted">{copy.name}</dt>
-                <dd className="mt-1 font-black text-cdl-title">{success.quote.eventName}</dd>
-              </div>
-              {typeof success.quote.total === 'number' ? (
-                <div>
-                  <dt className="text-xs font-bold uppercase text-cdl-muted">{copy.total}</dt>
-                  <dd className="mt-1 font-black text-cdl-title">
-                    {formatSuccessMoney(
-                      success.quote.total,
-                      locale,
-                      success.quote.currency || bootstrap.company.currencyCode,
-                    )}
-                  </dd>
-                </div>
-              ) : null}
-            </dl>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              {bootstrap.settings.support.whatsappUrl ? (
-                <a
-                  href={bootstrap.settings.support.whatsappUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="cdl-btn-primary inline-flex min-h-12 items-center justify-center px-6"
-                >
-                  {copy.whatsapp}
-                </a>
-              ) : null}
-              <Link
-                href={`/quote/${bootstrap.company.slug}/${locale}`}
-                onClick={() => {
-                  try {
-                    sessionStorage.removeItem(activeStorageKey)
-                  } catch {
-                    /* ignore quota / private mode */
-                  }
-                }}
-                className="inline-flex min-h-12 items-center justify-center rounded-xl border border-cdl-border px-6 text-sm font-bold"
-              >
-                {copy.restart}
-              </Link>
-            </div>
-          </section>
-        </main>
+        <PublicQuoteSuccessScreen
+          locale={locale}
+          companySlug={bootstrap.company.slug}
+          companyName={bootstrap.company.name}
+          currencyCode={bootstrap.company.currencyCode}
+          emblemSrc={emblemSrc}
+          support={bootstrap.settings.support}
+          success={success}
+          restartHref={`/quote/${bootstrap.company.slug}/${locale}`}
+          onRestart={handleRestart}
+        />
       ) : started ? (
         <div data-public-wizard-theme="light-locked" data-theme="light">
         <QuoteWizardCore
@@ -633,7 +580,7 @@ export default function PublicQuoteExperience({
             serviceDurationMinutes: bootstrap.settings.serviceDurationMinutes,
             locationBias: bootstrap.settings.locationBias ?? null,
           }}
-          onPublicSuccess={setSuccess}
+          onPublicSuccess={handlePublicSuccess}
         />
         </div>
       ) : (
@@ -673,31 +620,17 @@ export default function PublicQuoteExperience({
         </div>
       ) : null}
 
-      {!started || success ? (
-      <footer
-        className={
-          success
-            ? 'border-t border-cdl-border bg-cdl-surface'
-            : 'public-landing-footer'
-        }
-      >
-        <div
-          className={`mx-auto flex max-w-7xl flex-col items-center text-center sm:px-8 ${
-            success ? 'gap-6 px-4 py-10' : 'gap-3 px-4 py-6'
-          }`}
-        >
-          {success && emblemSrc ? (
-            <div
-              data-footer-cdl-logo
-              className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-white shadow-md sm:h-36 sm:w-36"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={emblemSrc}
-                alt={bootstrap.company.name}
-                className="h-full w-full scale-[1.08] object-cover object-center"
-              />
-            </div>
+      {!started && !success ? (
+      <footer className="public-landing-footer" data-public-landing-footer>
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 py-6 text-center sm:px-8">
+          {emblemSrc ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              data-landing-cdl-logo
+              src={emblemSrc}
+              alt={bootstrap.company.name}
+              className="public-landing-cdl-logo"
+            />
           ) : null}
           <div className="space-y-2">
             <p
@@ -714,24 +647,36 @@ export default function PublicQuoteExperience({
               )}
             </p>
           </div>
-          <p
-            data-powered-by
-            aria-label={copy.poweredByLabel}
-            className="flex flex-wrap items-center justify-center gap-2 text-[11px] leading-none tracking-[0.14em] text-cdl-faint"
-          >
-            <span>{copy.poweredBy}</span>
-            <PscsOneMark size="footer" variant="full" className="shadow-sm" />
-          </p>
           <div className="flex flex-wrap justify-center gap-4 text-xs text-cdl-muted">
             {bootstrap.settings.consent.privacyUrl ? (
               <a href={bootstrap.settings.consent.privacyUrl}>{copy.privacy}</a>
             ) : null}
-            {bootstrap.settings.support.phone ? (
-              <a href={`tel:${bootstrap.settings.support.phone}`}>
-                {copy.support} {bootstrap.settings.support.phone}
+            {publicContacts.phone ? (
+              <a href={`tel:${publicContacts.phone}`}>
+                {copy.support} {publicContacts.phone}
+              </a>
+            ) : null}
+            {publicContacts.email ? (
+              <a href={`mailto:${publicContacts.email}`} data-public-contact-email>
+                {publicContacts.email}
               </a>
             ) : null}
           </div>
+        </div>
+      </footer>
+      ) : null}
+
+      {/* Success closes on the PSCS One signature alone — the CDL story already
+          played out above it, so no second lockup competes with the fire mark. */}
+      {success ? (
+      <footer className="public-success-footer" data-success-footer>
+        <div
+          data-powered-by
+          aria-label={copy.poweredByLabel}
+          className="public-success-powered"
+        >
+          <span className="public-success-powered-label">{copy.poweredBy}</span>
+          <PscsOneMark size="footer" variant="full" className="shadow-sm" />
         </div>
       </footer>
       ) : null}
