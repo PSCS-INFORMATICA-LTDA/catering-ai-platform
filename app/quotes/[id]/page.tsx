@@ -34,11 +34,15 @@ export default async function QuoteDetailPage({
   const canConvert = Boolean(
     session?.isPlatformAdmin || hasPermission(session?.permissions, 'quotes.convert'),
   )
+  const canManageInvoice = Boolean(
+    session?.isPlatformAdmin || hasPermission(session?.permissions, 'quotes.manage'),
+  )
 
   return (
     <QuoteDetailView
       quote={data as QuoteDetail}
       canConvert={canConvert}
+      canManageInvoice={canManageInvoice}
       uiLocale={uiLocale}
     />
   )

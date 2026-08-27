@@ -10,6 +10,7 @@ import { listHelpI18nEntries } from './help.ts'
 import { listInventoryUiI18nEntries } from './inventoryUi.ts'
 import { listMediaI18nEntries } from './media.ts'
 import { listPackagesI18nEntries } from './packages.ts'
+import { listPaymentsI18nEntries } from './payments.ts'
 import { listPublicOpsI18nEntries } from './publicOps.ts'
 import { listQuotesOrdersI18nEntries } from './quotesOrders.ts'
 import { listShareI18nEntries } from './share.ts'
@@ -44,6 +45,7 @@ export function buildTranslationRegistry(): TranslationRegistryEntry[] {
     ...listCompanySettingsI18nEntries(),
     ...listHelpI18nEntries(),
     ...listShareI18nEntries(),
+    ...listPaymentsI18nEntries(),
     ...listPublicOpsI18nEntries(),
     ...listQuotesOrdersI18nEntries(),
     ...listQuoteWizardI18nEntries(),

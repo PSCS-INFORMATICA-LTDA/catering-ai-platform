@@ -21,6 +21,7 @@ import {
 import QuoteProposalSharePanel from '@/components/quotes/QuoteProposalSharePanel'
 import QuoteTeamAssignmentPanel from '@/components/quotes/QuoteTeamAssignmentPanel'
 import QuoteConvertPanel from '@/components/quotes/QuoteConvertPanel'
+import QuoteInvoicePanel from '@/components/payments/QuoteInvoicePanel'
 import QuoteDetailToolbar from './QuoteDetailToolbar'
 import QuoteFlashBanner from '@/components/QuoteFlashBanner'
 import { Suspense } from 'react'
@@ -29,10 +30,12 @@ import QuoteDebugPanel from './QuoteDebugPanel'
 export default function QuoteDetailView({
   quote,
   canConvert = false,
+  canManageInvoice = false,
   uiLocale,
 }: {
   quote: QuoteDetail
   canConvert?: boolean
+  canManageInvoice?: boolean
   uiLocale?: string | null
 }) {
   const lang = uiLocale === 'en' || uiLocale === 'es' || uiLocale === 'pt'
@@ -178,6 +181,17 @@ export default function QuoteDetailView({
               proposalResponse={quote.proposal_response}
               convertedServiceOrderId={quote.converted_service_order_id}
               canConvert={canConvert}
+            />
+            <QuoteInvoicePanel
+              quoteId={quote.id}
+              canManage={canManageInvoice}
+              language={lang}
+              quoteAccepted={
+                quote.proposal_response === 'accepted' ||
+                quote.quote_status === 'accepted' ||
+                quote.quote_status === 'approved' ||
+                quote.quote_status === 'converted'
+              }
             />
           </div>
           <Suspense fallback={null}>
