@@ -45,6 +45,20 @@ export async function assertCompanyPaypalEligible(companyId: string) {
   return { ok: true as const, company, runtime }
 }
 
+export async function loadCompanyPaymentMethods(companyId: string) {
+  const { data } = await getSupabaseServerClient()
+    .from('company_payment_providers')
+    .select('provider, enabled, environment')
+    .eq('company_id', companyId)
+  const rows = data ?? []
+  return {
+    zelle: rows.some((row) => row.provider === 'zelle' && row.enabled === true),
+    bankTransfer: rows.some(
+      (row) => row.provider === 'bank_transfer' && row.enabled === true,
+    ),
+  }
+}
+
 export async function ensureOfflineMethods(companyId: string) {
   const supabase = getSupabaseServerClient()
   await supabase.from('company_payment_providers').upsert(

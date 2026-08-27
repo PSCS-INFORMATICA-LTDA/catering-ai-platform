@@ -26,6 +26,7 @@ export type OperationalAuditEntityType =
   | 'inventory_document'
   | 'inventory_lot'
   | 'branch'
+  | 'company_payment_provider'
 
 export type OperationalAuditAction =
   | 'quote_version_created'
@@ -79,6 +80,9 @@ export type OperationalAuditAction =
   | 'inventory_document_posted'
   | 'inventory_branch_created'
   | 'inventory_branch_ensured_default'
+  | 'paypal_provider_config_updated'
+  | 'paypal_connection_tested'
+  | 'paypal_webhook_configured'
 
 export async function writeOperationalAudit(input: {
   companyId: string

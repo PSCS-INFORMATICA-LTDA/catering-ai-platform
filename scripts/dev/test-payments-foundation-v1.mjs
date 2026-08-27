@@ -120,7 +120,10 @@ test('DOUBLE_CAPTURE_BLOCKED', () => {
 
 test('PAYMENT_STATUS_IDEMPOTENT', () => {
   assert.match(read('Lib/payments/recordPayment.ts'), /duplicate: true/)
-  assert.match(webhookRoute, /webhook:\$\{eventId\}/)
+  assert.match(
+    read('Lib/payments/paypal/processWebhook.ts'),
+    /webhook:\$\{eventId\}/,
+  )
 })
 
 test('TENANT_ISOLATION', () => {

@@ -192,12 +192,16 @@ export class SandboxPaypalAdapter implements PaypalOrdersAdapter {
   }
 }
 
-export async function getPaypalSandboxAccessToken(): Promise<string | null> {
+export async function getPaypalSandboxAccessToken(input?: {
+  clientId?: string | null
+  clientSecret?: string | null
+}): Promise<string | null> {
   const config = readPaypalRuntimeConfig()
-  const secret = readPaypalClientSecret()
-  if (!config.clientId || !secret) return null
+  const clientId = input?.clientId ?? config.clientId
+  const secret = input?.clientSecret ?? readPaypalClientSecret()
+  if (!clientId || !secret) return null
   try {
-    return await paypalAccessToken(config.clientId, secret)
+    return await paypalAccessToken(clientId, secret)
   } catch {
     return null
   }
@@ -205,11 +209,13 @@ export async function getPaypalSandboxAccessToken(): Promise<string | null> {
 
 export function createPaypalAdapter(
   config: PaypalRuntimeConfig = readPaypalRuntimeConfig(),
+  company?: { clientId?: string | null; clientSecret?: string | null },
 ): PaypalOrdersAdapter {
   assertSandboxOnly(config)
-  if (config.mode === 'sandbox' && config.clientId) {
-    const secret = readPaypalClientSecret()
-    if (secret) return new SandboxPaypalAdapter(config.clientId, secret)
+  const clientId = company?.clientId ?? (config.mode === 'sandbox' ? config.clientId : null)
+  const secret = company?.clientSecret ?? readPaypalClientSecret()
+  if (clientId && secret) {
+    return new SandboxPaypalAdapter(clientId, secret)
   }
   return new MockPaypalAdapter()
 }

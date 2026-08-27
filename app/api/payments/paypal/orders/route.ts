@@ -1,6 +1,7 @@
 import { requireApiPermission, resolveAuthorizedCompanyId } from '@/Lib/auth/requireApi'
 import { ignoreClientAmount, resolveAmountDue } from '@/Lib/payments/amountDue'
 import { assertCompanyPaypalEligible } from '@/Lib/payments/companyProviders'
+import { loadCompanyPaypalCredentials } from '@/Lib/payments/companyPaypal'
 import { createPaypalAdapter } from '@/Lib/payments/paypal/adapter'
 import { readPaypalRuntimeConfig } from '@/Lib/payments/paypal/config'
 import { isPaymentPurpose } from '@/Lib/payments/paymentLinks'
@@ -84,7 +85,11 @@ export async function POST(request: Request) {
   }
 
   const requestId = randomUUID()
-  const adapter = createPaypalAdapter(runtime)
+  const companyPaypal = await loadCompanyPaypalCredentials(companyId)
+  const adapter = createPaypalAdapter(runtime, {
+    clientId: companyPaypal.clientId,
+    clientSecret: companyPaypal.clientSecret,
+  })
   const order = await adapter.createOrder({
     companyId,
     invoiceId,
