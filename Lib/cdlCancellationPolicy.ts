@@ -72,7 +72,16 @@ const COPY: Record<QuoteLanguage, CancellationPolicyCopy> = {
         id: 'weather',
         label: 'Clima',
         items: [
+          'A CDL possui tendas na estrutura para proteção do churrasco.',
           'Em caso de clima, o reagendamento pode ser solicitado até 72 horas antes.',
+        ],
+      },
+      {
+        id: 'yearEnd',
+        label: 'Datas especiais de fim de ano',
+        items: [
+          'Em 24, 25 e 31 de dezembro e 1º de janeiro não há reembolso nem reagendamento.',
+          'Esta regra especial prevalece sobre as janelas de 72h e 48h.',
         ],
       },
       {
@@ -141,7 +150,16 @@ const COPY: Record<QuoteLanguage, CancellationPolicyCopy> = {
         id: 'weather',
         label: 'Weather',
         items: [
+          'CDL has tents in its setup to protect the barbecue.',
           'In case of weather, a reschedule may be requested up to 72 hours before.',
+        ],
+      },
+      {
+        id: 'yearEnd',
+        label: 'Year-end special dates',
+        items: [
+          'On Dec 24, 25, 31 and Jan 1 there is no refund and no reschedule.',
+          'This special rule overrides the 72h and 48h windows.',
         ],
       },
       {
@@ -210,7 +228,16 @@ const COPY: Record<QuoteLanguage, CancellationPolicyCopy> = {
         id: 'weather',
         label: 'Clima',
         items: [
+          'CDL tiene carpas en su estructura para proteger la parrilla.',
           'En caso de clima, la reprogramación puede solicitarse hasta 72 horas antes.',
+        ],
+      },
+      {
+        id: 'yearEnd',
+        label: 'Fechas especiales de fin de año',
+        items: [
+          'El 24, 25 y 31 de diciembre y el 1 de enero no hay reembolso ni reprogramación.',
+          'Esta regla especial prevalece sobre las ventanas de 72h y 48h.',
         ],
       },
       {

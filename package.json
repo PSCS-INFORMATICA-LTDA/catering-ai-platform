@@ -95,6 +95,7 @@
     "apply:dev:bbq-luxury": "node scripts/dev/apply-cdl-bbq-luxury.mjs --apply",
     "test:dev:bbq-luxury": "node scripts/dev/test-cdl-bbq-luxury.mjs",
     "test:dev:caio-field-review": "node scripts/dev/test-caio-field-review-v1.mjs",
+    "test:dev:cdl-final-polish": "node scripts/dev/test-cdl-final-polish-v2.mjs",
     "test:dev:payments-foundation": "node scripts/dev/test-payments-foundation-v1.mjs",
     "apply:dev:additionals-clean-assets": "node scripts/dev/upload-cdl-additional-clean-assets.mjs --apply",
     "test:dev:extras-summary": "node --experimental-strip-types scripts/dev/test-public-quote-extras-summary.mjs",

@@ -101,14 +101,20 @@ export default function PackageSidesEditorial({
               </span>
             </p>
           ) : null}
-          <p
-            data-package-sides-disposables
-            className="public-package-editorial-helper"
-          >
-            {tw(language, 'packageSidesDisposables')}
-          </p>
         </div>
       ) : null}
+      <div data-included-service className="public-package-editorial-upsell">
+        <p className="public-package-editorial-title">
+          {tw(language, 'includedServiceTitle')}
+        </p>
+        <p
+          data-package-sides-disposables
+          data-included-service-body
+          className="public-package-editorial-helper"
+        >
+          {tw(language, 'includedServiceBody')}
+        </p>
+      </div>
     </section>
   )
 }

@@ -74,15 +74,19 @@ test('SERVICE_4_HOURS', () => {
 })
 
 test('DISPOSABLES_COPY', () => {
-  assert.match(editorial, /packageSidesDisposables/)
+  assert.match(editorial, /includedServiceBody/)
   const translations = read('Lib/quoteTranslations.ts')
+  assert.match(translations, /mesas do buffet com rechauds/)
   assert.match(translations, /pratos, talheres e guardanapos/)
+  assert.match(translations, /Buffet table setup with chafing dishes/)
   assert.match(translations, /plates, cutlery and napkins/)
+  assert.match(translations, /mesas de buffet con chafing dishes/)
   assert.match(translations, /platos, cubiertos y servilletas/)
 })
 
 test('GRILL_QUANTITY_INPUT_VISIBLE = NO', () => {
   assert.match(wizard, /data-grill-rental/)
+  assert.match(wizard, /data-grill-rental-mandatory/)
   assert.doesNotMatch(
     wizard,
     /label=\{w\.grillRentalQty\}[\s\S]{0,80}<QuantityField/,

@@ -22,6 +22,7 @@ import {
 import type { CommercialRulesSnapshot } from '@/Lib/supabaseCommercialRules'
 import { sanitizeStoredPublicPhone } from '@/Lib/publicQuote/phone'
 import { isPublicGrillDraftAnswered } from '@/Lib/publicQuote/grillDraft'
+import { resolveGrillRentalFromSite } from '@/Lib/grillRental'
 import {
   publicQuoteActiveStorageKey,
   publicQuoteSessionHasProgress,
@@ -254,6 +255,9 @@ function hydrateDraft(
   const photoReference = draft.grill?.photoReference?.trim() || null
   const grillSetupAnswered = isPublicGrillDraftAnswered(draft.grill, currentStep)
   const hasGrill = grillSetupAnswered ? Boolean(draft.grill?.hasGrill) : false
+  const grillRental = resolveGrillRentalFromSite(
+    grillSetupAnswered ? hasGrill : null,
+  )
 
   return {
     ...base,
@@ -296,8 +300,8 @@ function hydrateDraft(
       : 'not_applicable',
     grillPhotoAnswered: !hasGrill || Boolean(photoReference),
     grillPhotoReference: photoReference,
-    grillRentalRequired: Boolean(draft.grill?.rentalRequired),
-    grillRentalQty: draft.grill?.rentalRequired ? 1 : 0,
+    grillRentalRequired: grillRental?.required ?? false,
+    grillRentalQty: grillRental?.qty ?? 0,
     grillNotes: draft.grill?.notes || '',
     publicConsentVersion: consentVersion,
     cancellationPolicyAccepted: draft.consents?.cancellation?.accepted === true,

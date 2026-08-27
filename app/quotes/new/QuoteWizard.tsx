@@ -64,7 +64,10 @@ import QuoteWizardConfirmationStep from '../../../components/quote-review/QuoteW
 import PublicQuoteConfirmationStep from '../../../components/quote-review/PublicQuoteConfirmationStep'
 import SpecialEventDateNotice from '../../../components/quotes/SpecialEventDateNotice'
 import { CDL_CANCEL_POLICY_VERSION } from '@/Lib/cdlCancellationPolicy'
+import { isSpecialCdlEventDate } from '@/Lib/cdlSeasonalRules'
 import { normalizeGrillRentalQty } from '@/Lib/grillRental'
+import { resolveApplicableMinimum } from '@/Lib/quotes/applyCommercialMinimums'
+import { parseEventDateParts } from '@/Lib/usHolidays'
 import {
   getPublicPackageSidesGroup,
   resolvePackageCatalogImageUrl,
@@ -3383,6 +3386,15 @@ export default function QuoteWizardCore({
                 onSelectionChange={handlePackageSelectionChange}
                 pendingSelectionGroupIds={pendingSelectionGroupIds}
                 onSelect={handlePackageSelect}
+                eventDate={state.eventDate}
+                specialDatePricing={{
+                  active: isSpecialCdlEventDate(state.eventDate),
+                  surchargePercent: commercialRules.holidaySurchargePercent,
+                  minimumOrderAmount: resolveApplicableMinimum(
+                    parseEventDateParts(state.eventDate),
+                    commercialRules,
+                  ).amount,
+                }}
               />
             ) : (
               <QuotePackageStepExplorer
@@ -3552,6 +3564,8 @@ export default function QuoteWizardCore({
                                   grillPhotoAnswered: true,
                                   grillPhotoUrl: null,
                                   grillPhotoReference: null,
+                                  grillRentalRequired: true,
+                                  grillRentalQty: 1,
                                 },
                           )
                         }
@@ -3625,37 +3639,16 @@ export default function QuoteWizardCore({
               ) : null}
 
               {state.grillSetupAnswered && !state.hasGrill ? (
-                <fieldset className="sm:col-span-2" data-grill-rental>
-                  <legend className="cdl-eyebrow">{w.grillRentalRequired}</legend>
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    {[
-                      { value: true, label: w.yes },
-                      { value: false, label: w.no },
-                    ].map((option) => {
-                      const selected = state.grillRentalRequired === option.value
-                      return (
-                        <button
-                          key={String(option.value)}
-                          type="button"
-                          aria-pressed={selected}
-                          onClick={() =>
-                            updateState({
-                              grillRentalRequired: option.value,
-                              grillRentalQty: normalizeGrillRentalQty(option.value),
-                            })
-                          }
-                          className={`min-h-16 rounded-2xl border px-4 py-3 text-sm font-bold transition ${
-                            selected
-                              ? 'border-[var(--brand-primary-2)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,white)] text-[var(--brand-primary)] ring-2 ring-[color-mix(in_srgb,var(--brand-primary-2)_24%,transparent)]'
-                              : 'border-cdl-border bg-cdl-surface text-cdl-title hover:border-cdl-accent-border'
-                          }`}
-                        >
-                          {option.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </fieldset>
+                <div
+                  className="sm:col-span-2 rounded-2xl border border-cdl-border bg-cdl-inset p-5"
+                  data-grill-rental
+                  data-grill-rental-mandatory="true"
+                >
+                  <p className="cdl-eyebrow">{w.grillRentalMandatory}</p>
+                  <p className="mt-2 text-sm font-semibold text-cdl-title">
+                    {w.grillRentalFixedQty}
+                  </p>
+                </div>
               ) : null}
               <div className="sm:col-span-2">
                 <label className="flex flex-col gap-2">

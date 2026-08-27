@@ -43,6 +43,32 @@ export function packageMeatPricePerPerson(
   return Math.max(0, Math.round((price - includedSidesPricePerPerson(packageKey)) * 100) / 100)
 }
 
+/** Display-only. Never mutates catalog `price_per_person`. Sides stay un-doubled. */
+export function specialDateEffectivePackagePrice(input: {
+  packagePricePerPerson: number
+  packageKey?: string | null
+  surchargePercent?: number
+}): {
+  original: number
+  meat: number
+  sides: number
+  effectiveMeat: number
+  effective: number
+} {
+  const original = Math.max(0, Number(input.packagePricePerPerson) || 0)
+  const sides = includedSidesPricePerPerson(input.packageKey)
+  const meat = packageMeatPricePerPerson(original, input.packageKey)
+  const percent = Math.max(0, Number(input.surchargePercent) || 0)
+  const effectiveMeat = Math.round(meat * (1 + percent / 100) * 100) / 100
+  return {
+    original,
+    meat,
+    sides,
+    effectiveMeat,
+    effective: Math.round((effectiveMeat + sides) * 100) / 100,
+  }
+}
+
 export type SpecialEventDateNotice = {
   title: string
   lines: readonly string[]

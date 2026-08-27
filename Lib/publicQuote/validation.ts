@@ -258,11 +258,9 @@ export function validateCompletePublicQuoteDraft(
     }
     draft.grill.rentalRequired = false
     draft.grill.rentalQty = 0
-  } else if (
-    draft.grill.rentalRequired &&
-    draft.grill.rentalQty < 1
-  ) {
-    throw new PublicQuoteHttpError(400, 'invalid_payload')
+  } else {
+    draft.grill.rentalRequired = true
+    draft.grill.rentalQty = 1
   }
 
   draft.event.eventName = deriveEventName(

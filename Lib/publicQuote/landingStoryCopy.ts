@@ -96,7 +96,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'Churrasco preparado', breakAfter: true },
           { text: 'AO VIVO.', highlight: 'red' },
         ],
-        body: 'O chef churrasqueiro fica disponível durante o serviço, preparando o churrasco em tempo real para você e seus convidados.',
+        body: 'O chef churrasqueiro fica disponível durante o serviço, preparando o churrasco em tempo real para você e seus convidados, por até 4 horas.',
       },
       {
         id: 'buffet',
@@ -185,7 +185,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'Brazilian BBQ,', breakAfter: true },
           { text: 'PREPARED LIVE.', highlight: 'red' },
         ],
-        body: 'Your grill chef remains available throughout the service, preparing the barbecue in real time for you and your guests.',
+        body: 'Your grill chef remains available throughout the service, preparing the barbecue in real time for you and your guests, for up to 4 hours.',
       },
       {
         id: 'buffet',
@@ -274,7 +274,7 @@ export const PUBLIC_LANDING_STORY = {
           { text: 'Parrilla brasileña,', breakAfter: true },
           { text: 'PREPARADA EN VIVO.', highlight: 'red' },
         ],
-        body: 'El chef parrillero permanece disponible durante el servicio, preparando la parrilla en tiempo real para ti y tus invitados.',
+        body: 'El chef parrillero permanece disponible durante el servicio, preparando la parrilla en tiempo real para ti y tus invitados, por hasta 4 horas.',
       },
       {
         id: 'buffet',

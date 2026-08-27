@@ -1,4 +1,5 @@
 import { getCancellationPolicyCopy } from '../Lib/cdlCancellationPolicy'
+import { getIncludedServiceCopy } from '../Lib/cdlIncludedService'
 import {
   FOOD_STORAGE_FINE,
   HOLIDAY_MIN_ORDER,
@@ -12,6 +13,7 @@ import {
   MIN_ORDER_WEEKDAY,
   MIN_ORDER_WEEKEND,
 } from '../Lib/cdlCommercialRules'
+import { isSpecialCdlEventDate } from '../Lib/cdlSeasonalRules'
 import { emphasizeRuleText } from '../Lib/emphasizeRuleText'
 import { tQuotesOrders } from '../Lib/i18n/quotesOrders'
 import { tw } from '../Lib/quoteTranslations'
@@ -89,6 +91,7 @@ function importantRuleItems(language: QuoteLanguage) {
       t('ruleFoodFine', { amount: FOOD_STORAGE_FINE }),
     ],
     latePayment: [t('ruleLatePayment', { amount: LATE_PAYMENT_FEE_PER_DAY })],
+    includedService: [getIncludedServiceCopy(language).body],
     decemberJanuary: [
       t('ruleDecJanMin', { amount: MIN_ORDER_DEC_JAN }),
       t('ruleHolidaySurcharge', {
@@ -157,6 +160,13 @@ export function CdlImportantRulesPanel({
           items={rules.latePayment}
           variant={variant}
         />
+        <div data-included-service>
+          <RulesBlock
+            title={getIncludedServiceCopy(locale).title}
+            items={rules.includedService}
+            variant={variant}
+          />
+        </div>
         <RulesBlock
           title={tQuotesOrders(locale, 'docDecJanRuleTitle')}
           items={rules.decemberJanuary}
@@ -170,21 +180,33 @@ export function CdlImportantRulesPanel({
 export function CdlCancellationPolicySection({
   variant = 'pdf',
   language = 'pt',
+  eventDate = null,
 }: {
   variant?: RulesVariant
   language?: string | null
+  eventDate?: string | null
 }) {
   const locale = loc(language)
   const policy = getCancellationPolicyCopy(locale)
   const sections = [...policy.windows, ...policy.extras]
+  const specialDate = isSpecialCdlEventDate(eventDate)
 
   if (variant === 'summary') {
     return (
       <section
         data-cancellation-policy
+        data-special-date-override={specialDate ? 'yes' : 'no'}
         className="rounded-2xl border border-cdl-border bg-cdl-surface p-5 shadow-cdl sm:p-7"
       >
         <h2 className="cdl-section-title-lg">{policy.title}</h2>
+        {specialDate ? (
+          <p
+            data-special-date-cancellation
+            className="mt-3 rounded-xl border border-cdl-border bg-cdl-inset px-4 py-3 text-sm font-semibold text-cdl-title"
+          >
+            {policy.extras.find((section) => section.id === 'yearEnd')?.items[0]}
+          </p>
+        ) : null}
         <div className="cdl-cancel-policy mt-4 space-y-2">
           {sections.map((section, index) => (
             <details

@@ -549,7 +549,11 @@ function ConfirmationProposalBody({
 
       <CdlImportantRulesPanel variant="summary" language={lang} />
 
-      <CdlCancellationPolicySection variant="summary" language={lang} />
+      <CdlCancellationPolicySection
+        variant="summary"
+        language={lang}
+        eventDate={data.eventDate}
+      />
 
       <footer className="quote-proposal-signature">
         <p className="quote-proposal-footer-brand">BBQ AT HOME</p>
@@ -978,6 +982,7 @@ function DefaultProposalBody({
       <CdlCancellationPolicySection
         variant={rulesVariant === 'pdf' ? 'pdf' : 'summary'}
         language={lang}
+        eventDate={data.eventDate}
       />
     </>
   )

@@ -245,6 +245,12 @@ type QuoteStrings = {
     /** Lead before the live SIDE_OPTION labels on the PLUS block. */
     packageSidesChoiceLead: string
     packageSidesDisposables: string
+    includedServiceTitle: string
+    includedServiceBody: string
+    grillRentalMandatory: string
+    grillRentalFixedQty: string
+    specialDatePackageBadge: string
+    specialDatePackageMin: string
     cancellationPolicyAccept: string
     cancellationPolicyRequired: string
     bothConsentsRequired: string
@@ -683,7 +689,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packageSidesUpsellText: 'Adicione guarnições por {price} por pessoa.',
       packageSidesChoiceLead: 'Escolha 1 opção:',
       packageSidesDisposables:
-        'Inclui estrutura de mesa com rechauds e descartáveis: pratos, talheres e guardanapos.',
+        'Estrutura de mesas do buffet com rechauds e descartáveis: pratos, talheres e guardanapos.',
+      includedServiceTitle: 'INCLUÍDO NO SERVIÇO',
+      includedServiceBody:
+        'Estrutura de mesas do buffet com rechauds e descartáveis: pratos, talheres e guardanapos.',
+      grillRentalMandatory: 'Aluguel de churrasqueira necessário',
+      grillRentalFixedQty: '1 churrasqueira',
+      specialDatePackageBadge: 'DATA ESPECIAL · +{pct}%',
+      specialDatePackageMin: 'Pedido mínimo nesta data: {amount}',
       cancellationPolicyAccept: 'Li e concordo com a Política de Cancelamento.',
       cancellationPolicyRequired: 'Aceite a Política de Cancelamento para enviar.',
       bothConsentsRequired:
@@ -739,7 +752,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       attachGrillPhoto: 'Anexar foto da churrasqueira',
       grillPhotoHint:
         'Se o cliente possui churrasqueira própria, confirme se a foto foi recebida para validar tamanho, condição e estrutura antes do evento.',
-      grillRentalRequired: 'Alugar churrasqueira?',
+      grillRentalRequired: 'Aluguel de churrasqueira',
       grillRentalQty: 'Quantidade de churrasqueiras para aluguel',
       grillNotes: 'Observações sobre a churrasqueira',
       grillNotesPlaceholder:
@@ -1145,7 +1158,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packageSidesUpsellText: 'Add sides for {price} per person.',
       packageSidesChoiceLead: 'Choose 1 option:',
       packageSidesDisposables:
-        'Includes table setup with chafing dishes and disposables: plates, cutlery and napkins.',
+        'Buffet table setup with chafing dishes and disposables: plates, cutlery and napkins.',
+      includedServiceTitle: 'INCLUDED IN THE SERVICE',
+      includedServiceBody:
+        'Buffet table setup with chafing dishes and disposables: plates, cutlery and napkins.',
+      grillRentalMandatory: 'Grill rental required',
+      grillRentalFixedQty: '1 grill',
+      specialDatePackageBadge: 'SPECIAL DATE · +{pct}%',
+      specialDatePackageMin: 'Minimum order on this date: {amount}',
       cancellationPolicyAccept: 'I have read and agree to the Cancellation Policy.',
       cancellationPolicyRequired: 'Accept the Cancellation Policy to submit.',
       bothConsentsRequired:
@@ -1200,7 +1220,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       attachGrillPhoto: 'Attach grill photo',
       grillPhotoHint:
         'If the customer has their own grill, confirm the photo was received to validate size, condition and structure before the event.',
-      grillRentalRequired: 'Rent a grill?',
+      grillRentalRequired: 'Grill rental',
       grillRentalQty: 'Number of grills to rent',
       grillNotes: 'Grill notes',
       grillNotesPlaceholder:
@@ -1607,7 +1627,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packageSidesUpsellText: 'Agrega guarniciones por {price} por persona.',
       packageSidesChoiceLead: 'Elige 1 opción:',
       packageSidesDisposables:
-        'Incluye estructura de mesa con chafing dishes y desechables: platos, cubiertos y servilletas.',
+        'Estructura de mesas de buffet con chafing dishes y desechables: platos, cubiertos y servilletas.',
+      includedServiceTitle: 'INCLUIDO EN EL SERVICIO',
+      includedServiceBody:
+        'Estructura de mesas de buffet con chafing dishes y desechables: platos, cubiertos y servilletas.',
+      grillRentalMandatory: 'Alquiler de parrilla obligatorio',
+      grillRentalFixedQty: '1 parrilla',
+      specialDatePackageBadge: 'FECHA ESPECIAL · +{pct}%',
+      specialDatePackageMin: 'Pedido mínimo en esta fecha: {amount}',
       cancellationPolicyAccept: 'He leído y acepto la Política de Cancelación.',
       cancellationPolicyRequired: 'Acepta la Política de Cancelación para enviar.',
       bothConsentsRequired:
@@ -1662,7 +1689,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       attachGrillPhoto: 'Adjuntar foto de la parrilla',
       grillPhotoHint:
         'Si el cliente tiene parrilla propia, confirme si la foto fue recibida para validar tamaño, condición y estructura antes del evento.',
-      grillRentalRequired: '¿Alquilar parrilla?',
+      grillRentalRequired: 'Alquiler de parrilla',
       grillRentalQty: 'Cantidad de parrillas para alquiler',
       grillNotes: 'Observaciones sobre la parrilla',
       grillNotesPlaceholder:

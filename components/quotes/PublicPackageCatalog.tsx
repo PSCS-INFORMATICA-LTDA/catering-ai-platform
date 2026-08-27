@@ -20,6 +20,16 @@ import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import PackageIncludedOptions from '@/components/quotes/PackageIncludedOptions'
 import PackageCatalogHeroArt from '@/components/quotes/PackageCatalogHeroArt'
 import PackageSidesEditorial from '@/components/quotes/PackageSidesEditorial'
+import {
+  isSpecialCdlEventDate,
+  specialDateEffectivePackagePrice,
+} from '@/Lib/cdlSeasonalRules'
+
+export type PackageSpecialDatePricing = {
+  active: boolean
+  surchargePercent: number
+  minimumOrderAmount: number
+}
 
 type PackageSidesGroup = 'with_sides' | 'without_sides'
 
@@ -155,6 +165,7 @@ function PackageCatalogCard({
   active,
   language,
   sidesPricePerPerson,
+  specialDatePricing,
   onClick,
 }: {
   pkg: PublicPackageCard
@@ -162,6 +173,7 @@ function PackageCatalogCard({
   active: boolean
   language: QuoteLanguage
   sidesPricePerPerson: number
+  specialDatePricing?: PackageSpecialDatePricing | null
   onClick: () => void
 }) {
   const name = getPackageCatalogName(pkg, language)
@@ -184,6 +196,19 @@ function PackageCatalogCard({
     sidesPricing?.mode === 'breakdown' &&
     sidesPricing.basePricePerPerson != null &&
     sidesPricing.sidesPricePerPerson > 0
+  const specialActive = Boolean(specialDatePricing?.active)
+  const specialPrices = specialActive
+    ? specialDateEffectivePackagePrice({
+        packagePricePerPerson: displayTotal,
+        packageKey: pkg.package_key,
+        surchargePercent: specialDatePricing?.surchargePercent,
+      })
+    : null
+  const packageLineOriginal = showGarnishLine
+    ? sidesPricing.basePricePerPerson!
+    : packagePrice
+  const packageLineDisplay = specialPrices?.effectiveMeat ?? packageLineOriginal
+  const totalDisplay = specialPrices?.effective ?? displayTotal
 
   return (
     <button
@@ -215,6 +240,16 @@ function PackageCatalogCard({
         >
           {name}
         </span>
+        {specialActive ? (
+          <span
+            data-special-date-package-badge
+            className="mt-1 inline-flex w-fit rounded-full bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-[var(--brand-primary)]"
+          >
+            {tw(language, 'specialDatePackageBadge', {
+              pct: specialDatePricing?.surchargePercent ?? 100,
+            })}
+          </span>
+        ) : null}
         {priceOnRequest ? (
           <span className="text-sm font-semibold text-[var(--brand-primary)] sm:text-base">
             {formatPackageCatalogPriceLabel(pkg, language, money)}
@@ -230,8 +265,12 @@ function PackageCatalogCard({
               </span>
               <span className="min-w-0 break-words text-right font-semibold tabular-nums text-cdl-title">
                 <span className="public-package-price-unit">
-                  {money(showGarnishLine ? sidesPricing.basePricePerPerson! : packagePrice)}{' '}
-                  / {perPerson}
+                  {specialActive ? (
+                    <span className="mr-2 text-xs font-semibold text-cdl-muted line-through">
+                      {money(packageLineOriginal)}
+                    </span>
+                  ) : null}
+                  {money(packageLineDisplay)} / {perPerson}
                 </span>
               </span>
             </span>
@@ -253,10 +292,19 @@ function PackageCatalogCard({
               </span>
               <span
                 data-package-display-total
+                data-package-effective-price={specialActive ? 'true' : 'false'}
                 className="min-w-0 break-words text-right text-base font-black tabular-nums text-[var(--brand-primary)]"
               >
                 <span className="public-package-price-unit">
-                  {money(displayTotal)} / {perPerson}
+                  {specialActive ? (
+                    <span
+                      data-package-original-price
+                      className="mr-2 text-xs font-semibold text-cdl-muted line-through"
+                    >
+                      {money(displayTotal)}
+                    </span>
+                  ) : null}
+                  {money(totalDisplay)} / {perPerson}
                 </span>
               </span>
             </span>
@@ -279,6 +327,8 @@ export default function PublicPackageCatalog({
   onSelectionChange,
   pendingSelectionGroupIds,
   onSelect,
+  eventDate,
+  specialDatePricing,
 }: {
   packagesWithoutSides: PublicPackageCard[]
   packagesWithSides: PublicPackageCard[]
@@ -291,7 +341,14 @@ export default function PublicPackageCatalog({
   onSelectionChange: (groupId: string, itemId: string) => void
   pendingSelectionGroupIds: string[]
   onSelect: (id: string) => void
+  eventDate?: string | null
+  specialDatePricing?: PackageSpecialDatePricing | null
 }) {
+  const resolvedSpecial: PackageSpecialDatePricing | null =
+    specialDatePricing ??
+    (isSpecialCdlEventDate(eventDate)
+      ? { active: true, surchargePercent: 100, minimumOrderAmount: 2000 }
+      : null)
   const t = getQuoteStrings(language)
   const optionsRef = useRef<HTMLDivElement>(null)
   const [openGroup, setOpenGroup] = useState<PackageSidesGroup | null>(() => {
@@ -350,6 +407,7 @@ export default function PublicPackageCatalog({
                 active={active}
                 language={language}
                 sidesPricePerPerson={sidesPricePerPerson}
+                specialDatePricing={resolvedSpecial}
                 onClick={() => handlePackageClick(pkg.id)}
               />
               {active && expanded && selectableGroups.length > 0 ? (
@@ -428,6 +486,16 @@ export default function PublicPackageCatalog({
         formatMoney={(value) => formatMoney(value, language, 'USD')}
         optionGroups={sideOptionGroups}
       />
+      {resolvedSpecial?.active ? (
+        <p
+          data-special-date-package-min
+          className="rounded-2xl border border-cdl-border bg-cdl-inset px-4 py-3 text-sm font-semibold text-cdl-title"
+        >
+          {tw(language, 'specialDatePackageMin', {
+            amount: formatMoney(resolvedSpecial.minimumOrderAmount, language, 'USD'),
+          })}
+        </p>
+      ) : null}
       <div
         data-package-group-controls
         data-expanded-package-id={expandedPackageId ?? ''}
