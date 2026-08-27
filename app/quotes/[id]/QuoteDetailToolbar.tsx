@@ -1,10 +1,16 @@
 'use client'
 
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import DeleteQuoteButton from '@/components/DeleteQuoteButton'
-import QuotePdfDownload from './QuotePdfDownload'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
+
+const QuotePdfDownload = dynamic(() => import('./QuotePdfDownload'), {
+  loading: () => (
+    <div className="h-12 min-w-[8rem] animate-pulse rounded-xl bg-neutral-100" />
+  ),
+})
 
 export default function QuoteDetailToolbar({
   quoteId,

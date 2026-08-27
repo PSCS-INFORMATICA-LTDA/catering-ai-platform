@@ -32,14 +32,16 @@ export default function QuoteConvertPanel({
   if (proposalResponse !== 'accepted' && !serviceOrderId) return null
 
   async function handleConvert() {
+    if (busy) return
+    setBusy(true)
+    setError(null)
     const confirmMessage = quoteNumber
       ? `${tQuotesOrders(locale, 'convertConfirm')} (${quoteNumber})`
       : tQuotesOrders(locale, 'convertConfirm')
     if (!window.confirm(confirmMessage)) {
+      setBusy(false)
       return
     }
-    setBusy(true)
-    setError(null)
     try {
       const response = await fetch(`/api/quotes/${quoteId}/convert`, {
         method: 'POST',

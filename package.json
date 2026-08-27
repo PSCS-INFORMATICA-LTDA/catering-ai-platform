@@ -30,6 +30,7 @@
     "test:dev:i18n-registry": "node --experimental-strip-types scripts/dev/test-i18n-registry.mjs",
     "test:dev:quotes-orders:preflight": "node scripts/dev/preflight-quotes-orders.mjs",
     "test:dev:quotes-orders:conversion": "node scripts/dev/test-quote-to-order-conversion.mjs",
+    "test:dev:quote-fast-actions": "node scripts/dev/test-quote-fast-actions-v1.mjs",
     "test:dev:quotes-orders:snapshot-total": "node scripts/dev/test-order-snapshot-total.mjs",
     "test:dev:quotes-orders:list-filters": "node scripts/dev/test-quotes-list-filters.mjs",
     "test:dev:commercial-minimums": "node scripts/dev/test-commercial-minimums.mjs",

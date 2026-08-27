@@ -18,14 +18,37 @@ import {
   getChargedMilesFromSnapshot,
   readQuoteSnapshot,
 } from '../../../Lib/readQuoteSnapshot'
-import QuoteProposalSharePanel from '@/components/quotes/QuoteProposalSharePanel'
-import QuoteTeamAssignmentPanel from '@/components/quotes/QuoteTeamAssignmentPanel'
 import QuoteConvertPanel from '@/components/quotes/QuoteConvertPanel'
-import QuoteInvoicePanel from '@/components/payments/QuoteInvoicePanel'
 import QuoteDetailToolbar from './QuoteDetailToolbar'
 import QuoteFlashBanner from '@/components/QuoteFlashBanner'
-import { Suspense } from 'react'
 import QuoteDebugPanel from './QuoteDebugPanel'
+import dynamic from 'next/dynamic'
+import { Suspense } from 'react'
+
+const QuoteProposalSharePanel = dynamic(
+  () => import('@/components/quotes/QuoteProposalSharePanel'),
+  {
+    loading: () => (
+      <div className="mt-4 h-24 animate-pulse rounded-2xl bg-neutral-100" />
+    ),
+  },
+)
+const QuoteTeamAssignmentPanel = dynamic(
+  () => import('@/components/quotes/QuoteTeamAssignmentPanel'),
+  {
+    loading: () => (
+      <div className="mt-4 h-20 animate-pulse rounded-2xl bg-neutral-100" />
+    ),
+  },
+)
+const QuoteInvoicePanel = dynamic(
+  () => import('@/components/payments/QuoteInvoicePanel'),
+  {
+    loading: () => (
+      <div className="mt-4 h-20 animate-pulse rounded-2xl bg-neutral-100" />
+    ),
+  },
+)
 
 export default function QuoteDetailView({
   quote,
