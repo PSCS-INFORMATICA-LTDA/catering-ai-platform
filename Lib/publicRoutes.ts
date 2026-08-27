@@ -13,6 +13,8 @@ const SEGMENT_PUBLIC_PREFIXES = [
   '/confirmacao-equipe',
   '/confirmacao-guarnicao',
   '/conferencia-saida',
+  '/pay',
+  '/api/payments/paypal',
   '/api/public',
   '/cdl/video',
   '/cdl/brand',

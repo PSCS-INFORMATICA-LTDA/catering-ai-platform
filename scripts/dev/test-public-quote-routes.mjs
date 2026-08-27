@@ -55,6 +55,13 @@ test('/quote-admin is not public', () => {
   assert.equal(isPublicQuotePathname('/quote-admin'), false)
 })
 
+test('/pay token page is public', () => {
+  assert.equal(isPublicRoutePathname('/pay/abc'), true)
+  assert.equal(isPublicRoutePathname('/api/payments/paypal/webhook'), true)
+  assert.equal(isPublicRoutePathname('/api/payments/paypal/orders'), true)
+  assert.equal(isPublicRoutePathname('/api/invoices/abc'), false)
+})
+
 test('/cdl/video how-it-works file is public', () => {
   assert.equal(
     isPublicRoutePathname('/cdl/video/cdl-como-funciona.mp4'),

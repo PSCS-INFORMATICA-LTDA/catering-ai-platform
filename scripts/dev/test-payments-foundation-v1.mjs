@@ -175,6 +175,8 @@ test('SECURE TOKEN NOT RAW IDS', () => {
   assert.match(read('Lib/payments/paymentLinks.ts'), /randomBytes\(32\)/)
   assert.match(read('app/pay/[token]/page.tsx'), /resolvePaymentLink/)
   assert.doesNotMatch(read('app/pay/[token]/page.tsx'), /invoice_id sequencial/)
+  assert.match(read('Lib/publicRoutes.ts'), /'\/pay'/)
+  assert.match(read('Lib/publicRoutes.ts'), /'\/api\/payments\/paypal'/)
 })
 
 test('NO CARD VAULT / FEE / COUPON', () => {
