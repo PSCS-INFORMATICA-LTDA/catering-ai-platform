@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/generate-build-info.mjs",
+    "prebuild": "node scripts/generate-build-info.mjs && node --experimental-strip-types scripts/guard-sso-dev-supabase.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -172,7 +172,10 @@
     "test:dev:inventory-os-integration": "node scripts/dev/test-inventory-os-integration.mjs",
     "test:dev:inventory-jde-foundation": "node scripts/dev/test-inventory-jde-foundation.mjs",
     "test:dev:inventory-all": "node scripts/dev/test-inventory-core.mjs && node scripts/dev/test-inventory-order-posting.mjs && node scripts/dev/test-inventory-jde-domain.mjs && node scripts/dev/test-inventory-os-integration.mjs && node scripts/dev/test-inventory-jde-foundation.mjs && node scripts/dev/test-inventory-reconciliation.mjs",
-    "rebuild:dev:inventory-balances": "node scripts/dev/rebuild-inventory-balances.mjs"
+    "rebuild:dev:inventory-balances": "node scripts/dev/rebuild-inventory-balances.mjs",
+    "test:pscs-one-sso": "node --experimental-strip-types scripts/dev/test-pscs-one-sso-reason.mjs && node --experimental-strip-types scripts/dev/test-pscs-one-callback-flow.mjs && node --experimental-strip-types scripts/dev/test-sso-dev-supabase-guard.mjs",
+    "alias:dev:pin": "node scripts/dev/pin-catering-dev-alias.mjs",
+    "inspect:dev:sso-alias": "node scripts/dev/inspect-public-sso-aliases.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
