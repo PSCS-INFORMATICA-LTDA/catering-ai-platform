@@ -1,3 +1,4 @@
+import { recoverPendingInviteIfNeeded } from '@/Lib/auth/acceptInvite'
 import { createClient } from '@/Lib/supabase/server'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { fallbackPermissionsForRole } from '@/Lib/auth/permissions'
@@ -32,6 +33,23 @@ export async function getAuthSession(): Promise<AuthSessionContext | null> {
   if (!user) return null
 
   const admin = getSupabaseServerClient()
+
+  if (user.email) {
+    const { count: membershipCount } = await admin
+      .from('company_memberships')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+
+    await recoverPendingInviteIfNeeded({
+      authUserId: user.id,
+      email: user.email,
+      displayName:
+        (user.user_metadata?.full_name as string | undefined) ??
+        (user.user_metadata?.name as string | undefined) ??
+        null,
+      membershipsCount: membershipCount ?? 0,
+    })
+  }
 
   let { data: appUserRow } = await admin
     .from('app_users')

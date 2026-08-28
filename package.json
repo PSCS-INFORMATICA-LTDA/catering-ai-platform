@@ -8,6 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test Lib/auth/acceptInviteCore.test.mjs Lib/auth/appOrigin.test.mjs Lib/auth/inviteSendCore.test.mjs scripts/test-invite-acceptance-matrix.mjs",
     "seed:dev:functional:dry": "node scripts/dev/seed-catering-functional-validation.mjs --dry-run",
     "seed:dev:functional": "node scripts/dev/seed-catering-functional-validation.mjs --apply",
     "verify:dev:functional": "node scripts/dev/verify-catering-functional-validation.mjs"
