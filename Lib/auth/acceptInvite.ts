@@ -1,6 +1,7 @@
 import {
   normalizeInviteEmail,
-  selectPendingInvite,
+  resolveMembershipInviteRole,
+  selectPendingInviteResult,
   validateInviteForUser,
   type UserInviteRow,
 } from '@/Lib/auth/acceptInviteCore'
@@ -31,9 +32,17 @@ export type AcceptInviteResult =
       membershipId: string | null
     }
   | { status: 'no_pending_invite' }
+  | { status: 'ambiguous_pending_invites'; companyIds: string[] }
   | { status: 'email_mismatch' }
   | { status: 'expired'; inviteId: string }
   | { status: 'revoked'; inviteId: string }
+  | {
+      status: 'role_conflict'
+      inviteId: string
+      companyId: string
+      existingRole: CompanyRole
+      inviteRole: CompanyRole
+    }
   | { status: 'error'; message: string }
 
 function displayNameFrom(input: AcceptInviteInput): string {
@@ -156,22 +165,39 @@ async function ensureAppUser(
   return created.id as string
 }
 
+type EnsureMembershipResult =
+  | { ok: true; membershipId: string }
+  | {
+      ok: false
+      conflict: { existingRole: CompanyRole; inviteRole: CompanyRole }
+    }
+
 async function ensureMembership(
   authUserId: string,
   companyId: string,
   role: CompanyRole,
-): Promise<string> {
+): Promise<EnsureMembershipResult> {
   const admin = getSupabaseServerClient()
 
   const { data: existing } = await admin
     .from('company_memberships')
-    .select('id')
+    .select('id, role')
     .eq('company_id', companyId)
     .eq('user_id', authUserId)
     .maybeSingle()
 
   if (existing?.id) {
-    return existing.id as string
+    const resolution = resolveMembershipInviteRole(existing.role as string, role)
+    if (resolution.status === 'conflict') {
+      return {
+        ok: false,
+        conflict: {
+          existingRole: resolution.existingRole,
+          inviteRole: resolution.inviteRole,
+        },
+      }
+    }
+    return { ok: true, membershipId: existing.id as string }
   }
 
   const { data: created, error } = await admin
@@ -189,19 +215,29 @@ async function ensureMembership(
   if (error?.code === '23505') {
     const { data: raced } = await admin
       .from('company_memberships')
-      .select('id')
+      .select('id, role')
       .eq('company_id', companyId)
       .eq('user_id', authUserId)
       .maybeSingle()
     if (!raced?.id) throw new Error(error.message)
-    return raced.id as string
+    const resolution = resolveMembershipInviteRole(raced.role as string, role)
+    if (resolution.status === 'conflict') {
+      return {
+        ok: false,
+        conflict: {
+          existingRole: resolution.existingRole,
+          inviteRole: resolution.inviteRole,
+        },
+      }
+    }
+    return { ok: true, membershipId: raced.id as string }
   }
 
   if (error || !created?.id) {
     throw new Error(error?.message ?? 'Failed to create membership')
   }
 
-  return created.id as string
+  return { ok: true, membershipId: created.id as string }
 }
 
 async function markInviteAccepted(
@@ -229,6 +265,10 @@ async function markInviteAccepted(
 /**
  * Consumes a pending user_invites row for the authenticated identity.
  * Company and role always come from the invite row (never client metadata).
+ *
+ * F-003 (transactionality): provisioning steps are intentionally sequential and
+ * retry-safe without an RPC/DB transaction in this release. A bounded follow-up
+ * may add atomic accept if partial-state frequency warrants it.
  */
 export async function acceptPendingInvite(
   input: AcceptInviteInput,
@@ -239,9 +279,16 @@ export async function acceptPendingInvite(
 
   try {
     const invites = await findPendingInvitesForEmail(input.email)
-    const selected = selectPendingInvite(invites, input.email)
+    const selection = selectPendingInviteResult(invites, input.email)
 
-    if (!selected) {
+    if (selection.status === 'ambiguous') {
+      return {
+        status: 'ambiguous_pending_invites',
+        companyIds: selection.companyIds,
+      }
+    }
+
+    if (selection.status === 'none') {
       const accepted = await findAcceptedInviteForUser(
         input.authUserId,
         input.email,
@@ -273,6 +320,7 @@ export async function acceptPendingInvite(
       return { status: 'no_pending_invite' }
     }
 
+    const selected = selection.invite
     const validation = validateInviteForUser(selected, input.email)
     if (!validation.ok) {
       if (validation.reason === 'expired') {
@@ -293,7 +341,19 @@ export async function acceptPendingInvite(
     const companyId = invite.company_id
 
     const appUserId = await ensureAppUser(input, companyId)
-    const membershipId = await ensureMembership(input.authUserId, companyId, role)
+    const membershipResult = await ensureMembership(input.authUserId, companyId, role)
+
+    if (!membershipResult.ok) {
+      return {
+        status: 'role_conflict',
+        inviteId: invite.id,
+        companyId,
+        existingRole: membershipResult.conflict.existingRole,
+        inviteRole: membershipResult.conflict.inviteRole,
+      }
+    }
+
+    const membershipId = membershipResult.membershipId
     const transitioned = await markInviteAccepted(invite.id, input.authUserId)
 
     if (!transitioned) {
@@ -334,7 +394,8 @@ export async function recoverPendingInviteIfNeeded(input: {
   if (input.membershipsCount > 0) return null
 
   const invites = await findPendingInvitesForEmail(input.email)
-  if (!selectPendingInvite(invites, input.email)) return null
+  const selection = selectPendingInviteResult(invites, input.email)
+  if (selection.status !== 'selected') return null
 
   return acceptPendingInvite({
     authUserId: input.authUserId,

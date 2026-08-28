@@ -15,6 +15,16 @@ export type InviteValidationResult =
   | { ok: true; invite: UserInviteRow }
   | { ok: false; reason: 'no_pending_invite' | 'email_mismatch' | 'expired' | 'revoked' }
 
+export type SelectPendingInviteResult =
+  | { status: 'selected'; invite: UserInviteRow }
+  | { status: 'none' }
+  | { status: 'ambiguous'; companyIds: string[] }
+
+export type MembershipInviteRoleResult =
+  | { status: 'no_existing' }
+  | { status: 'match'; role: CompanyRole }
+  | { status: 'conflict'; existingRole: CompanyRole; inviteRole: CompanyRole }
+
 const ALLOWED_ROLES: CompanyRole[] = [
   'owner',
   'admin',
@@ -34,23 +44,56 @@ export function isAllowedInviteRole(role: string): role is CompanyRole {
   return (ALLOWED_ROLES as string[]).includes(role)
 }
 
+function filterActivePendingInvites(
+  invites: UserInviteRow[],
+  authEmail: string,
+  now: Date,
+): UserInviteRow[] {
+  const normalized = normalizeInviteEmail(authEmail)
+  return invites
+    .filter((invite) => invite.status === 'pending')
+    .filter((invite) => normalizeInviteEmail(invite.email) === normalized)
+    .filter((invite) => !invite.revoked_at)
+    .filter((invite) => new Date(invite.expires_at) > now)
+}
+
+function sortPendingInvites(invites: UserInviteRow[]): UserInviteRow[] {
+  return [...invites].sort((a, b) => {
+    const byExpiry =
+      new Date(b.expires_at).getTime() - new Date(a.expires_at).getTime()
+    if (byExpiry !== 0) return byExpiry
+    return a.id.localeCompare(b.id)
+  })
+}
+
+/**
+ * Selects a single pending invite when unambiguous.
+ * Fails closed when multiple active invites span different companies.
+ */
+export function selectPendingInviteResult(
+  invites: UserInviteRow[],
+  authEmail: string,
+  now: Date = new Date(),
+): SelectPendingInviteResult {
+  const pending = sortPendingInvites(filterActivePendingInvites(invites, authEmail, now))
+
+  if (pending.length === 0) return { status: 'none' }
+
+  const companyIds = [...new Set(pending.map((invite) => invite.company_id))]
+  if (companyIds.length > 1) {
+    return { status: 'ambiguous', companyIds }
+  }
+
+  return { status: 'selected', invite: pending[0] }
+}
+
 export function selectPendingInvite(
   invites: UserInviteRow[],
   authEmail: string,
   now: Date = new Date(),
 ): UserInviteRow | null {
-  const normalized = normalizeInviteEmail(authEmail)
-  const pending = invites
-    .filter((invite) => invite.status === 'pending')
-    .filter((invite) => normalizeInviteEmail(invite.email) === normalized)
-    .filter((invite) => !invite.revoked_at)
-    .filter((invite) => new Date(invite.expires_at) > now)
-    .sort(
-      (a, b) =>
-        new Date(b.expires_at).getTime() - new Date(a.expires_at).getTime(),
-    )
-
-  return pending[0] ?? null
+  const result = selectPendingInviteResult(invites, authEmail, now)
+  return result.status === 'selected' ? result.invite : null
 }
 
 export function validateInviteForUser(
@@ -79,6 +122,24 @@ export function validateInviteForUser(
   }
 
   return { ok: true, invite }
+}
+
+export function resolveMembershipInviteRole(
+  existingRole: string | null | undefined,
+  inviteRole: CompanyRole,
+): MembershipInviteRoleResult {
+  if (!existingRole) return { status: 'no_existing' }
+  if (!isAllowedInviteRole(existingRole)) {
+    return { status: 'conflict', existingRole: 'viewer', inviteRole }
+  }
+  if (existingRole === inviteRole) {
+    return { status: 'match', role: inviteRole }
+  }
+  return {
+    status: 'conflict',
+    existingRole,
+    inviteRole,
+  }
 }
 
 export function shouldAttemptInviteRecovery(input: {

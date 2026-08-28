@@ -1,4 +1,8 @@
-import { inviteAuthCallbackUrl } from '@/Lib/auth/appOrigin'
+import { AppOriginConfigError, inviteAuthCallbackUrl } from '@/Lib/auth/appOrigin'
+import {
+  AUTH_INVITE_FAILURE_HTTP_STATUS,
+  pendingInviteAuthFailureRevokeFields,
+} from '@/Lib/auth/inviteSendCore'
 import { canInviteUsers, canManageUsers } from '@/Lib/auth/permissions'
 import {
   rejectSpoofedCompanyId,
@@ -152,6 +156,18 @@ export async function POST(request: Request) {
   }
 
   const companyId = resolveAuthorizedCompanyId(session)
+
+  let redirectTo: string
+  try {
+    redirectTo = inviteAuthCallbackUrl(request)
+  } catch (error) {
+    const message =
+      error instanceof AppOriginConfigError
+        ? error.message
+        : 'configured app origin required for invite redirects'
+    return Response.json({ error: message }, { status: 500 })
+  }
+
   const admin = getSupabaseServerClient()
   const { data: invite, error } = await admin
     .from('user_invites')
@@ -167,11 +183,46 @@ export async function POST(request: Request) {
 
   if (error) return Response.json({ error: error.message }, { status: 500 })
 
-  const redirectTo = inviteAuthCallbackUrl(request)
   const { error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
     redirectTo,
     data: { invited_company_id: companyId, invited_role: role },
   })
+
+  if (inviteErr) {
+    const now = new Date().toISOString()
+    const { data: revokedInvite, error: revokeErr } = await admin
+      .from('user_invites')
+      .update(pendingInviteAuthFailureRevokeFields(now))
+      .eq('id', invite.id)
+      .eq('status', 'pending')
+      .select('id, email, role, status, expires_at, revoked_at')
+      .maybeSingle()
+
+    await writeAdminAudit({
+      companyId,
+      actorUserId: session.userId,
+      action: 'users.invite',
+      entityType: 'user_invites',
+      entityId: invite.id,
+      metadata: {
+        email,
+        role,
+        redirectTo,
+        inviteError: inviteErr.message,
+        inviteRevoked: Boolean(revokedInvite?.id),
+        revokeError: revokeErr?.message ?? null,
+      },
+    })
+
+    return Response.json(
+      {
+        error: 'auth invite delivery failed',
+        inviteId: invite.id,
+        inviteStatus: revokedInvite?.status ?? 'revoked',
+      },
+      { status: AUTH_INVITE_FAILURE_HTTP_STATUS },
+    )
+  }
 
   await writeAdminAudit({
     companyId,
@@ -183,7 +234,7 @@ export async function POST(request: Request) {
       email,
       role,
       redirectTo,
-      inviteError: inviteErr?.message ?? null,
+      inviteError: null,
     },
   })
 

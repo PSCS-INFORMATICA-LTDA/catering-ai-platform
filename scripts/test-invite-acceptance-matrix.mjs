@@ -4,10 +4,18 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  resolveMembershipInviteRole,
   selectPendingInvite,
+  selectPendingInviteResult,
   shouldAttemptInviteRecovery,
   validateInviteForUser,
 } from '../Lib/auth/acceptInviteCore.ts'
+import { resolveAppOrigin } from '../Lib/auth/appOrigin.ts'
+import {
+  isPendingInviteActionable,
+  pendingInviteAuthFailureRevokeFields,
+  resolveAuthInviteSendHttpStatus,
+} from '../Lib/auth/inviteSendCore.ts'
 
 const NOW = new Date('2026-08-28T12:00:00.000Z')
 
@@ -101,5 +109,67 @@ describe('invite acceptance matrix', () => {
     const first = selectPendingInvite([invite], 'user@example.com', NOW)
     const second = selectPendingInvite([invite], 'user@example.com', NOW)
     assert.deepEqual(first, second)
+  })
+
+  it('auth invite failure returns non-2xx', () => {
+    assert.equal(resolveAuthInviteSendHttpStatus('delivery failed'), 502)
+  })
+
+  it('failed auth invite is not left actionable as pending', () => {
+    const patch = pendingInviteAuthFailureRevokeFields('2026-08-28T18:30:00.000Z')
+    assert.equal(
+      isPendingInviteActionable({ status: patch.status, revoked_at: patch.revoked_at }),
+      false,
+    )
+  })
+
+  it('deployed canonical origin ignores untrusted request host', () => {
+    const result = resolveAppOrigin({
+      nextPublicAppUrl: 'https://catering-ai-agenda-dev.vercel.app',
+      requestOrigin: 'https://evil.example.com',
+      isDeployed: true,
+    })
+    assert.equal(result.ok, true)
+    if (result.ok) {
+      assert.equal(result.origin, 'https://catering-ai-agenda-dev.vercel.app')
+    }
+  })
+
+  it('same-role membership is idempotent', () => {
+    const result = resolveMembershipInviteRole('operator', 'operator')
+    assert.equal(result.status, 'match')
+  })
+
+  it('different-role membership is explicit conflict', () => {
+    const result = resolveMembershipInviteRole('operator', 'admin')
+    assert.equal(result.status, 'conflict')
+  })
+
+  it('multi-company pending invites fail closed', () => {
+    const result = selectPendingInviteResult(
+      [
+        {
+          id: 'inv-a',
+          company_id: 'co-a',
+          email: 'danielle@example.com',
+          role: 'admin',
+          status: 'pending',
+          expires_at: '2026-09-10T12:00:00.000Z',
+          revoked_at: null,
+        },
+        {
+          id: 'inv-b',
+          company_id: 'co-b',
+          email: 'danielle@example.com',
+          role: 'admin',
+          status: 'pending',
+          expires_at: '2026-09-11T12:00:00.000Z',
+          revoked_at: null,
+        },
+      ],
+      'danielle@example.com',
+      NOW,
+    )
+    assert.equal(result.status, 'ambiguous')
   })
 })

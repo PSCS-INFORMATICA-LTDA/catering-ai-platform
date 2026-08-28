@@ -2,7 +2,9 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   normalizeInviteEmail,
+  resolveMembershipInviteRole,
   selectPendingInvite,
+  selectPendingInviteResult,
   shouldAttemptInviteRecovery,
   validateInviteForUser,
 } from './acceptInviteCore.ts'
@@ -66,6 +68,78 @@ describe('selectPendingInvite', () => {
       NOW,
     )
     assert.equal(selected, null)
+  })
+
+  it('uses id tie-breaker for same-company duplicate invites', () => {
+    const selected = selectPendingInvite(
+      [
+        invite({
+          id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          expires_at: '2026-09-03T12:00:00.000Z',
+        }),
+        invite({
+          id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          expires_at: '2026-09-03T12:00:00.000Z',
+        }),
+      ],
+      'user@example.com',
+      NOW,
+    )
+    assert.equal(selected?.id, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
+  })
+
+  it('fails closed for multiple active invites across companies', () => {
+    const result = selectPendingInviteResult(
+      [
+        invite({
+          id: 'co-a',
+          company_id: '11111111-1111-4111-8111-111111111111',
+        }),
+        invite({
+          id: 'co-b',
+          company_id: '22222222-2222-4222-8222-222222222222',
+        }),
+      ],
+      'user@example.com',
+      NOW,
+    )
+    assert.equal(result.status, 'ambiguous')
+    if (result.status === 'ambiguous') {
+      assert.deepEqual(result.companyIds.sort(), [
+        '11111111-1111-4111-8111-111111111111',
+        '22222222-2222-4222-8222-222222222222',
+      ])
+    }
+    assert.equal(selectPendingInvite(
+      [
+        invite({ company_id: '11111111-1111-4111-8111-111111111111' }),
+        invite({ company_id: '22222222-2222-4222-8222-222222222222' }),
+      ],
+      'user@example.com',
+      NOW,
+    ), null)
+  })
+})
+
+describe('resolveMembershipInviteRole', () => {
+  it('treats same role as idempotent match', () => {
+    const result = resolveMembershipInviteRole('operator', 'operator')
+    assert.equal(result.status, 'match')
+    if (result.status === 'match') assert.equal(result.role, 'operator')
+  })
+
+  it('reports explicit conflict for different roles', () => {
+    const result = resolveMembershipInviteRole('operator', 'admin')
+    assert.equal(result.status, 'conflict')
+    if (result.status === 'conflict') {
+      assert.equal(result.existingRole, 'operator')
+      assert.equal(result.inviteRole, 'admin')
+    }
+  })
+
+  it('does not escalate operator to admin implicitly', () => {
+    const result = resolveMembershipInviteRole('operator', 'admin')
+    assert.equal(result.status, 'conflict')
   })
 })
 
