@@ -1,3 +1,4 @@
+import { inviteAuthCallbackUrl } from '@/Lib/auth/appOrigin'
 import { canInviteUsers, canManageUsers } from '@/Lib/auth/permissions'
 import {
   rejectSpoofedCompanyId,
@@ -166,7 +167,9 @@ export async function POST(request: Request) {
 
   if (error) return Response.json({ error: error.message }, { status: 500 })
 
+  const redirectTo = inviteAuthCallbackUrl(request)
   const { error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
+    redirectTo,
     data: { invited_company_id: companyId, invited_role: role },
   })
 
@@ -176,7 +179,12 @@ export async function POST(request: Request) {
     action: 'users.invite',
     entityType: 'user_invites',
     entityId: invite.id,
-    metadata: { email, role, inviteError: inviteErr?.message ?? null },
+    metadata: {
+      email,
+      role,
+      redirectTo,
+      inviteError: inviteErr?.message ?? null,
+    },
   })
 
   return Response.json({ data: invite })
