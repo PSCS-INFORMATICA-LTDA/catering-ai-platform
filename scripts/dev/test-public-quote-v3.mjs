@@ -203,8 +203,10 @@ test('WAITER quantity and client price sanitization', () => {
 
 test('PUBLIC bootstrap keeps quantity_2 / uom_2', () => {
   const bootstrap = source('Lib/publicQuote/bootstrap.ts')
+  const listSelect = source('Lib/catalogItemsTableSchema.ts')
   assert.match(bootstrap, /quantity_2: Number.isFinite\(Number\(row\.quantity_2\)\)/)
   assert.match(bootstrap, /uom_2: typeof row\.uom_2 === 'string' \? row\.uom_2 : null/)
+  assert.match(listSelect, /CATALOG_ITEMS_LIST_COLUMNS[\s\S]*'quantity_2'[\s\S]*'uom_2'/)
 })
 
 test('WEIGHTED extras use quantity_2 / uom_2', () => {
