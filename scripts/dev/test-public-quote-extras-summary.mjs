@@ -368,8 +368,8 @@ test('TEST 21c End/Home jumps do not review skipped summaries', () => {
 
 test('TEST 22 back navigation preserves review and selections', () => {
   assert.match(wizardSrc, /pruneVisitedAdditionalCategories/)
-  assert.doesNotMatch(wizardSrc, /step !== 3[\s\S]{0,80}setVisitedAdditionalCategories\(new Set\(\)\)/)
-  assert.match(wizardSrc, /if \(step !== 3\) \{\s*setOpenAdditionalCategories\(new Set\(\)\)/)
+  assert.doesNotMatch(wizardSrc, /step !== 4[\s\S]{0,80}setVisitedAdditionalCategories\(new Set\(\)\)/)
+  assert.match(wizardSrc, /if \(step !== 4\) \{\s*setOpenAdditionalCategories\(new Set\(\)\)/)
 })
 
 test('TEST 23 a new quote resets the review state', () => {

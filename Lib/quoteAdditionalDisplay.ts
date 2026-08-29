@@ -102,20 +102,33 @@ export function calcAdditionalLineTotalForItem(
   )
 }
 
+const WEIGHT_UOMS = new Set(['LB', 'LBS', 'POUND', 'POUNDS', 'KG', 'G', 'OZ'])
+
 function formatWeightUom(uom: string) {
-  if (uom === 'LB') return 'lb'
+  if (uom === 'LB' || uom === 'LBS') return 'lb'
   return uom.toLowerCase()
+}
+
+export function hasCatalogWeight(
+  item: Pick<QuoteAdditionalItem, 'quantity_2' | 'uom_2'> | null | undefined,
+): boolean {
+  const amount = Number(item?.quantity_2)
+  const uom = String(item?.uom_2 ?? '').trim().toUpperCase()
+  return Number.isFinite(amount) && amount > 0 && WEIGHT_UOMS.has(uom)
+}
+
+export function getAdditionalWeightPerUnit(
+  item: QuoteAdditionalItem,
+): { amount: number; uom: string; label: string } | null {
+  if (!hasCatalogWeight(item)) return null
+  const amount = Number(item.quantity_2)
+  const uom = formatWeightUom(String(item.uom_2))
+  return { amount, uom, label: `${amount} ${uom}` }
 }
 
 export function getAdditionalPackLabel(item: QuoteAdditionalItem): string {
   const packQty = item.quantity ?? 1
   const packUnit = item.unit_label ?? item.unit ?? 'UN'
-  const weight = item.quantity_2
-  const weightUom = item.uom_2
-
-  if (weight != null && weightUom) {
-    return `${packQty} ${packUnit} · ${weight} ${formatWeightUom(weightUom)}`
-  }
   return `${packQty} ${packUnit}`
 }
 
@@ -124,12 +137,13 @@ export function getAdditionalTotalWeight(
   quantity: number,
 ) {
   const normalizedQty = normalizeAdditionalQuantity(item, quantity)
-  if (normalizedQty <= 0 || item.quantity_2 == null || !item.uom_2) {
+  const perUnit = getAdditionalWeightPerUnit(item)
+  if (normalizedQty <= 0 || !perUnit) {
     return null
   }
   return {
-    amount: item.quantity_2 * normalizedQty,
-    uom: item.uom_2,
+    amount: perUnit.amount * normalizedQty,
+    uom: perUnit.uom,
   }
 }
 

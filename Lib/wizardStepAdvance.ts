@@ -50,6 +50,14 @@ export function canAdvanceFromWizardStep(ctx: WizardAdvanceContext): boolean {
     case 1:
       return true
     case 2: {
+      if (!ctx.state.grillSetupAnswered) return false
+      if (isGrillPhotoRequiredAndMissing(ctx.state)) return false
+      if (ctx.state.grillRentalRequired && ctx.state.grillRentalQty <= 0) {
+        return false
+      }
+      return true
+    }
+    case 3: {
       if (!ctx.packageId?.trim()) return false
       if (!ctx.selectedPackage || isCustomPackage(ctx.selectedPackage)) {
         return true
@@ -62,19 +70,11 @@ export function canAdvanceFromWizardStep(ctx: WizardAdvanceContext): boolean {
         ).length === 0
       )
     }
-    case 3:
+    case 4:
       return canAdvanceFromAdditionalsStep(
         ctx.additionalCategoryKeys,
         ctx.visitedAdditionalCategories,
       )
-    case 4: {
-      if (!ctx.state.grillSetupAnswered) return false
-      if (isGrillPhotoRequiredAndMissing(ctx.state)) return false
-      if (ctx.state.grillRentalRequired && ctx.state.grillRentalQty <= 0) {
-        return false
-      }
-      return true
-    }
     default:
       return ctx.step < WIZARD_STEP_COUNT - 1
   }
@@ -88,9 +88,9 @@ export function resolveNextWizardStep(ctx: WizardAdvanceContext): number {
 }
 
 export function isGrillWizardStep(step: number): boolean {
-  return step === 4
+  return step === 2
 }
 
 export function isAdditionalsWizardStep(step: number): boolean {
-  return step === 3
+  return step === 4
 }

@@ -1,4 +1,42 @@
 import { isPublicCatalogFixtureItem } from './catalogVisibility.ts'
+import { isGrillRentalAdditional } from './grillRentalDisplay.ts'
+
+export const WAITER_SERVICE_ITEM_KEY = 'CDL_WAITER_SERVICE'
+export const DISPOSABLE_KIT_ITEM_KEY = 'KIT_DESCARTAVEIS'
+
+const STRUCTURAL_PUBLIC_EXTRA_KEYS = new Set([
+  'ITEM_084',
+  WAITER_SERVICE_ITEM_KEY,
+  DISPOSABLE_KIT_ITEM_KEY,
+])
+
+export function isWaiterServiceItem(item: {
+  item_key?: string | null
+}): boolean {
+  return item.item_key?.trim().toUpperCase() === WAITER_SERVICE_ITEM_KEY
+}
+
+export function isDisposableKitItem(item: {
+  item_key?: string | null
+}): boolean {
+  return item.item_key?.trim().toUpperCase() === DISPOSABLE_KIT_ITEM_KEY
+}
+
+export function isStructuralPublicExtraItem(item: {
+  id?: string | null
+  item_key?: string | null
+}): boolean {
+  const key = item.item_key?.trim().toUpperCase() ?? ''
+  return STRUCTURAL_PUBLIC_EXTRA_KEYS.has(key) || isGrillRentalAdditional(item)
+}
+
+export function sanitizePublicAdditionalQuantity(value: unknown): number {
+  if (typeof value === 'boolean') return 0
+  if (typeof value === 'string' && !/^\s*\d+\s*$/.test(value)) return 0
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isInteger(parsed) || parsed < 0) return 0
+  return Math.min(10_000, parsed)
+}
 
 export type ExtraEligibilityItem = {
   id: string
@@ -51,6 +89,7 @@ function isCustomerAdditionalCandidate(item: ExtraEligibilityItem): boolean {
     return false
   }
   if (isPublicCatalogFixtureItem(item)) return false
+  if (isStructuralPublicExtraItem(item)) return false
   return true
 }
 

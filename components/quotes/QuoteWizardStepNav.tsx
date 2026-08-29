@@ -45,12 +45,12 @@ export default function QuoteWizardStepNav({
   if (step >= wizardStepCount - 1) return null
 
   const hideGlobalNext =
-    step === 2 && Boolean(packageId) && !keepPackageNextVisible
+    step === 3 && Boolean(packageId) && !keepPackageNextVisible
   const nextDisabled =
     step === wizardStepCount - 1 ||
-    (step === 2 && packageStepNextDisabled) ||
-    (step === 3 && additionalsStepNextDisabled) ||
-    (step === 4 && grillStepPendingIssuesCount > 0)
+    (step === 3 && packageStepNextDisabled) ||
+    (step === 4 && additionalsStepNextDisabled) ||
+    (step === 2 && grillStepPendingIssuesCount > 0)
 
   return (
     <div
@@ -62,12 +62,12 @@ export default function QuoteWizardStepNav({
           : 'mt-8 space-y-3'
       }
     >
-      {step === 2 && !packageId && packageStepMessage ? (
+      {step === 3 && !packageId && packageStepMessage ? (
         <p className="text-center text-sm font-medium text-[var(--brand-primary)] sm:text-right">
           {packageStepMessage}
         </p>
       ) : null}
-      {step === 3 && additionalsReviewMessage ? (
+      {step === 4 && additionalsReviewMessage ? (
         <p
           data-additionals-review-hint
           role="status"
@@ -87,7 +87,7 @@ export default function QuoteWizardStepNav({
         </button>
         {hideGlobalNext ? null : (
           <span className="relative inline-flex w-full sm:w-auto">
-            {step === 2 && packageStepNextDisabled ? (
+            {step === 3 && packageStepNextDisabled ? (
               <button
                 type="button"
                 aria-label={tw(language, 'nextCompleteOptions')}
@@ -95,7 +95,7 @@ export default function QuoteWizardStepNav({
                 onClick={onPackageNextBlockedClick}
               />
             ) : null}
-            {step === 3 && additionalsStepNextDisabled ? (
+            {step === 4 && additionalsStepNextDisabled ? (
               <button
                 type="button"
                 aria-label={quoteStrings.wizard.categoriesReviewPendingHeading}

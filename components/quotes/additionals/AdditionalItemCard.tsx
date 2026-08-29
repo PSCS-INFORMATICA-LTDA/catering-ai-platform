@@ -18,9 +18,9 @@ import {
   formatAdditionalPrice,
   getAdditionalChargeUnitLabel,
   getAdditionalImage,
-  getAdditionalPackLabel,
   getAdditionalPriceLabel,
   getAdditionalTotalWeight,
+  getAdditionalWeightPerUnit,
   getLocalizedAdditionalLabel,
   isPerPersonAdditional,
   normalizeAdditionalQuantity,
@@ -85,11 +85,6 @@ function AdditionalPhotoLightbox({
   )
 }
 
-function formatWeightUom(uom: string) {
-  if (uom === 'LB') return 'lb'
-  return uom.toLowerCase()
-}
-
 export default function AdditionalItemCard({
   item,
   quantity,
@@ -118,8 +113,11 @@ export default function AdditionalItemCard({
     billableGuestCount,
   )
   const isSelected = normalizedQty > 0
-  const totalWeight = getAdditionalTotalWeight(item, quantity)
-  const packLabel = !perPerson ? getAdditionalPackLabel(item) : null
+  const totalWeight =
+    !perPerson && normalizedQty > 1
+      ? getAdditionalTotalWeight(item, quantity)
+      : null
+  const weightPerUnit = !perPerson ? getAdditionalWeightPerUnit(item) : null
   const showPending =
     !image && item.image_status?.trim().toLowerCase() === 'missing'
   const categoryKey = getAdditionalItemCategoryKey(item)
@@ -251,9 +249,17 @@ export default function AdditionalItemCard({
         </span>
         <span className="public-additional-card-price-value">{priceLabel}</span>
         <span className="public-additional-card-price-unit">
-          {packLabel ?? chargeUnitLabel}
+          {chargeUnitLabel}
         </span>
       </div>
+      {weightPerUnit ? (
+        <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-600">
+          {t.weightPerUnit}
+          <span className="ml-1 font-bold normal-case text-neutral-900">
+            {weightPerUnit.label}
+          </span>
+        </p>
+      ) : null}
     </>
   )
 
@@ -326,10 +332,7 @@ export default function AdditionalItemCard({
             </p>
             {totalWeight ? (
               <p className="text-[10px] text-neutral-500">
-                {t.totalWeight(
-                  totalWeight.amount,
-                  formatWeightUom(totalWeight.uom),
-                )}
+                {t.estimatedTotalWeight}: {totalWeight.amount} {totalWeight.uom}
               </p>
             ) : null}
           </div>

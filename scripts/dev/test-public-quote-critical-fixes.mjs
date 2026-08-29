@@ -59,7 +59,7 @@ test('TEST 2 Extras Next remains fixed', () => {
 test('TEST 3 Zero review required', () => {
   assert.doesNotMatch(stepStatus, /areAllAdditionalCategoriesVisited/)
   assert.doesNotMatch(stepStatus, /categoriesReviewRequired/)
-  assert.match(stepStatus, /if \(ctx\.currentStep < 3\) return 3/)
+  assert.match(stepStatus, /if \(ctx\.currentStep < 4\) return 4/)
 })
 
 test('TEST 4 Zero category opened still allows Next', () => {
@@ -76,7 +76,7 @@ test('TEST 5 Zero additional selected allows Next', () => {
 })
 
 test('TEST 6 One additional selected allows Next', () => {
-  assert.match(advance, /case 3:\s*return canAdvanceFromAdditionalsStep/)
+  assert.match(advance, /case 4:\s*return canAdvanceFromAdditionalsStep/)
   assert.match(
     advance,
     /export function canAdvanceFromAdditionalsStep[\s\S]*?return true/,
@@ -91,11 +91,11 @@ test('TEST 7 New quote starts with zero extras', () => {
 test('TEST 8 Same quote retains selections when Back', () => {
   assert.doesNotMatch(
     wizard,
-    /step !== 3[\s\S]{0,80}setVisitedAdditionalCategories\(new Set\(\)\)/,
+    /step !== 4[\s\S]{0,80}setVisitedAdditionalCategories\(new Set\(\)\)/,
   )
   assert.match(
     wizard,
-    /if \(step !== 3\) \{\s*setOpenAdditionalCategories\(new Set\(\)\)/,
+    /if \(step !== 4\) \{\s*setOpenAdditionalCategories\(new Set\(\)\)/,
   )
 })
 

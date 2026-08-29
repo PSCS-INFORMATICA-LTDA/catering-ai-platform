@@ -333,14 +333,14 @@ async function main() {
   }
 
   try {
-    const step3Match = wizardSrc.match(/\{step === 3 && \([\s\S]*?\n        \)\}/)
-    const step3Block = step3Match?.[0] ?? ''
-    assert.ok(step3Block.length > 0)
-    assert.doesNotMatch(step3Block, /cdl-btn-primary/)
-    assert.doesNotMatch(step3Block, /goNext/)
-    assert.doesNotMatch(step3Block, /Continuar para Churrasqueira/)
-    assert.doesNotMatch(step3Block, /continueToBbq/)
-    pass('H14 step 3 content has no internal advance CTA')
+    const extrasMatch = wizardSrc.match(/\{step === 4 && \([\s\S]*?additionalsStepHint[\s\S]*?\n        \)\}/)
+    const extrasBlock = extrasMatch?.[0] ?? ''
+    assert.ok(extrasBlock.length > 0)
+    assert.doesNotMatch(extrasBlock, /cdl-btn-primary/)
+    assert.doesNotMatch(extrasBlock, /goNext/)
+    assert.doesNotMatch(extrasBlock, /Continuar para Churrasqueira/)
+    assert.doesNotMatch(extrasBlock, /continueToBbq/)
+    pass('H14 extras step content has no internal advance CTA')
   } catch (e) {
     fail('H14 additionals step DOM', e)
   }
@@ -935,9 +935,9 @@ async function main() {
   }
 
   try {
-    assert.match(wizardSrc, /step !== 3/)
-    assert.doesNotMatch(wizardSrc, /step !== 4[\s\S]*setOpenAdditionalCategories/)
-    pass('A14 additionals step index uses step 3')
+    assert.match(wizardSrc, /step !== 4/)
+    assert.match(wizardSrc, /if \(step !== 4\) \{\s*setOpenAdditionalCategories/)
+    pass('A14 additionals step index uses extras')
   } catch (e) {
     fail('A14 step index', e)
   }
@@ -1077,14 +1077,14 @@ async function main() {
   const fieldAccessSrc = read('Lib/additionalItemFieldAccess.ts')
 
   function simulateResolveNextWizardStep(ctx) {
-    if (ctx.step === 3) {
+    if (ctx.step === 4) {
       return ctx.step + 1
     }
     return ctx.step
   }
 
   const sampleAdvanceCtx = (overrides = {}) => ({
-    step: 3,
+    step: 4,
     packageId: 'pkg-1',
     selectedPackage: { id: 'pkg-1', package_key: 'STANDARD' },
     packageSelections: {},
@@ -1131,7 +1131,7 @@ async function main() {
   try {
     assert.equal(Number(wizardAdvanceSrc.match(/export const WIZARD_STEP_COUNT = (\d+)/)?.[1]), 6)
     assert.match(wizardAdvanceSrc, /isAdditionalsWizardStep/)
-    pass('N01 step initial 3 is additionals')
+    pass('N01 extras step is additionals')
     pass('N11 map contains exactly 6 steps')
   } catch (e) {
     fail('N01/N11 step map', e)
@@ -1168,16 +1168,17 @@ async function main() {
 
   try {
     const next = simulateResolveNextWizardStep(sampleAdvanceCtx())
-    assert.equal(next, 4)
-    pass('N06 after click step === 4')
+    assert.equal(next, 5)
+    pass('N06 after click extras advances to review')
   } catch (e) {
     fail('N06 advance to step 4', e)
   }
 
   try {
     assert.match(wizardAdvanceSrc, /isGrillWizardStep/)
-    assert.match(wizardSrc, /\{step === 4 &&/)
-    pass('N07 step 4 is Churrasco')
+    assert.match(wizardSrc, /\{step === 2 &&/)
+    assert.match(wizardAdvanceSrc, /return step === 2/)
+    pass('N07 BBQ is the third wizard step')
   } catch (e) {
     fail('N07 grill step index', e)
   }
@@ -1189,7 +1190,7 @@ async function main() {
         additionals: {},
       },
     })
-    assert.equal(simulateResolveNextWizardStep(ctx), 4)
+    assert.equal(simulateResolveNextWizardStep(ctx), 5)
     pass('N08 zero additionals selected still advances')
   } catch (e) {
     fail('N08 zero selections advance', e)
@@ -1199,7 +1200,7 @@ async function main() {
     const pending = sampleAdvanceCtx({
       visitedAdditionalCategories: new Set(['GUARNICOES']),
     })
-    assert.equal(simulateResolveNextWizardStep(pending), 4)
+    assert.equal(simulateResolveNextWizardStep(pending), 5)
     assert.equal(allVisited(['GUARNICOES', 'BOVINO'], pending.visitedAdditionalCategories), false)
     pass('N09 pending category does not block advance')
   } catch (e) {

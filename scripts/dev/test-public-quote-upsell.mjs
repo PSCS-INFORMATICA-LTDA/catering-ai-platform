@@ -202,7 +202,7 @@ test('CATEGORY_REVIEW_FLOW_UNCHANGED', () => {
 test('EXTRAS_HEADER_IS_PURELY_ADDITIVE', () => {
   // Suggested extras is a display group on the same accordion, so review,
   // expose and quantity stay on the existing category machinery.
-  const step = wizard.slice(wizard.indexOf('{step === 3 && ('))
+  const step = wizard.slice(wizard.indexOf('{step === 4 && ('))
   assert.match(step, /additionalItemsByCategory\.map/)
   assert.match(step, /featured=\{categoryKey === SUGGESTED_EXTRAS_DISPLAY_KEY\}/)
   assert.match(step, /quantities=\{state\.additionals\}/)

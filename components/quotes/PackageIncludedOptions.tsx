@@ -10,6 +10,7 @@ import { isRequiredOptionGroup, type PackageOptionGroup } from '@/Lib/packageOpt
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import { tw } from '@/Lib/quoteTranslations'
 import { pickLocalizedText } from '@/Lib/i18n/locales'
+import { resolveSausageDisplayLabel } from '@/Lib/publicQuote/sausageOptions'
 
 const SELECTED_OPTION_CLASS =
   'border-[var(--brand-primary-2)] bg-[color-mix(in_srgb,var(--brand-primary)_10%,white)] text-[var(--brand-primary)] ring-1 ring-[color-mix(in_srgb,var(--brand-primary-2)_35%,transparent)]'
@@ -54,6 +55,7 @@ export default function PackageIncludedOptions({
           const item = group.items.find((row) => row.id === selectedId)
           if (!item) return null
           const label =
+            resolveSausageDisplayLabel(item, language) ||
             pickLocalizedText(
               { pt: item.label_pt, en: item.label_en, es: item.label_es },
               language,
@@ -123,6 +125,7 @@ export default function PackageIncludedOptions({
                 {items.map((item) => {
                   const active = selectedItemId === item.id
                   const itemLabel =
+                    resolveSausageDisplayLabel(item, language) ||
                     pickLocalizedText(
                       {
                         pt: item.label_pt,

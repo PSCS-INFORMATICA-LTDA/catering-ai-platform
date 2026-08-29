@@ -91,6 +91,7 @@
     "verify:dev:public-quote": "node scripts/dev/verify-dev-public-quote.mjs",
     "test:dev:public-quote-routes": "node --experimental-strip-types scripts/dev/test-public-quote-routes.mjs",
     "test:dev:public-quote-v2-nav": "node --experimental-strip-types scripts/dev/test-public-quote-v2-navigation.mjs",
+    "test:dev:public-quote-wizard-delta": "node --experimental-strip-types scripts/dev/test-public-quote-wizard-delta.mjs",
     "test:dev:public-quote-extras-eligibility": "node --experimental-strip-types scripts/dev/test-public-quote-extras-eligibility.mjs",
     "apply:dev:additionals-catalog-cleanup": "node scripts/dev/apply-cdl-additionals-catalog-cleanup.mjs --apply",
     "apply:dev:cdl-2026-catalog": "node scripts/dev/apply-cdl-2026-real-catalog-sync.mjs --apply",

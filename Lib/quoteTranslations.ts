@@ -4,9 +4,9 @@ import { fillTemplate } from './i18n/makeModule.ts'
 export const WIZARD_STEP_KEYS = [
   'customer',
   'event',
+  'bbq',
   'package',
   'additionals',
-  'bbq',
   'confirmation',
 ] as const
 
@@ -147,6 +147,8 @@ type QuoteStrings = {
   removeUnit: string
   eachUnit: (pack: string) => string
   totalWeight: (amount: number, uom: string) => string
+  weightPerUnit: string
+  estimatedTotalWeight: string
   stepperAdditionals: (count: number) => string
   review: {
     packageSection: string
@@ -264,6 +266,15 @@ type QuoteStrings = {
     postSuggestedCategoryHintBody: string
     photoEnlargeHint: string
     additionalQuantityLabel: string
+    waiterSectionTitle: string
+    waiterSectionHint: string
+    waiterUnitPrice: string
+    waiterSubtotal: string
+    increaseWaiters: string
+    decreaseWaiters: string
+    disposableKitTitle: string
+    disposableKitDescription: string
+    disposableKitPrice: string
     withoutSidesGroupTitle: string
     withSidesGroupHint: string
     withoutSidesGroupHint: string
@@ -543,28 +554,30 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     customerNotLinked:
       'Cliente ainda não vinculado. A cotação pode ser criada, mas deverá ser revisada antes do envio final.',
     currentCustomer: 'Cliente atual',
+    weightPerUnit: 'Peso por unidade',
+    estimatedTotalWeight: 'Peso total estimado',
     stepSubtitles: {
       0: 'Identifique o cliente para começar a cotação.',
       1: 'Informe data, local e detalhes do evento.',
-      2: 'Escolha o pacote e confira as opções disponíveis.',
-      3: 'Adicione itens extras se quiser. A seleção é opcional.',
-      4: 'Configure churrasqueira, foto e rental quando aplicável.',
+      2: 'Configure churrasqueira, foto e rental quando aplicável.',
+      3: 'Escolha o pacote e confira as opções disponíveis.',
+      4: 'Adicione itens extras se quiser. A seleção é opcional.',
       5: 'Revise e confirme a cotação comercial completa.',
     },
     wizardSteps: [
       'Cliente',
       'Evento',
+      'Churrasco',
       'Pacote',
       'Adicionais',
-      'Churrasco',
       'Confirmação',
     ],
     wizardStepsShort: [
       'Cliente',
       'Evento',
+      'BBQ',
       'Pacote',
       'Extras',
-      'BBQ',
       'Revisão',
     ],
     next: 'Próximo',
@@ -711,6 +724,15 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       postSuggestedCategoryHintBody: 'Toque em uma categoria abaixo para visualizar todos os itens disponíveis.',
       photoEnlargeHint: 'Toque e segure a foto para ampliar.',
       additionalQuantityLabel: 'Quantidade',
+      waiterSectionTitle: 'Serviço de garçom',
+      waiterSectionHint: 'Adicione garçons para apoio ao seu evento.',
+      waiterUnitPrice: 'US$250 por garçom',
+      waiterSubtotal: 'Subtotal',
+      increaseWaiters: 'Aumentar garçons',
+      decreaseWaiters: 'Diminuir garçons',
+      disposableKitTitle: 'Kit de descartáveis',
+      disposableKitDescription: 'Pratos, talheres e guardanapos',
+      disposableKitPrice: 'US$3 por pessoa',
       withoutSidesGroupTitle: 'SEM GUARNIÇÕES',
       withSidesGroupHint:
         'Uma experiência completa, com acompanhamentos preparados para complementar o churrasco e deixar o serviço pronto para receber seus convidados. Explore {count} opções de pacotes disponíveis e escolha a combinação ideal para o seu evento.',
@@ -1015,28 +1037,30 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     customerNotLinked:
       'Customer not linked yet. The quote can be created, but must be reviewed before final send.',
     currentCustomer: 'Current customer',
+    weightPerUnit: 'Weight per unit',
+    estimatedTotalWeight: 'Estimated total weight',
     stepSubtitles: {
       0: 'Identify the customer to start the quote.',
       1: 'Enter date, location, and event details.',
-      2: 'Choose the package and review available options.',
-      3: 'Add extra items if you want. Selection is optional.',
-      4: 'Configure grill, photo and rental when applicable.',
+      2: 'Configure grill, photo and rental when applicable.',
+      3: 'Choose the package and review available options.',
+      4: 'Add extra items if you want. Selection is optional.',
       5: 'Review and confirm the full commercial quote.',
     },
     wizardSteps: [
       'Customer',
       'Event',
+      'BBQ',
       'Package',
       'Extras',
-      'BBQ',
       'Confirmation',
     ],
     wizardStepsShort: [
       'Client',
       'Event',
+      'BBQ',
       'Pack',
       'Extras',
-      'BBQ',
       'Review',
     ],
     next: 'Next',
@@ -1180,6 +1204,15 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       postSuggestedCategoryHintBody: 'Tap a category below to view all available items.',
       photoEnlargeHint: 'Touch and hold the photo to enlarge.',
       additionalQuantityLabel: 'Quantity',
+      waiterSectionTitle: 'Waiter service',
+      waiterSectionHint: 'Add waiters to support your event.',
+      waiterUnitPrice: 'US$250 per waiter',
+      waiterSubtotal: 'Subtotal',
+      increaseWaiters: 'Increase waiters',
+      decreaseWaiters: 'Decrease waiters',
+      disposableKitTitle: 'Disposable kit',
+      disposableKitDescription: 'Plates, cutlery and napkins',
+      disposableKitPrice: 'US$3 per person',
       withoutSidesGroupTitle: 'WITHOUT SIDES',
       withSidesGroupHint:
         'A complete experience, with sides prepared to complement the barbecue and ready your service for guests. Explore {count} available packages and choose the ideal combination for your event.',
@@ -1481,28 +1514,30 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     customerNotLinked:
       'Cliente aún no vinculado. La cotización puede crearse, pero debe revisarse antes del envío final.',
     currentCustomer: 'Cliente actual',
+    weightPerUnit: 'Peso por unidad',
+    estimatedTotalWeight: 'Peso total estimado',
     stepSubtitles: {
       0: 'Identifique al cliente para comenzar la cotización.',
       1: 'Indique fecha, lugar y detalles del evento.',
-      2: 'Elija el paquete y revise las opciones disponibles.',
-      3: 'Agregue ítems extra si quiere. La selección es opcional.',
-      4: 'Configure parrilla, foto y rental cuando aplique.',
+      2: 'Configure parrilla, foto y rental cuando aplique.',
+      3: 'Elija el paquete y revise las opciones disponibles.',
+      4: 'Agregue ítems extra si quiere. La selección es opcional.',
       5: 'Revise y confirme la cotización comercial completa.',
     },
     wizardSteps: [
       'Cliente',
       'Evento',
+      'Parrilla',
       'Paquete',
       'Adicionales',
-      'Parrilla',
       'Confirmación',
     ],
     wizardStepsShort: [
       'Cliente',
       'Evento',
+      'BBQ',
       'Pack',
       'Extra',
-      'BBQ',
       'Revisión',
     ],
     next: 'Siguiente',
@@ -1649,6 +1684,15 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       postSuggestedCategoryHintBody: 'Toca una categoría abajo para ver todos los artículos disponibles.',
       photoEnlargeHint: 'Mantén pulsada la foto para ampliarla.',
       additionalQuantityLabel: 'Cantidad',
+      waiterSectionTitle: 'Servicio de mesero',
+      waiterSectionHint: 'Agregue meseros para apoyar su evento.',
+      waiterUnitPrice: 'US$250 por mesero',
+      waiterSubtotal: 'Subtotal',
+      increaseWaiters: 'Aumentar meseros',
+      decreaseWaiters: 'Disminuir meseros',
+      disposableKitTitle: 'Kit de desechables',
+      disposableKitDescription: 'Platos, cubiertos y servilletas',
+      disposableKitPrice: 'US$3 por persona',
       withoutSidesGroupTitle: 'SIN ACOMPAÑAMIENTOS',
       withSidesGroupHint:
         'Una experiencia completa, con acompañamientos preparados para complementar el asado y dejar el servicio listo para recibir a tus invitados. Explora {count} opciones de paquetes disponibles y elige la combinación ideal para tu evento.',
