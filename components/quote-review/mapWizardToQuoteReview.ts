@@ -33,6 +33,7 @@ import type { QuoteReviewAdditional, QuoteReviewData } from './quoteReviewTypes'
 
 export type WizardSelectedAdditional = {
   id: string
+  itemKey?: string | null
   label: string
   category: string
   quantity: number
@@ -42,6 +43,8 @@ export type WizardSelectedAdditional = {
   itemType?: string | null
   categoryPt?: string | null
   perPerson?: boolean
+  quantity2?: number | null
+  uom2?: string | null
 }
 
 export type MapWizardToQuoteReviewInput = {
@@ -74,6 +77,7 @@ export function mapWizardToQuoteReview(
   const reviewAdditionals: QuoteReviewAdditional[] = input.additionals.map(
     (item) => ({
       id: item.id,
+      itemKey: item.itemKey ?? null,
       label: item.label,
       category: item.category,
       quantity: item.perPerson ? input.billableGuestCount : item.quantity,
@@ -82,6 +86,8 @@ export function mapWizardToQuoteReview(
       imageUrl: item.imageUrl,
       itemType: item.itemType,
       categoryPt: item.categoryPt,
+      quantity2: item.quantity2 ?? null,
+      uom2: item.uom2 ?? null,
     }),
   )
 

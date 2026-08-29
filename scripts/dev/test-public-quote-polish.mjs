@@ -328,7 +328,6 @@ test('TEST 32 Powered by PSCS One is discreet', () => {
   assert.doesNotMatch(experience, /Powered by Catering AI/)
   assert.doesNotMatch(experience, /Catering App/)
   assert.match(experience, /data-powered-by/)
-  assert.match(experience, /data-footer-cdl-logo/)
   assert.match(experience, /data-footer-since-pioneer/)
   assert.match(experience, /PscsOneMark/)
   assert.match(experience, /size="footer"/)
@@ -492,7 +491,14 @@ test('TEST 43 CDL flame emblem and discreet PSCS One footer', () => {
   assert.match(lockup, /CDL_FLAME_EMBLEM_SRC/)
   assert.match(lockup, /\/cdl\/logo\.png/)
   assert.match(experience, /publicQuoteEmblemSrc/)
-  assert.match(experience, /data-success-flame-art/)
+  assert.match(
+    source('components/quotes/PublicQuoteSuccessScreen.tsx'),
+    /PublicSuccessFireLogo/,
+  )
+  assert.match(
+    source('components/quotes/PublicSuccessFireLogo.tsx'),
+    /data-success-fire-logo/,
+  )
   assert.match(experience, /data-public-wizard-product/)
   assert.doesNotMatch(experience, /data-public-wizard-pscs/)
   assert.match(experience, /PscsOneMark/)

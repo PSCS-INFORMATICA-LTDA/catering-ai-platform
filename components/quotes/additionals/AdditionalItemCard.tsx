@@ -5,9 +5,9 @@ import {
   formatAdditionalPrice,
   getAdditionalChargeUnitLabel,
   getAdditionalImage,
-  getAdditionalPackLabel,
   getAdditionalPriceLabel,
   getAdditionalTotalWeight,
+  getAdditionalWeightPerUnit,
   getLocalizedAdditionalLabel,
   isPerPersonAdditional,
   normalizeAdditionalQuantity,
@@ -17,11 +17,6 @@ import { getQuoteStrings } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 const formatCurrency = formatAdditionalPrice
-
-function formatWeightUom(uom: string) {
-  if (uom === 'LB') return 'lb'
-  return uom.toLowerCase()
-}
 
 const SELECTED_CARD =
   'border-[var(--brand-primary-2)] bg-[color-mix(in_srgb,var(--brand-primary)_10%,white)] ring-1 ring-[color-mix(in_srgb,var(--brand-primary-2)_30%,transparent)]'
@@ -52,8 +47,11 @@ export default function AdditionalItemCard({
     billableGuestCount,
   )
   const isSelected = normalizedQty > 0
-  const totalWeight = getAdditionalTotalWeight(item, quantity)
-  const packLabel = !perPerson ? getAdditionalPackLabel(item) : null
+  const weightPerUnit = !perPerson ? getAdditionalWeightPerUnit(item) : null
+  const totalWeight =
+    !perPerson && normalizedQty > 1
+      ? getAdditionalTotalWeight(item, quantity)
+      : null
   const showPending =
     !image && item.image_status?.trim().toLowerCase() === 'missing'
 
@@ -110,7 +108,8 @@ export default function AdditionalItemCard({
           <button
             type="button"
             onClick={() => onChangeQty(isSelected ? 0 : 1)}
-            className={`mt-auto w-full rounded-xl px-2 py-2 text-xs font-bold transition ${
+            aria-pressed={isSelected}
+            className={`mt-auto min-h-11 w-full rounded-xl px-2 py-2 text-xs font-bold transition ${
               isSelected
                 ? 'bg-[var(--brand-primary)] text-white'
                 : 'border border-neutral-200 bg-neutral-50 text-neutral-800 hover:border-neutral-300'
@@ -132,14 +131,22 @@ export default function AdditionalItemCard({
         </p>
         <p className="mt-1 text-xs text-neutral-500">
           <span className="font-semibold text-neutral-800">{priceLabel}</span>{' '}
-          {packLabel ?? chargeUnitLabel}
+          {chargeUnitLabel}
         </p>
+        {weightPerUnit ? (
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-600">
+            {t.weightPerUnit}
+            <span className="ml-1 font-bold normal-case text-neutral-900">
+              {weightPerUnit.label}
+            </span>
+          </p>
+        ) : null}
         <div className="mt-auto flex items-center justify-between gap-1 pt-2">
           <button
             type="button"
             onClick={() => onChangeQty(normalizedQty - 1)}
             disabled={normalizedQty === 0}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-base font-bold disabled:opacity-30"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-base font-bold disabled:opacity-30"
             aria-label={t.removeUnit}
           >
             −
@@ -155,7 +162,7 @@ export default function AdditionalItemCard({
           <button
             type="button"
             onClick={() => onChangeQty(normalizedQty + 1)}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-base font-bold"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-base font-bold"
             aria-label={t.addUnit}
           >
             +
@@ -168,10 +175,8 @@ export default function AdditionalItemCard({
             </p>
             {totalWeight ? (
               <p className="text-[10px] text-neutral-500">
-                {t.totalWeight(
-                  totalWeight.amount,
-                  formatWeightUom(totalWeight.uom),
-                )}
+                {t.estimatedTotalWeight}:{' '}
+                {t.totalWeight(totalWeight.amount, totalWeight.uom)}
               </p>
             ) : null}
           </div>

@@ -5,6 +5,7 @@ import type { QuoteReviewPackageSummary } from './quoteReviewPackageSummary'
 
 export type QuoteReviewAdditional = {
   id: string
+  itemKey?: string | null
   label: string
   category: string
   quantity: number | null
@@ -13,6 +14,8 @@ export type QuoteReviewAdditional = {
   imageUrl?: string | null
   itemType?: string | null
   categoryPt?: string | null
+  quantity2?: number | null
+  uom2?: string | null
 }
 
 export type QuoteReviewData = {

@@ -110,7 +110,7 @@ check('T10 Next stays enabled with selected extras', () => {
   assert.match(wizardSrc, /resolveNextWizardStep/)
   assert.match(
     advanceSrc,
-    /case 3:\s*return canAdvanceFromAdditionalsStep/,
+    /case WIZARD_STEPS.EXTRAS:\s*return canAdvanceFromAdditionalsStep/,
   )
 })
 

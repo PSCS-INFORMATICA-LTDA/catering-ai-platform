@@ -14,6 +14,7 @@ import { tCommon } from '@/Lib/i18n/common'
 import { tw } from '../../../Lib/quoteTranslations'
 import type { QuoteLanguage } from '../../../Lib/quoteWizardTypes'
 import { locationBiasToLatLngBoundsLiteral } from '@/Lib/publicQuote/locationBias'
+import PublicRequiredMark from '@/components/quotes/PublicRequiredMark'
 
 type FieldCompletion = 'filled' | 'empty'
 
@@ -52,8 +53,21 @@ function getInputClassName(completion?: FieldCompletion) {
   return `${base} border-cdl-border bg-cdl-inset`
 }
 
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <span className="cdl-eyebrow">{children}</span>
+function FieldLabel({
+  children,
+  required,
+  requiredLabel,
+}: {
+  children: React.ReactNode
+  required?: boolean
+  requiredLabel?: string
+}) {
+  return (
+    <span className="cdl-eyebrow">
+      {children}
+      {required ? <PublicRequiredMark label={requiredLabel || ''} /> : null}
+    </span>
+  )
 }
 
 function FieldCheck({ show }: { show: boolean }) {
@@ -181,6 +195,9 @@ export default function AddressAutocompleteFields({
   language = 'pt',
   allowedCountries = ['US'],
   locationBias = null,
+  markRequired = false,
+  requiredLabel,
+  placeholders,
 }: {
   values: AddressValues
   onChange: (patch: Partial<AddressValues>) => void
@@ -196,6 +213,15 @@ export default function AddressAutocompleteFields({
     city?: FieldCompletion
     state?: FieldCompletion
     zipCode?: FieldCompletion
+  }
+  markRequired?: boolean
+  requiredLabel?: string
+  placeholders?: {
+    search?: string
+    number?: string
+    city?: string
+    state?: string
+    postal?: string
   }
 }) {
   const loc: QuoteLanguage = language === 'en' || language === 'es' ? language : 'pt'
@@ -385,7 +411,9 @@ export default function AddressAutocompleteFields({
   return (
     <div className={`grid grid-cols-1 gap-4 lg:grid-cols-12 ${className}`}>
       <label className="flex flex-col gap-2 lg:col-span-12">
-        <FieldLabel>{copy.search}</FieldLabel>
+        <FieldLabel required={markRequired} requiredLabel={requiredLabel}>
+          {copy.search}
+        </FieldLabel>
         <div className="relative">
           <input
             ref={inputRef}
@@ -402,7 +430,7 @@ export default function AddressAutocompleteFields({
                 onChange(clearCanonicalAddress())
               }
             }}
-            placeholder={tw(loc, 'addressPlaceholder')}
+            placeholder={placeholders?.search || tw(loc, 'addressPlaceholder')}
             className={getInputClassName(
               canonicalConfirmed || (manualMode && values.address)
                 ? 'filled'
@@ -441,6 +469,7 @@ export default function AddressAutocompleteFields({
           type="text"
           inputMode="numeric"
           value={values.addressNumber}
+          placeholder={placeholders?.number}
           onChange={(event) => onChange({ addressNumber: event.target.value })}
           className={getInputClassName(
             values.addressNumber ? 'filled' : undefined,
@@ -449,7 +478,9 @@ export default function AddressAutocompleteFields({
       </label>
 
       <label className="flex flex-col gap-2 lg:col-span-3">
-        <FieldLabel>{tCommon(loc, 'postalCode')}</FieldLabel>
+        <FieldLabel required={markRequired} requiredLabel={requiredLabel}>
+          {tCommon(loc, 'postalCode')}
+        </FieldLabel>
         <div className="relative">
           <input
             type="text"
@@ -461,7 +492,9 @@ export default function AddressAutocompleteFields({
               lastPostalLookupRef.current = ''
               manualPatch({ zipCode: formatPostalCode(event.target.value) })
             }}
-            placeholder={tCommon(loc, 'postalCodePlaceholder')}
+            placeholder={
+              placeholders?.postal || tCommon(loc, 'postalCodePlaceholder')
+            }
             className={getInputClassName(fieldCompletions?.zipCode)}
             aria-invalid={zipInvalid || Boolean(postalLookupError)}
           />
@@ -481,14 +514,16 @@ export default function AddressAutocompleteFields({
       </label>
 
       <label className="flex flex-col gap-2 lg:col-span-4">
-        <FieldLabel>{tCommon(loc, 'city')}</FieldLabel>
+        <FieldLabel required={markRequired} requiredLabel={requiredLabel}>
+          {tCommon(loc, 'city')}
+        </FieldLabel>
         <div className="relative">
           <input
             type="text"
             value={values.city}
             readOnly={!manualMode}
             onChange={(event) => manualPatch({ city: event.target.value })}
-            placeholder={tw(loc, 'cityPlaceholder')}
+            placeholder={placeholders?.city || tw(loc, 'cityPlaceholder')}
             className={getInputClassName(fieldCompletions?.city)}
           />
           <FieldCheck show={fieldCompletions?.city === 'filled'} />
@@ -496,14 +531,16 @@ export default function AddressAutocompleteFields({
       </label>
 
       <label className="flex flex-col gap-2 lg:col-span-3">
-        <FieldLabel>{tCommon(loc, 'state')}</FieldLabel>
+        <FieldLabel required={markRequired} requiredLabel={requiredLabel}>
+          {tCommon(loc, 'state')}
+        </FieldLabel>
         <div className="relative">
           <input
             type="text"
             value={values.state}
             readOnly={!manualMode}
             onChange={(event) => manualPatch({ state: event.target.value })}
-            placeholder={tw(loc, 'statePlaceholder')}
+            placeholder={placeholders?.state || tw(loc, 'statePlaceholder')}
             className={getInputClassName(fieldCompletions?.state)}
           />
           <FieldCheck show={fieldCompletions?.state === 'filled'} />

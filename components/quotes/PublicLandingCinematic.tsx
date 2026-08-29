@@ -122,6 +122,24 @@ export default function PublicLandingCinematic({
         ))}
 
         <section
+          data-landing-chapter="video"
+          className="public-cinematic-chapter public-cinematic-chapter--video"
+        >
+          <PublicLandingReveal className="public-cinematic-copy">
+            <p className="public-cinematic-eyebrow">{story.video.eyebrow}</p>
+            <p className="public-cinematic-body">{story.video.body}</p>
+            <PublicQuoteHowItWorks
+              label={story.video.play}
+              title={story.video.title}
+              closeLabel={story.video.close}
+              videos={videos}
+              routeLocale={locale}
+              localeLabels={story.video.locales}
+            />
+          </PublicLandingReveal>
+        </section>
+
+        <section
           data-landing-chapter="final-cta"
           className="public-cinematic-chapter"
         >
@@ -143,24 +161,6 @@ export default function PublicLandingCinematic({
               {starting ? '…' : story.finalCta.button}
               <span aria-hidden>→</span>
             </button>
-          </PublicLandingReveal>
-        </section>
-
-        <section
-          data-landing-chapter="video"
-          className="public-cinematic-chapter public-cinematic-chapter--video"
-        >
-          <PublicLandingReveal className="public-cinematic-copy">
-            <p className="public-cinematic-eyebrow">{story.video.eyebrow}</p>
-            <p className="public-cinematic-body">{story.video.body}</p>
-            <PublicQuoteHowItWorks
-              label={story.video.play}
-              title={story.video.title}
-              closeLabel={story.video.close}
-              videos={videos}
-              routeLocale={locale}
-              localeLabels={story.video.locales}
-            />
           </PublicLandingReveal>
         </section>
       </div>

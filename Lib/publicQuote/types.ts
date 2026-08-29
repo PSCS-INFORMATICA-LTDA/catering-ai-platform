@@ -52,6 +52,8 @@ export type PublicQuoteBootstrap = {
     support: {
       phone: string | null
       whatsappUrl: string | null
+      instagramUrl?: string | null
+      instagramHandle?: string | null
     }
     serviceDurationMinutes: number
     locationBias: PublicLocationBias | null

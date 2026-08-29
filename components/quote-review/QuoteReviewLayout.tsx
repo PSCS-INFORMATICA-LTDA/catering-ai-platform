@@ -25,6 +25,11 @@ import {
 } from '@/app/quotes/[id]/quoteDetailTypes'
 import { IconCalendar, IconClock, IconLocation } from './QuoteReviewIcons'
 import type { QuoteReviewAdditional, QuoteReviewData } from './quoteReviewTypes'
+import {
+  isDisposableKitCatalogItem,
+  isWaiterServiceCatalogItem,
+  hasCatalogWeight,
+} from '@/Lib/publicQuote/structuralExtras'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
 import { formatDistanceForDisplay, formatMileageQuantity } from '@/Lib/units'
@@ -207,6 +212,22 @@ function ConfirmationProposalBody({
     data.grillRentalRequired === true &&
     grillRentalLine != null &&
     grillRentalLine.amount > 0
+  const waiterItems = groupedAdditionals
+    .flatMap((group) => group.items)
+    .filter((item) => isWaiterServiceCatalogItem({ item_key: item.itemKey }))
+  const disposableItems = groupedAdditionals
+    .flatMap((group) => group.items)
+    .filter((item) => isDisposableKitCatalogItem({ item_key: item.itemKey }))
+  const genericGroupedAdditionals = groupedAdditionals
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) =>
+          !isWaiterServiceCatalogItem({ item_key: item.itemKey }) &&
+          !isDisposableKitCatalogItem({ item_key: item.itemKey }),
+      ),
+    }))
+    .filter((group) => group.items.length > 0)
   const mileageMetadata = mileageLine?.metadata
 
   return (
@@ -293,11 +314,11 @@ function ConfirmationProposalBody({
       </div>
 
       <ProposalSection title={t.review.additionalsSection}>
-        {groupedAdditionals.length === 0 ? (
+        {genericGroupedAdditionals.length === 0 ? (
           <p className="quote-proposal-muted">{t.review.noAdditionals}</p>
         ) : (
           <div className="quote-proposal-additionals">
-            {groupedAdditionals.map(({ category, items }) => (
+            {genericGroupedAdditionals.map(({ category, items }) => (
               <section key={category} className="quote-proposal-additional-group">
                 <h3 className="quote-proposal-category-title">{category}</h3>
                 <div className="quote-print-additional-grid quote-proposal-additional-grid">
@@ -336,6 +357,19 @@ function ConfirmationProposalBody({
                               {formatCurrency(item.unitPrice)}
                             </p>
                           </div>
+                          {hasCatalogWeight({
+                            quantity_2: item.quantity2,
+                            uom_2: item.uom2,
+                          }) ? (
+                            <div>
+                              <span className="quote-proposal-label">
+                                {t.weightPerUnit}
+                              </span>
+                              <p className="quote-proposal-additional-metric">
+                                {item.quantity2} {String(item.uom2).toLowerCase()}
+                              </p>
+                            </div>
+                          ) : null}
                         </div>
                         <div className="quote-print-additional-total quote-proposal-additional-total">
                           <span className="quote-proposal-label">{w.total}</span>
@@ -353,6 +387,17 @@ function ConfirmationProposalBody({
         )}
       </ProposalSection>
 
+      {disposableItems.length > 0 ? (
+        <ProposalSection title={w.disposableKitTitle}>
+          {disposableItems.map((item) => (
+            <p key={item.id} className="quote-proposal-value">
+              {item.label}: {displayValue(item.quantity)} ×{' '}
+              {formatCurrency(item.unitPrice)} = {formatCurrency(item.totalPrice)}
+            </p>
+          ))}
+        </ProposalSection>
+      ) : null}
+
       <ProposalSection title={tw(lang, 'confirmSectionGrill')}>
         <div className="quote-proposal-info-grid quote-proposal-grill-facts">
           <div className="quote-proposal-info-cell">
@@ -360,9 +405,13 @@ function ConfirmationProposalBody({
               {tw(lang, 'grillAtLocation')}
             </span>
             <p className="quote-proposal-value">
-              {data.hasGrill == null
-                ? w.notApplicable
-                : formatBool(data.hasGrill, lang)}
+              {data.hasGrill
+                ? w.grillOwn
+                : hasCanonicalGrillRental
+                  ? w.grillRentalNecessary
+                  : data.hasGrill == null
+                    ? w.notApplicable
+                    : formatBool(data.hasGrill, lang)}
             </p>
           </div>
           <div className="quote-proposal-info-cell">
@@ -395,6 +444,19 @@ function ConfirmationProposalBody({
               {hasCanonicalGrillRental
                 ? formatCurrency(grillRentalLine.amount)
                 : '—'}
+            </p>
+          </div>
+          <div className="quote-proposal-info-cell">
+            <span className="quote-proposal-label">{w.waiterSectionTitle}</span>
+            <p className="quote-proposal-value">
+              {waiterItems.length > 0
+                ? waiterItems
+                    .map(
+                      (item) =>
+                        `${displayValue(item.quantity)} × ${formatCurrency(item.unitPrice)} = ${formatCurrency(item.totalPrice)}`,
+                    )
+                    .join(' · ')
+                : w.waitersNotHired}
             </p>
           </div>
           {data.grillNotes ? (

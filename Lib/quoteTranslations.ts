@@ -4,9 +4,9 @@ import { fillTemplate } from './i18n/makeModule.ts'
 export const WIZARD_STEP_KEYS = [
   'customer',
   'event',
+  'bbq',
   'package',
   'additionals',
-  'bbq',
   'confirmation',
 ] as const
 
@@ -61,6 +61,11 @@ const CATEGORY_LABEL_MAP: Record<string, Record<QuoteLanguage, string>> = {
     en: 'Equipment',
     es: 'Equipos',
   },
+  SERVICOS: {
+    pt: 'Serviços',
+    en: 'Services',
+    es: 'Servicios',
+  },
   LEGUMES_E_SALADAS: {
     pt: 'Legumes e Saladas',
     en: 'Vegetables & Salads',
@@ -85,6 +90,7 @@ const CATEGORY_SORT_ORDER = [
   'GUARNICOES',
   'LEGUMES_E_SALADAS',
   'EQUIPAMENTOS',
+  'SERVICOS',
   'OUTROS',
 ] as const
 
@@ -115,9 +121,12 @@ type QuoteStrings = {
   additionalsStepHint: string
   addUnit: string
   removeUnit: string
-  eachUnit: (pack: string) => string
-  totalWeight: (amount: number, uom: string) => string
-  stepperAdditionals: (count: number) => string
+    eachUnit: (pack: string) => string
+    totalWeight: (amount: number, uom: string) => string
+    weightPerUnit: string
+    estimatedTotalWeight: string
+    suggestedExtrasTitle: string
+    stepperAdditionals: (count: number) => string
   review: {
     packageSection: string
     guestsSection: string
@@ -187,6 +196,13 @@ type QuoteStrings = {
     endTimeHintPublic: string
     publicPhoneHint: string
     publicPhonePlaceholder: string
+    publicAddressPlaceholder: string
+    publicAddressNumberPlaceholder: string
+    publicCityPlaceholder: string
+    publicStatePlaceholder: string
+    publicPostalPlaceholder: string
+    publicAdultsPlaceholder: string
+    publicChildrenPlaceholder: string
     firstName: string
     lastName: string
     contactPrivacyHint: string
@@ -230,6 +246,19 @@ type QuoteStrings = {
     grillPhotoHint: string
     grillRentalRequired: string
     grillRentalQty: string
+    grillRentalNecessary: string
+    grillOwn: string
+    waiterSectionTitle: string
+    waiterSectionHint: string
+    waiterUnitPrice: string
+    waiterSubtotal: string
+    increaseWaiters: string
+    decreaseWaiters: string
+    waitersNotHired: string
+    disposableKitTitle: string
+    disposableKitDescription: string
+    disposableKitPrice: string
+    sausageOption: string
     grillNotes: string
     grillNotesPlaceholder: string
     mileageBaseHint: string
@@ -417,6 +446,7 @@ type QuoteStrings = {
     confirmSectionPackage: string
     confirmSectionAdditionals: string
     confirmSectionGrill: string
+    bbqServicesSection: string
     confirmSectionMileage: string
     confirmSectionFinancial: string
     confirmSectionRules: string
@@ -475,25 +505,25 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     stepSubtitles: {
       0: 'Identifique o cliente para começar a cotação.',
       1: 'Informe data, local e detalhes do evento.',
-      2: 'Escolha o pacote e confira as opções disponíveis.',
-      3: 'Adicione itens extras se quiser. A seleção é opcional.',
-      4: 'Configure churrasqueira, foto e rental quando aplicável.',
+      2: 'Configure churrasqueira e serviço de garçom.',
+      3: 'Escolha o pacote e confira as opções disponíveis.',
+      4: 'Adicione itens extras se quiser. A seleção é opcional.',
       5: 'Revise e confirme a cotação comercial completa.',
     },
     wizardSteps: [
       'Cliente',
       'Evento',
+      'Churrasco',
       'Pacote',
       'Adicionais',
-      'Churrasco',
       'Confirmação',
     ],
     wizardStepsShort: [
       'Cliente',
       'Evento',
+      'BBQ',
       'Pacote',
       'Extras',
-      'BBQ',
       'Revisão',
     ],
     next: 'Próximo',
@@ -515,6 +545,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     removeUnit: 'Remover unidade',
     eachUnit: (pack) => `Cada unidade: ${pack}`,
     totalWeight: (amount, uom) => `${amount} ${uom} total`,
+    weightPerUnit: 'Peso por unidade',
+    estimatedTotalWeight: 'Peso total estimado',
+    suggestedExtrasTitle: 'Extras sugeridos',
     stepperAdditionals: (count) => `Adicionais · ${count} adicionais`,
     review: {
       packageSection: 'Pacote CDL',
@@ -589,7 +622,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Calculado automaticamente a partir do horário de início. Não é possível editar.',
       publicPhoneHint:
         'Comece pelo código do país. Estados Unidos é +1; para outro país use o DDI, por exemplo +55.',
-      publicPhonePlaceholder: 'Ex.: +1 407 555 0123',
+      publicPhonePlaceholder: 'Ex.: +1 407 555 1234',
+      publicAddressPlaceholder: 'Ex.: 123 Example Ave',
+      publicAddressNumberPlaceholder: 'Ex.: 250',
+      publicCityPlaceholder: 'Ex.: Orlando',
+      publicStatePlaceholder: 'Ex.: FL',
+      publicPostalPlaceholder: 'Ex.: 32801',
+      publicAdultsPlaceholder: 'Ex.: 20',
+      publicChildrenPlaceholder: 'Ex.: 4',
       firstName: 'Primeiro nome',
       lastName: 'Sobrenome',
       contactPrivacyHint:
@@ -644,6 +684,18 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Se o cliente possui churrasqueira própria, confirme se a foto foi recebida para validar tamanho, condição e estrutura antes do evento.',
       grillRentalRequired: 'Necessário alugar churrasqueira?',
       grillRentalQty: 'Quantidade de churrasqueiras para aluguel',
+      grillRentalNecessary: 'Aluguel de churrasqueira necessário',
+      grillOwn: 'Própria',
+      waiterSectionTitle: 'Serviço de garçom',
+      waiterSectionHint: 'Adicione garçons para apoio ao seu evento.',
+      waiterUnitPrice: 'US$250 por garçom',
+      waiterSubtotal: 'Subtotal',
+      increaseWaiters: 'Aumentar garçons',
+      decreaseWaiters: 'Diminuir garçons',
+      waitersNotHired: 'Não contratado',
+      disposableKitTitle: 'Kit de descartáveis',
+      disposableKitDescription: 'Pratos, talheres e guardanapos',
+      disposableKitPrice: 'US$3 por pessoa',
       grillNotes: 'Observações sobre a churrasqueira',
       grillNotesPlaceholder:
         'Ex.: cliente possui churrasqueira, mas foto ainda pendente',
@@ -815,6 +867,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       listAnd: 'e',
       listOr: 'ou',
       optionFallback: 'Opção',
+      sausageOption: 'Escolha da linguiça',
       seafoodOption: 'Frutos do mar',
       ribOption: 'Costela',
       sideOption: 'Guarnição',
@@ -844,7 +897,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       confirmSectionGuests: 'Convidados',
       confirmSectionPackage: 'Pacote',
       confirmSectionAdditionals: 'Adicionais',
-      confirmSectionGrill: 'Churrasqueira',
+      confirmSectionGrill: 'BBQ e serviços',
+      bbqServicesSection: 'BBQ e serviços',
       confirmSectionMileage: 'Milhagem / deslocamento',
       confirmSectionFinancial: 'Financeiro',
       confirmSectionRules: 'Regras comerciais',
@@ -907,25 +961,25 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     stepSubtitles: {
       0: 'Identify the customer to start the quote.',
       1: 'Enter date, location, and event details.',
-      2: 'Choose the package and review available options.',
-      3: 'Add extra items if you want. Selection is optional.',
-      4: 'Configure grill, photo and rental when applicable.',
+      2: 'Configure the grill and waiter service.',
+      3: 'Choose the package and review available options.',
+      4: 'Add extra items if you want. Selection is optional.',
       5: 'Review and confirm the full commercial quote.',
     },
     wizardSteps: [
       'Customer',
       'Event',
+      'BBQ',
       'Package',
       'Extras',
-      'BBQ',
       'Confirmation',
     ],
     wizardStepsShort: [
       'Client',
       'Event',
+      'BBQ',
       'Pack',
       'Extras',
-      'BBQ',
       'Review',
     ],
     next: 'Next',
@@ -945,6 +999,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     removeUnit: 'Remove unit',
     eachUnit: (pack) => `Each unit: ${pack}`,
     totalWeight: (amount, uom) => `${amount} ${uom} total`,
+    weightPerUnit: 'Weight per unit',
+    estimatedTotalWeight: 'Estimated total weight',
+    suggestedExtrasTitle: 'Suggested extras',
     stepperAdditionals: (count) => `Extras · ${count} items`,
     review: {
       packageSection: 'CDL Package',
@@ -1018,7 +1075,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Calculated automatically from the start time. This field cannot be edited.',
       publicPhoneHint:
         'Start with the country code. United States is +1; for another country use its code, for example +55.',
-      publicPhonePlaceholder: 'e.g. +1 407 555 0123',
+      publicPhonePlaceholder: 'Ex.: +1 407 555 1234',
+      publicAddressPlaceholder: 'Ex.: 123 Example Ave',
+      publicAddressNumberPlaceholder: 'Ex.: 250',
+      publicCityPlaceholder: 'Ex.: Orlando',
+      publicStatePlaceholder: 'Ex.: FL',
+      publicPostalPlaceholder: 'Ex.: 32801',
+      publicAdultsPlaceholder: 'Ex.: 20',
+      publicChildrenPlaceholder: 'Ex.: 4',
       firstName: 'First name',
       lastName: 'Last name',
       contactPrivacyHint:
@@ -1072,6 +1136,19 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'If the customer has their own grill, confirm the photo was received to validate size, condition and structure before the event.',
       grillRentalRequired: 'Grill rental required?',
       grillRentalQty: 'Number of grills to rent',
+      grillRentalNecessary: 'Grill rental required',
+      grillOwn: 'Customer-owned',
+      waiterSectionTitle: 'Waiter service',
+      waiterSectionHint: 'Add waiters to support your event.',
+      waiterUnitPrice: 'US$250 per waiter',
+      waiterSubtotal: 'Subtotal',
+      increaseWaiters: 'Increase waiters',
+      decreaseWaiters: 'Decrease waiters',
+      waitersNotHired: 'Not hired',
+      disposableKitTitle: 'Disposable kit',
+      disposableKitDescription: 'Plates, cutlery and napkins',
+      disposableKitPrice: 'US$3 per person',
+      sausageOption: 'Sausage choice',
       grillNotes: 'Grill notes',
       grillNotesPlaceholder:
         'E.g.: customer has a grill, but photo is still pending',
@@ -1271,7 +1348,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       confirmSectionGuests: 'Guests',
       confirmSectionPackage: 'Package',
       confirmSectionAdditionals: 'Additional items',
-      confirmSectionGrill: 'Grill setup',
+      confirmSectionGrill: 'BBQ & services',
+      bbqServicesSection: 'BBQ & services',
       confirmSectionMileage: 'Mileage / travel',
       confirmSectionFinancial: 'Financial summary',
       confirmSectionRules: 'Commercial rules',
@@ -1333,25 +1411,25 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     stepSubtitles: {
       0: 'Identifique al cliente para comenzar la cotización.',
       1: 'Indique fecha, lugar y detalles del evento.',
-      2: 'Elija el paquete y revise las opciones disponibles.',
-      3: 'Agregue ítems extra si quiere. La selección es opcional.',
-      4: 'Configure parrilla, foto y rental cuando aplique.',
+      2: 'Configure la parrilla y el servicio de meseros.',
+      3: 'Elija el paquete y revise las opciones disponibles.',
+      4: 'Agregue ítems extra si quiere. La selección es opcional.',
       5: 'Revise y confirme la cotización comercial completa.',
     },
     wizardSteps: [
       'Cliente',
       'Evento',
+      'Parrilla',
       'Paquete',
       'Adicionales',
-      'Parrilla',
       'Confirmación',
     ],
     wizardStepsShort: [
       'Cliente',
       'Evento',
+      'BBQ',
       'Pack',
       'Extra',
-      'BBQ',
       'Revisión',
     ],
     next: 'Siguiente',
@@ -1373,6 +1451,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     removeUnit: 'Quitar unidad',
     eachUnit: (pack) => `Cada unidad: ${pack}`,
     totalWeight: (amount, uom) => `${amount} ${uom} total`,
+    weightPerUnit: 'Peso por unidad',
+    estimatedTotalWeight: 'Peso total estimado',
+    suggestedExtrasTitle: 'Extras sugeridos',
     stepperAdditionals: (count) => `Adicionales · ${count} artículos`,
     review: {
       packageSection: 'Paquete CDL',
@@ -1447,7 +1528,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Calculado automáticamente a partir del horario de inicio. No se puede editar.',
       publicPhoneHint:
         'Empiece por el código del país. Estados Unidos es +1; para otro país use su código, por ejemplo +55.',
-      publicPhonePlaceholder: 'Ej.: +1 407 555 0123',
+      publicPhonePlaceholder: 'Ej.: +1 407 555 1234',
+      publicAddressPlaceholder: 'Ej.: 123 Example Ave',
+      publicAddressNumberPlaceholder: 'Ej.: 250',
+      publicCityPlaceholder: 'Ej.: Orlando',
+      publicStatePlaceholder: 'Ej.: FL',
+      publicPostalPlaceholder: 'Ej.: 32801',
+      publicAdultsPlaceholder: 'Ej.: 20',
+      publicChildrenPlaceholder: 'Ej.: 4',
       firstName: 'Nombre',
       lastName: 'Apellido',
       contactPrivacyHint:
@@ -1501,6 +1589,19 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Si el cliente tiene parrilla propia, confirme si la foto fue recibida para validar tamaño, condición y estructura antes del evento.',
       grillRentalRequired: '¿Necesita alquilar parrilla?',
       grillRentalQty: 'Cantidad de parrillas para alquiler',
+      grillRentalNecessary: 'Alquiler de parrilla necesario',
+      grillOwn: 'Propia',
+      waiterSectionTitle: 'Servicio de mesero',
+      waiterSectionHint: 'Agregue meseros para apoyar su evento.',
+      waiterUnitPrice: 'US$250 por mesero',
+      waiterSubtotal: 'Subtotal',
+      increaseWaiters: 'Aumentar meseros',
+      decreaseWaiters: 'Disminuir meseros',
+      waitersNotHired: 'No contratado',
+      disposableKitTitle: 'Kit de desechables',
+      disposableKitDescription: 'Platos, cubiertos y servilletas',
+      disposableKitPrice: 'US$3 por persona',
+      sausageOption: 'Elección de salchicha',
       grillNotes: 'Observaciones sobre la parrilla',
       grillNotesPlaceholder:
         'Ej.: el cliente tiene parrilla, pero la foto aún está pendiente',
@@ -1701,7 +1802,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       confirmSectionGuests: 'Invitados',
       confirmSectionPackage: 'Paquete',
       confirmSectionAdditionals: 'Adicionales',
-      confirmSectionGrill: 'Parrilla',
+      confirmSectionGrill: 'BBQ y servicios',
+      bbqServicesSection: 'BBQ y servicios',
       confirmSectionMileage: 'Kilometraje / desplazamiento',
       confirmSectionFinancial: 'Financiero',
       confirmSectionRules: 'Reglas comerciales',

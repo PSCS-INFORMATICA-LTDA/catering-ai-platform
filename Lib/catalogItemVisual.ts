@@ -124,6 +124,8 @@ export function enrichQuoteAdditionalsFromCatalog<
     category_en?: string | null
     category_es?: string | null
     item_key?: string | null
+    quantity_2?: number | null
+    uom_2?: string | null
   }
 > {
   if (rows.length === 0) return []
@@ -143,6 +145,8 @@ export function enrichQuoteAdditionalsFromCatalog<
       image_status: catalogItem.image_status ?? undefined,
       image_notes: catalogItem.image_notes ?? undefined,
       item_type: catalogItem.item_type ?? undefined,
+      quantity_2: catalogItem.quantity_2 ?? undefined,
+      uom_2: catalogItem.uom_2 ?? undefined,
     }
   })
 }

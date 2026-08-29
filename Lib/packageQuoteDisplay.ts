@@ -17,9 +17,10 @@ import { tw } from '@/Lib/quoteTranslations'
 import { pickLocalizedText } from '@/Lib/i18n/locales'
 
 const OPTION_GROUP_ORDER: Record<string, number> = {
-  SEAFOOD_OPTION: 0,
-  COSTELA_OPTION: 1,
-  SIDE_OPTION: 2,
+  LINGUICA_OPTION: 0,
+  SEAFOOD_OPTION: 1,
+  COSTELA_OPTION: 2,
+  SIDE_OPTION: 3,
 }
 
 export type PackageItemDisplayCategory =
@@ -197,6 +198,8 @@ export function getCommercialOptionGroupLabel(
 ): string {
   const key = group.option_group_key?.trim().toUpperCase() ?? ''
   switch (key) {
+    case 'LINGUICA_OPTION':
+      return tw(language, 'sausageOption')
     case 'SEAFOOD_OPTION':
       return tw(language, 'seafoodOption')
     case 'COSTELA_OPTION':

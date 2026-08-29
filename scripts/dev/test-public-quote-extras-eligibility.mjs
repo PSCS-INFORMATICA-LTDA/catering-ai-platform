@@ -183,7 +183,7 @@ test('included package catalog ids never appear in extras (intersection empty)',
   assert.ok(!visibleIds.includes(PICANHA_ANGUS))
   assert.ok(!visibleIds.includes(FRALDINHA_ANGUS))
   assert.ok(visibleIds.includes(FRALDINHA_WAGYU))
-  assert.ok(visibleIds.includes(GRILL_RENTAL))
+  assert.ok(!visibleIds.includes(GRILL_RENTAL))
 })
 
 test('inclusion blocks extras even when blocks_additional_item is false', () => {
@@ -203,7 +203,7 @@ test('package without the item exposes that extra again', () => {
   assert.ok(!pkgA.visible.some((row) => row.id === PICANHA_ANGUS))
   assert.ok(pkgB.visible.some((row) => row.id === PICANHA_ANGUS))
   assert.ok(!pkgB.visible.some((row) => row.id === FRALDINHA_ANGUS))
-  assert.ok(pkgB.visible.some((row) => row.id === GRILL_RENTAL))
+  assert.ok(!pkgB.visible.some((row) => row.id === GRILL_RENTAL))
 })
 
 test('selected extra is dropped when the new package already includes it', () => {
@@ -232,12 +232,12 @@ test('selected option choice also leaves extras (no duplicate seafood charge)', 
   assert.equal(additionals[CAMARAO], 1)
 })
 
-test('equipment remains eligible when it is not in the package composition', () => {
+test('grill rental stays in catalog fetch but is hidden from generic extras', () => {
+  const rows = filterCatalogItems(catalog, 'additional', 'customer')
+  assert.ok(rows.some((row) => row.id === GRILL_RENTAL))
   const { visible } = extrasFor(packageAIncludedRows)
   const grill = visible.find((row) => row.id === GRILL_RENTAL)
-  assert.ok(grill)
-  assert.equal(grill.item_type, 'EQUIPMENT')
-  assert.equal(grill.price, 100)
+  assert.equal(grill, undefined)
 })
 
 test('eligibility uses canonical ids, not translated names', () => {

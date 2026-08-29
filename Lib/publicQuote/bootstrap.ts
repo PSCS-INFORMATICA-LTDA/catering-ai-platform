@@ -285,6 +285,12 @@ function sanitizeCatalogItem(row: Record<string, unknown>) {
       typeof row.pricing_type === 'string' ? row.pricing_type : null,
     unit_label:
       typeof row.unit_label === 'string' ? row.unit_label : null,
+    quantity: Number.isFinite(Number(row.quantity)) ? Number(row.quantity) : null,
+    unit: typeof row.unit === 'string' ? row.unit : null,
+    quantity_2: Number.isFinite(Number(row.quantity_2))
+      ? Number(row.quantity_2)
+      : null,
+    uom_2: typeof row.uom_2 === 'string' ? row.uom_2 : null,
     currency_code:
       typeof row.currency_code === 'string' ? row.currency_code : null,
     display_order: Number(row.display_order ?? 0),

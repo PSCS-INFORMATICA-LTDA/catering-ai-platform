@@ -10,8 +10,14 @@ import {
   type PackageOptionGroupRecord,
 } from './packageOptionGroups'
 import type { QuoteLanguage } from './quoteWizardTypes'
+import {
+  WIZARD_STEPS,
+  isAdditionalsWizardStep as isAdditionalsStep,
+  isGrillWizardStep as isGrillStep,
+} from './wizardSteps'
 
 export const WIZARD_STEP_COUNT = 6
+export { WIZARD_STEPS }
 
 export type WizardAdvanceContext = {
   step: number
@@ -46,10 +52,18 @@ export function canAdvanceFromAdditionalsStep(
 
 export function canAdvanceFromWizardStep(ctx: WizardAdvanceContext): boolean {
   switch (ctx.step) {
-    case 0:
-    case 1:
+    case WIZARD_STEPS.CLIENT:
+    case WIZARD_STEPS.EVENT:
       return true
-    case 2: {
+    case WIZARD_STEPS.BBQ: {
+      if (!ctx.state.grillSetupAnswered) return false
+      if (isGrillPhotoRequiredAndMissing(ctx.state)) return false
+      if (ctx.state.grillRentalRequired && ctx.state.grillRentalQty <= 0) {
+        return false
+      }
+      return true
+    }
+    case WIZARD_STEPS.PACKAGE: {
       if (!ctx.packageId?.trim()) return false
       if (!ctx.selectedPackage || isCustomPackage(ctx.selectedPackage)) {
         return true
@@ -62,19 +76,11 @@ export function canAdvanceFromWizardStep(ctx: WizardAdvanceContext): boolean {
         ).length === 0
       )
     }
-    case 3:
+    case WIZARD_STEPS.EXTRAS:
       return canAdvanceFromAdditionalsStep(
         ctx.additionalCategoryKeys,
         ctx.visitedAdditionalCategories,
       )
-    case 4: {
-      if (!ctx.state.grillSetupAnswered) return false
-      if (isGrillPhotoRequiredAndMissing(ctx.state)) return false
-      if (ctx.state.grillRentalRequired && ctx.state.grillRentalQty <= 0) {
-        return false
-      }
-      return true
-    }
     default:
       return ctx.step < WIZARD_STEP_COUNT - 1
   }
@@ -88,9 +94,9 @@ export function resolveNextWizardStep(ctx: WizardAdvanceContext): number {
 }
 
 export function isGrillWizardStep(step: number): boolean {
-  return step === 4
+  return isGrillStep(step)
 }
 
 export function isAdditionalsWizardStep(step: number): boolean {
-  return step === 3
+  return isAdditionalsStep(step)
 }

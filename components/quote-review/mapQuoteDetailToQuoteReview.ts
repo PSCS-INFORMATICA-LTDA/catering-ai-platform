@@ -420,6 +420,7 @@ export function mapQuoteDetailToQuoteReview(
   const additionals: QuoteReviewAdditional[] = (quote.additional_items ?? []).map(
     (item) => ({
       id: item.item_id,
+      itemKey: item.item_key ?? null,
       label: getAdditionalLabel(item, lang),
       category: getAdditionalCategory(item, lang),
       quantity: item.quantity ?? null,
@@ -428,6 +429,8 @@ export function mapQuoteDetailToQuoteReview(
       imageUrl: getAdditionalImage(item),
       itemType: item.item_type,
       categoryPt: item.category_pt,
+      quantity2: item.quantity_2 ?? null,
+      uom2: item.uom_2 ?? null,
     }),
   )
 

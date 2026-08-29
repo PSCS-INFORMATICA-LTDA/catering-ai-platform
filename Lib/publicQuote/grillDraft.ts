@@ -19,7 +19,7 @@ export function isPublicGrillDraftAnswered(
   if (!grill) return false
   if (grill.setupAnswered === true) return true
   if (grill.setupAnswered === false) return false
-  if (currentStep >= 4) return true
+  if (currentStep >= 2) return true
   if (grill.hasGrill === true) return true
   if (grill.rentalRequired === true) return true
   if (Number(grill.rentalQty) > 0) return true

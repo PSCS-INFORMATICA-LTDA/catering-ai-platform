@@ -1,4 +1,6 @@
 import { isUsablePhone } from '@/Lib/normalizePhone'
+import { sanitizePublicAdditionalQuantity } from './structuralExtras.ts'
+import { normalizePublicGrillSelection } from './normalizePublicServices.ts'
 import { isValidEventTimeWindow } from './eventDuration'
 import { isPublicEventDateBookable } from './eventDate'
 import { toPublicPhoneE164 } from './phone'
@@ -76,7 +78,7 @@ export function sanitizePublicQuoteDraft(value: unknown): PublicQuoteDraft {
         .map((line) => record(line))
         .map((line) => ({
           itemId: shortText(line.itemId, 64),
-          quantity: nonNegativeInteger(line.quantity, 10000),
+          quantity: sanitizePublicAdditionalQuantity(line.quantity),
         }))
         .filter((line) => validUuid(line.itemId) && line.quantity > 0)
     : []
@@ -138,14 +140,27 @@ export function sanitizePublicQuoteDraft(value: unknown): PublicQuoteDraft {
       additionals,
       reviewedCategoryKeys,
     },
-    grill: {
-      setupAnswered: grill.setupAnswered === true,
-      hasGrill: grill.hasGrill === true,
-      photoReference: nullableText(grill.photoReference, 500),
-      rentalRequired: grill.rentalRequired === true,
-      rentalQty: nonNegativeInteger(grill.rentalQty, 20),
-      notes: nullableText(grill.notes, 1000),
-    },
+    grill: (() => {
+      const normalized = normalizePublicGrillSelection({
+        setupAnswered: grill.setupAnswered === true,
+        hasGrill:
+          grill.hasGrill === true
+            ? true
+            : grill.hasGrill === false
+              ? false
+              : null,
+        rentalRequired: grill.rentalRequired === true,
+        rentalQty: sanitizePublicAdditionalQuantity(grill.rentalQty),
+      })
+      return {
+        setupAnswered: normalized.setupAnswered === true,
+        hasGrill: normalized.hasGrill === true,
+        rentalRequired: normalized.rentalRequired,
+        rentalQty: normalized.rentalQty,
+        photoReference: nullableText(grill.photoReference, 500),
+        notes: nullableText(grill.notes, 1000),
+      }
+    })(),
   }
 }
 
@@ -236,6 +251,9 @@ export function validateCompletePublicQuoteDraft(
     }
     draft.grill.rentalRequired = false
     draft.grill.rentalQty = 0
+  } else if (draft.grill.setupAnswered || draft.grill.hasGrill === false) {
+    draft.grill.rentalRequired = true
+    draft.grill.rentalQty = 1
   } else if (
     draft.grill.rentalRequired &&
     draft.grill.rentalQty < 1

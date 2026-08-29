@@ -182,6 +182,16 @@ html[data-public-landing-theme="dark"],
     color: var(--cdl-muted);
   }
 
+  .public-field-required {
+    display: inline-block;
+    margin-left: 0.28em;
+    color: #f6d000;
+    font-size: 0.95em;
+    font-weight: 900;
+    line-height: 1;
+    vertical-align: 0.05em;
+  }
+
   .cdl-hero-tag {
     display: inline-flex;
     align-items: center;
@@ -2204,46 +2214,245 @@ body {
   }
 }
 
-.cdl-success-emblem-halo {
+.public-success {
+  background: #050505;
+  color: #fff;
+}
+
+.public-success-confirm {
+  position: relative;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 2rem 1.15rem 1.15rem;
+  background:
+    radial-gradient(ellipse 88% 58% at 12% 0%, rgba(226, 27, 27, 0.16), transparent 58%),
+    radial-gradient(ellipse 70% 46% at 88% 8%, rgba(246, 208, 0, 0.07), transparent 52%);
+}
+
+.public-success-kicker {
+  margin-bottom: 0.7rem;
+}
+
+.public-success-title {
+  font-size: clamp(2.15rem, 9.2vw, 3.6rem);
+}
+
+.public-success-body-copy {
+  margin-top: 1rem;
+}
+
+.public-success-panel {
+  position: relative;
+  z-index: 2;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 0.6rem 1.15rem 1.4rem;
+}
+
+.public-success-summary {
+  display: grid;
+  gap: 1rem;
+  padding: 1.2rem 1.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.public-success-summary dt {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.public-success-summary dd {
+  margin: 0.35rem 0 0;
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.public-success-zelle {
+  margin: 1.15rem 0 0;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.94rem;
+}
+
+.public-success-contacts {
+  margin-top: 1.4rem;
+}
+
+.public-success-contacts-label {
+  margin: 0 0 0.75rem;
+  color: #f6d000;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.public-success-contacts ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.public-success-contacts a {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 3rem;
+  color: #fff;
+  text-decoration: none;
+}
+
+.public-success-contact-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  flex-shrink: 0;
+}
+
+.public-success-contacts [data-success-whatsapp] .public-success-contact-icon {
+  color: #25d366;
+}
+
+.public-success-contacts [data-success-instagram] .public-success-contact-icon {
+  color: #f5d0c5;
+}
+
+.public-success-contacts a span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.public-success-contacts a strong {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.public-success-contacts a em {
+  color: #fff;
+  font-size: 0.98rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.public-success-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.7rem;
+}
+
+.public-success-cta {
+  margin-top: 0;
+}
+
+.public-success-cta-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.public-success-fire-logo {
+  display: flex;
+  justify-content: center;
+  padding: 1.6rem 1.15rem 2.6rem;
+}
+
+.public-success-fire-logo-stage {
+  position: relative;
+  width: 9.25rem;
+  height: 9.25rem;
+}
+
+.public-success-fire-logo-halo {
+  position: absolute;
+  inset: -32%;
+  z-index: 0;
+  border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(249, 115, 22, 0.55),
-    rgba(226, 27, 27, 0.18) 42%,
-    transparent 72%
+    rgba(255, 146, 32, 0.38) 0%,
+    rgba(226, 27, 27, 0.16) 40%,
+    transparent 70%
   );
-  filter: blur(10px);
-  animation: cdl-success-glow 3.8s ease-in-out infinite;
+  animation: public-success-fire-breathe 3.4s ease-in-out infinite;
 }
 
-.cdl-success-emblem-mark {
-  animation:
-    cdl-success-reveal 1.15s ease-out both,
-    cdl-success-turn 7.5s ease-in-out infinite;
-  transform-style: preserve-3d;
+.public-success-fire-logo-flame {
+  position: absolute;
+  z-index: 1;
+  width: 46%;
+  height: 58%;
+  bottom: 4%;
+  border-radius: 50% 50% 42% 42%;
+  background: radial-gradient(
+    ellipse at 50% 78%,
+    #ffd36a 0%,
+    #ff7a18 36%,
+    #e11b1b 68%,
+    transparent 80%
+  );
+  filter: blur(7px);
+  opacity: 0.52;
+  mix-blend-mode: screen;
+  animation: public-success-fire-flicker 1.55s ease-in-out infinite;
 }
 
-@keyframes cdl-success-reveal {
-  from {
-    opacity: 0;
-    transform: scale(0.86);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+.public-success-fire-logo-flame--left {
+  left: 4%;
+  transform-origin: 50% 100%;
 }
 
-@keyframes cdl-success-turn {
-  0%,
-  100% {
-    transform: rotateY(0deg) scale(1);
-  }
-  50% {
-    transform: rotateY(16deg) scale(1.04);
-  }
+.public-success-fire-logo-flame--right {
+  right: 2%;
+  animation-delay: -0.7s;
+  transform-origin: 55% 100%;
 }
 
-@keyframes cdl-success-glow {
+.public-success-fire-logo-embers {
+  position: absolute;
+  inset: -18% -8% 35%;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 22% 78%, #ffb347 0 1.5px, transparent 2px),
+    radial-gradient(circle at 68% 62%, #ff7a18 0 1.2px, transparent 2px),
+    radial-gradient(circle at 48% 40%, #ffd36a 0 1px, transparent 1.8px),
+    radial-gradient(circle at 80% 48%, #e11b1b 0 1px, transparent 1.8px);
+  animation: public-success-fire-embers 2.8s ease-in-out infinite;
+}
+
+.public-success-fire-logo-mark {
+  position: relative;
+  z-index: 3;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  filter: drop-shadow(0 0 14px rgba(255, 122, 24, 0.28));
+}
+
+@keyframes public-success-fire-breathe {
   0%,
   100% {
     opacity: 0.72;
@@ -2251,7 +2460,63 @@ body {
   }
   50% {
     opacity: 1;
-    transform: scale(1.08);
+    transform: scale(1.06);
+  }
+}
+
+@keyframes public-success-fire-flicker {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: scaleY(0.92) translateY(4%);
+  }
+  40% {
+    opacity: 0.7;
+    transform: scaleY(1.08) translateY(-2%);
+  }
+  70% {
+    opacity: 0.48;
+    transform: scaleY(0.98) translateY(1%);
+  }
+}
+
+@keyframes public-success-fire-embers {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(6%);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateY(-10%);
+  }
+}
+
+@media (min-width: 640px) {
+  .public-success-confirm,
+  .public-success-panel,
+  .public-success-fire-logo {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .public-success-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .public-success-fire-logo-stage {
+    width: 10.5rem;
+    height: 10.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .public-success-confirm {
+    padding-top: 2.8rem;
+  }
+
+  .public-success-title {
+    font-size: clamp(2.8rem, 4.6vw, 4.4rem);
   }
 }
 
@@ -2270,9 +2535,15 @@ body {
     text-shadow: none;
   }
 
-  .cdl-success-emblem-halo,
-  .cdl-success-emblem-mark {
+  .public-success-fire-logo-halo,
+  .public-success-fire-logo-flame,
+  .public-success-fire-logo-embers {
     animation: none;
+  }
+
+  .public-success-fire-logo-embers {
+    opacity: 0.45;
+    transform: none;
   }
 }
 

@@ -13,6 +13,7 @@ import { isPerPersonAdditional } from '@/Lib/quoteAdditionalDisplay'
 import { getActiveCompanyId } from '@/Lib/tenant/resolveTenant'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import type { PricingConfigurationError } from './pricingBreakdownTypes'
+import { pruneStructuralAdditionalLines } from '@/Lib/publicQuote/normalizePublicServices'
 
 export type QuotePricingSelectionInput = {
   companyId?: string | null
@@ -114,11 +115,11 @@ export async function resolveQuotePricingInput(
   }
 
   const packagePricePerPerson = getPackagePrice(pkg)
-  const selectedLines = (input.additionals ?? []).filter(
+  const rawLines = (input.additionals ?? []).filter(
     (line) => line.itemId?.trim() && line.quantity > 0,
   )
 
-  const catalogIds = [...new Set(selectedLines.map((line) => line.itemId.trim()))]
+  const catalogIds = [...new Set(rawLines.map((line) => line.itemId.trim()))]
   let catalogItems: CatalogItemListItem[] = []
 
   if (catalogIds.length > 0) {
@@ -141,6 +142,7 @@ export async function resolveQuotePricingInput(
   }
 
   const catalogById = new Map(catalogItems.map((item) => [item.id, item]))
+  const selectedLines = pruneStructuralAdditionalLines(rawLines, catalogById, pkg)
 
   const language =
     input.language === 'en' || input.language === 'es' || input.language === 'pt'
