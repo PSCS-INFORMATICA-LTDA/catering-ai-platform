@@ -26,6 +26,10 @@ export type CatalogItemListItem = {
   charge_type?: string | null
   pricing_type?: string | null
   unit_label?: string | null
+  quantity?: number | null
+  unit?: string | null
+  quantity_2?: number | null
+  uom_2?: string | null
   currency_code?: string | null
   display_order?: number | null
   image_url?: string | null

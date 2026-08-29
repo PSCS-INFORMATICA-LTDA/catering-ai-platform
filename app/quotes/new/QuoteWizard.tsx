@@ -13,7 +13,6 @@ import PublicPackageCatalog from '../../../components/quotes/PublicPackageCatalo
 import PublicPhoneField from '../../../components/quotes/PublicPhoneField'
 import PublicRequiredMark from '../../../components/quotes/PublicRequiredMark'
 import QuoteWizardStepNav from '../../../components/quotes/QuoteWizardStepNav'
-import AdditionalCategorySection from '../../../components/quotes/additionals/AdditionalCategorySection'
 import { useAutoEventDistance } from '@/Lib/hooks/useAutoEventDistance'
 import {
   calcAdditionalLineTotalForItem,
@@ -31,6 +30,11 @@ import {
   pruneVisitedAdditionalCategories,
 } from '@/Lib/wizardAdditionalCategories'
 import { resolveNextWizardStep, WIZARD_STEP_COUNT } from '@/Lib/wizardStepAdvance'
+import { WIZARD_STEPS } from '@/Lib/wizardSteps'
+import AdditionalCategorySection from '../../../components/quotes/additionals/AdditionalCategorySection'
+import AdditionalItemCard from '../../../components/quotes/additionals/AdditionalItemCard'
+import NoSidesDisposableKitOffer from '../../../components/quotes/NoSidesDisposableKitOffer'
+import QuoteBbqWaiterPanel from '../../../components/quotes/QuoteBbqWaiterPanel'
 import {
   ADDITIONAL_CATEGORY_EXPOSE_FALLBACK_BOTTOM_PX,
   isExtrasExposeScrollJump,
@@ -114,6 +118,15 @@ import {
   getVisiblePublicExtraItems,
   pruneBlockedAdditionalSelections,
 } from '../../../Lib/publicQuote/extrasEligibility.ts'
+import {
+  isDisposableKitCatalogItem,
+  isGrillRentalCatalogItem,
+  isWaiterServiceCatalogItem,
+  partitionSuggestedPublicExtras,
+  sanitizePublicAdditionalQuantity,
+} from '../../../Lib/publicQuote/structuralExtras'
+import { normalizePublicGrillSelection } from '../../../Lib/publicQuote/normalizePublicServices'
+import { GRILL_RENTAL_FEE, WAITER_SERVICE_FEE } from '@/Lib/cdlCommercialRules'
 import {
   flattenPackageOptionGroupItems,
   getBlockedCatalogItemIds,
@@ -302,11 +315,13 @@ function buildPublicIntakeDraft(
       reviewedCategoryKeys,
     },
     grill: {
-      setupAnswered: state.grillSetupAnswered,
-      hasGrill: state.hasGrill,
+      ...normalizePublicGrillSelection({
+        setupAnswered: state.grillSetupAnswered,
+        hasGrill: state.hasGrill,
+        rentalRequired: state.grillRentalRequired,
+        rentalQty: state.grillRentalQty,
+      }),
       photoReference: state.grillPhotoReference,
-      rentalRequired: state.grillRentalRequired,
-      rentalQty: state.grillRentalQty,
       notes: state.grillNotes.trim() || null,
     },
   }
@@ -979,30 +994,6 @@ function QuantityField({
   )
 }
 
-function CheckboxField({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string
-  checked: boolean
-  onChange: (checked: boolean) => void
-}) {
-  return (
-    <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-cdl-border bg-cdl-inset px-5 py-4 shadow-cdl transition-colors hover:border-cdl-accent-border">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 accent-cdl-brand"
-      />
-      <span className="text-xs font-bold uppercase tracking-wider text-cdl-fg">
-        {label}
-      </span>
-    </label>
-  )
-}
-
 function GrillPhotoStatusField({
   value,
   disabled,
@@ -1116,6 +1107,15 @@ export default function QuoteWizardCore({
   initialReviewedCategoryKeys?: string[]
 }) {
   const itemCatalog = catalogItems ?? additionalItems ?? []
+  const waiterItem = itemCatalog.find(isWaiterServiceCatalogItem) ?? null
+  const disposableKitItem = itemCatalog.find(isDisposableKitCatalogItem) ?? null
+  const grillCatalogItem = itemCatalog.find(isGrillRentalCatalogItem) ?? null
+  const waiterUnitPrice = waiterItem
+    ? getAdditionalUnitPrice(waiterItem) || WAITER_SERVICE_FEE
+    : WAITER_SERVICE_FEE
+  const grillUnitPrice = grillCatalogItem
+    ? getAdditionalUnitPrice(grillCatalogItem) || GRILL_RENTAL_FEE
+    : GRILL_RENTAL_FEE
   const isEditMode = mode === 'edit' && Boolean(quoteId)
   const isPublicMode = entryMode === 'public'
   const { branchId: tenantBranchId, companyId: tenantCompanyId } = useTenant()
@@ -1558,9 +1558,15 @@ export default function QuoteWizardCore({
     [itemCatalog, blockedCatalogItemIds],
   )
 
+  const { suggested: suggestedExtraItems, remaining: remainingExtraItems } =
+    useMemo(
+      () => partitionSuggestedPublicExtras(visibleAdditionalItems),
+      [visibleAdditionalItems],
+    )
+
   const additionalItemsByCategory = useMemo(
-    () => groupAdditionalItemsByCategory(visibleAdditionalItems, uiLocale),
-    [visibleAdditionalItems, uiLocale],
+    () => groupAdditionalItemsByCategory(remainingExtraItems, uiLocale),
+    [remainingExtraItems, uiLocale],
   )
 
   const selectedCountByCategory = useMemo(() => {
@@ -1573,6 +1579,27 @@ export default function QuoteWizardCore({
     }
     return counts
   }, [additionalItemsByCategory, state.additionals])
+
+  useEffect(() => {
+    setState((prev) => {
+      const next = { ...prev.additionals }
+      let changed = false
+      if (grillCatalogItem?.id && next[grillCatalogItem.id]) {
+        delete next[grillCatalogItem.id]
+        changed = true
+      }
+      if (
+        fromWithSidesSection &&
+        disposableKitItem?.id &&
+        next[disposableKitItem.id]
+      ) {
+        delete next[disposableKitItem.id]
+        changed = true
+      }
+      if (!changed) return prev
+      return { ...prev, additionals: next }
+    })
+  }, [grillCatalogItem?.id, disposableKitItem?.id, fromWithSidesSection])
 
   useEffect(() => {
     if (blockedCatalogItemIds.length === 0) return
@@ -1692,7 +1719,7 @@ export default function QuoteWizardCore({
     language: state.language,
     enabled:
       Boolean(state.packageId?.trim()) &&
-      (!isPublicMode || step === 5),
+      (!isPublicMode || step === WIZARD_STEPS.REVIEW),
     endpoint: isPublicMode
       ? '/api/public/quote-intake/preview'
       : '/api/quotes/preview',
@@ -1719,7 +1746,14 @@ export default function QuoteWizardCore({
   const reservationAmount = pricingBreakdown?.deposit ?? 0
 
   const selectedAdditionalsByCategory = useMemo(() => {
-    return additionalItemsByCategory
+    const serviceItems = [waiterItem, disposableKitItem].filter(
+      (item): item is NonNullable<typeof item> => Boolean(item),
+    )
+    const grouped = groupAdditionalItemsByCategory(
+      [...suggestedExtraItems, ...remainingExtraItems, ...serviceItems],
+      uiLocale,
+    )
+    return grouped
       .map(({ categoryKey, categoryLabel, items }) => ({
         categoryKey,
         categoryLabel,
@@ -1736,6 +1770,10 @@ export default function QuoteWizardCore({
       }))
       .filter(({ items }) => items.length > 0)
   }, [
+    suggestedExtraItems,
+    remainingExtraItems,
+    waiterItem,
+    disposableKitItem,
     additionalItemsByCategory,
     state.additionals,
     billableGuestCount,
@@ -1752,6 +1790,7 @@ export default function QuoteWizardCore({
       selectedAdditionalsByCategory.flatMap(({ categoryLabel, items }) =>
         items.map(({ item, quantity, unitPrice, perPerson, totalPrice }) => ({
           id: item.id,
+          itemKey: item.item_key ?? null,
           label: getLocalizedAdditionalLabel(item, uiLocale),
           category: categoryLabel,
           quantity,
@@ -1761,6 +1800,8 @@ export default function QuoteWizardCore({
           itemType: item.item_type,
           categoryPt: item.category_pt,
           perPerson,
+          quantity2: item.quantity_2 ?? null,
+          uom2: item.uom_2 ?? null,
         })),
       ),
     [selectedAdditionalsByCategory, uiLocale],
@@ -1818,7 +1859,7 @@ export default function QuoteWizardCore({
   }
 
   useEffect(() => {
-    if (step !== 3) {
+    if (step !== WIZARD_STEPS.EXTRAS) {
       setOpenAdditionalCategories(new Set())
       setAdditionalsReviewPrompt(false)
     }
@@ -1848,7 +1889,7 @@ export default function QuoteWizardCore({
   }, [isPublicMode, step])
 
   useEffect(() => {
-    if (!isPublicMode || step !== 3) return
+    if (!isPublicMode || step !== WIZARD_STEPS.EXTRAS) return
     let lastY = window.scrollY
     let lastT = performance.now()
     let settleTimer = 0
@@ -1880,7 +1921,7 @@ export default function QuoteWizardCore({
   }, [isPublicMode, step])
 
   useEffect(() => {
-    if (step !== 3) return
+    if (step !== WIZARD_STEPS.EXTRAS) return
     setVisitedAdditionalCategories((prev) =>
       pruneVisitedAdditionalCategories(prev, additionalCategoryKeys),
     )
@@ -2189,7 +2230,7 @@ export default function QuoteWizardCore({
   }
 
   useEffect(() => {
-    if (step !== 5) return
+    if (step !== WIZARD_STEPS.REVIEW) return
     const timer = window.setTimeout(() => {
       distanceInputRef.current?.focus()
       distanceInputRef.current?.select()
@@ -2199,9 +2240,10 @@ export default function QuoteWizardCore({
 
   function setAdditionalQty(itemId: string, quantity: number) {
     const item = itemCatalog.find((row) => row.id === itemId)
+    const integerQty = sanitizePublicAdditionalQuantity(quantity)
     const normalizedQty = item
-      ? normalizeAdditionalQuantity(item, quantity)
-      : Math.max(0, quantity)
+      ? normalizeAdditionalQuantity(item, integerQty)
+      : integerQty
 
     if (item) {
       markAdditionalCategoryVisited(getAdditionalItemCategoryKey(item))
@@ -2251,14 +2293,33 @@ export default function QuoteWizardCore({
     if (found?.id !== state.packageId) {
       setVisitedAdditionalCategories(new Set())
     }
-    updateState({ packageId: found?.id ?? packageId, packageSelections: prunedSelections })
+    const nextAdditionals = { ...state.additionals }
+    if (
+      found &&
+      getPublicPackageSidesGroup(found) === 'with_sides' &&
+      disposableKitItem?.id
+    ) {
+      delete nextAdditionals[disposableKitItem.id]
+    }
+    if (grillCatalogItem?.id) {
+      delete nextAdditionals[grillCatalogItem.id]
+    }
+    updateState({
+      packageId: found?.id ?? packageId,
+      packageSelections: prunedSelections,
+      additionals: nextAdditionals,
+    })
   }
 
   function goNext() {
     const categoryKeys = additionalCategoryKeysRef.current
     const visitedCategories = visitedAdditionalCategoriesRef.current
 
-    if (step === 0 || step === 1 || step === 4) {
+    if (
+      step === WIZARD_STEPS.CLIENT ||
+      step === WIZARD_STEPS.EVENT ||
+      step === WIZARD_STEPS.BBQ
+    ) {
       const issues = getStepIssues(step, stepStatusCtx)
       if (issues.length > 0) {
         setNavigationIssues(issues)
@@ -2266,11 +2327,11 @@ export default function QuoteWizardCore({
       }
     }
 
-    if (step === 2 && !state.packageId) {
+    if (step === WIZARD_STEPS.PACKAGE && !state.packageId) {
       setPackageStepMessage(w.selectPackageToContinue)
       return
     }
-    if (step === 2 && state.packageId && selectedPackage) {
+    if (step === WIZARD_STEPS.PACKAGE && state.packageId && selectedPackage) {
       if (!isCustomPackage(selectedPackage)) {
         const issues = validatePackageSelections(
           selectableActivePackageOptionGroups,
@@ -2340,7 +2401,7 @@ export default function QuoteWizardCore({
   )
 
   useEffect(() => {
-    if (step !== 2 || process.env.NODE_ENV === 'production') return
+    if (step !== WIZARD_STEPS.PACKAGE || process.env.NODE_ENV === 'production') return
     console.log('[Etapa Pacote] packages', packages)
     console.log('[Etapa Pacote] packageOptionGroups', flatOptionGroups)
     console.log('[Etapa Pacote] packageOptionGroupItems', allOptionGroupItems)
@@ -2415,12 +2476,8 @@ export default function QuoteWizardCore({
   ])
 
   useEffect(() => {
-    const previousStep = previousStepRef.current
     previousStepRef.current = step
-    if (step === 2 && previousStep === 1 && !isEditMode) {
-      updateState({ packageId: null, packageSelections: {} })
-    }
-  }, [step, isEditMode])
+  }, [step])
 
   const mandatoryPendingSteps = useMemo(
     () => getMandatoryPendingSteps(stepStatusCtx),
@@ -3085,7 +3142,7 @@ export default function QuoteWizardCore({
           </SectionCard>
         )}
 
-        {step === 2 && (
+        {step === WIZARD_STEPS.PACKAGE && (
           <div className="space-y-4">
             {packages.length === 0 ? (
               <div className="rounded-2xl border border-red-500/40 bg-cdl-surface p-6 text-sm text-red-300">
@@ -3137,6 +3194,18 @@ export default function QuoteWizardCore({
               />
             )}
 
+            {state.packageId &&
+            !fromWithSidesSection &&
+            disposableKitItem ? (
+              <NoSidesDisposableKitOffer
+                selected={(state.additionals[disposableKitItem.id] ?? 0) > 0}
+                language={uiLocale}
+                onToggle={(selected) =>
+                  setAdditionalQty(disposableKitItem.id, selected ? 1 : 0)
+                }
+              />
+            ) : null}
+
             {!isPublicMode && process.env.NODE_ENV !== 'production' ? (
               <PackageOptionsDebugPanel
                 companyId={debugCompanyId}
@@ -3152,12 +3221,32 @@ export default function QuoteWizardCore({
           </div>
         )}
 
-        {step === 3 && (
+        {step === WIZARD_STEPS.EXTRAS && (
           <div className="min-w-0 space-y-6">
             <p className="text-sm text-cdl-muted">
               {quoteStrings.additionalsStepHint}
             </p>
-            {additionalItemsByCategory.length === 0 ? (
+            {suggestedExtraItems.length > 0 ? (
+              <section data-suggested-extras className="space-y-3">
+                <h2 className="text-sm font-black uppercase tracking-wide text-cdl-title">
+                  {quoteStrings.suggestedExtrasTitle}
+                </h2>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {suggestedExtraItems.map((item) => (
+                    <AdditionalItemCard
+                      key={item.id}
+                      item={item}
+                      quantity={state.additionals[item.id] ?? 0}
+                      billableGuestCount={billableGuestCount}
+                      language={uiLocale}
+                      onChangeQty={(qty) => setAdditionalQty(item.id, qty)}
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
+            {additionalItemsByCategory.length === 0 &&
+            suggestedExtraItems.length === 0 ? (
               <p className="text-sm text-cdl-muted">
                 {quoteStrings.noAdditionalsAvailable}
               </p>
@@ -3193,7 +3282,7 @@ export default function QuoteWizardCore({
           </div>
         )}
 
-        {step === 4 && (
+        {step === WIZARD_STEPS.BBQ && (
           <div className="space-y-6">
             {grillStepPendingIssues.length > 0 ? (
               <section className="rounded-2xl border border-cdl-action/40 bg-cdl-red-soft p-5 shadow-cdl sm:p-6">
@@ -3265,6 +3354,8 @@ export default function QuoteWizardCore({
                                   grillPhotoAnswered: true,
                                   grillPhotoUrl: null,
                                   grillPhotoReference: null,
+                                  grillRentalRequired: true,
+                                  grillRentalQty: 1,
                                 },
                           )
                         }
@@ -3338,36 +3429,20 @@ export default function QuoteWizardCore({
               ) : null}
 
               {state.grillSetupAnswered && !state.hasGrill ? (
-                <>
-                  <div className="sm:col-span-1">
-                    <CheckboxField
-                      label={w.grillRentalRequired}
-                      checked={state.grillRentalRequired}
-                      onChange={(value) =>
-                        updateState({
-                          grillRentalRequired: value,
-                          grillRentalQty: value
-                            ? Math.max(1, state.grillRentalQty)
-                            : 0,
-                        })
-                      }
-                    />
-                  </div>
-                  <QuantityField
-                    label={w.grillRentalQty}
-                    value={state.grillRentalQty}
-                    min={state.grillRentalRequired ? 1 : 0}
-                    disabled={!state.grillRentalRequired}
-                    placeholder={state.grillRentalRequired ? '1' : '0'}
-                    onChange={(value) =>
-                      updateState({
-                        grillRentalQty: state.grillRentalRequired
-                          ? Math.max(1, value)
-                          : 0,
-                      })
-                    }
-                  />
-                </>
+                <div
+                  data-grill-rental-required
+                  className="sm:col-span-2 rounded-2xl border border-[color-mix(in_srgb,var(--brand-primary-2)_35%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_6%,white)] p-5"
+                >
+                  <p className="text-xs font-black uppercase tracking-wide text-[var(--brand-primary)]">
+                    {w.grillRentalNecessary}
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-cdl-title">
+                    1 {uiLocale === 'en' ? 'grill' : uiLocale === 'es' ? 'parrilla' : 'churrasqueira'}
+                  </p>
+                  <p className="mt-1 text-lg font-black text-[var(--brand-primary)]">
+                    {`US$${grillUnitPrice.toFixed(0)}`}
+                  </p>
+                </div>
               ) : null}
               <div className="sm:col-span-2">
                 <label className="flex flex-col gap-2">
@@ -3385,10 +3460,18 @@ export default function QuoteWizardCore({
               </div>
             </div>
           </SectionCard>
+          {waiterItem ? (
+            <QuoteBbqWaiterPanel
+              quantity={state.additionals[waiterItem.id] ?? 0}
+              unitPrice={waiterUnitPrice}
+              language={uiLocale}
+              onChangeQty={(qty) => setAdditionalQty(waiterItem.id, qty)}
+            />
+          ) : null}
           </div>
         )}
 
-        {step === 5 && (
+        {step === WIZARD_STEPS.REVIEW && (
           isPublicMode ? (
             <PublicQuoteConfirmationStep
               state={state}
@@ -3501,7 +3584,7 @@ export default function QuoteWizardCore({
           )
         )}
 
-        {step !== 5 && isPublicMode ? (
+        {step !== WIZARD_STEPS.REVIEW && isPublicMode ? (
           // The action bar stays pinned at the bottom. Reserve its measured
           // height so the last package, category, item or price never sits
           // behind Voltar/Próximo. Safe-area is already inside the nav.
@@ -3513,7 +3596,7 @@ export default function QuoteWizardCore({
           />
         ) : null}
 
-        {step !== 5 ? (
+        {step !== WIZARD_STEPS.REVIEW ? (
           <QuoteWizardStepNav
             step={step}
             wizardStepCount={WIZARD_STEP_COUNT}

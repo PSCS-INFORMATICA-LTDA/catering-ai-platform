@@ -104,9 +104,9 @@ test('TEST 1 new quote only unlocks Cliente', () => {
 })
 
 test('TEST 1 leftover BBQ content does not unlock BBQ', () => {
-  const complete = [false, false, false, false, true, false]
-  assert.equal(visualStatus(4, complete), 'locked')
-  assert.equal(canNavigate(4, complete), false)
+  const complete = [false, false, true, false, false, false]
+  assert.equal(visualStatus(2, complete), 'locked')
+  assert.equal(canNavigate(2, complete), false)
 })
 
 /* TEST 2 client validation */
@@ -125,15 +125,15 @@ test('TEST 2 complete client unlocks Evento only', () => {
 })
 
 /* TEST 3 event validation */
-test('TEST 3 complete event unlocks Pacote', () => {
+test('TEST 3 complete event unlocks BBQ', () => {
   const complete = [true, true, false, false, false, false]
   assert.equal(visualStatus(1, complete), 'complete')
   assert.equal(visualStatus(2, complete), 'pending')
   assert.equal(visualStatus(3, complete), 'locked')
 })
 
-/* TEST 4 package */
-test('TEST 4 selected package unlocks extras', () => {
+/* TEST 4 BBQ then package */
+test('TEST 4 answered BBQ unlocks package only', () => {
   const complete = [true, true, true, false, false, false]
   assert.equal(visualStatus(2, complete), 'complete')
   assert.equal(visualStatus(3, complete), 'pending')
@@ -153,8 +153,8 @@ test('TEST 5 extras Next does not require category review', () => {
     /export function canAdvanceFromAdditionalsStep[\s\S]*?return true/,
   )
   const statusSrc = source('app/quotes/new/wizardStepStatus.ts')
-  assert.match(statusSrc, /if \(index === 3\) \{/)
-  assert.match(statusSrc, /if \(ctx\.currentStep < 3\) return 3/)
+  assert.match(statusSrc, /if \(index === WIZARD_STEPS.EXTRAS\) \{/)
+  assert.match(statusSrc, /if \(ctx\.currentStep < WIZARD_STEPS.EXTRAS\) return WIZARD_STEPS.EXTRAS/)
   const wizard = source('app/quotes/new/QuoteWizard.tsx')
   assert.match(wizard, /const additionalsStepNextDisabled = false/)
   assert.doesNotMatch(
@@ -201,7 +201,7 @@ test('TEST 9 leftover hasGrill false is not a BBQ answer', () => {
     isPublicGrillDraftAnswered({ hasGrill: false, setupAnswered: true }, 0),
     true,
   )
-  assert.equal(isPublicGrillDraftAnswered({ hasGrill: false }, 4), true)
+  assert.equal(isPublicGrillDraftAnswered({ hasGrill: false }, 2), true)
   assert.equal(isPublicGrillDraftAnswered({ hasGrill: true }, 0), true)
   const experience = source(
     'app/quote/[companySlug]/[locale]/PublicQuoteExperience.tsx',

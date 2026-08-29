@@ -5,6 +5,7 @@ import {
   type PackageSideItem,
 } from '@/Lib/packageConfiguration'
 import { resolveCatalogItemDisplayLabel } from '@/Lib/cdlPackageItemI18n'
+import { resolveSausageDisplayLabel } from '@/Lib/publicQuote/sausageOptions'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import { tw } from '@/Lib/quoteTranslations'
 
@@ -64,6 +65,8 @@ export function getOptionItemLabel(
   item: PackageOptionGroupItem,
   language: QuoteLanguage = 'pt',
 ): string {
+  const sausageLabel = resolveSausageDisplayLabel(item, language)
+  if (sausageLabel) return sausageLabel
   return (
     resolveCatalogItemDisplayLabel(
       {

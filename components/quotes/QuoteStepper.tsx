@@ -3,6 +3,7 @@
 import type { StepVisualStatus } from '@/app/quotes/new/wizardStepStatus'
 import { getQuoteStrings } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import { WIZARD_STEPS } from '@/Lib/wizardSteps'
 
 function stepSegmentClass(status: StepVisualStatus, isCurrent: boolean) {
   if (isCurrent) return 'bg-[var(--brand-primary)]'
@@ -76,7 +77,7 @@ export default function QuoteStepper({
           const status = getStepStatus(index)
           const isCurrent = index === currentStep
           const stepTitle =
-            index === 3 && additionalsCount > 0
+            index === WIZARD_STEPS.EXTRAS && additionalsCount > 0
               ? t.stepperAdditionals(additionalsCount)
               : label
 

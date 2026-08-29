@@ -40,6 +40,7 @@ import {
   getPackagePriceLineLabel,
 } from '@/Lib/packageCatalogVisual'
 import { isPricingBreakdown } from '@/Lib/pricing/pricingBreakdownTypes'
+import { hasCatalogWeight } from '@/Lib/publicQuote/structuralExtras'
 import { resolveQuotePdfPackagePerPersonBreakdown } from '@/Lib/quotePdfPackagePresentation'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import {
@@ -1021,6 +1022,12 @@ export function QuotePdfDocument({
                       {t('docQtyLabel')} {displayValue(item.quantity)} ·{' '}
                       {formatCurrency(item.unit_price)}{t('docPerUnitSuffix')} ·{' '}
                       {formatCurrency(item.total_price)}
+                      {hasCatalogWeight({
+                        quantity_2: item.quantity_2,
+                        uom_2: item.uom_2,
+                      })
+                        ? ` · ${item.quantity_2} ${String(item.uom_2).toLowerCase()}`
+                        : ''}
                     </Text>
                   </View>
                 ))}

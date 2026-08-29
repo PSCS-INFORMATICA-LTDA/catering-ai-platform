@@ -1,29 +1,29 @@
-import { WIZARD_STEP_LABELS } from '@/app/quotes/new/wizardStepStatus'
+import { WIZARD_STEP_LABELS, WIZARD_STEPS } from './wizardSteps.ts'
 
 export const WIZARD_STEP_SLUGS: Record<string, number> = {
-  cliente: 0,
-  customer: 0,
-  evento: 1,
-  event: 1,
-  pacote: 2,
-  package: 2,
-  adicionais: 3,
-  additionals: 3,
-  extras: 3,
-  churrasco: 4,
-  churrasqueira: 4,
-  bbq: 4,
-  confirmacao: 5,
-  confirmation: 5,
-  resumo: 5,
-  summary: 5,
+  cliente: WIZARD_STEPS.CLIENT,
+  customer: WIZARD_STEPS.CLIENT,
+  evento: WIZARD_STEPS.EVENT,
+  event: WIZARD_STEPS.EVENT,
+  churrasco: WIZARD_STEPS.BBQ,
+  churrasqueira: WIZARD_STEPS.BBQ,
+  bbq: WIZARD_STEPS.BBQ,
+  pacote: WIZARD_STEPS.PACKAGE,
+  package: WIZARD_STEPS.PACKAGE,
+  adicionais: WIZARD_STEPS.EXTRAS,
+  additionals: WIZARD_STEPS.EXTRAS,
+  extras: WIZARD_STEPS.EXTRAS,
+  confirmacao: WIZARD_STEPS.REVIEW,
+  confirmation: WIZARD_STEPS.REVIEW,
+  resumo: WIZARD_STEPS.REVIEW,
+  summary: WIZARD_STEPS.REVIEW,
 }
 
-export const EDIT_WIZARD_DEFAULT_STEP = 0
+export const EDIT_WIZARD_DEFAULT_STEP = WIZARD_STEPS.CLIENT
 
 export function resolveWizardStep(
   stepParam?: string | null,
-  fallbackStep = 0,
+  fallbackStep = WIZARD_STEPS.CLIENT,
 ): number {
   if (!stepParam?.trim()) return fallbackStep
 

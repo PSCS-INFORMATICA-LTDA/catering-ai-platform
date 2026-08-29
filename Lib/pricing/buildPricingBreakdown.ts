@@ -10,6 +10,7 @@ import {
   type PricingBreakdownLine,
 } from './pricingBreakdownTypes'
 import type { ResolvedQuotePricingContext } from './resolveQuotePricingInput'
+import { hasCatalogWeight } from '@/Lib/publicQuote/structuralExtras'
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100
@@ -80,6 +81,9 @@ export function buildPricingBreakdown(
       metadata: {
         per_person: line.perPerson,
         selected_quantity: line.quantity,
+        item_key: catalog?.item_key ?? null,
+        quantity_2: hasCatalogWeight(catalog) ? Number(catalog?.quantity_2) : null,
+        uom_2: hasCatalogWeight(catalog) ? catalog?.uom_2 ?? null : null,
       },
     })
   }

@@ -10,6 +10,7 @@ import type {
 } from '@/Lib/packageOptionGroups'
 import { collectBlockedCatalogItemIds } from '@/Lib/publicQuote/extrasEligibility.ts'
 import { resolveCatalogItemDisplayLabel } from '@/Lib/cdlPackageItemI18n'
+import { resolveSausageDisplayLabel } from '@/Lib/publicQuote/sausageOptions'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
@@ -141,6 +142,8 @@ export function getPackageItemLabel(
   item: PackageItem,
   language: QuoteLanguage = 'pt',
 ): string {
+  const sausageLabel = resolveSausageDisplayLabel(item, language)
+  if (sausageLabel) return sausageLabel
   return (
     resolveCatalogItemDisplayLabel(
       {

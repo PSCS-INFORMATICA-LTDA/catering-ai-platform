@@ -18,6 +18,8 @@ export type QuoteAdditionalItem = {
   image_url?: string | null
   image_status?: string | null
   item_type?: string | null
+  quantity_2?: number | null
+  uom_2?: string | null
 }
 
 export type QuoteDetailPackageCatalogRow = PackageCatalogRecord & {

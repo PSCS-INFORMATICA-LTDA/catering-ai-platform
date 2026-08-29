@@ -88,6 +88,7 @@
     "test:dev:public-quote-routes": "node --experimental-strip-types scripts/dev/test-public-quote-routes.mjs",
     "test:dev:public-quote-v2-nav": "node --experimental-strip-types scripts/dev/test-public-quote-v2-navigation.mjs",
     "test:dev:public-quote-extras-eligibility": "node --experimental-strip-types scripts/dev/test-public-quote-extras-eligibility.mjs",
+    "test:dev:public-quote-v3": "node --experimental-strip-types scripts/dev/test-public-quote-v3.mjs",
     "apply:dev:additionals-catalog-cleanup": "node scripts/dev/apply-cdl-additionals-catalog-cleanup.mjs --apply",
     "apply:dev:additionals-clean-assets": "node scripts/dev/upload-cdl-additional-clean-assets.mjs --apply",
     "test:dev:extras-summary": "node --experimental-strip-types scripts/dev/test-public-quote-extras-summary.mjs",

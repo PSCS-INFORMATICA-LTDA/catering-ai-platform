@@ -11,15 +11,13 @@ import { isUsablePublicPhone } from '@/Lib/publicQuote/phone'
 import { isPublicEventDateBookable } from '@/Lib/publicQuote/eventDate'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import {
+  MANDATORY_WIZARD_STEP_INDICES,
+  WIZARD_STEP_LABELS,
+  WIZARD_STEPS,
+} from '@/Lib/wizardSteps'
 
-export const WIZARD_STEP_LABELS = [
-  'Cliente',
-  'Evento',
-  'Pacote',
-  'Adicionais',
-  'Churrasco',
-  'Confirmação',
-] as const
+export { WIZARD_STEP_LABELS } from '@/Lib/wizardSteps'
 
 function loc(ctx: { language?: QuoteLanguage | string | null }): QuoteLanguage {
   const l = ctx.language
@@ -120,7 +118,7 @@ export type PendingStepIssue = {
 }
 
 /** Etapas com validação obrigatória antes do save. */
-const MANDATORY_STEP_INDICES = [0, 1, 2, 4] as const
+const MANDATORY_STEP_INDICES = MANDATORY_WIZARD_STEP_INDICES
 
 function isFilled(value: string) {
   return value.trim().length > 0
@@ -261,7 +259,18 @@ export function getStepIssues(
         issues.push(tw(language, 'issueAdults'))
       }
       break
-    case 2: {
+    case WIZARD_STEPS.BBQ:
+      if (!state.grillSetupAnswered) {
+        issues.push(tw(language, 'issueHasGrill'))
+      }
+      if (isGrillPhotoRequiredAndMissing(state)) {
+        issues.push(tw(language, 'grillPendingPhoto'))
+      }
+      if (state.grillRentalRequired && state.grillRentalQty <= 0) {
+        issues.push(tw(language, 'grillPendingRentalQty'))
+      }
+      break
+    case WIZARD_STEPS.PACKAGE: {
       if (!hasValidPackage(ctx)) {
         issues.push(tw(language, 'issueSelectPackage'))
         break
@@ -288,20 +297,9 @@ export function getStepIssues(
       }
       break
     }
-    case 3:
+    case WIZARD_STEPS.EXTRAS:
       break
-    case 4:
-      if (!state.grillSetupAnswered) {
-        issues.push(tw(language, 'issueHasGrill'))
-      }
-      if (isGrillPhotoRequiredAndMissing(state)) {
-        issues.push(tw(language, 'grillPendingPhoto'))
-      }
-      if (state.grillRentalRequired && state.grillRentalQty <= 0) {
-        issues.push(tw(language, 'grillPendingRentalQty'))
-      }
-      break
-    case 5:
+    case WIZARD_STEPS.REVIEW:
       if (!areMandatoryStepsComplete(ctx)) {
         issues.push(tw(language, 'issueIncompleteSteps'))
       }
@@ -332,7 +330,11 @@ export function areMandatoryStepsComplete(ctx: StepStatusContext): boolean {
 export function getMandatoryPendingSteps(
   ctx: StepStatusContext,
 ): PendingStepIssue[] {
-  const indices = [...MANDATORY_STEP_INDICES, 3, 5]
+  const indices = [
+    ...MANDATORY_STEP_INDICES,
+    WIZARD_STEPS.EXTRAS,
+    WIZARD_STEPS.REVIEW,
+  ]
   return indices
     .filter((stepIndex) => !isMandatoryStepComplete(stepIndex, ctx))
     .map((stepIndex) => ({
@@ -346,16 +348,16 @@ export function isStepContentComplete(
   stepIndex: number,
   ctx: StepStatusContext,
 ): boolean {
-  if (stepIndex === 0) {
-    return hasLinkedCustomer(ctx) && getStepIssues(0, ctx).length === 0
+  if (stepIndex === WIZARD_STEPS.CLIENT) {
+    return hasLinkedCustomer(ctx) && getStepIssues(WIZARD_STEPS.CLIENT, ctx).length === 0
   }
-  if (stepIndex === 3) {
-    return ctx.currentStep > 3
+  if (stepIndex === WIZARD_STEPS.EXTRAS) {
+    return ctx.currentStep > WIZARD_STEPS.EXTRAS
   }
-  if (stepIndex === 5) {
+  if (stepIndex === WIZARD_STEPS.REVIEW) {
     return (
       areMandatoryStepsComplete(ctx) &&
-      ctx.currentStep > 3 &&
+      ctx.currentStep > WIZARD_STEPS.EXTRAS &&
       Boolean(ctx.pricingPreviewReady)
     )
   }
@@ -365,8 +367,8 @@ export function isStepContentComplete(
 /** Primeira etapa ainda inválida, ou a última se 1–5 estiverem válidas. */
 export function getMaxReachableStep(ctx: StepStatusContext): number {
   for (let index = 0; index < STEPS_COUNT - 1; index += 1) {
-    if (index === 3) {
-      if (ctx.currentStep < 3) return 3
+    if (index === WIZARD_STEPS.EXTRAS) {
+      if (ctx.currentStep < WIZARD_STEPS.EXTRAS) return WIZARD_STEPS.EXTRAS
       continue
     }
     if (!isStepContentComplete(index, ctx)) return index
@@ -390,8 +392,8 @@ export function getStepVisualStatus(
   if (stepIndex < 0 || stepIndex >= STEPS_COUNT) return 'locked'
   if (stepIndex > getMaxReachableStep(ctx)) return 'locked'
 
-  if (stepIndex === 5) {
-    return isStepContentComplete(5, ctx) ? 'complete' : 'pending'
+  if (stepIndex === WIZARD_STEPS.REVIEW) {
+    return isStepContentComplete(WIZARD_STEPS.REVIEW, ctx) ? 'complete' : 'pending'
   }
 
   return isStepContentComplete(stepIndex, ctx) ? 'complete' : 'pending'
@@ -403,8 +405,8 @@ export type StepStatus = 'current' | 'complete' | 'incomplete' | 'empty'
 export function isQuoteReadyToSave(ctx: StepStatusContext) {
   return (
     areMandatoryStepsComplete(ctx) &&
-    isMandatoryStepComplete(4, ctx) &&
-    isMandatoryStepComplete(5, ctx)
+    isMandatoryStepComplete(WIZARD_STEPS.BBQ, ctx) &&
+    isMandatoryStepComplete(WIZARD_STEPS.REVIEW, ctx)
   )
 }
 

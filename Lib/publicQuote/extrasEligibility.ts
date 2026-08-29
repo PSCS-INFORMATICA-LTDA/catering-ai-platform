@@ -1,4 +1,5 @@
 import { isPublicCatalogFixtureItem } from './catalogVisibility.ts'
+import { isStructuralPublicExtraItem } from './structuralExtras.ts'
 
 export type ExtraEligibilityItem = {
   id: string
@@ -51,6 +52,7 @@ function isCustomerAdditionalCandidate(item: ExtraEligibilityItem): boolean {
     return false
   }
   if (isPublicCatalogFixtureItem(item)) return false
+  if (isStructuralPublicExtraItem(item)) return false
   return true
 }
 
