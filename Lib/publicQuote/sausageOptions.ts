@@ -2,18 +2,26 @@ import type { QuoteLanguage } from '../quoteWizardTypes.ts'
 
 export const PORK_SAUSAGE_ITEM_KEY = 'ITEM_LINGUICA_TOSCANA_TRADICIONAL'
 export const CHICKEN_SAUSAGE_ITEM_KEY = 'ITEM_024'
+export const PORK_SAUSAGE_OPTION_KEY = 'TRADICIONAL_PORCO'
+export const CHICKEN_SAUSAGE_OPTION_KEY = 'TRADICIONAL_FRANGO'
+
+const PORK_SAUSAGE_LABELS = {
+  pt: 'Tradicional porco',
+  en: 'Traditional pork sausage',
+  es: 'Salchicha tradicional de cerdo',
+} as const
+
+const CHICKEN_SAUSAGE_LABELS = {
+  pt: 'Tradicional frango',
+  en: 'Traditional chicken sausage',
+  es: 'Salchicha tradicional de pollo',
+} as const
 
 const SAUSAGE_DISPLAY_LABELS = {
-  [PORK_SAUSAGE_ITEM_KEY]: {
-    pt: 'Tradicional porco',
-    en: 'Traditional pork sausage',
-    es: 'Salchicha tradicional de cerdo',
-  },
-  [CHICKEN_SAUSAGE_ITEM_KEY]: {
-    pt: 'Tradicional frango',
-    en: 'Traditional chicken sausage',
-    es: 'Salchicha tradicional de pollo',
-  },
+  [PORK_SAUSAGE_ITEM_KEY]: PORK_SAUSAGE_LABELS,
+  [PORK_SAUSAGE_OPTION_KEY]: PORK_SAUSAGE_LABELS,
+  [CHICKEN_SAUSAGE_ITEM_KEY]: CHICKEN_SAUSAGE_LABELS,
+  [CHICKEN_SAUSAGE_OPTION_KEY]: CHICKEN_SAUSAGE_LABELS,
 } as const
 
 export function resolveSausageDisplayLabel(

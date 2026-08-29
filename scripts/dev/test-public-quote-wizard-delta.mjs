@@ -164,6 +164,14 @@ test('SAUSAGE_TRADITIONAL_PORK_AND_CHICKEN', () => {
     resolveSausageDisplayLabel({ item_key: CHICKEN_SAUSAGE_ITEM_KEY }, 'es'),
     'Salchicha tradicional de pollo',
   )
+  assert.equal(
+    resolveSausageDisplayLabel({ option_item_key: 'tradicional_porco' }, 'pt'),
+    'Tradicional porco',
+  )
+  assert.equal(
+    resolveSausageDisplayLabel({ option_item_key: 'tradicional_frango' }, 'pt'),
+    'Tradicional frango',
+  )
 })
 
 test('DISPOSABLE_KIT_NO_SIDES_ONLY', () => {
