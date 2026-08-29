@@ -201,6 +201,12 @@ test('WAITER quantity and client price sanitization', () => {
   assert.deepEqual(pruned, [{ itemId: 'waiter', quantity: 2 }])
 })
 
+test('PUBLIC bootstrap keeps quantity_2 / uom_2', () => {
+  const bootstrap = source('Lib/publicQuote/bootstrap.ts')
+  assert.match(bootstrap, /quantity_2: Number.isFinite\(Number\(row\.quantity_2\)\)/)
+  assert.match(bootstrap, /uom_2: typeof row\.uom_2 === 'string' \? row\.uom_2 : null/)
+})
+
 test('WEIGHTED extras use quantity_2 / uom_2', () => {
   const tomahawk = {
     item_key: 'ITEM_012',
