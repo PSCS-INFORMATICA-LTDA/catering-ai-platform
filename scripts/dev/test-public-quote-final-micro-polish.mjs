@@ -88,6 +88,16 @@ test('WAITER_QTY_AND_PRICE_MATH', () => {
   assert.equal(sanitizePublicAdditionalQuantity(1.5), 0)
 })
 
+test('PUBLIC_SUBMIT_ALLOWS_OWN_GRILL_WITHOUT_PHOTO', () => {
+  const validation = source('Lib/publicQuote/validation.ts')
+  assert.match(validation, /if \(\s*draft\.grill\.photoReference &&/)
+  assert.match(validation, /photoReference\.startsWith\(expectedPrefix\)/)
+  assert.doesNotMatch(
+    validation,
+    /if \(!draft\.grill\.photoReference\?\.startsWith/,
+  )
+})
+
 test('HAS_GRILL_YES_WITHOUT_PHOTO_NEXT_ALLOWED', () => {
   const state = grillState()
   assert.equal(isGrillPhotoRequiredAndMissing(state), true)

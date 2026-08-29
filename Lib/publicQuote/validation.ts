@@ -253,7 +253,10 @@ export function validateCompletePublicQuoteDraft(
   }
   if (draft.grill.hasGrill) {
     const expectedPrefix = `public-quote-grill/${options.companyId}/${options.sessionId}/`
-    if (!draft.grill.photoReference?.startsWith(expectedPrefix)) {
+    if (
+      draft.grill.photoReference &&
+      !draft.grill.photoReference.startsWith(expectedPrefix)
+    ) {
       throw new PublicQuoteHttpError(400, 'invalid_payload')
     }
     draft.grill.rentalRequired = false
