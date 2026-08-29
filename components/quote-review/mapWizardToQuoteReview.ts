@@ -64,6 +64,7 @@ export type MapWizardToQuoteReviewInput = {
   commercialRules: CommercialRulesSnapshot
   /** Idioma da UI do operador (perfil). Itens e chrome da revisão seguem este locale. */
   displayLanguage?: WizardState['language']
+  grillDefaultImageUrl?: string | null
 }
 
 export function mapWizardToQuoteReview(
@@ -203,6 +204,7 @@ export function mapWizardToQuoteReview(
       ? getGrillPhotoStatusLabel(state.grillPhotoStatus, lang)
       : tw(lang, 'notApplicable'),
     grillPhotoUrl: state.grillPhotoUrl,
+    grillDefaultImageUrl: input.grillDefaultImageUrl ?? null,
     grillRentalRequired: state.grillRentalRequired,
     grillRentalQty: state.grillRentalRequired ? state.grillRentalQty : null,
     grillRentalTotal: quoteTotals.grillRentalTotal,

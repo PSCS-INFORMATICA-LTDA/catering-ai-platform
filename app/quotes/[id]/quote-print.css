@@ -117,9 +117,24 @@
   align-items: flex-start;
 }
 
+.quote-proposal-hero-brand--review {
+  align-items: center;
+  text-align: center;
+}
+
+.quote-proposal-hero-brand--review .quote-proposal-hero-copy {
+  width: 100%;
+  text-align: center;
+}
+
 @media (min-width: 640px) {
   .quote-proposal-hero-brand {
     flex-direction: row;
+    align-items: center;
+  }
+
+  .quote-proposal-hero-brand.quote-proposal-hero-brand--review {
+    flex-direction: column;
     align-items: center;
   }
 }

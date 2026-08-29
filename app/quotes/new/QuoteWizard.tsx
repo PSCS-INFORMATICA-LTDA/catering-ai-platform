@@ -130,10 +130,9 @@ import {
   pruneBlockedAdditionalSelections,
   sanitizePublicAdditionalQuantity,
 } from '../../../Lib/publicQuote/extrasEligibility.ts'
-import {
-  getPublicAdditionalDisplayImageUrl,
-  isGrillRentalAdditional,
-} from '../../../Lib/publicQuote/grillRentalDisplay'
+import { getCatalogItemImageUrl } from '../../../Lib/catalogItemVisual'
+import { isGrillRentalAdditional } from '../../../Lib/publicQuote/grillRentalDisplay'
+import { resolvePublicGrillSystemNotes } from '../../../Lib/publicQuote/ownGrillDisplay'
 import QuoteBbqWaiterPanel from '../../../components/quotes/QuoteBbqWaiterPanel'
 import NoSidesDisposableKitOffer from '../../../components/quotes/NoSidesDisposableKitOffer'
 import {
@@ -329,7 +328,7 @@ function buildPublicIntakeDraft(
       photoReference: state.grillPhotoReference,
       rentalRequired: state.grillRentalRequired,
       rentalQty: normalizeGrillRentalQty(state.grillRentalRequired),
-      notes: state.grillNotes.trim() || null,
+      notes: resolvePublicGrillSystemNotes(state, state.language) || null,
     },
     consents: {
       cancellation: {
@@ -1710,7 +1709,7 @@ export default function QuoteWizardCore({
     ? getAdditionalUnitPrice(grillCatalogItem)
     : 100
   const grillRentalDisplayUrl = grillCatalogItem
-    ? getPublicAdditionalDisplayImageUrl(grillCatalogItem)
+    ? getCatalogItemImageUrl(grillCatalogItem)
     : null
 
   const additionalItemsByCategory = useMemo(
@@ -2789,7 +2788,9 @@ export default function QuoteWizardCore({
       grillPhotoRequired: state.grillPhotoRequired,
       grillRentalRequired: state.grillRentalRequired,
       grillRentalQty: state.grillRentalQty,
-      grillNotes: state.grillNotes,
+      grillNotes: isPublicMode
+        ? resolvePublicGrillSystemNotes(state, state.language)
+        : state.grillNotes,
       baseLocation: state.baseLocation,
       distance: state.distance,
       pricing: commercialRules,
@@ -3279,7 +3280,12 @@ export default function QuoteWizardCore({
                   </p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div
+                ref={guestAddressTransitionRef}
+                data-guest-address-transition
+                className="guest-address-transition guest-counts-and-address"
+              >
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
                 <QuantityField
                   label={w.adults}
                   value={state.adultCount}
@@ -3316,12 +3322,7 @@ export default function QuoteWizardCore({
                       : undefined
                   }
                 />
-                <div
-                  ref={guestAddressTransitionRef}
-                  data-guest-address-transition
-                  data-guest-children-under-3
-                  className="guest-address-transition"
-                >
+                <div data-guest-children-under-3>
                   <QuantityField
                     label={w.childrenUnder3}
                     value={state.childrenUnder3Count}
@@ -3349,6 +3350,7 @@ export default function QuoteWizardCore({
               >
                 {w.eventAddressSection}
               </p>
+              </div>
               <AddressAutocompleteFields
                 searchInputRef={addressSearchInputRef}
                 numberInputRef={streetNumberInputRef}
@@ -3738,6 +3740,7 @@ export default function QuoteWizardCore({
                   ) : null}
                 </div>
               ) : null}
+              {!isPublicMode ? (
               <div className="sm:col-span-2">
                 <label className="flex flex-col gap-2">
                   <span className="cdl-eyebrow">
@@ -3752,6 +3755,7 @@ export default function QuoteWizardCore({
                   />
                 </label>
               </div>
+              ) : null}
             </div>
           </SectionCard>
           </div>
@@ -3791,6 +3795,7 @@ export default function QuoteWizardCore({
                 'USD'
               }
               language={uiLocale}
+              grillDefaultImageUrl={grillRentalDisplayUrl}
               consentLabel={publicContext?.consentLabel || ''}
               privacyUrl={publicContext?.privacyUrl}
               cancellationPolicyAccepted={state.cancellationPolicyAccepted}

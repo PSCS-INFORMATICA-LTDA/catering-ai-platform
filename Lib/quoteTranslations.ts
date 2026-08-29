@@ -777,9 +777,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       grillPhotoHint:
         'Se o cliente possui churrasqueira própria, confirme se a foto foi recebida para validar tamanho, condição e estrutura antes do evento.',
       grillNoPhotoWarning:
-        'Você pode continuar sem enviar a foto agora. Nossa equipe entrará em contato para confirmar se a churrasqueira é adequada para o serviço.',
+        'Cliente informou que possui churrasqueira própria e optou por prosseguir sem enviar foto. A equipe CDL entrará em contato para confirmar a churrasqueira.',
       grillNoPhotoReviewNote:
-        'Foto da churrasqueira pendente. A equipe CDL entrará em contato para confirmação.',
+        'Cliente informou que possui churrasqueira própria e optou por prosseguir sem enviar foto. A equipe CDL entrará em contato para confirmar a churrasqueira.',
       grillRentalRequired: 'Aluguel de churrasqueira',
       grillRentalQty: 'Quantidade de churrasqueiras para aluguel',
       grillNotes: 'Observações sobre a churrasqueira',
@@ -1260,9 +1260,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       grillPhotoHint:
         'If the customer has their own grill, confirm the photo was received to validate size, condition and structure before the event.',
       grillNoPhotoWarning:
-        'You can continue without uploading the photo now. Our team will contact you to confirm that the grill is suitable for the service.',
+        'The customer informed that they have their own grill and chose to continue without uploading a photo. The CDL team will contact them to confirm the grill.',
       grillNoPhotoReviewNote:
-        'Grill photo pending. The CDL team will contact you for confirmation.',
+        'The customer informed that they have their own grill and chose to continue without uploading a photo. The CDL team will contact them to confirm the grill.',
       grillRentalRequired: 'Grill rental',
       grillRentalQty: 'Number of grills to rent',
       grillNotes: 'Grill notes',
@@ -1744,9 +1744,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       grillPhotoHint:
         'Si el cliente tiene parrilla propia, confirme si la foto fue recibida para validar tamaño, condición y estructura antes del evento.',
       grillNoPhotoWarning:
-        'Puede continuar sin enviar la foto ahora. Nuestro equipo se pondrá en contacto para confirmar si la parrilla es adecuada para el servicio.',
+        'El cliente informó que tiene su propia parrilla y decidió continuar sin enviar una foto. El equipo de CDL se pondrá en contacto para confirmar la parrilla.',
       grillNoPhotoReviewNote:
-        'Foto de la parrilla pendiente. El equipo de CDL se pondrá en contacto para confirmarla.',
+        'El cliente informó que tiene su propia parrilla y decidió continuar sin enviar una foto. El equipo de CDL se pondrá en contacto para confirmar la parrilla.',
       grillRentalRequired: 'Alquiler de parrilla',
       grillRentalQty: 'Cantidad de parrillas para alquiler',
       grillNotes: 'Observaciones sobre la parrilla',

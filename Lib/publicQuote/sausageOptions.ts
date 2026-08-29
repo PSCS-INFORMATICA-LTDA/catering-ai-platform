@@ -5,14 +5,14 @@ export const CHICKEN_SAUSAGE_ITEM_KEY = 'ITEM_024'
 
 const SAUSAGE_DISPLAY_LABELS = {
   [PORK_SAUSAGE_ITEM_KEY]: {
-    pt: 'TRADICIONAL PORCO',
-    en: 'TRADITIONAL PORK SAUSAGE',
-    es: 'SALCHICHA TRADICIONAL DE CERDO',
+    pt: 'Tradicional porco',
+    en: 'Traditional pork sausage',
+    es: 'Salchicha tradicional de cerdo',
   },
   [CHICKEN_SAUSAGE_ITEM_KEY]: {
-    pt: 'TRADICIONAL FRANGO',
-    en: 'TRADITIONAL CHICKEN SAUSAGE',
-    es: 'SALCHICHA TRADICIONAL DE POLLO',
+    pt: 'Tradicional frango',
+    en: 'Traditional chicken sausage',
+    es: 'Salchicha tradicional de pollo',
   },
 } as const
 

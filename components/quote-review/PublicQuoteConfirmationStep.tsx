@@ -36,6 +36,7 @@ export default function PublicQuoteConfirmationStep({
   additionals,
   currency = 'USD',
   language,
+  grillDefaultImageUrl = null,
   consentLabel,
   privacyUrl,
   cancellationPolicyAccepted,
@@ -68,6 +69,7 @@ export default function PublicQuoteConfirmationStep({
   additionals: WizardSelectedAdditional[]
   currency?: string
   language: QuoteLanguage
+  grillDefaultImageUrl?: string | null
   consentLabel: string
   privacyUrl?: string | null
   cancellationPolicyAccepted: boolean
@@ -103,6 +105,7 @@ export default function PublicQuoteConfirmationStep({
             additionals,
             billableGuestCount: breakdown.guest_counts.billable_guest_count,
             displayLanguage: language,
+            grillDefaultImageUrl,
           })
         : null,
     [
@@ -120,6 +123,7 @@ export default function PublicQuoteConfirmationStep({
       fromWithSidesSection,
       additionals,
       language,
+      grillDefaultImageUrl,
     ],
   )
   const pricingMessage =

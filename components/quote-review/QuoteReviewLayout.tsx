@@ -33,6 +33,7 @@ import {
   isSameEventDestination,
 } from '@/Lib/formatEventAddress'
 import { mileageDestinationAddress } from '@/Lib/publicQuote/mileageDestination'
+import { resolvePublicGrillSummaryImageUrl } from '@/Lib/publicQuote/ownGrillDisplay'
 import PricingBreakdownView from './PricingBreakdownView'
 import type {
   PricingBreakdown,
@@ -209,6 +210,13 @@ function ConfirmationProposalBody({
     grillRentalLine != null &&
     grillRentalLine.amount > 0
   const mileageMetadata = mileageLine?.metadata
+  const uploadedGrillPhotoUrl = data.hasGrill
+    ? data.grillPhotoUrl?.trim() || null
+    : null
+  const grillSummaryImageUrl = resolvePublicGrillSummaryImageUrl(
+    uploadedGrillPhotoUrl,
+    data.grillDefaultImageUrl,
+  )
 
   return (
     <>
@@ -405,17 +413,20 @@ function ConfirmationProposalBody({
             </div>
           ) : null}
         </div>
-        <div className="quote-proposal-grill-photo-row">
+        <div
+          className="quote-proposal-grill-photo-row"
+          data-grill-summary-image={
+            uploadedGrillPhotoUrl
+              ? 'uploaded'
+              : grillSummaryImageUrl
+                ? 'default'
+                : 'empty'
+          }
+        >
           <span className="quote-proposal-label">
             {tQuotesOrders(lang, 'docGrillPhoto')}
           </span>
-          {data.hasGrill && data.grillPhotoUrl ? (
-            <QuoteGrillPhotoFrame
-              src={data.grillPhotoUrl}
-              alt={tQuotesOrders(lang, 'docGrillPhoto')}
-              emptyLabel=""
-            />
-          ) : data.hasGrill ? (
+          {data.hasGrill && !uploadedGrillPhotoUrl ? (
             <p
               data-grill-photo-pending-note
               role="status"
@@ -423,13 +434,12 @@ function ConfirmationProposalBody({
             >
               {w.grillNoPhotoReviewNote}
             </p>
-          ) : (
-            <QuoteGrillPhotoFrame
-              src={null}
-              alt={tQuotesOrders(lang, 'docGrillPhoto')}
-              emptyLabel=""
-            />
-          )}
+          ) : null}
+          <QuoteGrillPhotoFrame
+            src={grillSummaryImageUrl}
+            alt={tQuotesOrders(lang, 'docGrillPhoto')}
+            emptyLabel=""
+          />
         </div>
       </ProposalSection>
 
@@ -1173,7 +1183,13 @@ export default function QuoteReviewLayout({
     >
       <header className="quote-proposal-hero quote-print-header">
         <div className="quote-proposal-hero-inner">
-          <div className="quote-proposal-hero-brand">
+          <div
+            className={`quote-proposal-hero-brand${
+              variant === 'confirmation'
+                ? ' quote-proposal-hero-brand--review'
+                : ''
+            }`}
+          >
             <div
               className={
                 variant === 'confirmation'

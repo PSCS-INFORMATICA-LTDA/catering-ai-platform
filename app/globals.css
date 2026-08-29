@@ -866,6 +866,14 @@ body {
   scroll-margin-top: calc(var(--public-header-h, 3.5rem) + 0.75rem);
 }
 
+@media (max-width: 639px) {
+  .guest-counts-and-address {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+}
+
 .public-additional-card-media[data-additional-image-crop='operational-grill'] img {
   object-fit: cover;
   object-position: 42% 55%;
