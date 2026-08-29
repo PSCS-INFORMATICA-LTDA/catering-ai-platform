@@ -181,10 +181,12 @@ export function CdlCancellationPolicySection({
   variant = 'pdf',
   language = 'pt',
   eventDate = null,
+  defaultOpenAll = false,
 }: {
   variant?: RulesVariant
   language?: string | null
   eventDate?: string | null
+  defaultOpenAll?: boolean
 }) {
   const locale = loc(language)
   const policy = getCancellationPolicyCopy(locale)
@@ -213,7 +215,7 @@ export function CdlCancellationPolicySection({
               key={section.id}
               data-cancel-section={section.id}
               className="cdl-cancel-policy-item"
-              open={index < 3}
+              open={defaultOpenAll || index < 3}
             >
               <summary className="cdl-cancel-policy-summary">
                 {section.label}

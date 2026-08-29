@@ -130,7 +130,10 @@ import {
   pruneBlockedAdditionalSelections,
   sanitizePublicAdditionalQuantity,
 } from '../../../Lib/publicQuote/extrasEligibility.ts'
-import { isGrillRentalAdditional } from '../../../Lib/publicQuote/grillRentalDisplay'
+import {
+  getPublicAdditionalDisplayImageUrl,
+  isGrillRentalAdditional,
+} from '../../../Lib/publicQuote/grillRentalDisplay'
 import QuoteBbqWaiterPanel from '../../../components/quotes/QuoteBbqWaiterPanel'
 import NoSidesDisposableKitOffer from '../../../components/quotes/NoSidesDisposableKitOffer'
 import {
@@ -1706,6 +1709,9 @@ export default function QuoteWizardCore({
   const grillUnitPrice = grillCatalogItem
     ? getAdditionalUnitPrice(grillCatalogItem)
     : 100
+  const grillRentalDisplayUrl = grillCatalogItem
+    ? getPublicAdditionalDisplayImageUrl(grillCatalogItem)
+    : null
 
   const additionalItemsByCategory = useMemo(
     () => buildPublicAdditionalDisplayGroups(visibleAdditionalItems, uiLocale),
@@ -2585,22 +2591,13 @@ export default function QuoteWizardCore({
 
   const grillStepPendingIssues = useMemo(() => {
     const issues: string[] = []
-    if (isGrillPhotoRequiredAndMissing(state)) {
-      issues.push(tw(uiLocale, 'grillPendingPhoto'))
-    }
     if (state.grillRentalRequired && state.grillRentalQty <= 0) {
       issues.push(tw(uiLocale, 'grillPendingRentalQty'))
     }
     return issues
-  }, [
-    state.hasGrill,
-    state.grillPhotoStatus,
-    state.grillPhotoUrl,
-    state.grillPhotoReference,
-    state.grillRentalRequired,
-    state.grillRentalQty,
-    uiLocale,
-  ])
+  }, [state.grillRentalRequired, state.grillRentalQty, uiLocale])
+  const grillNoPhotoWarningVisible =
+    state.grillSetupAnswered && isGrillPhotoRequiredAndMissing(state)
 
   useEffect(() => {
     const previousStep = previousStepRef.current
@@ -3641,6 +3638,17 @@ export default function QuoteWizardCore({
                 </div>
               </fieldset>
 
+              {waiterItem ? (
+                <div className="sm:col-span-2" data-bbq-waiter-slot>
+                  <QuoteBbqWaiterPanel
+                    quantity={state.additionals[waiterItem.id] ?? 0}
+                    unitPrice={waiterUnitPrice}
+                    language={uiLocale}
+                    onChangeQty={(qty) => setAdditionalQty(waiterItem.id, qty)}
+                  />
+                </div>
+              ) : null}
+
               {isEditMode ? (
                 <div className="sm:col-span-2">
                   <GrillPhotoStatusField
@@ -3686,9 +3694,19 @@ export default function QuoteWizardCore({
                     className="mt-3 max-h-48 rounded-xl border border-cdl-border object-cover"
                   />
                 ) : null}
-                <p className="mt-3 rounded-xl border border-cdl-border-subtle bg-cdl-inset px-4 py-3 text-sm leading-relaxed text-cdl-text-secondary">
-                  {w.grillPhotoHint}
-                </p>
+                {grillNoPhotoWarningVisible ? (
+                  <p
+                    data-grill-no-photo-warning
+                    role="status"
+                    className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-950"
+                  >
+                    {w.grillNoPhotoWarning}
+                  </p>
+                ) : (
+                  <p className="mt-3 rounded-xl border border-cdl-border-subtle bg-cdl-inset px-4 py-3 text-sm leading-relaxed text-cdl-text-secondary">
+                    {w.grillPhotoHint}
+                  </p>
+                )}
                 {publicUploadError ? (
                   <p className="mt-3 text-sm text-cdl-action" role="alert">
                     {publicUploadError}
@@ -3710,6 +3728,14 @@ export default function QuoteWizardCore({
                   <p className="mt-1 text-lg font-black text-[var(--brand-primary)]">
                     {`US$${grillUnitPrice.toFixed(0)}`}
                   </p>
+                  {grillRentalDisplayUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={grillRentalDisplayUrl}
+                      alt=""
+                      className="mt-3 max-h-48 w-full rounded-xl border border-cdl-border object-cover"
+                    />
+                  ) : null}
                 </div>
               ) : null}
               <div className="sm:col-span-2">
@@ -3728,14 +3754,6 @@ export default function QuoteWizardCore({
               </div>
             </div>
           </SectionCard>
-          {waiterItem ? (
-            <QuoteBbqWaiterPanel
-              quantity={state.additionals[waiterItem.id] ?? 0}
-              unitPrice={waiterUnitPrice}
-              language={uiLocale}
-              onChangeQty={(qty) => setAdditionalQty(waiterItem.id, qty)}
-            />
-          ) : null}
           </div>
         )}
 

@@ -24,6 +24,7 @@ import type {
   PricingBreakdownLine,
 } from '@/Lib/pricing/pricingBreakdownTypes'
 import { getGrillPhotoStatusLabel } from '@/Lib/grillPhotoStatus'
+import { displayPublicPhone } from '@/Lib/publicQuote/phone'
 import { tw } from '@/Lib/quoteTranslations'
 import {
   buildQuoteReviewPackageSummary,
@@ -167,7 +168,10 @@ export function mapWizardToQuoteReview(
   return {
     preview: true,
     customerName: input.customerName,
-    customerPhone: state.customerDraftPhone.trim() || null,
+    customerPhone:
+      displayPublicPhone(state.customerDraftPhone) ||
+      state.customerDraftPhone.trim() ||
+      null,
     customerEmail: state.customerDraftEmail.trim() || null,
     eventName: state.eventName.trim() || input.customerName,
     eventDate: state.eventDate || null,

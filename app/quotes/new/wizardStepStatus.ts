@@ -265,9 +265,6 @@ export function getStepIssues(
       if (!state.grillSetupAnswered) {
         issues.push(tw(language, 'issueHasGrill'))
       }
-      if (isGrillPhotoRequiredAndMissing(state)) {
-        issues.push(tw(language, 'grillPendingPhoto'))
-      }
       if (state.grillRentalRequired && state.grillRentalQty <= 0) {
         issues.push(tw(language, 'grillPendingRentalQty'))
       }

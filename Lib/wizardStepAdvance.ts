@@ -1,8 +1,5 @@
 import { getUnvisitedAdditionalCategoryKeys } from './wizardAdditionalCategories'
-import {
-  isGrillPhotoRequiredAndMissing,
-  type WizardStateSnapshot,
-} from '../app/quotes/new/wizardStepStatus'
+import { type WizardStateSnapshot } from '../app/quotes/new/wizardStepStatus'
 import {
   isCustomPackage,
   validatePackageSelections,
@@ -51,7 +48,6 @@ export function canAdvanceFromWizardStep(ctx: WizardAdvanceContext): boolean {
       return true
     case 2: {
       if (!ctx.state.grillSetupAnswered) return false
-      if (isGrillPhotoRequiredAndMissing(ctx.state)) return false
       if (ctx.state.grillRentalRequired && ctx.state.grillRentalQty <= 0) {
         return false
       }

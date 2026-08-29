@@ -409,13 +409,27 @@ function ConfirmationProposalBody({
           <span className="quote-proposal-label">
             {tQuotesOrders(lang, 'docGrillPhoto')}
           </span>
-          <QuoteGrillPhotoFrame
-            src={
-              data.hasGrill && data.grillPhotoUrl ? data.grillPhotoUrl : null
-            }
-            alt={tQuotesOrders(lang, 'docGrillPhoto')}
-            emptyLabel=""
-          />
+          {data.hasGrill && data.grillPhotoUrl ? (
+            <QuoteGrillPhotoFrame
+              src={data.grillPhotoUrl}
+              alt={tQuotesOrders(lang, 'docGrillPhoto')}
+              emptyLabel=""
+            />
+          ) : data.hasGrill ? (
+            <p
+              data-grill-photo-pending-note
+              role="status"
+              className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-950"
+            >
+              {w.grillNoPhotoReviewNote}
+            </p>
+          ) : (
+            <QuoteGrillPhotoFrame
+              src={null}
+              alt={tQuotesOrders(lang, 'docGrillPhoto')}
+              emptyLabel=""
+            />
+          )}
         </div>
       </ProposalSection>
 
@@ -553,6 +567,7 @@ function ConfirmationProposalBody({
         variant="summary"
         language={lang}
         eventDate={data.eventDate}
+        defaultOpenAll
       />
 
       <footer className="quote-proposal-signature">
@@ -1159,11 +1174,21 @@ export default function QuoteReviewLayout({
       <header className="quote-proposal-hero quote-print-header">
         <div className="quote-proposal-hero-inner">
           <div className="quote-proposal-hero-brand">
-            <div className="quote-print-logo">
+            <div
+              className={
+                variant === 'confirmation'
+                  ? 'quote-review-cover-logo'
+                  : 'quote-print-logo'
+              }
+            >
               <CdlBrandLogo
                 size="lg"
-                variant="cover"
-                className="quote-print-logo-mark"
+                variant={variant === 'confirmation' ? 'review' : 'cover'}
+                className={
+                  variant === 'confirmation'
+                    ? 'cdl-review-logo'
+                    : 'quote-print-logo-mark'
+                }
               />
             </div>
             <div className="quote-proposal-hero-copy">

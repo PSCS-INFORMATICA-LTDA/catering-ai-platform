@@ -5,11 +5,12 @@ import {
   CDL_LOGO_ALT,
   CDL_LOGO_PATH,
   CDL_LOGO_PLACEHOLDER,
+  CDL_REVIEW_LOGO_PATH,
 } from '../Lib/cdlLogo'
 
 type CdlBrandLogoProps = {
   size?: 'sm' | 'md' | 'lg'
-  variant?: 'default' | 'cover' | 'compact'
+  variant?: 'default' | 'cover' | 'compact' | 'review'
   className?: string
 }
 
@@ -26,6 +27,8 @@ const variantClass: Record<
   default: '',
   cover: 'pdf-cover-logo',
   compact: 'pdf-logo',
+  review:
+    'cdl-review-logo h-32 w-32 max-h-32 max-w-32 bg-transparent object-contain object-center',
 }
 
 const placeholderClass: Record<NonNullable<CdlBrandLogoProps['size']>, string> =
@@ -43,6 +46,8 @@ export default function CdlBrandLogo({
   className = '',
 }: CdlBrandLogoProps) {
   const [usePlaceholder, setUsePlaceholder] = useState(false)
+  const src = variant === 'review' ? CDL_REVIEW_LOGO_PATH : CDL_LOGO_PATH
+  const pixelSize = variant === 'review' ? 128 : size === 'sm' ? 24 : size === 'lg' ? 96 : 80
 
   if (usePlaceholder) {
     return (
@@ -59,13 +64,13 @@ export default function CdlBrandLogo({
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={CDL_LOGO_PATH}
+      src={src}
       alt={CDL_LOGO_ALT}
-      width={size === 'sm' ? 24 : size === 'lg' ? 96 : 80}
-      height={size === 'sm' ? 24 : size === 'lg' ? 96 : 80}
-      className={`cdl-brand-logo shrink-0 object-contain object-center ${sizeClass[size]} ${variantClass[variant]} ${className}`}
+      width={pixelSize}
+      height={pixelSize}
+      className={`cdl-brand-logo shrink-0 object-contain object-center ${variant === 'review' ? '' : sizeClass[size]} ${variantClass[variant]} ${className}`}
       onError={() => {
-        console.error(`[CDL Logo] Failed to load ${CDL_LOGO_PATH}`)
+        console.error(`[CDL Logo] Failed to load ${src}`)
         setUsePlaceholder(true)
       }}
     />

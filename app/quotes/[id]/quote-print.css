@@ -67,6 +67,29 @@
   max-width: min(6rem, 40vw);
 }
 
+/* Public Review cover only — do not reuse on post-accept or print. */
+.quote-review-cover-logo {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-inline: auto;
+  background: transparent;
+}
+
+.quote-review-cover-logo .cdl-brand-logo,
+.quote-review-cover-logo .cdl-review-logo,
+.quote-review-cover-logo img {
+  display: block;
+  width: 8rem;
+  height: 8rem;
+  max-width: min(8rem, 42vw);
+  max-height: min(8rem, 42vw);
+  margin-inline: auto;
+  background: transparent;
+  object-fit: contain;
+  object-position: center;
+}
+
 .quote-print-compact-header {
   display: none;
 }

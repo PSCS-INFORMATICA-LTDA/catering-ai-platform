@@ -184,7 +184,11 @@ async function main() {
     assert.match(wizardSrc, /capture="environment"/)
     assert.match(wizardSrc, /grillRentalRequired/)
     assert.match(stepStatusSrc, /grillRentalQty <= 0/)
-    pass('T14 grill=yes requires photo')
+    assert.doesNotMatch(
+      stepStatusSrc,
+      /case 2:[\s\S]*isGrillPhotoRequiredAndMissing\(state\)[\s\S]*grillPendingPhoto/,
+    )
+    pass('T14 grill=yes photo is warning-only, not required')
     pass('T15 grill=no does not require photo')
     pass('T16 rental=yes requires valid qty')
   } catch (e) {
@@ -383,11 +387,16 @@ async function main() {
 
   try {
     assert.match(wizardSrc, /grillStepPendingIssues/)
-    assert.match(wizardSrc, /grillPendingPhoto/)
+    assert.match(wizardSrc, /grillNoPhotoWarning/)
+    assert.match(wizardSrc, /data-grill-no-photo-warning/)
     assert.match(wizardSrc, /stepPendingTitle/)
-    assert.match(stepStatusSrc, /grillPendingPhoto/)
-    pass('H06 hasGrill without photo shows specific pending')
-    pass('H07 photo pending uses grillPendingPhoto key')
+    assert.match(stepStatusSrc, /isGrillPhotoRequiredAndMissing/)
+    assert.doesNotMatch(
+      wizardSrc,
+      /grillStepPendingIssues[\s\S]*grillPendingPhoto/,
+    )
+    pass('H06 hasGrill without photo shows non-blocking warning')
+    pass('H07 photo pending uses grillNoPhotoWarning key')
   } catch (e) {
     fail('H06–H07 grill photo pending', e)
   }
