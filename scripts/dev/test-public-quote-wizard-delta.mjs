@@ -146,23 +146,23 @@ test('SAUSAGE_TRADITIONAL_PORK_AND_CHICKEN', () => {
   assert.equal(CHICKEN_SAUSAGE_ITEM_KEY, 'ITEM_024')
   assert.equal(
     resolveSausageDisplayLabel({ item_key: PORK_SAUSAGE_ITEM_KEY }, 'pt'),
-    'TRADICIONAL PORCO',
+    'Tradicional porco',
   )
   assert.equal(
     resolveSausageDisplayLabel({ item_key: PORK_SAUSAGE_ITEM_KEY }, 'en'),
-    'TRADITIONAL PORK SAUSAGE',
+    'Traditional pork sausage',
   )
   assert.equal(
     resolveSausageDisplayLabel({ item_key: CHICKEN_SAUSAGE_ITEM_KEY }, 'pt'),
-    'TRADICIONAL FRANGO',
+    'Tradicional frango',
   )
   assert.equal(
     resolveSausageDisplayLabel({ item_key: CHICKEN_SAUSAGE_ITEM_KEY }, 'en'),
-    'TRADITIONAL CHICKEN SAUSAGE',
+    'Traditional chicken sausage',
   )
   assert.equal(
     resolveSausageDisplayLabel({ item_key: CHICKEN_SAUSAGE_ITEM_KEY }, 'es'),
-    'SALCHICHA TRADICIONAL DE POLLO',
+    'Salchicha tradicional de pollo',
   )
 })
 

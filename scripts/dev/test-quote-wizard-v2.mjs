@@ -716,8 +716,9 @@ async function main() {
 
     assert.match(
       reviewLayoutSrc,
-      /data\.hasGrill && data\.grillPhotoUrl/,
+      /uploadedGrillPhotoUrl = data\.hasGrill/,
     )
+    assert.match(reviewLayoutSrc, /resolvePublicGrillSummaryImageUrl/)
     assert.match(reviewLayoutSrc, /QuoteGrillPhotoFrame/)
     pass('G02 customer grill photo is displayed when present')
 

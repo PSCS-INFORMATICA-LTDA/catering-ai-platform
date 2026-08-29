@@ -8,7 +8,12 @@ import { createHash } from 'node:crypto'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { sanitizePublicAdditionalQuantity } from '../../Lib/publicQuote/extrasEligibility.ts'
+import {
+  resolvePublicGrillSummaryImageUrl,
+  resolvePublicGrillSystemNotes,
+} from '../../Lib/publicQuote/ownGrillDisplay.ts'
 import { isUsablePublicPhone } from '../../Lib/publicQuote/phone.ts'
+import { resolveSausageDisplayLabel } from '../../Lib/publicQuote/sausageOptions.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const source = (p) => readFileSync(join(ROOT, p), 'utf8')
@@ -135,32 +140,34 @@ test('HAS_GRILL_NO_RENTAL_REQUIRED', () => {
 test('OBSERVATION_NOT_REQUIRED', () => {
   assert.doesNotMatch(wizard, /grillNotes[\s\S]{0,200}required/)
   assert.match(translations, /grillNotesPlaceholder/)
+  assert.match(wizard, /!isPublicMode \? \(/)
+  assert.match(wizard, /resolvePublicGrillSystemNotes/)
 })
 
 test('NO_PHOTO_WARNING_I18N', () => {
   assert.match(
     translations,
-    /Você pode continuar sem enviar a foto agora/,
+    /Cliente informou que possui churrasqueira própria e optou por prosseguir sem enviar foto/,
   )
   assert.match(
     translations,
-    /You can continue without uploading the photo now/,
+    /The customer informed that they have their own grill and chose to continue without uploading a photo/,
   )
   assert.match(
     translations,
-    /Puede continuar sin enviar la foto ahora/,
+    /El cliente informó que tiene su propia parrilla y decidió continuar sin enviar una foto/,
   )
   assert.match(
     translations,
-    /Foto da churrasqueira pendente/,
+    /A equipe CDL entrará em contato para confirmar a churrasqueira/,
   )
   assert.match(
     translations,
-    /Grill photo pending/,
+    /The CDL team will contact them to confirm the grill/,
   )
   assert.match(
     translations,
-    /Foto de la parrilla pendiente/,
+    /El equipo de CDL se pondrá en contacto para confirmar la parrilla/,
   )
 })
 
@@ -210,6 +217,111 @@ test('REVIEW_LOGO_VARIANT_ONLY', () => {
   assert.ok(existsSync(join(ROOT, 'public/cdl/logo-review-circle.png')))
   assert.doesNotMatch(source('components/quotes/PublicQuoteSuccessScreen.tsx'), /quote-review-cover-logo/)
   assert.doesNotMatch(source('components/quotes/CdlFireSignature.tsx'), /CDL_REVIEW_LOGO_PATH/)
+})
+
+test('PUBLIC_BBQ_HAS_NO_EDITABLE_GRILL_NOTES', () => {
+  const publicNotes = wizard.match(/!isPublicMode \? \([\s\S]*grillNotesPlaceholder/)
+  assert.ok(publicNotes, 'staff may keep notes; public must hide the textarea')
+  assert.match(wizard, /data-grill-no-photo-warning/)
+  assert.doesNotMatch(
+    wizard,
+    /isPublicMode \? \([\s\S]{0,200}textarea/,
+  )
+})
+
+test('SYSTEM_GRILL_NOTE_ONLY_WHEN_OWN_GRILL_WITHOUT_PHOTO', () => {
+  assert.equal(
+    resolvePublicGrillSystemNotes(
+      { hasGrill: true, grillPhotoUrl: null, grillPhotoReference: null },
+      'pt',
+    ).includes('prosseguir sem enviar foto'),
+    true,
+  )
+  assert.equal(
+    resolvePublicGrillSystemNotes(
+      {
+        hasGrill: true,
+        grillPhotoUrl: 'https://example.test/grill.webp',
+        grillPhotoReference: 'quotes/x/grill.webp',
+      },
+      'pt',
+    ),
+    '',
+  )
+  assert.equal(
+    resolvePublicGrillSystemNotes(
+      { hasGrill: false, grillPhotoUrl: null, grillPhotoReference: null },
+      'pt',
+    ),
+    '',
+  )
+})
+
+test('REVIEW_GRILL_IMAGE_UPLOADED_OR_DEFAULT', () => {
+  assert.equal(
+    resolvePublicGrillSummaryImageUrl(
+      'https://cdn.example/uploaded.webp',
+      'https://cdn.example/default.webp',
+    ),
+    'https://cdn.example/uploaded.webp',
+  )
+  assert.equal(
+    resolvePublicGrillSummaryImageUrl(null, 'https://cdn.example/default.webp'),
+    'https://cdn.example/default.webp',
+  )
+  assert.match(review, /data-grill-summary-image/)
+  assert.match(review, /grillDefaultImageUrl/)
+  assert.match(mapper, /grillDefaultImageUrl: input\.grillDefaultImageUrl/)
+  assert.match(wizard, /getCatalogItemImageUrl\(grillCatalogItem\)/)
+  assert.ok(
+    existsSync(
+      join(
+        ROOT,
+        'assets/additionals/missing-20260829/ITEM_084_grill_only_v1_20260829.webp',
+      ),
+    ),
+  )
+})
+
+test('REVIEW_COVER_LOGO_AND_TEXT_CENTERED', () => {
+  assert.match(review, /quote-proposal-hero-brand--review/)
+  assert.match(
+    source('app/quotes/[id]/quote-print.css'),
+    /quote-proposal-hero-brand--review/,
+  )
+  assert.doesNotMatch(
+    source('components/quotes/PublicQuoteSuccessScreen.tsx'),
+    /quote-proposal-hero-brand--review/,
+  )
+})
+
+test('EVENT_MOBILE_KEEPS_ADULTS_VISIBLE', () => {
+  assert.match(wizard, /guest-counts-and-address/)
+  const adultsCommit = wizard.match(
+    /inputRef=\{adultsInputRef\}[\s\S]{0,1600}onCommit=\{[\s\S]{0,1400}scrollIntoView\(\{[\s\S]{0,180}?block: 'start'/,
+  )
+  assert.ok(adultsCommit)
+  assert.match(wizard, /data-guest-children-under-3/)
+  assert.match(wizard, /data-guest-children-4-12/)
+  assert.match(wizard, /data-event-address-section/)
+})
+
+test('SAUSAGE_OPTIONS_NORMALIZED_CASING', () => {
+  assert.equal(
+    resolveSausageDisplayLabel(
+      { item_key: 'ITEM_LINGUICA_TOSCANA_TRADICIONAL' },
+      'pt',
+    ),
+    'Tradicional porco',
+  )
+  assert.equal(
+    resolveSausageDisplayLabel({ item_key: 'ITEM_024' }, 'pt'),
+    'Tradicional frango',
+  )
+  assert.doesNotMatch(
+    source('Lib/publicQuote/sausageOptions.ts'),
+    /TRADICIONAL PORCO/,
+  )
 })
 
 test('POST_ACCEPT_FIRE_VIDEO_INTACT', () => {
