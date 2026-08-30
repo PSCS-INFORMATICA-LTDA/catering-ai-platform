@@ -15,8 +15,10 @@ import {
 import {
   collectBlockedCatalogItemIds,
   extraIdsIntersectingIncluded,
+  filterPublicExtraItemsForPackage,
   getVisiblePublicExtraItems,
   pruneBlockedAdditionalSelections,
+  shouldShowAccompanimentExtras,
 } from '../../Lib/publicQuote/extrasEligibility.ts'
 import { filterCatalogItems } from '../../Lib/itemCatalog.ts'
 
@@ -254,7 +256,50 @@ test('wizard prunes blocked extras and bootstrap hides fixture items', () => {
   const bootstrap = source('Lib/publicQuote/bootstrap.ts')
   assert.match(wizard, /pruneBlockedAdditionalSelections/)
   assert.match(wizard, /getVisiblePublicExtraItems/)
+  assert.match(wizard, /filterPublicExtraItemsForPackage/)
+  assert.match(wizard, /appendServiceSupplyGroup/)
   assert.match(bootstrap, /isPublicCatalogFixtureItem/)
+})
+
+test('accompaniment extras only appear on the custom package', () => {
+  const items = [
+    extra('acc-1', {
+      item_key: 'ITEM_061',
+      category_key: 'ACOMPANHAMENTOS',
+      label_pt: 'Goiabada',
+    }),
+    extra('beef-1', {
+      item_key: 'ITEM_001',
+      category_key: 'BOVINO_NOBRE',
+      label_pt: 'Picanha',
+    }),
+  ]
+  assert.equal(shouldShowAccompanimentExtras({ package_key: 'BBQLUX' }), false)
+  assert.equal(shouldShowAccompanimentExtras({ package_key: 'BBQPRI' }), false)
+  assert.equal(shouldShowAccompanimentExtras({ package_key: 'BBQPERS' }), true)
+  assert.equal(shouldShowAccompanimentExtras({ package_key: 'BBQPERS+' }), true)
+  assert.equal(
+    shouldShowAccompanimentExtras({ package_name: 'Pacote Personalizado' }),
+    false,
+  )
+  const regular = filterPublicExtraItemsForPackage(items, {
+    package_key: 'BBQLUX',
+  })
+  assert.deepEqual(
+    regular.map((row) => row.item_key),
+    ['ITEM_001'],
+  )
+  const custom = filterPublicExtraItemsForPackage(items, {
+    package_key: 'BBQPERS',
+  })
+  assert.deepEqual(
+    custom.map((row) => row.item_key),
+    ['ITEM_061', 'ITEM_001'],
+  )
+  const eligibility = source('Lib/publicQuote/extrasEligibility.ts')
+  assert.doesNotMatch(eligibility, /name\.includes\(['"]personalizado['"]\)/)
+  assert.match(eligibility, /BBQPERS/)
+  assert.match(eligibility, /package_key/)
 })
 
 if (failed > 0) {

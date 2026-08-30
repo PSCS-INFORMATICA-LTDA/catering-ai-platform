@@ -255,6 +255,35 @@ test('STRUCTURAL_EXTRAS_HIDDEN_FROM_GENERIC_GRID', () => {
   assert.equal(isStructuralPublicExtraItem(kit), true)
 })
 
+test('SERVICES_SUPPLIES_LAST_EXTRAS_CATEGORY', () => {
+  const wizard = source('app/quotes/new/QuoteWizard.tsx')
+  const translations = source('Lib/quoteTranslations.ts')
+  const extras = source('Lib/publicQuote/suggestedExtras.ts')
+  assert.match(wizard, /appendServiceSupplyGroup/)
+  assert.match(wizard, /SERVICES_SUPPLIES_CATEGORY_KEY/)
+  assert.match(wizard, /!fromWithSidesSection \? \[disposableKitItem\]/)
+  assert.match(extras, /appendServiceSupplyGroup/)
+  assert.match(translations, /SERVICOS_E_SUPRIMENTOS/)
+  assert.match(translations, /Services & Supplies/)
+  assert.match(translations, /Servicios y Suministros/)
+  const order = translations.match(
+    /const CATEGORY_SORT_ORDER = \[([\s\S]*?)\] as const/,
+  )?.[1]
+  assert.ok(order)
+  assert.ok(order.trim().endsWith("'SERVICOS_E_SUPRIMENTOS',"))
+})
+
+test('DISPOSABLE_KIT_AUTO_REVEAL_ONCE', () => {
+  const catalog = source('components/quotes/PublicPackageCatalog.tsx')
+  const groups = source('Lib/packageOptionGroups.ts')
+  assert.match(groups, /export function areRequiredPackageOptionsComplete/)
+  assert.match(catalog, /areRequiredPackageOptionsComplete/)
+  assert.match(catalog, /revealFloatingPanelWhenReady/)
+  assert.match(catalog, /justCompleted/)
+  assert.match(catalog, /disposableKitRevealRef/)
+  assert.doesNotMatch(catalog, /onToggle\(true\)/)
+})
+
 test('NO_NEW_WIZARD_FRAMEWORK', () => {
   const wizard = source('app/quotes/new/QuoteWizard.tsx')
   assert.doesNotMatch(wizard, /wizardSteps\.ts/)

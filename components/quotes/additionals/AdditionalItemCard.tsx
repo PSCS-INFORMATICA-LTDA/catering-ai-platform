@@ -265,7 +265,11 @@ export default function AdditionalItemCard({
 
   if (perPerson) {
     return (
-      <article data-additional-item-card className={cardClass}>
+      <article
+        data-additional-item-card
+        data-item-key={item.item_key ?? item.id}
+        className={cardClass}
+      >
         {media}
         <div className="public-additional-card-body">
           {copy}
@@ -289,7 +293,11 @@ export default function AdditionalItemCard({
   }
 
   return (
-    <article data-additional-item-card className={cardClass}>
+    <article
+      data-additional-item-card
+      data-item-key={item.item_key ?? item.id}
+      className={cardClass}
+    >
       {media}
       <div className="public-additional-card-body">
         {copy}
