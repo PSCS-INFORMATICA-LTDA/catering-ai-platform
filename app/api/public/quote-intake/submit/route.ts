@@ -16,6 +16,12 @@ import {
   loadPublicQuoteSessionTenant,
 } from '@/Lib/publicQuote/session'
 import { validateCompletePublicQuoteDraft } from '@/Lib/publicQuote/validation'
+import {
+  isOwnGrillWithoutPhoto,
+  persistOwnGrillWithoutPhoto,
+  rollbackPublicQuoteFinalize,
+  toFinalizePayloadForCurrentRpc,
+} from '@/Lib/publicQuote/ownGrillSubmitCompat'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { fetchSupabaseCommercialRules } from '@/Lib/supabaseCommercialRules'
 import { CDL_CANCEL_POLICY_VERSION } from '@/Lib/cdlCancellationPolicy'
@@ -145,11 +151,13 @@ export async function POST(request: NextRequest) {
       cancellationPolicyVersion: CDL_CANCEL_POLICY_VERSION,
     })
     const supabase = getSupabaseServerClient()
+    const ownGrillWithoutPhoto = isOwnGrillWithoutPhoto(draft)
+    const rpcPayload = toFinalizePayloadForCurrentRpc(draft)
     const { data, error } = await supabase.rpc('finalize_public_quote', {
       p_token_hash: session.token_hash,
       p_idempotency_key_hash: idempotencyKeyHash,
       p_submission_hash: submissionHash,
-      p_payload: draft,
+      p_payload: rpcPayload,
       p_pricing: {
         breakdown: {
           ...pricing.breakdown,
@@ -167,6 +175,7 @@ export async function POST(request: NextRequest) {
       console.error('[public-quote] finalize_public_quote failed', {
         code: error?.code ?? null,
         message: error?.message ?? null,
+        stage: 'rpc',
       })
       throw new PublicQuoteHttpError(500, 'server_error')
     }
@@ -187,6 +196,7 @@ export async function POST(request: NextRequest) {
       const code = result.error || 'server_error'
       console.warn('[public-quote] finalize_public_quote rejected', {
         error: code,
+        stage: 'rpc_validation',
         additionalCount: draft.selection.additionals.length,
         pricedCount: Array.isArray(pricing.resolvedAdditionals)
           ? pricing.resolvedAdditionals.length
@@ -206,6 +216,26 @@ export async function POST(request: NextRequest) {
                 ? 'invalid_payload'
                 : 'server_error',
       )
+    }
+
+    if (ownGrillWithoutPhoto && result.alreadySubmitted !== true) {
+      const persisted = await persistOwnGrillWithoutPhoto(
+        supabase,
+        session.company_id,
+        result.quote.id,
+      )
+      if (!persisted) {
+        console.error('[public-quote] own-grill no-photo persist failed', {
+          stage: 'own_grill_correction',
+        })
+        await rollbackPublicQuoteFinalize(
+          supabase,
+          session.company_id,
+          result.quote.id,
+          session.id,
+        )
+        throw new PublicQuoteHttpError(500, 'server_error')
+      }
     }
 
     return NextResponse.json(

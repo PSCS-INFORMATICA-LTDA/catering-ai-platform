@@ -1,0 +1,45 @@
+-- DEV delta documentation — do not apply via broad db push.
+--
+-- FUNCTION: public.finalize_public_quote
+-- LAYER: RPC / domain
+-- TABLE: events, quotes
+-- CONSTRAINT: IF (payload.grill.hasGrill) THEN photoReference + storage object
+-- EXPECTED: own grill photo is optional; persist has_grill=true, grill_photo_required=false
+-- ACTUAL (before hotfix): missing photo → error invalid_photo
+--          API maps invalid_* → HTTP 422 invalid_payload
+--          UI shows generic "We could not submit right now."
+--
+-- Replace only the photo gate with:
+--
+--   v_photo_reference := NULLIF(trim(COALESCE(v_grill->>'photoReference', '')), '');
+--   IF v_photo_reference IS NOT NULL THEN
+--     IF v_photo_reference NOT LIKE (
+--       'public-quote-grill/' || v_session.company_id::text || '/' || v_session.id::text || '/%'
+--     ) THEN
+--       RETURN jsonb_build_object('ok', false, 'error', 'invalid_photo');
+--     END IF;
+--     v_storage_path := substring(
+--       v_photo_reference FROM length('public-quote-grill/') + 1
+--     );
+--     IF NOT EXISTS (
+--       SELECT 1
+--       FROM storage.objects AS o
+--       WHERE o.bucket_id = 'public-quote-grill'
+--         AND o.name = v_storage_path
+--     ) THEN
+--       RETURN jsonb_build_object('ok', false, 'error', 'invalid_photo');
+--     END IF;
+--   ELSIF COALESCE((v_grill->>'hasGrill')::boolean, false) IS TRUE THEN
+--     v_photo_reference := NULL;
+--     v_storage_path := NULL;
+--   ELSIF COALESCE((v_grill->>'rentalRequired')::boolean, false) IS TRUE
+--     AND COALESCE((v_grill->>'rentalQty')::integer, 0) < 1
+--   THEN
+--     RETURN jsonb_build_object('ok', false, 'error', 'invalid_payload');
+--   END IF;
+--
+-- And persist grill_photo_required = (v_photo_reference IS NOT NULL)
+-- instead of copying hasGrill.
+--
+-- Runtime hotfix lives in Lib/publicQuote/ownGrillSubmitCompat.ts until
+-- this function body can be replaced on DEV with a management token.

@@ -8,6 +8,10 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getQuoteStrings } from '../../Lib/quoteTranslations.ts'
 import {
+  isOwnGrillWithoutPhoto,
+  toFinalizePayloadForCurrentRpc,
+} from '../../Lib/publicQuote/ownGrillSubmitCompat.ts'
+import {
   calendarDateInTimeZone,
   isPublicEventDateBookable,
 } from '../../Lib/publicQuote/eventDate.ts'
@@ -78,6 +82,57 @@ test('TEST 9 Privacy checked allows submit', () => {
 test('TEST 10 Quote persistence requires RPC', () => {
   assert.match(submitRoute, /finalize_public_quote/)
   assert.match(wizard, /!result\.quote\?\.id/)
+})
+
+test('OWN_GRILL_NO_PHOTO_RPC_COMPAT_DOES_NOT_FAKE_SUCCESS', () => {
+  const compat = source('Lib/publicQuote/ownGrillSubmitCompat.ts')
+  assert.match(submitRoute, /toFinalizePayloadForCurrentRpc/)
+  assert.match(submitRoute, /persistOwnGrillWithoutPhoto/)
+  assert.match(submitRoute, /rollbackPublicQuoteFinalize/)
+  assert.match(compat, /has_grill: true/)
+  assert.match(compat, /grill_photo_required: false/)
+  assert.doesNotMatch(submitRoute, /status:\s*200[\s\S]{0,80}invalid_photo/)
+  const draft = {
+    locale: 'pt',
+    contact: { firstName: 'QA', lastName: 'Photo', phone: '+12025550100', email: null },
+    event: {
+      eventName: 'QA',
+      eventDate: '2026-09-21',
+      startTime: '18:00',
+      endTime: '22:00',
+      adultCount: 10,
+      childrenUnder3Count: 0,
+      children4To12Count: 0,
+      address: {
+        route: 'Main',
+        number: '1',
+        city: 'Orlando',
+        region: 'FL',
+        postalCode: '32801',
+        country: 'US',
+        formattedAddress: '1 Main',
+        placeId: null,
+        latitude: null,
+        longitude: null,
+        source: 'manual',
+      },
+    },
+    selection: { packageId: 'pkg', packageSelections: {}, additionals: [], reviewedCategoryKeys: [] },
+    grill: {
+      setupAnswered: true,
+      hasGrill: true,
+      photoReference: null,
+      rentalRequired: false,
+      rentalQty: 0,
+      notes: null,
+    },
+  }
+  assert.equal(isOwnGrillWithoutPhoto(draft), true)
+  const rpcDraft = toFinalizePayloadForCurrentRpc(draft)
+  assert.equal(rpcDraft.grill.hasGrill, false)
+  assert.equal(rpcDraft.grill.rentalRequired, false)
+  assert.equal(rpcDraft.grill.rentalQty, 0)
+  assert.equal(draft.grill.hasGrill, true)
 })
 
 test('TEST 11 Correct company_id from session', () => {
