@@ -1,5 +1,10 @@
 import { getCdlCompanyId } from '@/Lib/cdlCompany'
+import { normalizeCatalogItemLabelFields } from '@/Lib/publicQuote/catalogDisplayName'
 import { supabase } from '@/Lib/supabase'
+
+function withEditorialLabels(row: Record<string, unknown>) {
+  return normalizeCatalogItemLabelFields(row)
+}
 
 function companyIdOrThrow(): string {
   const companyId = getCdlCompanyId()?.trim()
@@ -11,7 +16,7 @@ export async function insertPackageItem(row: Record<string, unknown>) {
   const company_id = companyIdOrThrow()
   return supabase
     .from('package_items')
-    .insert({ ...row, company_id })
+    .insert({ ...withEditorialLabels(row), company_id })
     .select()
     .single()
 }
@@ -20,7 +25,7 @@ export async function updatePackageItem(id: string, row: Record<string, unknown>
   const company_id = companyIdOrThrow()
   return supabase
     .from('package_items')
-    .update(row)
+    .update(withEditorialLabels(row))
     .eq('id', id)
     .eq('company_id', company_id)
     .select()
@@ -40,7 +45,7 @@ export async function insertPackageSideItem(row: Record<string, unknown>) {
   const company_id = companyIdOrThrow()
   return supabase
     .from('package_side_items')
-    .insert({ ...row, company_id })
+    .insert({ ...withEditorialLabels(row), company_id })
     .select()
     .single()
 }
@@ -49,7 +54,7 @@ export async function updatePackageSideItem(id: string, row: Record<string, unkn
   const company_id = companyIdOrThrow()
   return supabase
     .from('package_side_items')
-    .update(row)
+    .update(withEditorialLabels(row))
     .eq('id', id)
     .eq('company_id', company_id)
     .select()
@@ -98,7 +103,7 @@ export async function insertPackageOptionGroupItem(row: Record<string, unknown>)
   const company_id = companyIdOrThrow()
   return supabase
     .from('package_option_group_items')
-    .insert({ ...row, company_id })
+    .insert({ ...withEditorialLabels(row), company_id })
     .select()
     .single()
 }
@@ -110,7 +115,7 @@ export async function updatePackageOptionGroupItem(
   const company_id = companyIdOrThrow()
   return supabase
     .from('package_option_group_items')
-    .update(row)
+    .update(withEditorialLabels(row))
     .eq('id', id)
     .eq('company_id', company_id)
     .select()

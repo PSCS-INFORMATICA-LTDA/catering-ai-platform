@@ -163,7 +163,7 @@ test('SAUSAGE_TRADITIONAL_PORK_AND_CHICKEN', () => {
   )
   assert.equal(
     resolveSausageDisplayLabel({ item_key: CHICKEN_SAUSAGE_ITEM_KEY }, 'es'),
-    'Salchicha Tradicional De Pollo',
+    'Salchicha Tradicional de Pollo',
   )
   assert.equal(
     resolveSausageDisplayLabel({ option_item_key: 'tradicional_porco' }, 'pt'),
@@ -300,19 +300,19 @@ test('NO_NEW_WIZARD_FRAMEWORK', () => {
   )
 })
 
-test('CATALOG_DISPLAY_NAME_TITLE_CASE', () => {
+test('CATALOG_DISPLAY_NAME_EDITORIAL_CASE', () => {
   assert.equal(formatCatalogDisplayName('TRADICIONAL FRANGO'), 'Tradicional Frango')
   assert.equal(formatCatalogDisplayName('TRADICIONAL PORCO'), 'Tradicional Porco')
   assert.equal(formatCatalogDisplayName('GOIABADA'), 'Goiabada')
   assert.equal(formatCatalogDisplayName('MEL'), 'Mel')
-  assert.equal(formatCatalogDisplayName('PIMENTA DE BICO'), 'Pimenta De Bico')
+  assert.equal(formatCatalogDisplayName('PIMENTA DE BICO'), 'Pimenta de Bico')
   assert.equal(formatCatalogDisplayName('FILÉ MIGNON BOVINO'), 'Filé Mignon Bovino')
   assert.equal(formatCatalogDisplayName('FILÉ MIGNON SUÍNO'), 'Filé Mignon Suíno')
   assert.equal(
     formatCatalogDisplayName('TOMAHAWK WAGYU FOLHADO A OURO'),
-    'Tomahawk Wagyu Folhado A Ouro',
+    'Tomahawk (WAGYU) Folhado a Ouro',
   )
-  assert.equal(formatCatalogDisplayName('  pimenta   de   bico  '), 'Pimenta De Bico')
+  assert.equal(formatCatalogDisplayName('  pimenta   de   bico  '), 'Pimenta de Bico')
   assert.equal(formatCatalogDisplayName('ITEM_061'), 'ITEM_061')
   assert.equal(formatCatalogDisplayName('KIT_DESCARTAVEIS'), 'KIT_DESCARTAVEIS')
   assert.equal(formatCatalogDisplayName('BBQ PRIME'), 'BBQ Prime')
@@ -320,9 +320,9 @@ test('CATALOG_DISPLAY_NAME_TITLE_CASE', () => {
     source('Lib/packageCatalogVisual.ts'),
     /formatCatalogDisplayName/,
   )
-  assert.match(
+  assert.doesNotMatch(
     source('Lib/cdlPackageItemI18n.ts'),
-    /formatCatalogDisplayName/,
+    /formatCatalogDisplayName|formatCatalogDisplayLabel/,
   )
 })
 

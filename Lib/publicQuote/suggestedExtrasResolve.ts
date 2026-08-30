@@ -69,7 +69,16 @@ export function isSuggestedExtraItem(item: SuggestedExtraCandidate): boolean {
     item.label_es,
     item.item_name,
   ].map(normalizeSuggestedLabel)
-  return labels.some((label) => label.length > 0 && SUGGESTED_LABEL_SET.has(label))
+  return labels.some((label) => labelMatchesSuggestedFallback(label))
+}
+
+function labelMatchesSuggestedFallback(label: string): boolean {
+  if (!label) return false
+  if (SUGGESTED_LABEL_SET.has(label)) return true
+  for (const fallback of SUGGESTED_EXTRA_LABEL_FALLBACKS) {
+    if (label === fallback || label.startsWith(`${fallback} `)) return true
+  }
+  return false
 }
 
 /**

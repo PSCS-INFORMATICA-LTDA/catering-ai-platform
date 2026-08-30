@@ -7,6 +7,7 @@ import {
   type CatalogItemsInsertPayload,
 } from '@/Lib/catalogItemsTableSchema'
 import { supabase } from '@/Lib/supabase'
+import { normalizeCatalogItemLabelFields } from '@/Lib/publicQuote/catalogDisplayName'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -32,7 +33,7 @@ export async function PATCH(
   const updatePayload: Record<string, unknown> = isDeactivateOnly
     ? { active: false, updated_at: new Date().toISOString() }
     : {
-        ...pickCatalogItemsUpdatePayload(body),
+        ...pickCatalogItemsUpdatePayload(normalizeCatalogItemLabelFields(body)),
         ...(body.price != null || body.sale_price != null
           ? {
               price: getAdditionalItemPrice(body),

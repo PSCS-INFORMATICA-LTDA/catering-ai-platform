@@ -393,10 +393,42 @@ test('SUGGESTED_EXTRAS_COPY_NO_PRICE', () => {
   assert.match(translations, /Elige tus favoritos abajo\./)
 })
 
+test('SUGGESTED_EXTRAS_MATCHES_EDITORIAL_LABELS', () => {
+  assert.equal(
+    isSuggestedExtraItem({
+      id: 'unknown-id',
+      item_key: 'OTHER',
+      label_pt: 'Tomahawk (WAGYU) Folhado a Ouro',
+    }),
+    true,
+  )
+  assert.equal(
+    isSuggestedExtraItem({
+      id: 'unknown-id',
+      item_key: 'OTHER',
+      label_pt: 'T-Bone (ANGUS)',
+    }),
+    true,
+  )
+  assert.equal(
+    isSuggestedExtraItem({
+      id: 'unknown-id',
+      item_key: 'OTHER',
+      label_pt: 'Pimenta de Bico',
+    }),
+    false,
+  )
+})
+
 test('SUGGESTED_EXTRAS_FEATURED_VISUAL', () => {
   assert.match(css, /\.public-suggested-extras-header \{[\s\S]*?#070707/)
   assert.match(css, /\.public-suggested-extras-title \{[\s\S]*?color: #fff/)
   assert.match(css, /background: var\(--cdl-yellow\)/)
+  assert.match(
+    css,
+    /\.public-additional-category\.is-featured \.public-additional-card-name,[\s\S]*?text-transform: uppercase/,
+  )
+  assert.doesNotMatch(css, /text-transform:\s*capitalize/)
   assert.match(categorySection, /data-suggested-extras=\{featured \? 'true'/)
 })
 

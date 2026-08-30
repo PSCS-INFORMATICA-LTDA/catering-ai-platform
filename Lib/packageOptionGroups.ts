@@ -5,7 +5,6 @@ import {
   type PackageSideItem,
 } from '@/Lib/packageConfiguration'
 import { resolveCatalogItemDisplayLabel } from '@/Lib/cdlPackageItemI18n'
-import { formatCatalogDisplayName } from '@/Lib/publicQuote/catalogDisplayName'
 import { resolveSausageDisplayLabel } from '@/Lib/publicQuote/sausageOptions'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import { tw } from '@/Lib/quoteTranslations'
@@ -67,7 +66,7 @@ export function getOptionItemLabel(
   language: QuoteLanguage = 'pt',
 ): string {
   return (
-    formatCatalogDisplayName(resolveSausageDisplayLabel(item, language)) ||
+    resolveSausageDisplayLabel(item, language) ||
     resolveCatalogItemDisplayLabel(
       {
         pt: item.label_pt,

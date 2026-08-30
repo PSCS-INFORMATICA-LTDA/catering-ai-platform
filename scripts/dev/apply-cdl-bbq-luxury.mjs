@@ -10,6 +10,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { formatCatalogDisplayLabel } from '../../Lib/publicQuote/catalogDisplayName.ts'
 import { assertDevUrl, loadDevEnv } from './loadDevEnv.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -199,10 +200,10 @@ async function upsertItem(packageId, spec, catalog) {
     package_id: packageId,
     category_id: PROTEIN_CATEGORY_ID,
     item_key: spec.itemKey,
-    item_name: spec.label_pt,
-    label_pt: spec.label_pt,
-    label_en: spec.label_en,
-    label_es: spec.label_es,
+    item_name: formatCatalogDisplayLabel(spec.label_pt, 'pt'),
+    label_pt: formatCatalogDisplayLabel(spec.label_pt, 'pt'),
+    label_en: formatCatalogDisplayLabel(spec.label_en, 'en'),
+    label_es: formatCatalogDisplayLabel(spec.label_es, 'es'),
     additional_item_id: catalogItem.id,
     included: true,
     active: true,
@@ -288,9 +289,9 @@ async function upsertGroupItem(groupId, spec, catalog) {
     company_id: COMPANY_ID,
     option_group_id: groupId,
     option_item_key: spec.key,
-    label_pt: spec.label_pt,
-    label_en: spec.label_en,
-    label_es: spec.label_es,
+    label_pt: formatCatalogDisplayLabel(spec.label_pt, 'pt'),
+    label_en: formatCatalogDisplayLabel(spec.label_en, 'en'),
+    label_es: formatCatalogDisplayLabel(spec.label_es, 'es'),
     additional_item_id: catalogItem.id,
     display_order: spec.order,
     active: true,
@@ -331,10 +332,10 @@ async function upsertSide(packageId, spec, catalog) {
     package_id: packageId,
     additional_item_id: catalogItem.id,
     item_key: catalogItem.item_key,
-    item_name: spec.label_pt,
-    label_pt: spec.label_pt,
-    label_en: spec.label_en,
-    label_es: spec.label_es,
+    item_name: formatCatalogDisplayLabel(spec.label_pt, 'pt'),
+    label_pt: formatCatalogDisplayLabel(spec.label_pt, 'pt'),
+    label_en: formatCatalogDisplayLabel(spec.label_en, 'en'),
+    label_es: formatCatalogDisplayLabel(spec.label_es, 'es'),
     quantity: 1,
     included: true,
     blocks_additional_item: true,

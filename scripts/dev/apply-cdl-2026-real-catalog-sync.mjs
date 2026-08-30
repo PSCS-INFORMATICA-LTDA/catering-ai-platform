@@ -11,6 +11,7 @@ import { createClient } from '@supabase/supabase-js'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { formatCatalogDisplayLabel } from '../../Lib/publicQuote/catalogDisplayName.ts'
 import { assertDevUrl, loadDevEnv, DEV_REF } from './loadDevEnv.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -732,9 +733,27 @@ const PRESERVE_KEYS = [
   'ITEM_081',
 ]
 
+function editorialCatalogPatch(patch) {
+  const next = { ...patch }
+  if (next.item_name) next.item_name = formatCatalogDisplayLabel(next.item_name, 'pt')
+  if (next.label_pt) next.label_pt = formatCatalogDisplayLabel(next.label_pt, 'pt')
+  if (next.label_en) next.label_en = formatCatalogDisplayLabel(next.label_en, 'en')
+  if (next.label_es) next.label_es = formatCatalogDisplayLabel(next.label_es, 'es')
+  return next
+}
+
+for (const key of Object.keys(UPDATES)) {
+  UPDATES[key] = editorialCatalogPatch(UPDATES[key])
+}
+for (let i = 0; i < CREATES.length; i += 1) {
+  CREATES[i] = editorialCatalogPatch(CREATES[i])
+}
+
 const SOURCE_PUBLIC_KEYS = new Set([
   ...Object.keys(UPDATES),
   ...CREATES.map((row) => row.item_key),
+  'KIT_DESCARTAVEIS',
+  'CDL_WAITER_SERVICE',
 ])
 
 const CRITICAL_PRICES = [
@@ -1083,30 +1102,19 @@ export function evaluateGates(items, prices) {
 
   const guarnicoes = publicItems.filter((item) => item.category_key === 'GUARNICOES')
   const wantSides = [
-    'ARROZ BRANCO',
-    'FEIJÃO PRETO',
-    'SALPICÃO DE FRANGO',
-    'VINAGRETE',
-    'MAIONESE',
-    'SALADA CÉSAR',
-    'FAROFA TEMPERADA',
-    'MANDIOCA COZIDA',
-    'PURÊ DE BATATA',
+    'Arroz Branco',
+    'Feijão Preto',
+    'Salpicão de Frango',
+    'Vinagrete',
+    'Maionese',
+    'Salada César',
+    'Farofa Temperada',
+    'Mandioca Cozida',
+    'Purê de Batata',
   ]
-  const gotSides = guarnicoes.map((item) => item.label_pt).sort()
+  const gotSides = (guarnicoes ?? []).map((item) => item.label_pt).sort()
   if (gotSides.join('|') !== [...wantSides].sort().join('|')) {
     failures.push(`GUARNICOES_SET ${gotSides.join(',')}`)
-  }
-  for (const item of guarnicoes) {
-    if (item.label_pt !== item.label_pt?.toUpperCase()) {
-      failures.push(`GUARNICOES_CASE ${item.label_pt}`)
-    }
-    if (item.label_en && item.label_en !== item.label_en.toUpperCase()) {
-      failures.push(`GUARNICOES_EN_CASE ${item.label_en}`)
-    }
-    if (item.label_es && item.label_es !== item.label_es.toUpperCase()) {
-      failures.push(`GUARNICOES_ES_CASE ${item.label_es}`)
-    }
   }
 
   const byKey = new Map(items.map((item) => [item.item_key, item]))

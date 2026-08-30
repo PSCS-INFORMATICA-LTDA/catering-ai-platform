@@ -8,6 +8,7 @@ import {
   type CatalogItemsInsertPayload,
 } from '@/Lib/catalogItemsTableSchema'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
+import { normalizeCatalogItemLabelFields } from '@/Lib/publicQuote/catalogDisplayName'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -120,7 +121,7 @@ export async function POST(request: Request) {
   const now = new Date().toISOString()
   const salePrice = getCatalogItemSalePrice(body)
   const payload = {
-    ...pickCatalogItemsInsertPayload(body),
+    ...pickCatalogItemsInsertPayload(normalizeCatalogItemLabelFields(body)),
     company_id: companyId,
     price: salePrice,
     sale_price: salePrice,

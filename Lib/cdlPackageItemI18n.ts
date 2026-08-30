@@ -1,6 +1,5 @@
 import { resolveUiLocale } from '@/Lib/i18n/locales'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
-import { formatCatalogDisplayName } from '@/Lib/publicQuote/catalogDisplayName'
 
 type CdlItemTranslation = { en: string; es: string }
 
@@ -89,6 +88,7 @@ function normalizeItemKey(value: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '')
 }
 
 const CDL_ITEM_I18N_BY_NORMALIZED = new Map(
@@ -126,7 +126,7 @@ export function translateCdlItemList(
   locale?: string | null,
 ): string[] {
   return items
-    .map((item) => formatCatalogDisplayName(translateCdlItem(item, locale)))
+    .map((item) => translateCdlItem(item, locale))
     .filter(Boolean)
 }
 
@@ -164,12 +164,12 @@ export function resolveCatalogItemDisplayLabel(
       : loc === 'es'
         ? values.es?.trim()
         : values.pt?.trim()
-  if (dedicated) return formatCatalogDisplayName(dedicated)
+  if (dedicated) return dedicated
   const source =
     values.pt?.trim() ||
     values.fallback?.trim() ||
     values.en?.trim() ||
     values.es?.trim() ||
     ''
-  return formatCatalogDisplayName(translateCdlItem(source, loc) || source)
+  return translateCdlItem(source, loc) || source
 }

@@ -667,6 +667,12 @@ body {
   color: #fff;
 }
 
+/* Visual-only: Suggested Extras merchandising row. Stored catalog labels stay editorial. */
+.public-additional-category.is-featured .public-additional-card-name,
+.public-additional-category.is-featured .public-suggested-extras-item-name {
+  text-transform: uppercase;
+}
+
 .public-suggested-extras-header {
   position: relative;
   overflow: hidden;

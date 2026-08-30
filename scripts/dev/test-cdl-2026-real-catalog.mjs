@@ -36,6 +36,8 @@ const SOURCE_KEYS = new Set([
   'ITEM_084',
   'ITEM_CHIMICHURRI', 'ITEM_FILE_MIGNON_BOVINO', 'ITEM_FILE_MIGNON_PORCO',
   'ITEM_CARANGUEJO_REI',
+  'KIT_DESCARTAVEIS',
+  'CDL_WAITER_SERVICE',
 ])
 
 const CRITICAL = {
@@ -73,15 +75,15 @@ const CRITICAL = {
 }
 
 const WANT_SIDES = [
-  'ARROZ BRANCO',
-  'FEIJÃO PRETO',
-  'SALPICÃO DE FRANGO',
-  'VINAGRETE',
-  'MAIONESE',
-  'SALADA CÉSAR',
-  'FAROFA TEMPERADA',
-  'MANDIOCA COZIDA',
-  'PURÊ DE BATATA',
+  'Arroz Branco',
+  'Feijão Preto',
+  'Salpicão de Frango',
+  'Vinagrete',
+  'Maionese',
+  'Salada César',
+  'Farofa Temperada',
+  'Mandioca Cozida',
+  'Purê de Batata',
 ]
 
 function isFixture(item) {
@@ -187,16 +189,14 @@ test('NO_PUBLIC_PEIXES_OR_CONDIMENTOS', () => {
   )
 })
 
-test('GUARNICOES_EXACT_UPPERCASE', () => {
+test('GUARNICOES_EDITORIAL_CASE', () => {
   const sides = publicItems.filter((item) => item.category_key === 'GUARNICOES')
   assert.deepEqual(
     sides.map((item) => item.label_pt).sort(),
     [...WANT_SIDES].sort(),
   )
   for (const item of sides) {
-    assert.equal(item.label_pt, item.label_pt.toUpperCase())
-    assert.equal(item.label_en, item.label_en.toUpperCase())
-    assert.equal(item.label_es, item.label_es.toUpperCase())
+    assert.notEqual(item.label_pt, item.label_pt.toUpperCase())
   }
 })
 
