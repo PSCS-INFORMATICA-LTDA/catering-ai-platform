@@ -277,6 +277,9 @@ type QuoteStrings = {
     disposableKitTitle: string
     disposableKitDescription: string
     disposableKitPrice: string
+    disposableKitOptional: string
+    disposableKitDecline: string
+    disposableKitAdd: string
     withoutSidesGroupTitle: string
     withSidesGroupHint: string
     withoutSidesGroupHint: string
@@ -742,6 +745,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       disposableKitTitle: 'Kit de descartáveis',
       disposableKitDescription: 'Pratos, talheres e guardanapos',
       disposableKitPrice: '{price} por pessoa',
+      disposableKitOptional: 'opcional',
+      disposableKitDecline: 'Sem descartáveis',
+      disposableKitAdd: 'Adicionar kit',
       withoutSidesGroupTitle: 'SEM GUARNIÇÕES',
       withSidesGroupHint:
         'Uma experiência completa, com acompanhamentos preparados para complementar o churrasco e deixar o serviço pronto para receber seus convidados. Explore {count} opções de pacotes disponíveis e escolha a combinação ideal para o seu evento.',
@@ -1233,6 +1239,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       disposableKitTitle: 'Disposable kit',
       disposableKitDescription: 'Plates, cutlery and napkins',
       disposableKitPrice: '{price} per person',
+      disposableKitOptional: 'optional',
+      disposableKitDecline: 'No disposables',
+      disposableKitAdd: 'Add kit',
       withoutSidesGroupTitle: 'WITHOUT SIDES',
       withSidesGroupHint:
         'A complete experience, with sides prepared to complement the barbecue and ready your service for guests. Explore {count} available packages and choose the ideal combination for your event.',
@@ -1724,6 +1733,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       disposableKitTitle: 'Kit de desechables',
       disposableKitDescription: 'Platos, cubiertos y servilletas',
       disposableKitPrice: '{price} por persona',
+      disposableKitOptional: 'opcional',
+      disposableKitDecline: 'Sin desechables',
+      disposableKitAdd: 'Agregar kit',
       withoutSidesGroupTitle: 'SIN ACOMPAÑAMIENTOS',
       withSidesGroupHint:
         'Una experiencia completa, con acompañamientos preparados para complementar el asado y dejar el servicio listo para recibir a tus invitados. Explora {count} opciones de paquetes disponibles y elige la combinación ideal para tu evento.',

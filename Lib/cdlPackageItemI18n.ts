@@ -1,5 +1,6 @@
 import { resolveUiLocale } from '@/Lib/i18n/locales'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
+import { formatCatalogDisplayName } from '@/Lib/publicQuote/catalogDisplayName'
 
 type CdlItemTranslation = { en: string; es: string }
 
@@ -124,7 +125,9 @@ export function translateCdlItemList(
   items: ReadonlyArray<string>,
   locale?: string | null,
 ): string[] {
-  return items.map((item) => translateCdlItem(item, locale)).filter(Boolean)
+  return items
+    .map((item) => formatCatalogDisplayName(translateCdlItem(item, locale)))
+    .filter(Boolean)
 }
 
 /** Traduz listas já unidas por • , ou quebra de linha (fallback CDL). */
@@ -161,12 +164,12 @@ export function resolveCatalogItemDisplayLabel(
       : loc === 'es'
         ? values.es?.trim()
         : values.pt?.trim()
-  if (dedicated) return dedicated
+  if (dedicated) return formatCatalogDisplayName(dedicated)
   const source =
     values.pt?.trim() ||
     values.fallback?.trim() ||
     values.en?.trim() ||
     values.es?.trim() ||
     ''
-  return translateCdlItem(source, loc) || source
+  return formatCatalogDisplayName(translateCdlItem(source, loc) || source)
 }

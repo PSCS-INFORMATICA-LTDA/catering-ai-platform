@@ -389,7 +389,10 @@ export default function PublicPackageCatalog({
     setExpandedPackageId((current) => (current === id ? null : id))
   }
 
-  function renderGroup(packages: PublicPackageCard[]) {
+  function renderGroup(
+    packages: PublicPackageCard[],
+    { includeDisposableKit = false }: { includeDisposableKit?: boolean } = {},
+  ) {
     return (
       <div className="mt-4 grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
         {packages.map((pkg) => {
@@ -400,6 +403,13 @@ export default function PublicPackageCatalog({
                 (group) => group.items.length > 0,
               )
             : []
+          const showDisposableKit = Boolean(
+            includeDisposableKit && disposableKitOffer,
+          )
+          const showOptions =
+            active &&
+            expanded &&
+            (selectableGroups.length > 0 || showDisposableKit)
 
           return (
             <Fragment key={pkg.id}>
@@ -412,7 +422,7 @@ export default function PublicPackageCatalog({
                 specialDatePricing={resolvedSpecial}
                 onClick={() => handlePackageClick(pkg.id)}
               />
-              {active && expanded && selectableGroups.length > 0 ? (
+              {showOptions ? (
                 <div
                   ref={optionsRef}
                   data-public-package-options
@@ -426,14 +436,21 @@ export default function PublicPackageCatalog({
                     <p className="mt-1 text-sm font-semibold text-cdl-title">
                       {getPackageCatalogName(pkg, language)}
                     </p>
-                    <div className="mt-4 min-w-0">
-                      <PackageIncludedOptions
-                        optionGroups={selectableGroups}
-                        selections={selections}
-                        onChange={onSelectionChange}
-                        language={language}
-                        pendingGroupIds={pendingSelectionGroupIds}
-                      />
+                    <div className="mt-4 min-w-0 space-y-2.5">
+                      {selectableGroups.length > 0 ? (
+                        <PackageIncludedOptions
+                          optionGroups={selectableGroups}
+                          selections={selections}
+                          onChange={onSelectionChange}
+                          language={language}
+                          pendingGroupIds={pendingSelectionGroupIds}
+                        />
+                      ) : null}
+                      {showDisposableKit ? (
+                        <div data-disposable-kit-in-no-sides>
+                          {disposableKitOffer}
+                        </div>
+                      ) : null}
                     </div>
                   </section>
                 </div>
@@ -560,10 +577,7 @@ export default function PublicPackageCatalog({
           className="min-w-0 space-y-5 rounded-2xl border border-cdl-border bg-cdl-inset/70 p-3 sm:p-4"
           data-package-group-panel="without_sides"
         >
-          {disposableKitOffer ? (
-            <div data-disposable-kit-in-no-sides>{disposableKitOffer}</div>
-          ) : null}
-          {renderGroup(packagesWithoutSides)}
+          {renderGroup(packagesWithoutSides, { includeDisposableKit: true })}
         </section>
       ) : null}
     </div>

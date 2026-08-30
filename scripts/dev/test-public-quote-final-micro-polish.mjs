@@ -362,15 +362,15 @@ test('SAUSAGE_OPTIONS_NORMALIZED_CASING', () => {
       { item_key: 'ITEM_LINGUICA_TOSCANA_TRADICIONAL' },
       'pt',
     ),
-    'Tradicional porco',
+    'Tradicional Porco',
   )
   assert.equal(
     resolveSausageDisplayLabel({ item_key: 'ITEM_024' }, 'pt'),
-    'Tradicional frango',
+    'Tradicional Frango',
   )
   assert.equal(
     resolveSausageDisplayLabel({ option_item_key: 'tradicional_porco' }, 'pt'),
-    'Tradicional porco',
+    'Tradicional Porco',
   )
   assert.doesNotMatch(
     source('Lib/publicQuote/sausageOptions.ts'),

@@ -184,7 +184,11 @@ test('TEST 5 package pricing box stays below the art with canonical math', () =>
 
 test('TEST 6 package options remain inline under the selected package', () => {
   assert.match(catalogSrc, /data-public-package-options/)
-  assert.match(catalogSrc, /active && expanded && selectableGroups\.length > 0/)
+  assert.match(catalogSrc, /const showOptions =/)
+  assert.match(
+    catalogSrc,
+    /active &&\s+expanded &&\s+\(selectableGroups\.length > 0 \|\| showDisposableKit\)/,
+  )
   assert.match(catalogSrc, /lg:col-span-2/)
 })
 

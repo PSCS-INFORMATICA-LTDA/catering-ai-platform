@@ -20,6 +20,7 @@ import {
   PORK_SAUSAGE_ITEM_KEY,
   resolveSausageDisplayLabel,
 } from '../../Lib/publicQuote/sausageOptions.ts'
+import { formatCatalogDisplayName } from '../../Lib/publicQuote/catalogDisplayName.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
@@ -146,31 +147,31 @@ test('SAUSAGE_TRADITIONAL_PORK_AND_CHICKEN', () => {
   assert.equal(CHICKEN_SAUSAGE_ITEM_KEY, 'ITEM_024')
   assert.equal(
     resolveSausageDisplayLabel({ item_key: PORK_SAUSAGE_ITEM_KEY }, 'pt'),
-    'Tradicional porco',
+    'Tradicional Porco',
   )
   assert.equal(
     resolveSausageDisplayLabel({ item_key: PORK_SAUSAGE_ITEM_KEY }, 'en'),
-    'Traditional pork sausage',
+    'Traditional Pork Sausage',
   )
   assert.equal(
     resolveSausageDisplayLabel({ item_key: CHICKEN_SAUSAGE_ITEM_KEY }, 'pt'),
-    'Tradicional frango',
+    'Tradicional Frango',
   )
   assert.equal(
     resolveSausageDisplayLabel({ item_key: CHICKEN_SAUSAGE_ITEM_KEY }, 'en'),
-    'Traditional chicken sausage',
+    'Traditional Chicken Sausage',
   )
   assert.equal(
     resolveSausageDisplayLabel({ item_key: CHICKEN_SAUSAGE_ITEM_KEY }, 'es'),
-    'Salchicha tradicional de pollo',
+    'Salchicha Tradicional De Pollo',
   )
   assert.equal(
     resolveSausageDisplayLabel({ option_item_key: 'tradicional_porco' }, 'pt'),
-    'Tradicional porco',
+    'Tradicional Porco',
   )
   assert.equal(
     resolveSausageDisplayLabel({ option_item_key: 'tradicional_frango' }, 'pt'),
-    'Tradicional frango',
+    'Tradicional Frango',
   )
 })
 
@@ -188,6 +189,20 @@ test('DISPOSABLE_KIT_NO_SIDES_ONLY', () => {
   assert.match(wizard, /disposableKitOffer=/)
   assert.match(catalog, /data-package-group-panel="without_sides"/)
   assert.match(catalog, /data-disposable-kit-in-no-sides/)
+  assert.match(catalog, /includeDisposableKit/)
+  assert.match(catalog, /data-public-package-options/)
+  assert.match(
+    source('components/quotes/NoSidesDisposableKitOffer.tsx'),
+    /data-disposable-kit-inline/,
+  )
+  assert.match(
+    source('components/quotes/NoSidesDisposableKitOffer.tsx'),
+    /data-disposable-kit-choice="off"/,
+  )
+  assert.doesNotMatch(
+    source('components/quotes/NoSidesDisposableKitOffer.tsx'),
+    /shadow-cdl/,
+  )
   assert.match(catalog, /data-with-sides-includes-disposables/)
   assert.match(catalog, /packageWithSidesIncludesDisposables/)
   assert.doesNotMatch(catalog, /\b13\b/)
@@ -249,6 +264,36 @@ test('NO_NEW_WIZARD_FRAMEWORK', () => {
   assert.match(
     source('components/quotes/NoSidesDisposableKitOffer.tsx'),
     /data-disposable-kit-offer/,
+  )
+  assert.match(
+    source('components/quotes/NoSidesDisposableKitOffer.tsx'),
+    /data-disposable-kit-inline/,
+  )
+})
+
+test('CATALOG_DISPLAY_NAME_TITLE_CASE', () => {
+  assert.equal(formatCatalogDisplayName('TRADICIONAL FRANGO'), 'Tradicional Frango')
+  assert.equal(formatCatalogDisplayName('TRADICIONAL PORCO'), 'Tradicional Porco')
+  assert.equal(formatCatalogDisplayName('GOIABADA'), 'Goiabada')
+  assert.equal(formatCatalogDisplayName('MEL'), 'Mel')
+  assert.equal(formatCatalogDisplayName('PIMENTA DE BICO'), 'Pimenta De Bico')
+  assert.equal(formatCatalogDisplayName('FILÉ MIGNON BOVINO'), 'Filé Mignon Bovino')
+  assert.equal(formatCatalogDisplayName('FILÉ MIGNON SUÍNO'), 'Filé Mignon Suíno')
+  assert.equal(
+    formatCatalogDisplayName('TOMAHAWK WAGYU FOLHADO A OURO'),
+    'Tomahawk Wagyu Folhado A Ouro',
+  )
+  assert.equal(formatCatalogDisplayName('  pimenta   de   bico  '), 'Pimenta De Bico')
+  assert.equal(formatCatalogDisplayName('ITEM_061'), 'ITEM_061')
+  assert.equal(formatCatalogDisplayName('KIT_DESCARTAVEIS'), 'KIT_DESCARTAVEIS')
+  assert.equal(formatCatalogDisplayName('BBQ PRIME'), 'BBQ Prime')
+  assert.doesNotMatch(
+    source('Lib/packageCatalogVisual.ts'),
+    /formatCatalogDisplayName/,
+  )
+  assert.match(
+    source('Lib/cdlPackageItemI18n.ts'),
+    /formatCatalogDisplayName/,
   )
 })
 
