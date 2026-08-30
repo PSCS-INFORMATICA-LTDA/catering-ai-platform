@@ -534,13 +534,13 @@ export default function PublicPackageCatalog({
       </div>
       {openGroup === 'with_sides' ? (
         <section
-          className="min-w-0 space-y-5"
+          className="min-w-0 space-y-5 rounded-2xl border border-cdl-border bg-cdl-inset/70 p-3 sm:p-4"
           data-package-group-panel="with_sides"
         >
           {sidesPricePerPerson > 0 ? (
             <div
               data-with-sides-includes-disposables
-              className="rounded-2xl border border-cdl-border bg-cdl-inset px-4 py-3"
+              className="rounded-2xl border border-cdl-border bg-cdl-surface px-4 py-3"
             >
               <p className="text-sm font-black text-[var(--brand-primary)]">
                 {tw(language, 'packageWithSidesPriceLead', {
@@ -557,13 +557,13 @@ export default function PublicPackageCatalog({
       ) : null}
       {openGroup === 'without_sides' ? (
         <section
-          className="min-w-0 space-y-5"
+          className="min-w-0 space-y-5 rounded-2xl border border-cdl-border bg-cdl-inset/70 p-3 sm:p-4"
           data-package-group-panel="without_sides"
         >
-          {renderGroup(packagesWithoutSides)}
           {disposableKitOffer ? (
             <div data-disposable-kit-in-no-sides>{disposableKitOffer}</div>
           ) : null}
+          {renderGroup(packagesWithoutSides)}
         </section>
       ) : null}
     </div>
