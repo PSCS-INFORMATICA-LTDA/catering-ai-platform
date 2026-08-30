@@ -47,6 +47,8 @@ const KEYS = [
   'BBQCHO+',
   'BBQPRI',
   'BBQPRI+',
+  'BBQLUX',
+  'BBQLUX+',
   'BBQPERS',
   'BBQPERS+',
 ]
@@ -76,7 +78,7 @@ test('PACKAGE_PT_EN_ES_ART_MAPPED', () => {
     }
   }
   const files = [...generated.matchAll(/"([a-z-]+-v[3-9]\.webp)"/g)].map((m) => m[1])
-  assert.equal(files.length, 30)
+  assert.equal(files.length, 36)
   for (const file of files) {
     assert.ok(allFolders.includes(file), `${file} is mapped but missing on disk`)
   }
@@ -87,7 +89,7 @@ test('PACKAGE_PT_EN_ES_ART_MAPPED', () => {
 })
 
 test('WITH_AND_WITHOUT_SIDES_ART_DISTINCT', () => {
-  for (const base of ['BBQTRAD', 'BBQSEL', 'BBQCHO', 'BBQPRI', 'BBQPERS']) {
+  for (const base of ['BBQTRAD', 'BBQSEL', 'BBQCHO', 'BBQPRI', 'BBQLUX', 'BBQPERS']) {
     for (const locale of LOCALES) {
       const plain = new RegExp(`"${base}":[\\s\\S]{0,400}?"${locale}": "([^"]+)"`)
       const plus = new RegExp(`"${base}\\+":[\\s\\S]{0,400}?"${locale}": "([^"]+)"`)

@@ -17,6 +17,16 @@ export const PACKAGE_FOLDER_ART_V2: Record<
   string,
   Partial<Record<'pt' | 'en' | 'es', string>>
 > = {
+  "BBQLUX": {
+    "en": "bbqlux-en-v3.webp",
+    "es": "bbqlux-es-v3.webp",
+    "pt": "bbqlux-pt-v3.webp"
+  },
+  "BBQLUX+": {
+    "en": "bbqlux-plus-en-v3.webp",
+    "es": "bbqlux-plus-es-v3.webp",
+    "pt": "bbqlux-plus-pt-v3.webp"
+  },
   "BBQCHO": {
     "en": "bbqcho-en-v4.webp",
     "es": "bbqcho-es-v4.webp",

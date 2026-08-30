@@ -1,0 +1,43 @@
+{
+  "project_ref": "yasprgtlqclwsjcshtls",
+  "uploaded": [
+    {
+      "key": "BBQLUX",
+      "locale": "pt",
+      "path": "cdl-folders-v3/bbqlux-pt-v3.webp",
+      "bytes": 220686
+    },
+    {
+      "key": "BBQLUX",
+      "locale": "en",
+      "path": "cdl-folders-v3/bbqlux-en-v3.webp",
+      "bytes": 220244
+    },
+    {
+      "key": "BBQLUX",
+      "locale": "es",
+      "path": "cdl-folders-v3/bbqlux-es-v3.webp",
+      "bytes": 222098
+    },
+    {
+      "key": "BBQLUX+",
+      "locale": "pt",
+      "path": "cdl-folders-v3/bbqlux-plus-pt-v3.webp",
+      "bytes": 217874
+    },
+    {
+      "key": "BBQLUX+",
+      "locale": "en",
+      "path": "cdl-folders-v3/bbqlux-plus-en-v3.webp",
+      "bytes": 216316
+    },
+    {
+      "key": "BBQLUX+",
+      "locale": "es",
+      "path": "cdl-folders-v3/bbqlux-plus-es-v3.webp",
+      "bytes": 219150
+    }
+  ],
+  "status": "UPLOADED",
+  "map_status": "PATCHED"
+}

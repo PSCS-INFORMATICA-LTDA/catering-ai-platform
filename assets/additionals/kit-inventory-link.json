@@ -1,0 +1,11 @@
+{
+  "project_ref": "yasprgtlqclwsjcshtls",
+  "item_key": "KIT_DESCARTAVEIS",
+  "catalog_item_id": "d910d4e8-09dd-49ad-8bcb-48635f4ba71e",
+  "price": 3,
+  "pricing_type": "PER_PERSON",
+  "inventory_enabled_before": false,
+  "image_object": "65fd576f-8d97-49ba-bf38-61bc1e94e94a/KIT_DESCARTAVEIS_clean_v1_20260829.webp",
+  "stock_decrement": "NOT_IMPLEMENTED — catalog linkage only",
+  "status": "ENABLED"
+}
