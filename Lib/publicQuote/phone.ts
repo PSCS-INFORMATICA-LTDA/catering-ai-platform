@@ -1,6 +1,18 @@
 import { isUsablePhone, toE164Digits } from '../normalizePhone.ts'
+import {
+  countriesForCallingCode,
+  getPhoneCountry,
+  matchCallingCode,
+  type PhoneCountry,
+} from './phoneCountries.ts'
 
 export const PUBLIC_PHONE_EXAMPLE = '+1 407 555 1234'
+
+export type PublicPhoneParts = {
+  iso2: string | null
+  callingCode: string
+  nationalDigits: string
+}
 const NANP_E164 = /^1[2-9]\d{2}[2-9]\d{6}$/
 const BRAZIL_E164 = /^55[1-9]\d{9,10}$/
 
@@ -118,4 +130,111 @@ export function sanitizeStoredPublicPhone(
   const trimmed = value?.trim()
   if (!trimmed) return ''
   return toE164Digits(trimmed).length < 4 ? '' : trimmed
+}
+
+export function nationalDigitsOnly(raw: string | null | undefined): string {
+  return String(raw ?? '').replace(/\D/g, '').slice(0, 15)
+}
+
+export function stripCallingCodeFromNational(
+  country: PhoneCountry,
+  raw: string,
+): string {
+  let digits = nationalDigitsOnly(raw)
+  if (!digits) return ''
+  const code = country.callingCode
+  if (digits.startsWith(code) && digits.length > code.length + 3) {
+    digits = digits.slice(code.length)
+  }
+  return digits
+}
+
+export function composePublicPhoneE164(
+  iso2: string | null | undefined,
+  nationalRaw: string | null | undefined,
+): string | null {
+  const country = getPhoneCountry(iso2)
+  if (!country) return null
+  const national = stripCallingCodeFromNational(country, String(nationalRaw ?? ''))
+  if (!national) return null
+  return toPublicPhoneE164(`+${country.callingCode}${national}`)
+}
+
+export function splitPublicPhone(
+  raw: string | null | undefined,
+  preferredIso2?: string | null,
+): PublicPhoneParts {
+  const preferred = getPhoneCountry(preferredIso2)
+  const trimmed = String(raw ?? '').trim()
+  if (!trimmed) {
+    return {
+      iso2: preferred?.iso2 ?? null,
+      callingCode: preferred?.callingCode ?? '',
+      nationalDigits: '',
+    }
+  }
+
+  const digits = toE164Digits(trimmed)
+  if (!digits) {
+    return {
+      iso2: preferred?.iso2 ?? null,
+      callingCode: preferred?.callingCode ?? '',
+      nationalDigits: nationalDigitsOnly(trimmed),
+    }
+  }
+
+  const explicit = hasExplicitCountryCode(trimmed)
+  if (!explicit && preferred && digits.length <= 11) {
+    const national = stripCallingCodeFromNational(preferred, digits)
+    return {
+      iso2: preferred.iso2,
+      callingCode: preferred.callingCode,
+      nationalDigits: national,
+    }
+  }
+
+  const code = matchCallingCode(digits)
+  if (!code) {
+    return {
+      iso2: preferred?.iso2 ?? null,
+      callingCode: preferred?.callingCode ?? '',
+      nationalDigits: digits,
+    }
+  }
+
+  const matches = countriesForCallingCode(code)
+  const chosen =
+    (preferred && matches.find((row) => row.iso2 === preferred.iso2)) ||
+    matches[0] ||
+    null
+  return {
+    iso2: chosen?.iso2 ?? null,
+    callingCode: code,
+    nationalDigits: digits.slice(code.length),
+  }
+}
+
+export function formatNationalPhoneDisplay(
+  iso2: string | null | undefined,
+  nationalRaw: string,
+): string {
+  const digits = nationalDigitsOnly(nationalRaw)
+  if (!digits) return ''
+  const country = getPhoneCountry(iso2)
+  if (country?.iso2 === 'US' || country?.iso2 === 'CA' || country?.iso2 === 'PR') {
+    const area = digits.slice(0, 3)
+    const prefix = digits.slice(3, 6)
+    const line = digits.slice(6, 10)
+    if (digits.length <= 3) return area
+    if (digits.length <= 6) return `(${area}) ${prefix}`
+    return `(${area}) ${prefix}-${line}`
+  }
+  if (country?.iso2 === 'BR') {
+    const area = digits.slice(0, 2)
+    const rest = digits.slice(2)
+    if (!area) return digits
+    if (rest.length <= 4) return `${area} ${rest}`.trim()
+    return `${area} ${rest.slice(0, -4)}-${rest.slice(-4)}`
+  }
+  return digits
 }

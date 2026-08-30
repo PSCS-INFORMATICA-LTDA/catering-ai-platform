@@ -146,9 +146,9 @@ test('CONTACTS', () => {
 test('PHONE_PLACEHOLDER_ONLY', () => {
   assert.equal(PUBLIC_PHONE_EXAMPLE, '+1 407 555 1234')
   assert.match(phone, /placeholder=\{t\.publicPhonePlaceholder\}/)
-  assert.equal(getQuoteStrings('pt').wizard.publicPhonePlaceholder, 'Ex.: +1 407 555 1234')
-  assert.equal(getQuoteStrings('en').wizard.publicPhonePlaceholder, 'Ex.: +1 407 555 1234')
-  assert.equal(getQuoteStrings('es').wizard.publicPhonePlaceholder, 'Ej.: +1 407 555 1234')
+  assert.equal(getQuoteStrings('pt').wizard.publicPhonePlaceholder, 'Ex.: 407 555 1234')
+  assert.equal(getQuoteStrings('en').wizard.publicPhonePlaceholder, 'Ex.: 407 555 1234')
+  assert.equal(getQuoteStrings('es').wizard.publicPhonePlaceholder, 'Ej.: 407 555 1234')
   const types = source('Lib/quoteWizardTypes.ts')
   assert.match(types, /customerDraftPhone: ''/)
 })

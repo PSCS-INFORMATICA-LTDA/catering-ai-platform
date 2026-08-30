@@ -117,20 +117,21 @@ test('ADULTS_TO_ADDRESS_FLOW', () => {
   assert.match(wizard, /data-guest-field/)
   assert.match(wizard, /shouldAdvanceFromFieldBlur/)
   assert.match(wizard, /data-guest-address-transition/)
+  assert.match(wizard, /data-guest-children-under-3/)
+  assert.match(wizard, /data-guest-children-4-12/)
+  assert.match(wizard, /data-event-address-entry/)
   const adultsCommit = wizard.match(
-    /inputRef=\{adultsInputRef\}[\s\S]{0,1600}onCommit=\{[\s\S]{0,1200}scrollIntoView/,
+    /inputRef=\{adultsInputRef\}[\s\S]{0,2400}onCommit=\{[\s\S]{0,900}?revealFloatingPanelWhenReady[\s\S]{0,200}addressEntryRef/,
   )
   assert.ok(adultsCommit)
-  assert.match(adultsCommit[0], /guestAddressTransitionRef/)
-  assert.doesNotMatch(adultsCommit[0], /streetNumberInputRef/)
+  assert.match(adultsCommit[0], /streetNumberInputRef/)
 })
 
 test('ADULTS_TO_STREET_NUMBER', () => {
   const adultsCommit = wizard.match(
-    /inputRef=\{adultsInputRef\}[\s\S]{0,1600}onCommit=\{[\s\S]{0,1200}scrollIntoView/,
+    /inputRef=\{adultsInputRef\}[\s\S]{0,2400}onCommit=\{[\s\S]{0,500}streetNumberInputRef[\s\S]{0,200}preventScroll: true/,
   )
   assert.ok(adultsCommit)
-  assert.doesNotMatch(adultsCommit[0], /streetNumberInputRef/)
 })
 
 test('STREET_NUMBER_NUMERIC_KEYBOARD_HINT', () => {
@@ -203,7 +204,7 @@ test('PHONE_TYPE_TEL', () => {
 
 test('PHONE_INPUTMODE_TEL', () => {
   assert.match(phone, /inputMode="tel"/)
-  assert.match(phone, /autoComplete="tel"/)
+  assert.match(phone, /autoComplete="tel-national"/)
 })
 
 test('INTERNATIONAL_PLUS_ALLOWED', () => {
@@ -219,7 +220,7 @@ test('AUTO_INSERT_PLUS_ONE', () => {
 
 test('PHONE_VALIDATION_UNCHANGED', () => {
   assert.match(wizard, /isUsablePublicPhone\(state\.customerDraftPhone\)/)
-  assert.match(phone, /isUsablePublicPhone\(display\)/)
+  assert.match(phone, /isUsablePublicPhone\(canonical\)/)
 })
 
 test('CUSTOM_PLUS_MAPPED_TO_V9', () => {

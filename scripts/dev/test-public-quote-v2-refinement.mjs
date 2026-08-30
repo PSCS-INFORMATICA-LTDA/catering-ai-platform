@@ -172,9 +172,9 @@ test('public phone field has no focus-time default and shows an example', () => 
   )
   assert.doesNotMatch(experience, /getPublicPhoneDefault/)
   const translations = source('Lib/quoteTranslations.ts')
-  assert.match(translations, /publicPhonePlaceholder: 'Ex\.: \+1 407 555 1234'/)
-  assert.match(translations, /publicPhonePlaceholder: 'Ex\.: \+1 407 555 1234'/)
-  assert.match(translations, /publicPhonePlaceholder: 'Ej\.: \+1 407 555 1234'/)
+  assert.match(translations, /publicPhonePlaceholder: 'Ex\.: 407 555 1234'/)
+  assert.match(translations, /publicPhonePlaceholder: 'Ex\.: 407 555 1234'/)
+  assert.match(translations, /publicPhonePlaceholder: 'Ej\.: 407 555 1234'/)
 })
 
 /* -------------------------------------------------- address number (step 2) */

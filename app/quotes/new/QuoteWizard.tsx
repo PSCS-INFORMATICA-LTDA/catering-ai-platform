@@ -26,6 +26,7 @@ import {
   normalizeAdditionalQuantity,
 } from '../../../Lib/quoteAdditionalDisplay'
 import {
+  appendServiceSupplyGroup,
   buildPublicAdditionalDisplayGroups,
   getReviewAdditionalCategoryLabel,
   SUGGESTED_EXTRAS_DISPLAY_KEY,
@@ -124,11 +125,13 @@ import type {
   PackageSideItem,
 } from '../../../Lib/packageConfiguration'
 import {
+  filterPublicExtraItemsForPackage,
   getVisiblePublicExtraItems,
   isDisposableKitItem,
   isWaiterServiceItem,
   pruneBlockedAdditionalSelections,
   sanitizePublicAdditionalQuantity,
+  SERVICES_SUPPLIES_CATEGORY_KEY,
 } from '../../../Lib/publicQuote/extrasEligibility.ts'
 import { getCatalogItemImageUrl } from '../../../Lib/catalogItemVisual'
 import { isGrillRentalAdditional } from '../../../Lib/publicQuote/grillRentalDisplay'
@@ -217,6 +220,7 @@ export type PublicQuoteWizardContext = {
   companySlug: string
   branchId?: string | null
   allowedCountries: string[]
+  branchCountry?: string | null
   consentVersion: string
   consentLabel: string
   privacyUrl?: string | null
@@ -1288,6 +1292,7 @@ export default function QuoteWizardCore({
   const phoneInputRef = useRef<HTMLInputElement>(null)
   const adultsInputRef = useRef<HTMLInputElement>(null)
   const guestAddressTransitionRef = useRef<HTMLDivElement>(null)
+  const addressEntryRef = useRef<HTMLDivElement>(null)
   const streetNumberInputRef = useRef<HTMLInputElement>(null)
   const addressSearchInputRef = useRef<HTMLInputElement>(null)
   const [startTimePickerOpen, setStartTimePickerOpen] = useState(false)
@@ -1686,8 +1691,12 @@ export default function QuoteWizardCore({
   ])
 
   const visibleAdditionalItems = useMemo(
-    () => getVisiblePublicExtraItems(itemCatalog, blockedCatalogItemIds),
-    [itemCatalog, blockedCatalogItemIds],
+    () =>
+      filterPublicExtraItemsForPackage(
+        getVisiblePublicExtraItems(itemCatalog, blockedCatalogItemIds),
+        selectedPackage,
+      ),
+    [itemCatalog, blockedCatalogItemIds, selectedPackage],
   )
 
   const waiterItem = useMemo(
@@ -1712,9 +1721,23 @@ export default function QuoteWizardCore({
     ? getCatalogItemImageUrl(grillCatalogItem)
     : null
 
+  const serviceSupplyItems = useMemo(
+    () => [
+      ...(waiterItem ? [waiterItem] : []),
+      ...(disposableKitItem && !fromWithSidesSection ? [disposableKitItem] : []),
+    ],
+    [waiterItem, disposableKitItem, fromWithSidesSection],
+  )
+
   const additionalItemsByCategory = useMemo(
-    () => buildPublicAdditionalDisplayGroups(visibleAdditionalItems, uiLocale),
-    [visibleAdditionalItems, uiLocale],
+    () =>
+      appendServiceSupplyGroup(
+        buildPublicAdditionalDisplayGroups(visibleAdditionalItems, uiLocale),
+        serviceSupplyItems,
+        uiLocale,
+        SERVICES_SUPPLIES_CATEGORY_KEY,
+      ),
+    [visibleAdditionalItems, serviceSupplyItems, uiLocale],
   )
 
   const selectedCountByCategory = useMemo(() => {
@@ -3123,6 +3146,8 @@ export default function QuoteWizardCore({
                   required
                   requiredLabel={requiredLabel}
                   inputRef={phoneInputRef}
+                  allowedCountries={publicContext?.allowedCountries}
+                  branchCountry={publicContext?.branchCountry}
                   onChange={(value) =>
                     updateState({
                       customerDraftPhone: value,
@@ -3304,22 +3329,12 @@ export default function QuoteWizardCore({
                     isPublicMode
                       ? (value) => {
                           if (value <= 0) return
-                          const childrenReviewed =
-                            state.childrenUnder3Count > 0 ||
-                            state.children4To12Count > 0
-                          if (childrenReviewed) {
-                            focusWizardField(addressSearchInputRef.current)
-                            return
-                          }
-                          const node = guestAddressTransitionRef.current
-                          if (!node) return
-                          const reduced = window.matchMedia?.(
-                            '(prefers-reduced-motion: reduce)',
-                          ).matches
-                          node.scrollIntoView({
-                            behavior: reduced ? 'auto' : 'smooth',
-                            block: 'start',
-                          })
+                          const numberField = streetNumberInputRef.current
+                          numberField?.focus({ preventScroll: true })
+                          revealFloatingPanelWhenReady(
+                            () =>
+                              addressEntryRef.current || numberField,
+                          )
                         }
                       : undefined
                   }
@@ -3345,6 +3360,12 @@ export default function QuoteWizardCore({
                   />
                 </div>
               </div>
+              </div>
+              <div
+                ref={addressEntryRef}
+                data-event-address-entry
+                className="space-y-4"
+              >
               {/* Without this the address reads as more guest fields. */}
               <p
                 data-event-address-section
@@ -3352,7 +3373,6 @@ export default function QuoteWizardCore({
               >
                 {w.eventAddressSection}
               </p>
-              </div>
               <AddressAutocompleteFields
                 searchInputRef={addressSearchInputRef}
                 numberInputRef={streetNumberInputRef}
@@ -3404,6 +3424,7 @@ export default function QuoteWizardCore({
                     : undefined
                 }
               />
+              </div>
             </div>
           </SectionCard>
         )}

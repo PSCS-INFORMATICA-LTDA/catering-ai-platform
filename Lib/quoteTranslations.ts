@@ -71,6 +71,11 @@ const CATEGORY_LABEL_MAP: Record<string, Record<QuoteLanguage, string>> = {
     en: 'Accompaniments',
     es: 'Acompañamientos',
   },
+  SERVICOS_E_SUPRIMENTOS: {
+    pt: 'Serviços e Suprimentos',
+    en: 'Services & Supplies',
+    es: 'Servicios y Suministros',
+  },
   LEGUMES_E_VEGETAIS: {
     pt: 'Legumes e Vegetais',
     en: 'Vegetables',
@@ -116,6 +121,7 @@ const CATEGORY_SORT_ORDER = [
   'PEIXES',
   'LEGUMES_E_SALADAS',
   'OUTROS',
+  'SERVICOS_E_SUPRIMENTOS',
 ] as const
 
 type QuoteStrings = {
@@ -219,6 +225,11 @@ type QuoteStrings = {
     endTimeHintPublic: string
     publicPhoneHint: string
     publicPhonePlaceholder: string
+    phoneCountryPlaceholder: string
+    phoneCountrySearch: string
+    phoneCountryRequired: string
+    phoneNationalRequired: string
+    phoneInvalidSplit: string
     publicAddressPlaceholder: string
     publicAddressNumberPlaceholder: string
     publicCityPlaceholder: string
@@ -280,6 +291,7 @@ type QuoteStrings = {
     disposableKitOptional: string
     disposableKitDecline: string
     disposableKitAdd: string
+    includedInPackage: string
     withoutSidesGroupTitle: string
     withSidesGroupHint: string
     withoutSidesGroupHint: string
@@ -681,8 +693,13 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       endTimeHintPublic:
         'Calculado automaticamente a partir do horário de início. Não é possível editar.',
       publicPhoneHint:
-        'Comece pelo código do país. Estados Unidos é +1; para outro país use o DDI, por exemplo +55.',
-      publicPhonePlaceholder: 'Ex.: +1 407 555 1234',
+        'Escolha o país e o DDI. Depois digite DDD e número. O telefone é salvo no formato internacional.',
+      publicPhonePlaceholder: 'Ex.: 407 555 1234',
+      phoneCountryPlaceholder: 'DDI',
+      phoneCountrySearch: 'Buscar país ou DDI',
+      phoneCountryRequired: 'Selecione o país / DDI.',
+      phoneNationalRequired: 'Informe DDD e número.',
+      phoneInvalidSplit: 'Telefone incompleto. Confira o DDI e o número.',
       publicAddressPlaceholder: 'Ex.: 123 Example Ave',
       publicAddressNumberPlaceholder: 'Ex.: 250',
       publicCityPlaceholder: 'Ex.: Orlando',
@@ -748,6 +765,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       disposableKitOptional: 'opcional',
       disposableKitDecline: 'Sem descartáveis',
       disposableKitAdd: 'Adicionar kit',
+      includedInPackage: 'Incluído no pacote',
       withoutSidesGroupTitle: 'SEM GUARNIÇÕES',
       withSidesGroupHint:
         'Uma experiência completa, com acompanhamentos preparados para complementar o churrasco e deixar o serviço pronto para receber seus convidados. Explore {count} opções de pacotes disponíveis e escolha a combinação ideal para o seu evento.',
@@ -1175,8 +1193,13 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       endTimeHintPublic:
         'Calculated automatically from the start time. This field cannot be edited.',
       publicPhoneHint:
-        'Start with the country code. United States is +1; for another country use its code, for example +55.',
-      publicPhonePlaceholder: 'Ex.: +1 407 555 1234',
+        'Choose the country and calling code, then type the area code and number. The phone is stored in international format.',
+      publicPhonePlaceholder: 'Ex.: 407 555 1234',
+      phoneCountryPlaceholder: 'Code',
+      phoneCountrySearch: 'Search country or code',
+      phoneCountryRequired: 'Select the country / calling code.',
+      phoneNationalRequired: 'Enter the area code and number.',
+      phoneInvalidSplit: 'Incomplete phone. Check the calling code and number.',
       publicAddressPlaceholder: 'Ex.: 123 Example Ave',
       publicAddressNumberPlaceholder: 'Ex.: 250',
       publicCityPlaceholder: 'Ex.: Orlando',
@@ -1242,6 +1265,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       disposableKitOptional: 'optional',
       disposableKitDecline: 'No disposables',
       disposableKitAdd: 'Add kit',
+      includedInPackage: 'Included in package',
       withoutSidesGroupTitle: 'WITHOUT SIDES',
       withSidesGroupHint:
         'A complete experience, with sides prepared to complement the barbecue and ready your service for guests. Explore {count} available packages and choose the ideal combination for your event.',
@@ -1669,8 +1693,13 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       endTimeHintPublic:
         'Calculado automáticamente a partir del horario de inicio. No se puede editar.',
       publicPhoneHint:
-        'Empiece por el código del país. Estados Unidos es +1; para otro país use su código, por ejemplo +55.',
-      publicPhonePlaceholder: 'Ej.: +1 407 555 1234',
+        'Elija el país y el código, luego escriba el área y el número. El teléfono se guarda en formato internacional.',
+      publicPhonePlaceholder: 'Ej.: 407 555 1234',
+      phoneCountryPlaceholder: 'DDI',
+      phoneCountrySearch: 'Buscar país o código',
+      phoneCountryRequired: 'Seleccione el país / código.',
+      phoneNationalRequired: 'Informe el área y el número.',
+      phoneInvalidSplit: 'Teléfono incompleto. Revise el código y el número.',
       publicAddressPlaceholder: 'Ej.: 123 Example Ave',
       publicAddressNumberPlaceholder: 'Ej.: 250',
       publicCityPlaceholder: 'Ej.: Orlando',
@@ -1736,6 +1765,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       disposableKitOptional: 'opcional',
       disposableKitDecline: 'Sin desechables',
       disposableKitAdd: 'Agregar kit',
+      includedInPackage: 'Incluido en el paquete',
       withoutSidesGroupTitle: 'SIN ACOMPAÑAMIENTOS',
       withSidesGroupHint:
         'Una experiencia completa, con acompañamientos preparados para complementar el asado y dejar el servicio listo para recibir a tus invitados. Explora {count} opciones de paquetes disponibles y elige la combinación ideal para tu evento.',

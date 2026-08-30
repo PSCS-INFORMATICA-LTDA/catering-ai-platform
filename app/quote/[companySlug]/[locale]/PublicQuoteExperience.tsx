@@ -572,6 +572,7 @@ export default function PublicQuoteExperience({
             companySlug: bootstrap.company.slug,
             branchId: defaultBranch?.id ?? null,
             allowedCountries: bootstrap.settings.allowedCountries,
+            branchCountry: defaultBranch?.country ?? null,
             consentVersion: bootstrap.settings.consent.version,
             consentLabel: bootstrap.settings.consent.label,
             privacyUrl: bootstrap.settings.consent.privacyUrl,

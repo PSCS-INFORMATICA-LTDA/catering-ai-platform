@@ -14,7 +14,11 @@ import {
   resolvePackageSidesPricing,
   type PackageCatalogFields,
 } from '@/Lib/packageCatalogVisual'
-import type { PackageOptionGroup } from '@/Lib/packageOptionGroups'
+import {
+  areRequiredPackageOptionsComplete,
+  type PackageOptionGroup,
+} from '@/Lib/packageOptionGroups'
+import { revealFloatingPanelWhenReady } from '@/Lib/revealFloatingPanel'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import PackageIncludedOptions from '@/components/quotes/PackageIncludedOptions'
@@ -353,6 +357,12 @@ export default function PublicPackageCatalog({
       : null)
   const t = getQuoteStrings(language)
   const optionsRef = useRef<HTMLDivElement>(null)
+  const disposableKitRevealRef = useRef<HTMLDivElement>(null)
+  const kitRevealCycleRef = useRef<{
+    packageId: string | null
+    wasComplete: boolean | null
+    revealed: boolean
+  }>({ packageId: null, wasComplete: null, revealed: false })
   const [openGroup, setOpenGroup] = useState<PackageSidesGroup | null>(() => {
     if (!selectedPackageId) return null
     const selected = allPackages.find((pkg) => pkg.id === selectedPackageId)
@@ -371,12 +381,51 @@ export default function PublicPackageCatalog({
     return []
   }, [optionGroupsForPackage, packagesWithSides])
 
+  const selectedPackage = useMemo(
+    () => allPackages.find((pkg) => pkg.id === selectedPackageId) ?? null,
+    [allPackages, selectedPackageId],
+  )
+  const selectedOptionGroups = useMemo(
+    () =>
+      selectedPackageId ? optionGroupsForPackage(selectedPackageId) : [],
+    [optionGroupsForPackage, selectedPackageId],
+  )
+  const requiredOptionsComplete = areRequiredPackageOptionsComplete(
+    selectedOptionGroups,
+    selections,
+  )
+  const selectedIsWithoutSides =
+    selectedPackage != null &&
+    getPublicPackageSidesGroup(selectedPackage) === 'without_sides'
+
   useEffect(() => {
     if (!selectedPackageId) return
     const node = optionsRef.current
     if (!node) return
     node.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }, [selectedPackageId, expandedPackageId, openGroup])
+
+  useEffect(() => {
+    const cycle = kitRevealCycleRef.current
+    if (cycle.packageId !== selectedPackageId) {
+      cycle.packageId = selectedPackageId
+      cycle.wasComplete = requiredOptionsComplete
+      cycle.revealed = false
+      return
+    }
+    const justCompleted =
+      requiredOptionsComplete && cycle.wasComplete === false
+    cycle.wasComplete = requiredOptionsComplete
+    if (!justCompleted || cycle.revealed) return
+    if (!selectedIsWithoutSides || !disposableKitOffer) return
+    cycle.revealed = true
+    return revealFloatingPanelWhenReady(() => disposableKitRevealRef.current)
+  }, [
+    disposableKitOffer,
+    requiredOptionsComplete,
+    selectedIsWithoutSides,
+    selectedPackageId,
+  ])
 
   function handlePackageClick(id: string) {
     const pkg = allPackages.find((item) => item.id === id)
@@ -447,7 +496,10 @@ export default function PublicPackageCatalog({
                         />
                       ) : null}
                       {showDisposableKit ? (
-                        <div data-disposable-kit-in-no-sides>
+                        <div
+                          ref={active ? disposableKitRevealRef : undefined}
+                          data-disposable-kit-in-no-sides
+                        >
                           {disposableKitOffer}
                         </div>
                       ) : null}

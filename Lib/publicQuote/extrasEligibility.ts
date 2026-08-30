@@ -1,8 +1,15 @@
 import { isPublicCatalogFixtureItem } from './catalogVisibility.ts'
 import { isGrillRentalAdditional } from './grillRentalDisplay.ts'
 
+type PackageKeySource = {
+  package_key?: string | null
+}
+
+export const SERVICES_SUPPLIES_CATEGORY_KEY = 'SERVICOS_E_SUPRIMENTOS'
+
 export const WAITER_SERVICE_ITEM_KEY = 'CDL_WAITER_SERVICE'
 export const DISPOSABLE_KIT_ITEM_KEY = 'KIT_DESCARTAVEIS'
+/** Catalog/inventory linkage only. No per-person kit stock decrement yet. */
 
 const STRUCTURAL_PUBLIC_EXTRA_KEYS = new Set([
   'ITEM_084',
@@ -107,6 +114,33 @@ export function getVisiblePublicExtraItems<T extends ExtraEligibilityItem>(
   return items.filter(
     (item) => isCustomerAdditionalCandidate(item) && !blocked.has(item.id),
   )
+}
+
+function extraCategoryKey(item: ExtraEligibilityItem): string {
+  return (item.category_key ?? '')
+    .trim()
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\s-]+/g, '_')
+}
+
+/**
+ * Same identity as isCustomPackage: package_key, never translated name.
+ */
+export function shouldShowAccompanimentExtras(
+  pkg: PackageKeySource | null | undefined,
+): boolean {
+  const key = (pkg?.package_key ?? '').trim().toUpperCase()
+  return /\bPERS\b|BBQPERS/i.test(key)
+}
+
+export function filterPublicExtraItemsForPackage<T extends ExtraEligibilityItem>(
+  items: ReadonlyArray<T>,
+  pkg: PackageKeySource | null | undefined,
+): T[] {
+  if (shouldShowAccompanimentExtras(pkg)) return [...items]
+  return items.filter((item) => extraCategoryKey(item) !== 'ACOMPANHAMENTOS')
 }
 
 export function extraIdsIntersectingIncluded(

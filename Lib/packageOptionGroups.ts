@@ -113,6 +113,17 @@ export function isRequiredOptionGroup(group: PackageOptionGroup): boolean {
   return group.required === true
 }
 
+export function areRequiredPackageOptionsComplete(
+  groups: ReadonlyArray<PackageOptionGroup>,
+  selections: Record<string, string>,
+): boolean {
+  const required = groups.filter(
+    (group) => isRequiredOptionGroup(group) && (group.items?.length ?? 0) > 0,
+  )
+  if (required.length === 0) return false
+  return required.every((group) => Boolean(selections[group.id]?.trim()))
+}
+
 export function hasPackageIncludedChoices(
   packageId: string | null | undefined,
   groups: ReadonlyArray<PackageOptionGroup>,

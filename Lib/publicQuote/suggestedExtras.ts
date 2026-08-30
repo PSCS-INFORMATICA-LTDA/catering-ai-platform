@@ -54,3 +54,20 @@ export function buildPublicAdditionalDisplayGroups<T extends QuoteAdditionalItem
     ...canonical,
   ]
 }
+
+export function appendServiceSupplyGroup<T extends QuoteAdditionalItem>(
+  groups: ReadonlyArray<AdditionalCategoryGroup<T>>,
+  items: ReadonlyArray<T>,
+  language: QuoteLanguage,
+  categoryKey = 'SERVICOS_E_SUPRIMENTOS',
+): AdditionalCategoryGroup<T>[] {
+  if (items.length === 0) return [...groups]
+  return [
+    ...groups,
+    {
+      categoryKey,
+      categoryLabel: getCategoryLabel(categoryKey, language, items[0]),
+      items: [...items],
+    },
+  ]
+}
