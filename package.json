@@ -97,6 +97,7 @@
     "apply:dev:catalog-display-labels": "node --experimental-strip-types scripts/dev/apply-cdl-catalog-display-labels.mjs --apply",
     "test:dev:public-quote-final-micro-polish": "node --experimental-strip-types scripts/dev/test-public-quote-final-micro-polish.mjs",
     "test:dev:public-quote-extras-eligibility": "node --experimental-strip-types scripts/dev/test-public-quote-extras-eligibility.mjs",
+    "test:dev:public-quote-event-extras": "node --experimental-strip-types scripts/dev/test-public-quote-event-extras-hardening.mjs",
     "test:dev:public-quote-v5": "node --experimental-strip-types scripts/dev/test-public-quote-v5-contact-extras.mjs",
     "apply:dev:additionals-catalog-cleanup": "node scripts/dev/apply-cdl-additionals-catalog-cleanup.mjs --apply",
     "apply:dev:cdl-2026-catalog": "node --experimental-strip-types scripts/dev/apply-cdl-2026-real-catalog-sync.mjs --apply",

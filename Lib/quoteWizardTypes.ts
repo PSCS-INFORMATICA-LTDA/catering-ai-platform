@@ -19,8 +19,8 @@ export type WizardState = {
   startTime: string
   endTime: string
   adultCount: number
-  childrenUnder3Count: number
-  children4To12Count: number
+  childrenUnder3Count: number | null
+  children4To12Count: number | null
   address: string
   addressNumber: string
   city: string
@@ -130,8 +130,8 @@ export function buildPricingFingerprint(state: WizardState): string {
   return JSON.stringify({
     packageId: state.packageId,
     adultCount: state.adultCount,
-    childrenUnder3Count: state.childrenUnder3Count,
-    children4To12Count: state.children4To12Count,
+    childrenUnder3Count: state.childrenUnder3Count ?? 0,
+    children4To12Count: state.children4To12Count ?? 0,
     distance: state.distance,
     baseLocation: state.baseLocation.trim(),
     additionals,

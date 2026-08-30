@@ -6,6 +6,7 @@ import { parsePublicQuoteLocale, PublicQuoteHttpError } from './security'
 import type { PublicQuoteDraft } from './types'
 import { normalizeGrillRentalQty } from '@/Lib/grillRental'
 import { CDL_CANCEL_POLICY_VERSION } from '@/Lib/cdlCancellationPolicy'
+import { isExplicitNonNegativeInteger } from '../quoteGuestFields.ts'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -27,6 +28,17 @@ function nullableText(value: unknown, max = 1000): string | null {
 function nonNegativeInteger(value: unknown, max = 10000): number {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return 0
+  return Math.min(max, Math.max(0, Math.floor(parsed)))
+}
+
+function optionalNonNegativeInteger(
+  value: unknown,
+  max = 10000,
+): number | null {
+  if (value === null || value === undefined || value === '') return null
+  if (typeof value === 'string' && value.trim() === '') return null
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return null
   return Math.min(max, Math.max(0, Math.floor(parsed)))
 }
 
@@ -112,11 +124,11 @@ export function sanitizePublicQuoteDraft(value: unknown): PublicQuoteDraft {
       startTime: shortText(event.startTime, 5),
       endTime: shortText(event.endTime, 5),
       adultCount: nonNegativeInteger(event.adultCount, 10000),
-      childrenUnder3Count: nonNegativeInteger(
+      childrenUnder3Count: optionalNonNegativeInteger(
         event.childrenUnder3Count,
         10000,
       ),
-      children4To12Count: nonNegativeInteger(
+      children4To12Count: optionalNonNegativeInteger(
         event.children4To12Count,
         10000,
       ),
@@ -235,9 +247,16 @@ export function validateCompletePublicQuoteDraft(
   if (draft.event.adultCount < 1) {
     throw new PublicQuoteHttpError(400, 'invalid_payload')
   }
+  if (
+    !isExplicitNonNegativeInteger(draft.event.childrenUnder3Count) ||
+    !isExplicitNonNegativeInteger(draft.event.children4To12Count)
+  ) {
+    throw new PublicQuoteHttpError(400, 'invalid_payload')
+  }
   const address = draft.event.address
   if (
     !address.route ||
+    !address.number ||
     !address.city ||
     !address.region ||
     !address.postalCode ||

@@ -201,6 +201,7 @@ export default function AddressAutocompleteFields({
   numberInputRef,
   searchInputRef,
   onPlaceSelected,
+  onNumberCommit,
 }: {
   values: AddressValues
   onChange: (patch: Partial<AddressValues>) => void
@@ -229,6 +230,7 @@ export default function AddressAutocompleteFields({
   numberInputRef?: React.RefObject<HTMLInputElement | null>
   searchInputRef?: React.RefObject<HTMLInputElement | null>
   onPlaceSelected?: (info: { addressNumber: string }) => void
+  onNumberCommit?: (value: string) => void
 }) {
   const loc: QuoteLanguage = language === 'en' || language === 'es' ? language : 'pt'
   const copy = ADDRESS_COPY[loc]
@@ -258,8 +260,7 @@ export default function AddressAutocompleteFields({
   const listenerRef = useRef<google.maps.MapsEventListener | null>(null)
   const mountedRef = useRef(true)
   const [query, setQuery] = useState(
-    values.addressFormatted ||
-      [values.address, values.addressNumber].filter(Boolean).join(', '),
+    values.address || values.addressFormatted || '',
   )
   const [addressError, setAddressError] = useState<string | null>(null)
   const [postalLookupError, setPostalLookupError] = useState<string | null>(null)
@@ -353,14 +354,10 @@ export default function AddressAutocompleteFields({
 
             setAddressError(null)
             setPostalLookupError(null)
-            setQuery(
-              selected.addressFormatted ||
-                place.formatted_address ||
-                selected.address,
-            )
+            setQuery(selected.address || selected.addressFormatted || '')
+            const existingNumber = valuesRef.current.addressNumber.trim()
             const addressNumber =
-              selected.addressNumber?.trim() ||
-              valuesRef.current.addressNumber
+              existingNumber || selected.addressNumber?.trim() || ''
             onChangeRef.current({
               ...selected,
               addressNumber,
@@ -429,9 +426,38 @@ export default function AddressAutocompleteFields({
 
   return (
     <div className={`grid grid-cols-1 gap-4 lg:grid-cols-12 ${className}`}>
-      <label className="flex flex-col gap-2 lg:col-span-12">
+      <div className="event-address-primary-row lg:col-span-12">
+      <label className="event-address-number-field flex min-w-0 flex-col gap-2">
         <FieldLabel required={markRequired} requiredLabel={requiredLabel}>
-          {copy.search}
+          {tCommon(loc, 'streetNumber')}
+        </FieldLabel>
+        <input
+          ref={numberInputRef}
+          data-address-number
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          enterKeyHint="next"
+          value={values.addressNumber}
+          placeholder={placeholders?.number}
+          onChange={(event) => onChange({ addressNumber: event.target.value })}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter') return
+            event.preventDefault()
+            event.stopPropagation()
+            const next = event.currentTarget.value.trim()
+            if (!next) return
+            onNumberCommit?.(next)
+          }}
+          className={getInputClassName(
+            values.addressNumber ? 'filled' : 'empty',
+          )}
+        />
+      </label>
+
+      <label className="event-address-search-field flex min-w-0 flex-col gap-2">
+        <FieldLabel required={markRequired} requiredLabel={requiredLabel}>
+          {tCommon(loc, 'address')}
         </FieldLabel>
         <div className="relative">
           <input
@@ -482,29 +508,7 @@ export default function AddressAutocompleteFields({
                 : copy.searchHint)}
         </p>
       </label>
-
-      <label className="flex flex-col gap-2 lg:col-span-2">
-        <FieldLabel>{tCommon(loc, 'streetNumber')}</FieldLabel>
-        <input
-          ref={numberInputRef}
-          data-address-number
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          enterKeyHint="next"
-          value={values.addressNumber}
-          placeholder={placeholders?.number}
-          onChange={(event) => onChange({ addressNumber: event.target.value })}
-          onKeyDown={(event) => {
-            if (event.key !== 'Enter') return
-            event.preventDefault()
-            event.stopPropagation()
-          }}
-          className={getInputClassName(
-            values.addressNumber ? 'filled' : undefined,
-          )}
-        />
-      </label>
+      </div>
 
       <label className="flex flex-col gap-2 lg:col-span-3">
         <FieldLabel required={markRequired} requiredLabel={requiredLabel}>

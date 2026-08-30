@@ -116,17 +116,10 @@ export function getVisiblePublicExtraItems<T extends ExtraEligibilityItem>(
   )
 }
 
-function extraCategoryKey(item: ExtraEligibilityItem): string {
-  return (item.category_key ?? '')
-    .trim()
-    .toUpperCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[\s-]+/g, '_')
-}
-
 /**
  * Same identity as isCustomPackage: package_key, never translated name.
+ * Personalized packages skip included-item subtraction; they still use
+ * getVisiblePublicExtraItems for active / customer / additional flags.
  */
 export function shouldShowAccompanimentExtras(
   pkg: PackageKeySource | null | undefined,
@@ -135,12 +128,15 @@ export function shouldShowAccompanimentExtras(
   return /\bPERS\b|BBQPERS/i.test(key)
 }
 
+/**
+ * Package-aware extras stay ID-based (blockedCatalogItemIds).
+ * Never hide an entire category because one included SKU lives in it.
+ */
 export function filterPublicExtraItemsForPackage<T extends ExtraEligibilityItem>(
   items: ReadonlyArray<T>,
-  pkg: PackageKeySource | null | undefined,
+  _pkg?: PackageKeySource | null,
 ): T[] {
-  if (shouldShowAccompanimentExtras(pkg)) return [...items]
-  return items.filter((item) => extraCategoryKey(item) !== 'ACOMPANHAMENTOS')
+  return [...items]
 }
 
 export function extraIdsIntersectingIncluded(

@@ -378,6 +378,9 @@ type QuoteStrings = {
     issueState: string
     issueZip: string
     issueAdults: string
+    issueChildrenUnder3: string
+    issueChildren4To12: string
+    issueAddressNumber: string
     issueSelectPackage: string
     issueNoAdditionals: string
     issueHasGrill: string
@@ -870,6 +873,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       issueState: 'Informe o estado.',
       issueZip: 'Informe um CEP brasileiro (ex.: 01310-100) ou ZIP dos EUA.',
       issueAdults: 'Informe o número de adultos (mínimo 1).',
+      issueChildrenUnder3: 'Informe quantas crianças até 3 anos. Zero é válido.',
+      issueChildren4To12: 'Informe quantas crianças de 4 a 12 anos. Zero é válido.',
+      issueAddressNumber: 'Informe o número do endereço.',
       issueSelectPackage: 'Selecione um pacote.',
       issueNoAdditionals: 'Nenhum adicional selecionado (opcional).',
       issueHasGrill: 'Informe se o cliente possui churrasqueira.',
@@ -1368,6 +1374,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       issueState: 'Enter the state.',
       issueZip: 'Enter a Brazilian ZIP (e.g. 01310-100) or a US ZIP code.',
       issueAdults: 'Enter the number of adults (minimum 1).',
+      issueChildrenUnder3: 'Enter how many children are up to 3 years. Zero is valid.',
+      issueChildren4To12: 'Enter how many children are 4 to 12 years. Zero is valid.',
+      issueAddressNumber: 'Enter the street number.',
       issueSelectPackage: 'Select a package.',
       issueNoAdditionals: 'No extras selected (optional).',
       issueHasGrill: 'Indicate whether the customer has a grill.',
@@ -1869,6 +1878,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       issueState: 'Indique el estado.',
       issueZip: 'Indique un CEP de Brasil (ej.: 01310-100) o ZIP de EE. UU.',
       issueAdults: 'Indique el número de adultos (mínimo 1).',
+      issueChildrenUnder3: 'Indique cuántos niños hay hasta 3 años. Cero es válido.',
+      issueChildren4To12: 'Indique cuántos niños hay de 4 a 12 años. Cero es válido.',
+      issueAddressNumber: 'Indique el número de la dirección.',
       issueSelectPackage: 'Seleccione un paquete.',
       issueNoAdditionals: 'Ningún adicional seleccionado (opcional).',
       issueHasGrill: 'Indique si el cliente tiene parrilla.',

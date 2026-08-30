@@ -261,7 +261,7 @@ test('wizard prunes blocked extras and bootstrap hides fixture items', () => {
   assert.match(bootstrap, /isPublicCatalogFixtureItem/)
 })
 
-test('accompaniment extras only appear on the custom package', () => {
+test('accompaniment extras stay visible unless their catalog id is included', () => {
   const items = [
     extra('acc-1', {
       item_key: 'ITEM_061',
@@ -287,7 +287,7 @@ test('accompaniment extras only appear on the custom package', () => {
   })
   assert.deepEqual(
     regular.map((row) => row.item_key),
-    ['ITEM_001'],
+    ['ITEM_061', 'ITEM_001'],
   )
   const custom = filterPublicExtraItemsForPackage(items, {
     package_key: 'BBQPERS',
@@ -296,8 +296,17 @@ test('accompaniment extras only appear on the custom package', () => {
     custom.map((row) => row.item_key),
     ['ITEM_061', 'ITEM_001'],
   )
+  const hiddenOnlyIncluded = getVisiblePublicExtraItems(items, ['acc-1'])
+  assert.deepEqual(
+    hiddenOnlyIncluded.map((row) => row.item_key),
+    ['ITEM_001'],
+  )
   const eligibility = source('Lib/publicQuote/extrasEligibility.ts')
   assert.doesNotMatch(eligibility, /name\.includes\(['"]personalizado['"]\)/)
+  assert.doesNotMatch(
+    eligibility,
+    /extraCategoryKey\(item\) !== 'ACOMPANHAMENTOS'/,
+  )
   assert.match(eligibility, /BBQPERS/)
   assert.match(eligibility, /package_key/)
 })

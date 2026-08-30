@@ -107,8 +107,8 @@ export type PublicQuoteDraft = {
     startTime: string
     endTime: string
     adultCount: number
-    childrenUnder3Count: number
-    children4To12Count: number
+    childrenUnder3Count: number | null
+    children4To12Count: number | null
     address: {
       route: string
       number: string

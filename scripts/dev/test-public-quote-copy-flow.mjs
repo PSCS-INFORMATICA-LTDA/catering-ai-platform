@@ -112,7 +112,7 @@ test('ADULTS_VALIDATION_UNCHANGED', () => {
   assert.match(wizard, /blankZero=\{isPublicMode\}/)
 })
 
-test('ADULTS_TO_ADDRESS_FLOW', () => {
+test('ADULTS_TO_CHILDREN_FLOW', () => {
   assert.match(wizard, /guestField/)
   assert.match(wizard, /data-guest-field/)
   assert.match(wizard, /shouldAdvanceFromFieldBlur/)
@@ -120,18 +120,21 @@ test('ADULTS_TO_ADDRESS_FLOW', () => {
   assert.match(wizard, /data-guest-children-under-3/)
   assert.match(wizard, /data-guest-children-4-12/)
   assert.match(wizard, /data-event-address-entry/)
+  assert.match(wizard, /revealGuestChildrenAfterAdults/)
+  assert.match(wizard, /childrenUnder3InputRef/)
+  assert.match(wizard, /children4To12InputRef/)
   const adultsCommit = wizard.match(
-    /inputRef=\{adultsInputRef\}[\s\S]{0,2400}onCommit=\{[\s\S]{0,900}?revealFloatingPanelWhenReady[\s\S]{0,200}addressEntryRef/,
+    /inputRef=\{adultsInputRef\}[\s\S]{0,2400}onCommit=\{[\s\S]{0,500}revealGuestChildrenAfterAdults/,
   )
   assert.ok(adultsCommit)
-  assert.match(adultsCommit[0], /streetNumberInputRef/)
 })
 
-test('ADULTS_TO_STREET_NUMBER', () => {
+test('ADULTS_DO_NOT_SKIP_TO_STREET_NUMBER', () => {
   const adultsCommit = wizard.match(
-    /inputRef=\{adultsInputRef\}[\s\S]{0,2400}onCommit=\{[\s\S]{0,500}streetNumberInputRef[\s\S]{0,200}preventScroll: true/,
+    /inputRef=\{adultsInputRef\}[\s\S]{0,800}onCommit=\{[\s\S]{0,400}?undefined/,
   )
   assert.ok(adultsCommit)
+  assert.doesNotMatch(adultsCommit[0], /streetNumberInputRef/)
 })
 
 test('STREET_NUMBER_NUMERIC_KEYBOARD_HINT', () => {
@@ -146,7 +149,11 @@ test('GOOGLE_ADDRESS_WITH_NUMBER_PRESERVED', () => {
   assert.match(address, /onPlaceSelected\?: \(info: \{ addressNumber: string \}\) => void/)
   assert.match(
     address,
-    /const addressNumber =\s*selected\.addressNumber\?\.trim\(\) \|\|\s*valuesRef\.current\.addressNumber/,
+    /const existingNumber = valuesRef\.current\.addressNumber\.trim\(\)/,
+  )
+  assert.match(
+    address,
+    /existingNumber \|\| selected\.addressNumber\?\.trim\(\) \|\| ''/,
   )
   assert.match(wizard, /if \(addressNumber\.trim\(\)\) return/)
 })
@@ -170,7 +177,7 @@ test('GOOGLE_PLACES_UNCHANGED', () => {
   assert.match(address, /importLibrary\('places'\)/)
   assert.match(
     address,
-    /const addressNumber =\s*selected\.addressNumber\?\.trim\(\) \|\|\s*valuesRef\.current\.addressNumber/,
+    /existingNumber \|\| selected\.addressNumber\?\.trim\(\) \|\| ''/,
   )
   assert.doesNotMatch(address, /inputMode="numeric"[\s\S]{0,80}autoComplete="street-address"/)
   assert.match(address, /data-address-search/)

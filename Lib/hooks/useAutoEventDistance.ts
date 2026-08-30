@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { composeCanonicalDestination } from '@/Lib/addressLine'
 
 function destinationFromParts(parts: {
   address: string
@@ -9,15 +10,7 @@ function destinationFromParts(parts: {
   state: string
   zipCode: string
 }) {
-  return [
-    [parts.address, parts.addressNumber].filter(Boolean).join(', '),
-    parts.city,
-    parts.state,
-    parts.zipCode,
-  ]
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .join(', ')
+  return composeCanonicalDestination(parts)
 }
 
 function milesFromMeters(meters: number) {

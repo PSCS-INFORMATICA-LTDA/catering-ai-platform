@@ -90,6 +90,7 @@ import {
   getCustomerDisplayName,
 } from '../../../Lib/getCustomerDisplayName'
 import { isUsablePostalCode } from '../../../Lib/cep'
+import { isExplicitNonNegativeInteger } from '../../../Lib/quoteGuestFields'
 import { isUsablePhone, normalizePhone } from '../../../Lib/normalizePhone'
 import {
   deriveEventEndTime,
@@ -412,6 +413,10 @@ function shouldAdvanceFromFieldBlur(related: EventTarget | null) {
 function getFieldCompletion(value: string | number): FieldCompletion {
   if (typeof value === 'number') return value > 0 ? 'filled' : 'empty'
   return value.trim().length > 0 ? 'filled' : 'empty'
+}
+
+function getExplicitCountCompletion(value: number | null): FieldCompletion {
+  return isExplicitNonNegativeInteger(value) ? 'filled' : 'empty'
 }
 
 function fieldCompletionClass(completion?: FieldCompletion) {
@@ -1019,6 +1024,7 @@ function QuantityField({
   disabled = false,
   completion,
   blankZero = false,
+  allowEmpty = false,
   required,
   requiredLabel,
   inputRef,
@@ -1027,23 +1033,27 @@ function QuantityField({
   guestField,
 }: {
   label: string
-  value: number
-  onChange: (value: number) => void
+  value: number | null
+  onChange: (value: number | null) => void
   className?: string
   placeholder?: string
   min?: number
   disabled?: boolean
   completion?: FieldCompletion
   blankZero?: boolean
+  allowEmpty?: boolean
   required?: boolean
   requiredLabel?: string
   inputRef?: React.RefObject<HTMLInputElement | null>
-  onCommit?: (value: number) => void
+  onCommit?: (value: number | null) => void
   enterKeyHint?: React.HTMLAttributes<HTMLInputElement>['enterKeyHint']
   guestField?: boolean
 }) {
-  const displayValue = (next: number) =>
-    blankZero && next === 0 ? '' : String(next)
+  const displayValue = (next: number | null) => {
+    if (next === null) return ''
+    if (blankZero && next === 0) return ''
+    return String(next)
+  }
   const [draft, setDraft] = useState(() => displayValue(value))
   const [focused, setFocused] = useState(false)
   const [seenValue, setSeenValue] = useState(value)
@@ -1054,11 +1064,19 @@ function QuantityField({
     setDraft(displayValue(value))
   }
 
-  function commitDraft(): number {
-    const next =
-      draft === ''
-        ? min
-        : Math.max(min, Number.parseInt(draft, 10) || min)
+  function commitDraft(): number | null {
+    if (draft === '') {
+      if (allowEmpty) {
+        onChange(null)
+        setDraft('')
+        return null
+      }
+      onChange(min)
+      setDraft(displayValue(min))
+      return min
+    }
+    const parsed = Number.parseInt(draft, 10)
+    const next = Number.isFinite(parsed) ? Math.max(min, parsed) : min
     onChange(next)
     setDraft(displayValue(next))
     return next
@@ -1097,9 +1115,12 @@ function QuantityField({
           onChange={(e) => {
             const raw = e.target.value.replace(/\D/g, '')
             setDraft(raw)
-            if (raw !== '') {
-              onChange(Math.max(min, Number.parseInt(raw, 10) || min))
+            if (raw === '') {
+              if (allowEmpty) onChange(null)
+              return
             }
+            const parsed = Number.parseInt(raw, 10)
+            onChange(Number.isFinite(parsed) ? Math.max(min, parsed) : min)
           }}
           className={`w-full rounded-xl border px-4 py-3.5 pr-10 text-base text-cdl-fg shadow-cdl outline-none transition-colors placeholder:text-cdl-faint focus:border-cdl-accent-border disabled:cursor-not-allowed disabled:opacity-40 ${fieldCompletionClass(completion)}`}
         />
@@ -1291,6 +1312,8 @@ export default function QuoteWizardCore({
   const lastNameInputRef = useRef<HTMLInputElement>(null)
   const phoneInputRef = useRef<HTMLInputElement>(null)
   const adultsInputRef = useRef<HTMLInputElement>(null)
+  const childrenUnder3InputRef = useRef<HTMLInputElement>(null)
+  const children4To12InputRef = useRef<HTMLInputElement>(null)
   const guestAddressTransitionRef = useRef<HTMLDivElement>(null)
   const addressEntryRef = useRef<HTMLDivElement>(null)
   const streetNumberInputRef = useRef<HTMLInputElement>(null)
@@ -1886,8 +1909,8 @@ export default function QuoteWizardCore({
     packageId: state.packageId,
     additionals: previewAdditionals,
     adultCount: state.adultCount,
-    childrenUnder3Count: state.childrenUnder3Count,
-    children4To12Count: state.children4To12Count,
+    childrenUnder3Count: state.childrenUnder3Count ?? 0,
+    children4To12Count: state.children4To12Count ?? 0,
     eventDate: state.eventDate,
     mileageDistance: isPublicMode ? 0 : state.distance,
     grillRentalRequired: state.grillRentalRequired,
@@ -2470,6 +2493,52 @@ export default function QuoteWizardCore({
     updateState({ packageId: found?.id ?? packageId, packageSelections: prunedSelections })
   }
 
+  function revealGuestChildrenAfterAdults() {
+    const root = guestAddressTransitionRef.current
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    root?.scrollIntoView({
+      behavior: reduced ? 'auto' : 'smooth',
+      block: 'start',
+    })
+    childrenUnder3InputRef.current?.focus({ preventScroll: true })
+  }
+
+  function revealAddressAfterChildren() {
+    const numberField = streetNumberInputRef.current
+    numberField?.focus({ preventScroll: true })
+    revealFloatingPanelWhenReady(
+      () => addressEntryRef.current || numberField,
+    )
+  }
+
+  function focusFirstPublicEventIssue() {
+    if (!(state.adultCount > 0)) {
+      focusWizardField(adultsInputRef.current)
+      return
+    }
+    if (!isExplicitNonNegativeInteger(state.childrenUnder3Count)) {
+      guestAddressTransitionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+      childrenUnder3InputRef.current?.focus({ preventScroll: true })
+      return
+    }
+    if (!isExplicitNonNegativeInteger(state.children4To12Count)) {
+      guestAddressTransitionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+      children4To12InputRef.current?.focus({ preventScroll: true })
+      return
+    }
+    if (!state.addressNumber.trim()) {
+      revealAddressAfterChildren()
+      return
+    }
+    focusWizardField(addressSearchInputRef.current)
+  }
+
   function goNext() {
     const categoryKeys = additionalCategoryKeysRef.current
     const visitedCategories = visitedAdditionalCategoriesRef.current
@@ -2478,6 +2547,9 @@ export default function QuoteWizardCore({
       const issues = getStepIssues(step, stepStatusCtx)
       if (issues.length > 0) {
         setNavigationIssues(issues)
+        if (step === 1 && isPublicMode) {
+          focusFirstPublicEventIssue()
+        }
         return
       }
     }
@@ -2802,8 +2874,8 @@ export default function QuoteWizardCore({
       startTime: state.startTime,
       endTime: state.endTime,
       adultCount: state.adultCount,
-      childrenUnder3Count: state.childrenUnder3Count,
-      children4To12Count: state.children4To12Count,
+      childrenUnder3Count: state.childrenUnder3Count ?? 0,
+      children4To12Count: state.children4To12Count ?? 0,
       address: state.address,
       addressNumber: state.addressNumber,
       city: state.city,
@@ -3316,7 +3388,7 @@ export default function QuoteWizardCore({
                 <QuantityField
                   label={w.adults}
                   value={state.adultCount}
-                  onChange={(v) => updateState({ adultCount: v })}
+                  onChange={(v) => updateState({ adultCount: v ?? 0 })}
                   completion={getFieldCompletion(state.adultCount)}
                   blankZero={isPublicMode}
                   placeholder={isPublicMode ? w.publicAdultsPlaceholder : ''}
@@ -3328,13 +3400,8 @@ export default function QuoteWizardCore({
                   onCommit={
                     isPublicMode
                       ? (value) => {
-                          if (value <= 0) return
-                          const numberField = streetNumberInputRef.current
-                          numberField?.focus({ preventScroll: true })
-                          revealFloatingPanelWhenReady(
-                            () =>
-                              addressEntryRef.current || numberField,
-                          )
+                          if (value == null || value <= 0) return
+                          revealGuestChildrenAfterAdults()
                         }
                       : undefined
                   }
@@ -3344,9 +3411,25 @@ export default function QuoteWizardCore({
                     label={w.childrenUnder3}
                     value={state.childrenUnder3Count}
                     onChange={(v) => updateState({ childrenUnder3Count: v })}
-                    blankZero={isPublicMode}
+                    completion={getExplicitCountCompletion(
+                      state.childrenUnder3Count,
+                    )}
+                    blankZero={false}
+                    allowEmpty={isPublicMode}
                     placeholder={isPublicMode ? w.publicChildrenPlaceholder : ''}
+                    required={isPublicMode}
+                    requiredLabel={requiredLabel}
+                    inputRef={childrenUnder3InputRef}
                     guestField
+                    enterKeyHint={isPublicMode ? 'next' : undefined}
+                    onCommit={
+                      isPublicMode
+                        ? (value) => {
+                            if (!isExplicitNonNegativeInteger(value)) return
+                            focusWizardField(children4To12InputRef.current)
+                          }
+                        : undefined
+                    }
                   />
                 </div>
                 <div data-guest-children-4-12>
@@ -3354,9 +3437,25 @@ export default function QuoteWizardCore({
                     label={w.children4to12}
                     value={state.children4To12Count}
                     onChange={(v) => updateState({ children4To12Count: v })}
-                    blankZero={isPublicMode}
+                    completion={getExplicitCountCompletion(
+                      state.children4To12Count,
+                    )}
+                    blankZero={false}
+                    allowEmpty={isPublicMode}
                     placeholder={isPublicMode ? w.publicChildrenPlaceholder : ''}
+                    required={isPublicMode}
+                    requiredLabel={requiredLabel}
+                    inputRef={children4To12InputRef}
                     guestField
+                    enterKeyHint={isPublicMode ? 'next' : undefined}
+                    onCommit={
+                      isPublicMode
+                        ? (value) => {
+                            if (!isExplicitNonNegativeInteger(value)) return
+                            revealAddressAfterChildren()
+                          }
+                        : undefined
+                    }
                   />
                 </div>
               </div>
@@ -3376,6 +3475,14 @@ export default function QuoteWizardCore({
               <AddressAutocompleteFields
                 searchInputRef={addressSearchInputRef}
                 numberInputRef={streetNumberInputRef}
+                onNumberCommit={
+                  isPublicMode
+                    ? (value) => {
+                        if (!value.trim()) return
+                        focusWizardField(addressSearchInputRef.current)
+                      }
+                    : undefined
+                }
                 onPlaceSelected={
                   isPublicMode
                     ? ({ addressNumber }) => {

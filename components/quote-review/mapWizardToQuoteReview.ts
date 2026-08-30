@@ -193,8 +193,8 @@ export function mapWizardToQuoteReview(
     packageSelections: packageSelectionLabels,
     guestCounts: {
       adultCount: state.adultCount,
-      childrenUnder3Count: state.childrenUnder3Count,
-      children4To12Count: state.children4To12Count,
+      childrenUnder3Count: state.childrenUnder3Count ?? 0,
+      children4To12Count: state.children4To12Count ?? 0,
     },
     billableGuestCount: quoteTotals.billableGuestCount,
     physicalGuestCount: quoteTotals.physicalGuestCount,

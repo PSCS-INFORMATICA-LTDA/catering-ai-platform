@@ -274,8 +274,16 @@ function hydrateDraft(
     startTime: draft.event?.startTime || '',
     endTime: draft.event?.endTime || '',
     adultCount: draft.event?.adultCount || 0,
-    childrenUnder3Count: draft.event?.childrenUnder3Count || 0,
-    children4To12Count: draft.event?.children4To12Count || 0,
+    childrenUnder3Count:
+      typeof draft.event?.childrenUnder3Count === 'number' &&
+      Number.isInteger(draft.event.childrenUnder3Count)
+        ? draft.event.childrenUnder3Count
+        : null,
+    children4To12Count:
+      typeof draft.event?.children4To12Count === 'number' &&
+      Number.isInteger(draft.event.children4To12Count)
+        ? draft.event.children4To12Count
+        : null,
     address: address?.route || '',
     addressNumber: address?.number || '',
     city: address?.city || '',

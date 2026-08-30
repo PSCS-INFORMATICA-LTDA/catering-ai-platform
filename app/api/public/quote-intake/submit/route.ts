@@ -122,8 +122,8 @@ export async function POST(request: NextRequest) {
       additionals: draft.selection.additionals,
       guestCounts: {
         adultCount: draft.event.adultCount,
-        childrenUnder3Count: draft.event.childrenUnder3Count,
-        children4To12Count: draft.event.children4To12Count,
+        childrenUnder3Count: draft.event.childrenUnder3Count ?? 0,
+        children4To12Count: draft.event.children4To12Count ?? 0,
       },
       eventDate: draft.event.eventDate,
       mileageDistance: mileage.distance,

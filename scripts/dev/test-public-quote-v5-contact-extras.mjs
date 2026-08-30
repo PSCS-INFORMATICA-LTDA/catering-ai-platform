@@ -163,7 +163,7 @@ test('CUSTOM_PACKAGE_IDENTITY_IS_KEY', () => {
   assert.match(source('Lib/publicQuote/extrasEligibility.ts'), /\\bPERS\\b\|BBQPERS/)
 })
 
-test('ACCOMPANIMENTS_HIDDEN_EXCEPT_CUSTOM', () => {
+test('ACCOMPANIMENTS_HIDDEN_ONLY_WHEN_INCLUDED', () => {
   const items = [
     {
       id: 'a',
@@ -188,7 +188,7 @@ test('ACCOMPANIMENTS_HIDDEN_EXCEPT_CUSTOM', () => {
     filterPublicExtraItemsForPackage(items, { package_key: 'BBQLUX' }).map(
       (row) => row.item_key,
     ),
-    ['ITEM_001'],
+    ['ITEM_061', 'ITEM_001'],
   )
   assert.deepEqual(
     filterPublicExtraItemsForPackage(items, { package_key: 'BBQPERS' }).map(

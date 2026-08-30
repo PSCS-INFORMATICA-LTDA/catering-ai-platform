@@ -8,6 +8,7 @@ import type { GrillPhotoStatus } from '@/Lib/grillPhotoStatus'
 import { isUsablePostalCode } from '@/Lib/cep'
 import { isUsablePhone } from '@/Lib/normalizePhone'
 import { isUsablePublicPhone } from '@/Lib/publicQuote/phone'
+import { isExplicitNonNegativeInteger } from '@/Lib/quoteGuestFields'
 import { isPublicEventDateBookable } from '@/Lib/publicQuote/eventDate'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
@@ -56,8 +57,8 @@ export type WizardStateSnapshot = {
   addressPlaceId?: string | null
   addressSource?: 'google' | 'manual' | null
   adultCount: number
-  childrenUnder3Count: number
-  children4To12Count: number
+  childrenUnder3Count: number | null
+  children4To12Count: number | null
   hasGrill: boolean
   grillSetupAnswered: boolean
   grillPhotoRequired: boolean
@@ -259,6 +260,17 @@ export function getStepIssues(
       if (!isUsablePostalCode(state.zipCode)) issues.push(tw(language, 'issueZip'))
       if (!(state.adultCount > 0)) {
         issues.push(tw(language, 'issueAdults'))
+      }
+      if (ctx.isPublicMode) {
+        if (!isExplicitNonNegativeInteger(state.childrenUnder3Count)) {
+          issues.push(tw(language, 'issueChildrenUnder3'))
+        }
+        if (!isExplicitNonNegativeInteger(state.children4To12Count)) {
+          issues.push(tw(language, 'issueChildren4To12'))
+        }
+        if (!isFilled(state.addressNumber)) {
+          issues.push(tw(language, 'issueAddressNumber'))
+        }
       }
       break
     case 2:
