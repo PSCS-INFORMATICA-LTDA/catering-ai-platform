@@ -257,30 +257,52 @@ test('SYSTEM_GRILL_NOTE_ONLY_WHEN_OWN_GRILL_WITHOUT_PHOTO', () => {
   )
 })
 
-test('REVIEW_GRILL_IMAGE_UPLOADED_OR_DEFAULT', () => {
-  assert.equal(
-    resolvePublicGrillSummaryImageUrl(
-      'https://cdn.example/uploaded.webp',
-      'https://cdn.example/default.webp',
-    ),
-    'https://cdn.example/uploaded.webp',
+test('REVIEW_GRILL_IMAGE_OWN_WITH_PHOTO', () => {
+  assert.deepEqual(
+    resolvePublicGrillSummaryImageUrl({
+      hasOwnGrill: true,
+      customerPhotoUrl: 'https://cdn.example/uploaded.webp',
+      rentalImageUrl: 'https://cdn.example/item-084.webp',
+    }),
+    { kind: 'customer', url: 'https://cdn.example/uploaded.webp' },
   )
-  assert.equal(
-    resolvePublicGrillSummaryImageUrl(null, 'https://cdn.example/default.webp'),
-    'https://cdn.example/default.webp',
+})
+
+test('REVIEW_GRILL_IMAGE_OWN_WITHOUT_PHOTO_NO_FALLBACK', () => {
+  assert.deepEqual(
+    resolvePublicGrillSummaryImageUrl({
+      hasOwnGrill: true,
+      customerPhotoUrl: null,
+      rentalImageUrl: 'https://cdn.example/item-084.webp',
+    }),
+    { kind: 'none', url: null },
+  )
+  const confirmationBody = review.slice(
+    review.indexOf('function ConfirmationProposalBody'),
+    review.indexOf('function DefaultProposalBody'),
+  )
+  assert.match(confirmationBody, /showOwnGrillPendingWarning/)
+  assert.match(
+    confirmationBody,
+    /grillSummaryImage\.url \? \([\s\S]*QuoteGrillPhotoFrame/,
+  )
+  assert.doesNotMatch(
+    confirmationBody,
+    /uploadedPhotoUrl\?\.trim\(\) \|\| defaultItemImageUrl/,
+  )
+})
+
+test('REVIEW_GRILL_IMAGE_RENTAL_USES_ITEM_084', () => {
+  assert.deepEqual(
+    resolvePublicGrillSummaryImageUrl({
+      hasOwnGrill: false,
+      customerPhotoUrl: 'https://cdn.example/uploaded.webp',
+      rentalImageUrl: 'https://cdn.example/item-084.webp',
+    }),
+    { kind: 'rental', url: 'https://cdn.example/item-084.webp' },
   )
   assert.match(review, /data-grill-summary-image/)
-  assert.match(review, /grillDefaultImageUrl/)
   assert.match(mapper, /grillDefaultImageUrl: input\.grillDefaultImageUrl/)
-  assert.match(wizard, /getCatalogItemImageUrl\(grillCatalogItem\)/)
-  assert.ok(
-    existsSync(
-      join(
-        ROOT,
-        'assets/additionals/missing-20260829/ITEM_084_grill_only_v1_20260829.webp',
-      ),
-    ),
-  )
 })
 
 test('REVIEW_COVER_LOGO_AND_TEXT_CENTERED', () => {

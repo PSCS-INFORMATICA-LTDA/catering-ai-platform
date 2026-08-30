@@ -22,9 +22,19 @@ export function resolvePublicGrillSystemNotes(
   return tw(language, 'grillNoPhotoWarning')
 }
 
-export function resolvePublicGrillSummaryImageUrl(
-  uploadedPhotoUrl: string | null | undefined,
-  defaultItemImageUrl: string | null | undefined,
-): string | null {
-  return uploadedPhotoUrl?.trim() || defaultItemImageUrl?.trim() || null
+export function resolvePublicGrillSummaryImageUrl(input: {
+  hasOwnGrill: boolean
+  customerPhotoUrl?: string | null
+  rentalImageUrl?: string | null
+}): { kind: 'customer' | 'rental' | 'none'; url: string | null } {
+  if (input.hasOwnGrill) {
+    const customerPhotoUrl = input.customerPhotoUrl?.trim() || null
+    return customerPhotoUrl
+      ? { kind: 'customer', url: customerPhotoUrl }
+      : { kind: 'none', url: null }
+  }
+  const rentalImageUrl = input.rentalImageUrl?.trim() || null
+  return rentalImageUrl
+    ? { kind: 'rental', url: rentalImageUrl }
+    : { kind: 'none', url: null }
 }

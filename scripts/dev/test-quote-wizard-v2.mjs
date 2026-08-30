@@ -714,11 +714,9 @@ async function main() {
     assert.match(reviewLayoutSrc, /formatBool\(data\.hasGrill, lang\)/)
     pass('G01 customer grill yes uses localized boolean')
 
-    assert.match(
-      reviewLayoutSrc,
-      /uploadedGrillPhotoUrl = data\.hasGrill/,
-    )
+    assert.match(reviewLayoutSrc, /hasOwnGrill: data\.hasGrill === true/)
     assert.match(reviewLayoutSrc, /resolvePublicGrillSummaryImageUrl/)
+    assert.match(reviewLayoutSrc, /grillSummaryImage\.url \? \(/)
     assert.match(reviewLayoutSrc, /QuoteGrillPhotoFrame/)
     pass('G02 customer grill photo is displayed when present')
 

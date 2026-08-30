@@ -210,13 +210,13 @@ function ConfirmationProposalBody({
     grillRentalLine != null &&
     grillRentalLine.amount > 0
   const mileageMetadata = mileageLine?.metadata
-  const uploadedGrillPhotoUrl = data.hasGrill
-    ? data.grillPhotoUrl?.trim() || null
-    : null
-  const grillSummaryImageUrl = resolvePublicGrillSummaryImageUrl(
-    uploadedGrillPhotoUrl,
-    data.grillDefaultImageUrl,
-  )
+  const grillSummaryImage = resolvePublicGrillSummaryImageUrl({
+    hasOwnGrill: data.hasGrill === true,
+    customerPhotoUrl: data.grillPhotoUrl,
+    rentalImageUrl: data.grillDefaultImageUrl,
+  })
+  const showOwnGrillPendingWarning =
+    data.hasGrill === true && grillSummaryImage.kind === 'none'
 
   return (
     <>
@@ -416,17 +416,17 @@ function ConfirmationProposalBody({
         <div
           className="quote-proposal-grill-photo-row"
           data-grill-summary-image={
-            uploadedGrillPhotoUrl
+            grillSummaryImage.kind === 'customer'
               ? 'uploaded'
-              : grillSummaryImageUrl
-                ? 'default'
-                : 'empty'
+              : grillSummaryImage.kind === 'rental'
+                ? 'rental'
+                : 'none'
           }
         >
           <span className="quote-proposal-label">
             {tQuotesOrders(lang, 'docGrillPhoto')}
           </span>
-          {data.hasGrill && !uploadedGrillPhotoUrl ? (
+          {showOwnGrillPendingWarning ? (
             <p
               data-grill-photo-pending-note
               role="status"
@@ -435,11 +435,13 @@ function ConfirmationProposalBody({
               {w.grillNoPhotoReviewNote}
             </p>
           ) : null}
-          <QuoteGrillPhotoFrame
-            src={grillSummaryImageUrl}
-            alt={tQuotesOrders(lang, 'docGrillPhoto')}
-            emptyLabel=""
-          />
+          {grillSummaryImage.url ? (
+            <QuoteGrillPhotoFrame
+              src={grillSummaryImage.url}
+              alt={tQuotesOrders(lang, 'docGrillPhoto')}
+              emptyLabel=""
+            />
+          ) : null}
         </div>
       </ProposalSection>
 
