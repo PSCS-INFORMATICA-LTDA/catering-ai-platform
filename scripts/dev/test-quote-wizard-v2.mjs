@@ -387,16 +387,16 @@ async function main() {
 
   try {
     assert.match(wizardSrc, /grillStepPendingIssues/)
-    assert.match(wizardSrc, /grillNoPhotoWarning/)
-    assert.match(wizardSrc, /data-grill-no-photo-warning/)
+    assert.match(wizardSrc, /grillPhotoGuidancePrimary/)
+    assert.match(wizardSrc, /data-grill-photo-guidance/)
     assert.match(wizardSrc, /stepPendingTitle/)
     assert.match(stepStatusSrc, /isGrillPhotoRequiredAndMissing/)
     assert.doesNotMatch(
       wizardSrc,
       /grillStepPendingIssues[\s\S]*grillPendingPhoto/,
     )
-    pass('H06 hasGrill without photo shows non-blocking warning')
-    pass('H07 photo pending uses grillNoPhotoWarning key')
+    pass('H06 hasGrill without photo shows non-blocking guidance')
+    pass('H07 photo pending uses grillPhotoGuidance keys')
   } catch (e) {
     fail('H06–H07 grill photo pending', e)
   }

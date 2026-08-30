@@ -2595,8 +2595,10 @@ export default function QuoteWizardCore({
     }
     return issues
   }, [state.grillRentalRequired, state.grillRentalQty, uiLocale])
-  const grillNoPhotoWarningVisible =
-    state.grillSetupAnswered && isGrillPhotoRequiredAndMissing(state)
+  const grillPhotoGuidanceVisible =
+    state.grillSetupAnswered &&
+    state.hasGrill &&
+    isGrillPhotoRequiredAndMissing(state)
 
   useEffect(() => {
     const previousStep = previousStepRef.current
@@ -3696,19 +3698,22 @@ export default function QuoteWizardCore({
                     className="mt-3 max-h-48 rounded-xl border border-cdl-border object-cover"
                   />
                 ) : null}
-                {grillNoPhotoWarningVisible ? (
-                  <p
-                    data-grill-no-photo-warning
-                    role="status"
-                    className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-950"
+                {grillPhotoGuidanceVisible ? (
+                  <div
+                    data-grill-photo-guidance
+                    className="mt-3 space-y-2"
                   >
-                    {w.grillNoPhotoWarning}
-                  </p>
-                ) : (
-                  <p className="mt-3 rounded-xl border border-cdl-border-subtle bg-cdl-inset px-4 py-3 text-sm leading-relaxed text-cdl-text-secondary">
-                    {w.grillPhotoHint}
-                  </p>
-                )}
+                    <p className="text-sm leading-relaxed text-cdl-fg">
+                      {w.grillPhotoGuidancePrimary}
+                    </p>
+                    <p
+                      data-grill-photo-guidance-continue
+                      className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-sm leading-relaxed text-amber-950"
+                    >
+                      {w.grillPhotoGuidanceContinue}
+                    </p>
+                  </div>
+                ) : null}
                 {publicUploadError ? (
                   <p className="mt-3 text-sm text-cdl-action" role="alert">
                     {publicUploadError}

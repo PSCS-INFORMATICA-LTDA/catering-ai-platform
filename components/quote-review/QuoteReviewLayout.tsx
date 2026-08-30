@@ -215,8 +215,14 @@ function ConfirmationProposalBody({
     customerPhotoUrl: data.grillPhotoUrl,
     rentalImageUrl: data.grillDefaultImageUrl,
   })
-  const showOwnGrillPendingWarning =
+  const ownGrillNoPhoto =
     data.hasGrill === true && grillSummaryImage.kind === 'none'
+  const ownGrillObservation =
+    ownGrillNoPhoto
+      ? data.grillNotes?.trim() || w.grillNoPhotoReviewNote
+      : null
+  const showGrillPhotoSection =
+    grillSummaryImage.kind === 'customer' || grillSummaryImage.kind === 'rental'
 
   return (
     <>
@@ -406,43 +412,33 @@ function ConfirmationProposalBody({
                 : '—'}
             </p>
           </div>
-          {data.grillNotes ? (
-            <div className="quote-proposal-info-cell quote-proposal-info-cell--wide">
+          {ownGrillObservation ? (
+            <div
+              className="quote-proposal-info-cell quote-proposal-info-cell--wide"
+              data-review-grill-observation
+            >
               <span className="quote-proposal-label">{w.notes}</span>
-              <p className="quote-proposal-value">{data.grillNotes}</p>
+              <p className="quote-proposal-value">{ownGrillObservation}</p>
             </div>
           ) : null}
         </div>
-        <div
-          className="quote-proposal-grill-photo-row"
-          data-grill-summary-image={
-            grillSummaryImage.kind === 'customer'
-              ? 'uploaded'
-              : grillSummaryImage.kind === 'rental'
-                ? 'rental'
-                : 'none'
-          }
-        >
-          <span className="quote-proposal-label">
-            {tQuotesOrders(lang, 'docGrillPhoto')}
-          </span>
-          {showOwnGrillPendingWarning ? (
-            <p
-              data-grill-photo-pending-note
-              role="status"
-              className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-950"
-            >
-              {w.grillNoPhotoReviewNote}
-            </p>
-          ) : null}
-          {grillSummaryImage.url ? (
+        {showGrillPhotoSection && grillSummaryImage.url ? (
+          <div
+            className="quote-proposal-grill-photo-row"
+            data-grill-summary-image={
+              grillSummaryImage.kind === 'customer' ? 'uploaded' : 'rental'
+            }
+          >
+            <span className="quote-proposal-label">
+              {tQuotesOrders(lang, 'docGrillPhoto')}
+            </span>
             <QuoteGrillPhotoFrame
               src={grillSummaryImage.url}
               alt={tQuotesOrders(lang, 'docGrillPhoto')}
               emptyLabel=""
             />
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </ProposalSection>
 
       <ProposalSection

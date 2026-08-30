@@ -19,7 +19,7 @@ export function resolvePublicGrillSystemNotes(
   language: QuoteLanguage,
 ): string {
   if (!state.hasGrill || hasOwnGrillPhoto(state)) return ''
-  return tw(language, 'grillNoPhotoWarning')
+  return tw(language, 'grillNoPhotoReviewNote')
 }
 
 export function resolvePublicGrillSummaryImageUrl(input: {

@@ -113,8 +113,10 @@ test('HAS_GRILL_YES_WITHOUT_PHOTO_NEXT_ALLOWED', () => {
   )
   assert.doesNotMatch(advance, /isGrillPhotoRequiredAndMissing/)
   assert.match(advance, /case 2: \{[\s\S]*grillSetupAnswered[\s\S]*return true/)
-  assert.match(wizard, /data-grill-no-photo-warning/)
-  assert.match(wizard, /grillNoPhotoWarning/)
+  assert.match(wizard, /data-grill-photo-guidance/)
+  assert.match(wizard, /grillPhotoGuidancePrimary/)
+  assert.match(wizard, /grillPhotoGuidanceContinue/)
+  assert.doesNotMatch(wizard, /data-grill-no-photo-warning/)
 })
 
 test('HAS_GRILL_YES_WITH_PHOTO_NEXT_ALLOWED', () => {
@@ -147,27 +149,43 @@ test('OBSERVATION_NOT_REQUIRED', () => {
 test('NO_PHOTO_WARNING_I18N', () => {
   assert.match(
     translations,
-    /Cliente informou que possui churrasqueira própria e optou por prosseguir sem enviar foto/,
+    /Anexe uma foto da churrasqueira para que nossa equipe possa confirmar se ela é adequada para o serviço/,
   )
   assert.match(
     translations,
-    /The customer informed that they have their own grill and chose to continue without uploading a photo/,
+    /Upload a photo of the grill so our team can confirm that it is suitable for the service/,
   )
   assert.match(
     translations,
-    /El cliente informó que tiene su propia parrilla y decidió continuar sin enviar una foto/,
+    /Adjunte una foto de la parrilla para que nuestro equipo pueda confirmar que es adecuada para el servicio/,
   )
   assert.match(
     translations,
-    /A equipe CDL entrará em contato para confirmar a churrasqueira/,
+    /Se não tiver disponibilidade para enviar a foto agora, você pode continuar normalmente/,
   )
   assert.match(
     translations,
-    /The CDL team will contact them to confirm the grill/,
+    /If you are unable to upload the photo now, you may continue normally/,
   )
   assert.match(
     translations,
-    /El equipo de CDL se pondrá en contacto para confirmar la parrilla/,
+    /Si no puede enviar la foto ahora, puede continuar normalmente/,
+  )
+  assert.match(
+    translations,
+    /Cliente informou que possui churrasqueira própria e não enviou uma foto\. A equipe CDL entrará em contato para confirmar a churrasqueira antes do evento/,
+  )
+  assert.match(
+    translations,
+    /The customer informed that they have their own grill and did not upload a photo\. The CDL team will contact them to confirm the grill before the event/,
+  )
+  assert.match(
+    translations,
+    /El cliente informó que tiene su propia parrilla y no envió una foto\. El equipo de CDL se pondrá en contacto para confirmar la parrilla antes del evento/,
+  )
+  assert.doesNotMatch(
+    translations,
+    /optou por prosseguir sem enviar foto/,
   )
 })
 
@@ -222,7 +240,8 @@ test('REVIEW_LOGO_VARIANT_ONLY', () => {
 test('PUBLIC_BBQ_HAS_NO_EDITABLE_GRILL_NOTES', () => {
   const publicNotes = wizard.match(/!isPublicMode \? \([\s\S]*grillNotesPlaceholder/)
   assert.ok(publicNotes, 'staff may keep notes; public must hide the textarea')
-  assert.match(wizard, /data-grill-no-photo-warning/)
+  assert.match(wizard, /data-grill-photo-guidance/)
+  assert.doesNotMatch(wizard, /data-grill-no-photo-warning/)
   assert.doesNotMatch(
     wizard,
     /isPublicMode \? \([\s\S]{0,200}textarea/,
@@ -230,11 +249,16 @@ test('PUBLIC_BBQ_HAS_NO_EDITABLE_GRILL_NOTES', () => {
 })
 
 test('SYSTEM_GRILL_NOTE_ONLY_WHEN_OWN_GRILL_WITHOUT_PHOTO', () => {
+  const helper = source('Lib/publicQuote/ownGrillDisplay.ts')
+  assert.match(helper, /grillNoPhotoReviewNote/)
+  assert.doesNotMatch(helper, /grillNoPhotoWarning/)
+  assert.doesNotMatch(wizard, /grillNoPhotoReviewNote/)
+  assert.doesNotMatch(wizard, /grillNoPhotoWarning/)
   assert.equal(
     resolvePublicGrillSystemNotes(
       { hasGrill: true, grillPhotoUrl: null, grillPhotoReference: null },
       'pt',
-    ).includes('prosseguir sem enviar foto'),
+    ).includes('não enviou uma foto'),
     true,
   )
   assert.equal(
@@ -281,10 +305,14 @@ test('REVIEW_GRILL_IMAGE_OWN_WITHOUT_PHOTO_NO_FALLBACK', () => {
     review.indexOf('function ConfirmationProposalBody'),
     review.indexOf('function DefaultProposalBody'),
   )
-  assert.match(confirmationBody, /showOwnGrillPendingWarning/)
+  assert.match(confirmationBody, /ownGrillNoPhoto/)
+  assert.match(confirmationBody, /data-review-grill-observation/)
+  assert.match(confirmationBody, /showGrillPhotoSection/)
+  assert.doesNotMatch(confirmationBody, /data-grill-photo-pending-note/)
+  assert.doesNotMatch(confirmationBody, /showOwnGrillPendingWarning/)
   assert.match(
     confirmationBody,
-    /grillSummaryImage\.url \? \([\s\S]*QuoteGrillPhotoFrame/,
+    /showGrillPhotoSection && grillSummaryImage\.url \? \([\s\S]*QuoteGrillPhotoFrame/,
   )
   assert.doesNotMatch(
     confirmationBody,

@@ -309,6 +309,8 @@ type QuoteStrings = {
     photoPendingHint: string
     attachGrillPhoto: string
     grillPhotoHint: string
+    grillPhotoGuidancePrimary: string
+    grillPhotoGuidanceContinue: string
     grillNoPhotoWarning: string
     grillNoPhotoReviewNote: string
     grillRentalRequired: string
@@ -776,10 +778,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       attachGrillPhoto: 'Anexar foto da churrasqueira',
       grillPhotoHint:
         'Se o cliente possui churrasqueira própria, confirme se a foto foi recebida para validar tamanho, condição e estrutura antes do evento.',
+      grillPhotoGuidancePrimary:
+        'Anexe uma foto da churrasqueira para que nossa equipe possa confirmar se ela é adequada para o serviço.',
+      grillPhotoGuidanceContinue:
+        'Se não tiver disponibilidade para enviar a foto agora, você pode continuar normalmente. Após o fechamento da cotação, a equipe CDL entrará em contato para revisar essa etapa.',
       grillNoPhotoWarning:
-        'Cliente informou que possui churrasqueira própria e optou por prosseguir sem enviar foto. A equipe CDL entrará em contato para confirmar a churrasqueira.',
+        'Cliente informou que possui churrasqueira própria e não enviou uma foto. A equipe CDL entrará em contato para confirmar a churrasqueira antes do evento.',
       grillNoPhotoReviewNote:
-        'Cliente informou que possui churrasqueira própria e optou por prosseguir sem enviar foto. A equipe CDL entrará em contato para confirmar a churrasqueira.',
+        'Cliente informou que possui churrasqueira própria e não enviou uma foto. A equipe CDL entrará em contato para confirmar a churrasqueira antes do evento.',
       grillRentalRequired: 'Aluguel de churrasqueira',
       grillRentalQty: 'Quantidade de churrasqueiras para aluguel',
       grillNotes: 'Observações sobre a churrasqueira',
@@ -1259,10 +1265,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       attachGrillPhoto: 'Attach grill photo',
       grillPhotoHint:
         'If the customer has their own grill, confirm the photo was received to validate size, condition and structure before the event.',
+      grillPhotoGuidancePrimary:
+        'Upload a photo of the grill so our team can confirm that it is suitable for the service.',
+      grillPhotoGuidanceContinue:
+        'If you are unable to upload the photo now, you may continue normally. After the quote is submitted, the CDL team will contact you to review this step.',
       grillNoPhotoWarning:
-        'The customer informed that they have their own grill and chose to continue without uploading a photo. The CDL team will contact them to confirm the grill.',
+        'The customer informed that they have their own grill and did not upload a photo. The CDL team will contact them to confirm the grill before the event.',
       grillNoPhotoReviewNote:
-        'The customer informed that they have their own grill and chose to continue without uploading a photo. The CDL team will contact them to confirm the grill.',
+        'The customer informed that they have their own grill and did not upload a photo. The CDL team will contact them to confirm the grill before the event.',
       grillRentalRequired: 'Grill rental',
       grillRentalQty: 'Number of grills to rent',
       grillNotes: 'Grill notes',
@@ -1743,10 +1753,14 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       attachGrillPhoto: 'Adjuntar foto de la parrilla',
       grillPhotoHint:
         'Si el cliente tiene parrilla propia, confirme si la foto fue recibida para validar tamaño, condición y estructura antes del evento.',
+      grillPhotoGuidancePrimary:
+        'Adjunte una foto de la parrilla para que nuestro equipo pueda confirmar que es adecuada para el servicio.',
+      grillPhotoGuidanceContinue:
+        'Si no puede enviar la foto ahora, puede continuar normalmente. Después de enviar la cotización, el equipo de CDL se pondrá en contacto para revisar esta etapa.',
       grillNoPhotoWarning:
-        'El cliente informó que tiene su propia parrilla y decidió continuar sin enviar una foto. El equipo de CDL se pondrá en contacto para confirmar la parrilla.',
+        'El cliente informó que tiene su propia parrilla y no envió una foto. El equipo de CDL se pondrá en contacto para confirmar la parrilla antes del evento.',
       grillNoPhotoReviewNote:
-        'El cliente informó que tiene su propia parrilla y decidió continuar sin enviar una foto. El equipo de CDL se pondrá en contacto para confirmar la parrilla.',
+        'El cliente informó que tiene su propia parrilla y no envió una foto. El equipo de CDL se pondrá en contacto para confirmar la parrilla antes del evento.',
       grillRentalRequired: 'Alquiler de parrilla',
       grillRentalQty: 'Cantidad de parrillas para alquiler',
       grillNotes: 'Observaciones sobre la parrilla',
