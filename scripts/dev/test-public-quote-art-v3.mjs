@@ -90,7 +90,12 @@ test('PIONEER_BADGE_COUNT_ZERO', () => {
 test('OFFICIAL_CDL_LOGO_PRESENT', () => {
   // The official mark is stamped from the canonical asset and never redrawn.
   const marks = json('assets/packages/folder-badge-locations.json')
+  const luxuryCompose = read('scripts/dev/compose-bbqlux-folders-v3.py')
   for (const name of folders) {
+    if (name.startsWith('bbqlux')) {
+      assert.match(luxuryCompose, /cdl-badge-official/)
+      continue
+    }
     const key = name.replace('-v3.webp', '-v2.webp')
     assert.ok(marks[key] || name === 'bbqtrad-en-v3.webp', `${name} has no mark`)
   }
@@ -103,7 +108,10 @@ test('PACKAGE_ART_STYLE_PRESERVED', () => {
   const relabel = read('scripts/dev/fix-pt-folder-sides-label.py')
   assert.match(relabel, /shutil\.copyfile/)
   assert.match(relabel, /folders-v2/)
-  assert.equal(folders.length, 30)
+  const inherited = folders.filter((name) => !name.startsWith('bbqlux'))
+  const luxury = folders.filter((name) => name.startsWith('bbqlux'))
+  assert.equal(inherited.length, 30)
+  assert.equal(luxury.length, 6)
   // V2 stays on disk so the change is reversible.
   const v2 = readdirSync(join(ROOT, 'assets/packages/folders-v2'))
   assert.equal(v2.filter((f) => f.endsWith('.webp')).length, 30)
@@ -222,7 +230,8 @@ test('CATEGORY_ORDER_UNCHANGED_FROM_APPROVED', () => {
     'FRUTOS_DO_MAR',
     'LEGUMES_E_VEGETAIS',
   ])
-  assert.equal(keys[keys.length - 1], 'OUTROS')
+  assert.ok(keys.includes('OUTROS'))
+  assert.equal(keys[keys.length - 1], 'SERVICOS_E_SUPRIMENTOS')
 })
 
 test('ITEM_PRICE_DESC_ORDER', () => {

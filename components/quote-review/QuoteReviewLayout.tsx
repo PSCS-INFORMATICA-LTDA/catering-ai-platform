@@ -307,7 +307,10 @@ function ConfirmationProposalBody({
         </ProposalSection>
       </div>
 
-      <ProposalSection title={t.review.additionalsSection}>
+      <ProposalSection
+        sectionKey="additionals"
+        title={t.review.additionalsSection}
+      >
         {groupedAdditionals.length === 0 ? (
           <p className="quote-proposal-muted">{t.review.noAdditionals}</p>
         ) : (
@@ -319,6 +322,7 @@ function ConfirmationProposalBody({
                   {items.map((item) => (
                     <article
                       key={item.id}
+                      data-review-additional-id={item.id}
                       className="quote-print-additional-card quote-proposal-additional-card"
                     >
                       <CatalogImageFrame
@@ -724,7 +728,10 @@ function DefaultProposalBody({
         </ProposalSection>
       </div>
 
-      <ProposalSection title={t.review.additionalsSection}>
+      <ProposalSection
+        sectionKey="additionals"
+        title={t.review.additionalsSection}
+      >
         {groupedAdditionals.length === 0 ? (
           <p className="quote-proposal-muted">{t.review.noAdditionals}</p>
         ) : (
@@ -736,6 +743,7 @@ function DefaultProposalBody({
                   {items.map((item) => (
                     <article
                       key={item.id}
+                      data-review-additional-id={item.id}
                       className="quote-print-additional-card quote-proposal-additional-card"
                     >
                       <CatalogImageFrame
