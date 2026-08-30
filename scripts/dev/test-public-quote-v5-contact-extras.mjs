@@ -109,6 +109,7 @@ test('PHONE_DEFAULT_FROM_COMPANY_NOT_LOCALE', () => {
   assert.match(field, /data-public-phone-split/)
   assert.match(field, /data-phone-country/)
   assert.match(field, /data-phone-national/)
+  assert.match(field, /chosenIso2Ref/)
   assert.match(field, /inputMode="tel"/)
   assert.doesNotMatch(field, /type="number"/)
 })

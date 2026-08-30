@@ -48,9 +48,16 @@ export default function PublicPhoneField({
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const rootRef = useRef<HTMLDivElement>(null)
+  const chosenIso2Ref = useRef<string | null>(parts.iso2)
 
   useEffect(() => {
     const next = splitPublicPhone(value, defaultIso2)
+    if (!String(value ?? '').trim()) {
+      setIso2(chosenIso2Ref.current ?? next.iso2)
+      setNational('')
+      return
+    }
+    chosenIso2Ref.current = next.iso2
     setIso2(next.iso2)
     setNational(next.nationalDigits)
   }, [value, defaultIso2])
@@ -77,6 +84,7 @@ export default function PublicPhoneField({
   const nationalMissing = required && Boolean(iso2) && !national
 
   function emit(nextIso2: string | null, nextNational: string) {
+    chosenIso2Ref.current = nextIso2
     setIso2(nextIso2)
     setNational(nextNational)
     onChange(composePublicPhoneE164(nextIso2, nextNational) || '')
