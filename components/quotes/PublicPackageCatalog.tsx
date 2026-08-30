@@ -329,6 +329,7 @@ export default function PublicPackageCatalog({
   onSelect,
   eventDate,
   specialDatePricing,
+  disposableKitOffer = null,
 }: {
   packagesWithoutSides: PublicPackageCard[]
   packagesWithSides: PublicPackageCard[]
@@ -343,6 +344,7 @@ export default function PublicPackageCatalog({
   onSelect: (id: string) => void
   eventDate?: string | null
   specialDatePricing?: PackageSpecialDatePricing | null
+  disposableKitOffer?: ReactNode
 }) {
   const resolvedSpecial: PackageSpecialDatePricing | null =
     specialDatePricing ??
@@ -531,11 +533,37 @@ export default function PublicPackageCatalog({
         ) : null}
       </div>
       {openGroup === 'with_sides' ? (
-        <section className="min-w-0">{renderGroup(packagesWithSides)}</section>
+        <section
+          className="min-w-0 space-y-5"
+          data-package-group-panel="with_sides"
+        >
+          {sidesPricePerPerson > 0 ? (
+            <div
+              data-with-sides-includes-disposables
+              className="rounded-2xl border border-cdl-border bg-cdl-inset px-4 py-3"
+            >
+              <p className="text-sm font-black text-[var(--brand-primary)]">
+                {tw(language, 'packageWithSidesPriceLead', {
+                  price: formatMoney(sidesPricePerPerson, language, 'USD'),
+                })}
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-cdl-muted">
+                {tw(language, 'packageWithSidesIncludesDisposables')}
+              </p>
+            </div>
+          ) : null}
+          {renderGroup(packagesWithSides)}
+        </section>
       ) : null}
       {openGroup === 'without_sides' ? (
-        <section className="min-w-0">
+        <section
+          className="min-w-0 space-y-5"
+          data-package-group-panel="without_sides"
+        >
           {renderGroup(packagesWithoutSides)}
+          {disposableKitOffer ? (
+            <div data-disposable-kit-in-no-sides>{disposableKitOffer}</div>
+          ) : null}
         </section>
       ) : null}
     </div>

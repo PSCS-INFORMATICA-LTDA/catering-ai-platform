@@ -6,10 +6,12 @@ import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 export default function NoSidesDisposableKitOffer({
   selected,
   language,
+  priceLabel,
   onToggle,
 }: {
   selected: boolean
   language: QuoteLanguage
+  priceLabel?: string
   onToggle: (selected: boolean) => void
 }) {
   const t = getQuoteStrings(language).wizard
@@ -26,7 +28,7 @@ export default function NoSidesDisposableKitOffer({
       </h3>
       <p className="mt-1 text-sm text-cdl-muted">{t.disposableKitDescription}</p>
       <p className="mt-2 text-sm font-bold text-[var(--brand-primary)]">
-        {t.disposableKitPrice}
+        {priceLabel || t.disposableKitPrice}
       </p>
       <button
         type="button"

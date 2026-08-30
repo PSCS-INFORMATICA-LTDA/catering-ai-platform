@@ -179,9 +179,43 @@ test('DISPOSABLE_KIT_NO_SIDES_ONLY', () => {
   const kit = extra('kit-1', { item_key: DISPOSABLE_KIT_ITEM_KEY })
   assert.equal(isStructuralPublicExtraItem(kit), true)
   const wizard = source('app/quotes/new/QuoteWizard.tsx')
+  const catalog = source('components/quotes/PublicPackageCatalog.tsx')
+  const translations = source('Lib/quoteTranslations.ts')
+  const editorial = source('components/quotes/PackageSidesEditorial.tsx')
   assert.match(wizard, /NoSidesDisposableKitOffer/)
   assert.match(wizard, /!fromWithSidesSection && disposableKitItem/)
   assert.match(wizard, /fromWithSidesSection &&[\s\S]*disposableKitItem\.id/)
+  assert.match(wizard, /disposableKitOffer=/)
+  assert.match(catalog, /data-package-group-panel="without_sides"/)
+  assert.match(catalog, /data-disposable-kit-in-no-sides/)
+  assert.match(catalog, /data-with-sides-includes-disposables/)
+  assert.match(catalog, /packageWithSidesIncludesDisposables/)
+  assert.doesNotMatch(catalog, /\b13\b/)
+  assert.match(
+    translations,
+    /includedServiceBody:\s*\n\s*'Estrutura de mesas do buffet com rechauds\.'/,
+  )
+  assert.match(
+    translations,
+    /Inclui as guarnições selecionadas e descartáveis: pratos, talheres e guardanapos/,
+  )
+  assert.match(
+    translations,
+    /Includes the selected side dishes and disposables: plates, cutlery and napkins/,
+  )
+  assert.match(
+    translations,
+    /Incluye las guarniciones seleccionadas y desechables: platos, cubiertos y servilletas/,
+  )
+  assert.doesNotMatch(editorial, /rechauds e descartáveis/)
+  assert.doesNotMatch(translations, /Descartáveis incluídos no serviço/)
+})
+
+test('DISPOSABLE_KIT_PER_PERSON_NO_DOUBLE_CHARGE', () => {
+  const totals = source('Lib/calculateQuoteTotals.ts')
+  assert.equal(DISPOSABLE_KIT_ITEM_KEY, 'KIT_DESCARTAVEIS')
+  assert.match(totals, /if \(line\.perPerson\) \{[\s\S]*unitPrice \* billableGuestCount/)
+  assert.equal(3 * 50, 150)
 })
 
 test('STRUCTURAL_EXTRAS_HIDDEN_FROM_GENERIC_GRID', () => {

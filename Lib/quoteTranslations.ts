@@ -249,6 +249,8 @@ type QuoteStrings = {
     packageSidesDisposables: string
     includedServiceTitle: string
     includedServiceBody: string
+    packageWithSidesPriceLead: string
+    packageWithSidesIncludesDisposables: string
     grillRentalMandatory: string
     grillRentalFixedQty: string
     specialDatePackageBadge: string
@@ -706,10 +708,13 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packageSidesUpsellText: 'Adicione guarnições por {price} por pessoa.',
       packageSidesChoiceLead: 'Escolha 1 opção:',
       packageSidesDisposables:
-        'Estrutura de mesas do buffet com rechauds e descartáveis: pratos, talheres e guardanapos.',
+        'Estrutura de mesas do buffet com rechauds.',
       includedServiceTitle: 'INCLUÍDO NO SERVIÇO',
       includedServiceBody:
-        'Estrutura de mesas do buffet com rechauds e descartáveis: pratos, talheres e guardanapos.',
+        'Estrutura de mesas do buffet com rechauds.',
+      packageWithSidesPriceLead: '+ {price} por pessoa',
+      packageWithSidesIncludesDisposables:
+        'Inclui as guarnições selecionadas e descartáveis: pratos, talheres e guardanapos.',
       grillRentalMandatory: 'Aluguel de churrasqueira necessário',
       grillRentalFixedQty: '1 churrasqueira',
       specialDatePackageBadge: 'DATA ESPECIAL · +{pct}%',
@@ -736,7 +741,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       decreaseWaiters: 'Diminuir garçons',
       disposableKitTitle: 'Kit de descartáveis',
       disposableKitDescription: 'Pratos, talheres e guardanapos',
-      disposableKitPrice: 'US$3 por pessoa',
+      disposableKitPrice: '{price} por pessoa',
       withoutSidesGroupTitle: 'SEM GUARNIÇÕES',
       withSidesGroupHint:
         'Uma experiência completa, com acompanhamentos preparados para complementar o churrasco e deixar o serviço pronto para receber seus convidados. Explore {count} opções de pacotes disponíveis e escolha a combinação ideal para o seu evento.',
@@ -1194,10 +1199,13 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packageSidesUpsellText: 'Add sides for {price} per person.',
       packageSidesChoiceLead: 'Choose 1 option:',
       packageSidesDisposables:
-        'Buffet table setup with chafing dishes and disposables: plates, cutlery and napkins.',
+        'Buffet table setup with chafing dishes.',
       includedServiceTitle: 'INCLUDED IN THE SERVICE',
       includedServiceBody:
-        'Buffet table setup with chafing dishes and disposables: plates, cutlery and napkins.',
+        'Buffet table setup with chafing dishes.',
+      packageWithSidesPriceLead: '+ {price} per person',
+      packageWithSidesIncludesDisposables:
+        'Includes the selected side dishes and disposables: plates, cutlery and napkins.',
       grillRentalMandatory: 'Grill rental required',
       grillRentalFixedQty: '1 grill',
       specialDatePackageBadge: 'SPECIAL DATE · +{pct}%',
@@ -1224,7 +1232,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       decreaseWaiters: 'Decrease waiters',
       disposableKitTitle: 'Disposable kit',
       disposableKitDescription: 'Plates, cutlery and napkins',
-      disposableKitPrice: 'US$3 per person',
+      disposableKitPrice: '{price} per person',
       withoutSidesGroupTitle: 'WITHOUT SIDES',
       withSidesGroupHint:
         'A complete experience, with sides prepared to complement the barbecue and ready your service for guests. Explore {count} available packages and choose the ideal combination for your event.',
@@ -1682,10 +1690,13 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       packageSidesUpsellText: 'Agrega guarniciones por {price} por persona.',
       packageSidesChoiceLead: 'Elige 1 opción:',
       packageSidesDisposables:
-        'Estructura de mesas de buffet con chafing dishes y desechables: platos, cubiertos y servilletas.',
+        'Estructura de mesas de buffet con chafing dishes.',
       includedServiceTitle: 'INCLUIDO EN EL SERVICIO',
       includedServiceBody:
-        'Estructura de mesas de buffet con chafing dishes y desechables: platos, cubiertos y servilletas.',
+        'Estructura de mesas de buffet con chafing dishes.',
+      packageWithSidesPriceLead: '+ {price} por persona',
+      packageWithSidesIncludesDisposables:
+        'Incluye las guarniciones seleccionadas y desechables: platos, cubiertos y servilletas.',
       grillRentalMandatory: 'Alquiler de parrilla obligatorio',
       grillRentalFixedQty: '1 parrilla',
       specialDatePackageBadge: 'FECHA ESPECIAL · +{pct}%',
@@ -1712,7 +1723,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       decreaseWaiters: 'Disminuir meseros',
       disposableKitTitle: 'Kit de desechables',
       disposableKitDescription: 'Platos, cubiertos y servilletas',
-      disposableKitPrice: 'US$3 por persona',
+      disposableKitPrice: '{price} por persona',
       withoutSidesGroupTitle: 'SIN ACOMPAÑAMIENTOS',
       withSidesGroupHint:
         'Una experiencia completa, con acompañamientos preparados para complementar el asado y dejar el servicio listo para recibir a tus invitados. Explora {count} opciones de paquetes disponibles y elige la combinación ideal para tu evento.',

@@ -3445,6 +3445,27 @@ export default function QuoteWizardCore({
                     commercialRules,
                   ).amount,
                 }}
+                disposableKitOffer={
+                  !fromWithSidesSection && disposableKitItem ? (
+                    <NoSidesDisposableKitOffer
+                      selected={
+                        (state.additionals[disposableKitItem.id] ?? 0) > 0
+                      }
+                      language={uiLocale}
+                      priceLabel={tw(uiLocale, 'disposableKitPrice', {
+                        price: `US$${Math.round(
+                          getAdditionalUnitPrice(disposableKitItem) || 3,
+                        )}`,
+                      })}
+                      onToggle={(selected) =>
+                        setAdditionalQty(
+                          disposableKitItem.id,
+                          selected ? 1 : 0,
+                        )
+                      }
+                    />
+                  ) : null
+                }
               />
             ) : (
               <QuotePackageStepExplorer
@@ -3475,10 +3496,18 @@ export default function QuoteWizardCore({
               />
             )}
 
-            {state.packageId && !fromWithSidesSection && disposableKitItem ? (
+            {!isPublicMode &&
+            state.packageId &&
+            !fromWithSidesSection &&
+            disposableKitItem ? (
               <NoSidesDisposableKitOffer
                 selected={(state.additionals[disposableKitItem.id] ?? 0) > 0}
                 language={uiLocale}
+                priceLabel={tw(uiLocale, 'disposableKitPrice', {
+                  price: `US$${Math.round(
+                    getAdditionalUnitPrice(disposableKitItem) || 3,
+                  )}`,
+                })}
                 onToggle={(selected) =>
                   setAdditionalQty(disposableKitItem.id, selected ? 1 : 0)
                 }
