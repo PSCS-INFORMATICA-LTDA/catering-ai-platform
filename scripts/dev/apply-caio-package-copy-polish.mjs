@@ -2,7 +2,8 @@
  * DEV-only: Caio package copy polish.
  *
  * 1. Costela de Boi / Costela de Porco labels
- * 2. Luxury display_order immediately before Prime
+ * 2. Commercial package order from lower to higher price,
+ *    Personalized always last.
  * 3. No price / id / relationship changes
  *
  *   node --experimental-strip-types scripts/dev/apply-caio-package-copy-polish.mjs
@@ -37,14 +38,14 @@ const PACKAGE_DISPLAY_ORDER = {
   BBQTRAD: 1,
   BBQSEL: 2,
   BBQCHO: 3,
-  BBQLUX: 4,
-  BBQPRI: 5,
+  BBQPRI: 4,
+  BBQLUX: 5,
   BBQPERS: 6,
   'BBQTRAD+': 7,
   'BBQSEL+': 8,
   'BBQCHO+': 9,
-  'BBQLUX+': 10,
-  'BBQPRI+': 11,
+  'BBQPRI+': 10,
+  'BBQLUX+': 11,
   'BBQPERS+': 12,
 }
 

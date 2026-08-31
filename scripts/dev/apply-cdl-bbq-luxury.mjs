@@ -160,7 +160,7 @@ function packagePayload(withSides) {
     highlight_pt: withSides
       ? 'Pacote luxury com Wagyu, lagosta ou vieira com bacon e guarnições.'
       : 'Pacote luxury com Wagyu, lagosta ou vieira com bacon.',
-    display_order: withSides ? 10 : 4,
+    display_order: withSides ? 11 : 5,
     card_theme_key: 'gold',
     image_status: 'missing',
     active: true,

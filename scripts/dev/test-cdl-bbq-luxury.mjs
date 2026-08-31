@@ -128,8 +128,8 @@ test('LUXURY_NAMES', () => {
   assert.equal(base.label_en, 'BBQ Luxury')
   assert.equal(base.label_es, 'BBQ Luxury')
 })
-test('LUXURY_POSITION_BEFORE_PRIME', () => {
-  assert.match(displaySrc, /const PACKAGE_TIER_ORDER = \['TRAD', 'SEL', 'CHO', 'LUX', 'PRI', 'PERS'\]/)
+test('LUXURY_POSITION_AFTER_PRIME', () => {
+  assert.match(displaySrc, /const PACKAGE_TIER_ORDER = \['TRAD', 'SEL', 'CHO', 'PRI', 'LUX', 'PERS'\]/)
 })
 test('LUXURY_POSITION_BEFORE_CUSTOM', () => {
   const order = displaySrc.match(/PACKAGE_TIER_ORDER = \[([^\]]+)\]/)?.[1] ?? ''

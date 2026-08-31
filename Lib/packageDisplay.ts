@@ -36,7 +36,7 @@ const TRADITIONAL_COMMON_ITEMS = [
   'Geleia de pimenta',
 ] as const
 
-const PACKAGE_TIER_ORDER = ['TRAD', 'SEL', 'CHO', 'LUX', 'PRI', 'PERS'] as const
+const PACKAGE_TIER_ORDER = ['TRAD', 'SEL', 'CHO', 'PRI', 'LUX', 'PERS'] as const
 
 type PackageCommercialTier = (typeof PACKAGE_TIER_ORDER)[number]
 
@@ -211,7 +211,7 @@ export function getPackageTierSortIndex(
   return PACKAGE_TIER_ORDER.indexOf(tier)
 }
 
-/** Traditional → Select → Choice → Luxury → Prime → Personalized */
+/** Traditional → Select → Choice → Prime → Luxury → Personalized */
 export function sortPackagesByCommercialTier<
   T extends PackageFieldSource,
 >(packages: ReadonlyArray<T>): T[] {

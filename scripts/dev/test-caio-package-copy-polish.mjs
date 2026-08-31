@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
 import { assertDevUrl, loadDevEnv } from './loadDevEnv.mjs'
 
-const TIER_ORDER = ['TRAD', 'SEL', 'CHO', 'LUX', 'PRI', 'PERS']
+const TIER_ORDER = ['TRAD', 'SEL', 'CHO', 'PRI', 'LUX', 'PERS']
 
 function sortByTier(keys) {
   return [...keys].sort((a, b) => {
@@ -48,10 +48,10 @@ const wizard = source('app/quotes/new/QuoteWizard.tsx')
 const extras = source('Lib/publicQuote/extrasEligibility.ts')
 const phone = source('components/quotes/PublicPhoneField.tsx')
 
-test('TIER_ORDER_LUXURY_BEFORE_PRIME', () => {
+test('TIER_ORDER_PRICE_ASCENDING_PERSONALIZED_LAST', () => {
   assert.match(
     display,
-    /const PACKAGE_TIER_ORDER = \['TRAD', 'SEL', 'CHO', 'LUX', 'PRI', 'PERS'\]/,
+    /const PACKAGE_TIER_ORDER = \['TRAD', 'SEL', 'CHO', 'PRI', 'LUX', 'PERS'\]/,
   )
   const without = sortByTier([
     'BBQPRI',
@@ -73,16 +73,16 @@ test('TIER_ORDER_LUXURY_BEFORE_PRIME', () => {
     'BBQTRAD',
     'BBQSEL',
     'BBQCHO',
-    'BBQLUX',
     'BBQPRI',
+    'BBQLUX',
     'BBQPERS',
   ])
   assert.deepEqual(withSides, [
     'BBQTRAD+',
     'BBQSEL+',
     'BBQCHO+',
-    'BBQLUX+',
     'BBQPRI+',
+    'BBQLUX+',
     'BBQPERS+',
   ])
 })
@@ -190,14 +190,14 @@ test('LIVE_PACKAGE_ORDER_AND_PRICES', () => {
     BBQTRAD: [1, 45],
     BBQSEL: [2, 55],
     BBQCHO: [3, 65],
-    BBQLUX: [4, 150],
-    BBQPRI: [5, 75],
+    BBQPRI: [4, 75],
+    BBQLUX: [5, 150],
     BBQPERS: [6, 0],
     'BBQTRAD+': [7, 58],
     'BBQSEL+': [8, 68],
     'BBQCHO+': [9, 78],
-    'BBQLUX+': [10, 163],
-    'BBQPRI+': [11, 88],
+    'BBQPRI+': [10, 88],
+    'BBQLUX+': [11, 163],
     'BBQPERS+': [12, 0],
   }
   assert.equal(Object.keys(expected).length, 12)
@@ -207,8 +207,8 @@ test('LIVE_PACKAGE_ORDER_AND_PRICES', () => {
     assert.equal(Number(byKey[key].price_per_person), price, key)
     assert.equal(byKey[key].active, true, key)
   }
-  assert.ok(Number(byKey.BBQLUX.display_order) < Number(byKey.BBQPRI.display_order))
-  assert.ok(Number(byKey['BBQLUX+'].display_order) < Number(byKey['BBQPRI+'].display_order))
+  assert.ok(Number(byKey.BBQPRI.display_order) < Number(byKey.BBQLUX.display_order))
+  assert.ok(Number(byKey['BBQPRI+'].display_order) < Number(byKey['BBQLUX+'].display_order))
 })
 
 if (failed > 0) {
