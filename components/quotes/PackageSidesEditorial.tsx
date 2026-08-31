@@ -114,6 +114,12 @@ export default function PackageSidesEditorial({
         >
           {tw(language, 'includedServiceBody')}
         </p>
+        <p
+          data-included-service-disposables-with-sides
+          className="public-package-editorial-helper"
+        >
+          {tw(language, 'includedServiceDisposablesWithSides')}
+        </p>
       </div>
     </section>
   )

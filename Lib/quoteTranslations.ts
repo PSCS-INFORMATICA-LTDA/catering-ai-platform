@@ -260,6 +260,7 @@ type QuoteStrings = {
     packageSidesDisposables: string
     includedServiceTitle: string
     includedServiceBody: string
+    includedServiceDisposablesWithSides: string
     packageWithSidesPriceLead: string
     packageWithSidesIncludesDisposables: string
     grillRentalMandatory: string
@@ -735,6 +736,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       includedServiceTitle: 'INCLUÍDO NO SERVIÇO',
       includedServiceBody:
         'Estrutura de mesas do buffet com rechauds.',
+      includedServiceDisposablesWithSides:
+        'Com guarnições: descartáveis incluídos — pratos, talheres e guardanapos.',
       packageWithSidesPriceLead: '+ {price} por pessoa',
       packageWithSidesIncludesDisposables:
         'Inclui as guarnições selecionadas e descartáveis: pratos, talheres e guardanapos.',
@@ -1238,6 +1241,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       includedServiceTitle: 'INCLUDED IN THE SERVICE',
       includedServiceBody:
         'Buffet table setup with chafing dishes.',
+      includedServiceDisposablesWithSides:
+        'With side dishes: disposables included — plates, utensils and napkins.',
       packageWithSidesPriceLead: '+ {price} per person',
       packageWithSidesIncludesDisposables:
         'Includes the selected side dishes and disposables: plates, cutlery and napkins.',
@@ -1741,6 +1746,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       includedServiceTitle: 'INCLUIDO EN EL SERVICIO',
       includedServiceBody:
         'Estructura de mesas de buffet con chafing dishes.',
+      includedServiceDisposablesWithSides:
+        'Con guarniciones: desechables incluidos — platos, cubiertos y servilletas.',
       packageWithSidesPriceLead: '+ {price} por persona',
       packageWithSidesIncludesDisposables:
         'Incluye las guarniciones seleccionadas y desechables: platos, cubiertos y servilletas.',

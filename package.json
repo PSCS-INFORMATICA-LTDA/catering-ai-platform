@@ -106,6 +106,8 @@
     "apply:dev:bbq-luxury": "node --experimental-strip-types scripts/dev/apply-cdl-bbq-luxury.mjs --apply",
     "test:dev:bbq-luxury": "node scripts/dev/test-cdl-bbq-luxury.mjs",
     "test:dev:caio-field-review": "node scripts/dev/test-caio-field-review-v1.mjs",
+    "apply:dev:caio-package-copy-polish": "node --experimental-strip-types scripts/dev/apply-caio-package-copy-polish.mjs --apply",
+    "test:dev:caio-package-copy-polish": "node --experimental-strip-types scripts/dev/test-caio-package-copy-polish.mjs",
     "test:dev:cdl-final-polish": "node scripts/dev/test-cdl-final-polish-v2.mjs",
     "test:dev:payments-foundation": "node scripts/dev/test-payments-foundation-v1.mjs",
     "test:dev:company-paypal-settings": "node scripts/dev/test-company-paypal-settings-v1.mjs",

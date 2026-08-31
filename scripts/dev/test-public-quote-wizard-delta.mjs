@@ -212,6 +212,10 @@ test('DISPOSABLE_KIT_NO_SIDES_ONLY', () => {
   )
   assert.match(
     translations,
+    /Com guarnições: descartáveis incluídos — pratos, talheres e guardanapos\./,
+  )
+  assert.match(
+    translations,
     /Inclui as guarnições selecionadas e descartáveis: pratos, talheres e guardanapos/,
   )
   assert.match(

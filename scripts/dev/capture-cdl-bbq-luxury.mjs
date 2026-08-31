@@ -139,8 +139,8 @@ record(
 record(
   'LUXURY_AFTER_PRIME_BEFORE_CUSTOM',
   withoutKeys.indexOf('BBQPRI') >= 0 &&
-    withoutKeys.indexOf('BBQLUX') === withoutKeys.indexOf('BBQPRI') + 1 &&
-    withoutKeys.indexOf('BBQPERS') > withoutKeys.indexOf('BBQLUX'),
+    withoutKeys.indexOf('BBQLUX') === withoutKeys.indexOf('BBQPRI') - 1 &&
+    withoutKeys.indexOf('BBQPERS') > withoutKeys.indexOf('BBQPRI'),
   withoutKeys.join(' > '),
 )
 
