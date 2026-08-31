@@ -91,6 +91,7 @@ export function filterPhoneCountries(
 ): PhoneCountry[] {
   const needle = query.trim().toLocaleLowerCase(language === 'pt' ? 'pt-BR' : language)
   if (!needle) return [...PHONE_COUNTRIES]
+  const digits = needle.replace(/\D/g, '')
   return PHONE_COUNTRIES.filter((country) => {
     const name = getPhoneCountryLabel(country, language).toLocaleLowerCase(
       language === 'pt' ? 'pt-BR' : language,
@@ -98,7 +99,7 @@ export function filterPhoneCountries(
     return (
       name.includes(needle) ||
       country.iso2.toLowerCase().includes(needle) ||
-      country.callingCode.includes(needle.replace(/\D/g, '')) ||
+      (digits.length > 0 && country.callingCode.includes(digits)) ||
       `+${country.callingCode}`.includes(needle)
     )
   })

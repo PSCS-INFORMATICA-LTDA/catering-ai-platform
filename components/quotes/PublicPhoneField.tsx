@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, type Ref } from 'react'
+import { createPortal } from 'react-dom'
+import { tCommon } from '@/Lib/i18n/common'
 import { getQuoteStrings } from '@/Lib/quoteTranslations'
 import {
   composePublicPhoneE164,
@@ -17,6 +19,15 @@ import {
 } from '@/Lib/publicQuote/phoneCountries'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import PublicRequiredMark from '@/components/quotes/PublicRequiredMark'
+
+const PICKER_ID = 'public-phone-country-picker'
+const PICKER_VIEWPORT_VAR = '--public-phone-country-picker-vh'
+
+function blurActiveElement() {
+  if (typeof document === 'undefined') return
+  const active = document.activeElement
+  if (active instanceof HTMLElement) active.blur()
+}
 
 export default function PublicPhoneField({
   value,
@@ -47,8 +58,15 @@ export default function PublicPhoneField({
   const [national, setNational] = useState(parts.nationalDigits)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [portalReady, setPortalReady] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const countryButtonRef = useRef<HTMLButtonElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
   const chosenIso2Ref = useRef<string | null>(parts.iso2)
+
+  useEffect(() => {
+    setPortalReady(true)
+  }, [])
 
   useEffect(() => {
     const next = splitPublicPhone(value, defaultIso2)
@@ -64,12 +82,51 @@ export default function PublicPhoneField({
 
   useEffect(() => {
     if (!open) return
-    const onPointer = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    const frame = window.requestAnimationFrame(() => {
+      const active = document.activeElement
+      if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
+        active.blur()
+      }
+      closeButtonRef.current?.focus({ preventScroll: true })
+    })
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const viewport = window.visualViewport
+    const syncViewport = () => {
+      const height = viewport?.height ?? window.innerHeight
+      document.documentElement.style.setProperty(
+        PICKER_VIEWPORT_VAR,
+        `${Math.round(height)}px`,
+      )
     }
-    document.addEventListener('mousedown', onPointer)
-    return () => document.removeEventListener('mousedown', onPointer)
+    syncViewport()
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closePicker()
+    }
+    viewport?.addEventListener('resize', syncViewport)
+    viewport?.addEventListener('scroll', syncViewport)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      document.body.style.overflow = previousOverflow
+      document.documentElement.style.removeProperty(PICKER_VIEWPORT_VAR)
+      viewport?.removeEventListener('resize', syncViewport)
+      viewport?.removeEventListener('scroll', syncViewport)
+      document.removeEventListener('keydown', onKey)
+    }
   }, [open])
+
+  function closePicker() {
+    setQuery('')
+    setOpen(false)
+    countryButtonRef.current?.focus({ preventScroll: true })
+  }
+
+  function openPicker() {
+    blurActiveElement()
+    setQuery('')
+    setOpen(true)
+  }
 
   const country = getPhoneCountry(iso2)
   const countries = useMemo(
@@ -105,11 +162,17 @@ export default function PublicPhoneField({
       <div className="grid grid-cols-[minmax(7.5rem,0.42fr)_minmax(0,1fr)] gap-2">
         <div className="relative">
           <button
+            ref={countryButtonRef}
             type="button"
             data-phone-country
             aria-expanded={open}
-            aria-haspopup="listbox"
-            onClick={() => setOpen((current) => !current)}
+            aria-haspopup="dialog"
+            aria-controls={PICKER_ID}
+            onPointerDown={() => {
+              if (open) return
+              blurActiveElement()
+            }}
+            onClick={() => (open ? closePicker() : openPicker())}
             className={`flex min-h-12 w-full items-center justify-between gap-1 rounded-xl border px-3 py-3 text-left text-sm font-semibold shadow-cdl ${
               country ? 'cdl-field-filled' : 'cdl-field-empty'
             }`}
@@ -124,45 +187,79 @@ export default function PublicPhoneField({
               ▾
             </span>
           </button>
-          {open ? (
-            <div
-              role="listbox"
-              className="absolute z-30 mt-1 max-h-64 w-[min(18rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-cdl-border bg-cdl-surface shadow-cdl"
-            >
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={t.phoneCountrySearch}
-                className="w-full border-b border-cdl-border px-3 py-2 text-sm outline-none"
-                autoFocus
-              />
-              <div className="max-h-52 overflow-y-auto">
-                {countries.map((row) => (
+          {open && portalReady
+            ? createPortal(
+                <div
+                  id={PICKER_ID}
+                  className="public-phone-country-picker"
+                  data-phone-country-picker
+                  data-theme="light"
+                  data-public-wizard-theme="light-locked"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label={t.phoneCountryPlaceholder}
+                >
                   <button
-                    key={row.iso2}
                     type="button"
-                    role="option"
-                    aria-selected={row.iso2 === iso2}
-                    onClick={() => {
-                      emit(row.iso2, national)
-                      setQuery('')
-                      setOpen(false)
-                    }}
-                    className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm hover:bg-cdl-hover"
-                  >
-                    <span aria-hidden>{countryFlagEmoji(row.iso2)}</span>
-                    <span className="min-w-0 flex-1 truncate">
-                      {getPhoneCountryLabel(row, language)}
-                    </span>
-                    <span className="shrink-0 font-semibold text-cdl-muted">
-                      +{row.callingCode}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
+                    className="public-phone-country-picker-backdrop"
+                    aria-label={tCommon(language, 'close')}
+                    onClick={closePicker}
+                  />
+                  <div className="public-phone-country-picker-panel">
+                    <div className="public-phone-country-picker-header">
+                      <button
+                        ref={closeButtonRef}
+                        type="button"
+                        data-phone-country-close
+                        className="public-phone-country-picker-close"
+                        onClick={closePicker}
+                      >
+                        {tCommon(language, 'close')}
+                      </button>
+                      <input
+                        type="search"
+                        inputMode="search"
+                        enterKeyHint="search"
+                        data-phone-country-search
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                        placeholder={t.phoneCountrySearch}
+                        className="public-phone-country-picker-search"
+                        tabIndex={0}
+                      />
+                    </div>
+                    <div
+                      role="listbox"
+                      data-phone-country-list
+                      className="public-phone-country-picker-list"
+                    >
+                      {countries.map((row) => (
+                        <button
+                          key={row.iso2}
+                          type="button"
+                          role="option"
+                          aria-selected={row.iso2 === iso2}
+                          onClick={() => {
+                            emit(row.iso2, national)
+                            closePicker()
+                          }}
+                          className="public-phone-country-picker-option"
+                        >
+                          <span aria-hidden>{countryFlagEmoji(row.iso2)}</span>
+                          <span className="min-w-0 flex-1 truncate">
+                            {getPhoneCountryLabel(row, language)}
+                          </span>
+                          <span className="shrink-0 font-semibold text-cdl-muted">
+                            +{row.callingCode}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>,
+                document.body,
+              )
+            : null}
         </div>
         <div className="relative">
           <input
