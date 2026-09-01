@@ -188,6 +188,7 @@ function ConfirmationProposalBody({
   eventTimeLabel,
   groupedAdditionals,
   mileageEditor,
+  publicReviewFooter = false,
 }: {
   data: QuoteReviewData
   breakdown: PricingBreakdown
@@ -199,6 +200,7 @@ function ConfirmationProposalBody({
     items: QuoteReviewAdditional[]
   }>
   mileageEditor?: ReactNode
+  publicReviewFooter?: boolean
 }) {
   const lang = data.language ?? 'pt'
   const t = getQuoteStrings(lang)
@@ -582,7 +584,24 @@ function ConfirmationProposalBody({
         defaultOpenAll
       />
 
-      <footer className="quote-proposal-signature">
+      <footer
+        className={`quote-proposal-signature${
+          publicReviewFooter ? ' quote-proposal-signature--public' : ''
+        }`}
+        data-public-review-footer={publicReviewFooter ? 'true' : undefined}
+      >
+        {publicReviewFooter ? (
+          <div
+            data-public-review-cdl-logo
+            className="quote-proposal-public-cdl-logo-wrap"
+          >
+            <CdlBrandLogo
+              size="sm"
+              variant="review"
+              className="quote-proposal-public-cdl-logo"
+            />
+          </div>
+        ) : null}
         <p className="quote-proposal-footer-brand">BBQ AT HOME</p>
         <p className="quote-proposal-footer-tagline">Orlando, Florida</p>
         <img
@@ -1028,6 +1047,7 @@ export default function QuoteReviewLayout({
   variant = 'default',
   breakdown = null,
   mileageEditor,
+  publicReviewFooter = false,
 }: {
   data: QuoteReviewData
   rulesVariant?: 'summary' | 'pdf'
@@ -1037,6 +1057,7 @@ export default function QuoteReviewLayout({
   variant?: 'default' | 'confirmation'
   breakdown?: PricingBreakdown | null
   mileageEditor?: ReactNode
+  publicReviewFooter?: boolean
 }) {
   const lang = data.language ?? 'pt'
   const t = getQuoteStrings(lang)
@@ -1249,6 +1270,7 @@ export default function QuoteReviewLayout({
             eventTimeLabel={eventTimeLabel}
             groupedAdditionals={groupedAdditionals}
             mileageEditor={mileageEditor}
+            publicReviewFooter={publicReviewFooter}
           />
         ) : (
           <DefaultProposalBody

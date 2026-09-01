@@ -71,8 +71,8 @@ test('SUCCESS_ORDER_CONFIRM_SUMMARY_CTA_CONTACTS', () => {
   assert.ok(at('public-success-title') > at('public-success-kicker'))
   assert.ok(at('public-success-body-copy') > at('public-success-title'))
   assert.ok(at('data-success-summary') > at('public-success-body-copy'))
-  assert.ok(at('data-success-restart') > at('data-success-summary'))
-  assert.ok(at('data-success-contact-heading') > at('data-success-restart'))
+  assert.ok(at('data-success-contact-heading') > at('data-success-summary'))
+  assert.ok(at('data-success-restart') > at('data-success-contact-heading'))
   assert.ok(at('data-success-whatsapp') > at('data-success-contact-heading'))
   assert.ok(at('data-success-instagram') > at('data-success-whatsapp'))
 })
@@ -239,17 +239,20 @@ test('WIZARD_LIGHT_UNCHANGED', () => {
 })
 
 test('PRICING_UNCHANGED', () => {
-  const status = execFileSync(
+  const baseline = 'bb8432ddcc11094759726adfb7f9646ba15943cc'
+  const committed = execFileSync(
     'git',
-    [
-      'diff',
-      '--name-only',
-      'origin/cursor/public-experience-master-polish-v4...HEAD',
-    ],
+    ['diff', '--name-only', `${baseline}...HEAD`],
     { cwd: ROOT, encoding: 'utf8' },
   )
-  const touched = status.split('\n').filter(Boolean)
-  const forbidden = touched.filter((file) =>
+  const dirty = execFileSync('git', ['diff', '--name-only', baseline], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  })
+  const touched = new Set(
+    `${committed}\n${dirty}`.split('\n').map((file) => file.trim()).filter(Boolean),
+  )
+  const forbidden = [...touched].filter((file) =>
     /^(supabase\/|Lib\/pricing|Lib\/quotePricing|app\/api\/quotes|app\/api\/packages|app\/api\/commercial-rules)/.test(
       file,
     ),

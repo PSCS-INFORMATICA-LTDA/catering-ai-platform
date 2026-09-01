@@ -183,9 +183,11 @@ test('SUCCESS_PSCS_ONE_BELOW_POWERED_BY', () => {
   assert.match(powered, /justify-content: center/)
   const footer = rule('.public-success-footer')
   assert.match(footer, /justify-content: center/)
-  // Official mark is reused untouched, at the approved footer size.
-  assert.match(successFooter, /size="footer"/)
+  // Official mark is reused untouched; success uses the slightly larger md size.
+  assert.match(successFooter, /size="md"/)
+  assert.doesNotMatch(successFooter, /size="footer"/)
   assert.match(source('components/brand/PscsOneMark.tsx'), /h-\[22px\]/)
+  assert.match(source('components/brand/PscsOneMark.tsx'), /size === 'sm' \? 'h-3\.5' : 'h-7'/)
 })
 
 test('LANDING_NOT_REGRESSED', () => {

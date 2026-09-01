@@ -103,6 +103,7 @@
     "test:dev:public-phone-split-focus": "node --experimental-strip-types scripts/dev/test-public-phone-split-focus.mjs",
     "test:dev:public-event-enter-chain": "node --experimental-strip-types scripts/dev/test-public-event-enter-chain.mjs",
     "test:dev:public-event-advance-check": "node --experimental-strip-types scripts/dev/test-public-event-advance-check.mjs",
+    "test:dev:public-quote-closeout-polish": "node --experimental-strip-types scripts/dev/test-public-quote-closeout-polish.mjs",
     "test:dev:package-selection-review": "node --experimental-strip-types scripts/dev/test-package-selection-review.mjs",
     "apply:dev:additionals-catalog-cleanup": "node scripts/dev/apply-cdl-additionals-catalog-cleanup.mjs --apply",
     "apply:dev:cdl-2026-catalog": "node --experimental-strip-types scripts/dev/apply-cdl-2026-real-catalog-sync.mjs --apply",

@@ -211,7 +211,7 @@ export default function QuoteReviewPackageCdlSection({
 
   // Canonical review order for every consumer of this section
   // (public confirmation + proposal/PDF): image → fixed items →
-  // included choices → garnish. Choice resolution stays in the mapper.
+  // garnish → included choices. All packageSelections stay in one block.
   const details = (
     <div className="quote-proposal-package-split-main">
       {showHeroImage && packageImageUrl?.trim() ? (
@@ -227,6 +227,9 @@ export default function QuoteReviewPackageCdlSection({
       ) : null}
       <div data-review-package-items>
         <PackageDetailLine label={tw(loc, 'packageItems')} value={itemsText} />
+      </div>
+      <div data-review-garnish>
+        <PackageDetailLine label={tw(loc, 'garnish')} value={garnishText} />
       </div>
       {packageSelections.length > 0 ? (
         <div className="space-y-1" data-review-included-choices>
@@ -244,9 +247,6 @@ export default function QuoteReviewPackageCdlSection({
           </ul>
         </div>
       ) : null}
-      <div data-review-garnish>
-        <PackageDetailLine label={tw(loc, 'garnish')} value={garnishText} />
-      </div>
       {showAdditionalItems ? (
         <PackageDetailLine
           label={tw(loc, 'additionalItems')}

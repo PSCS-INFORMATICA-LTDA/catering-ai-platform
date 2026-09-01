@@ -3126,6 +3126,14 @@ body {
   letter-spacing: -0.02em;
 }
 
+.public-success-contact-card {
+  margin-top: 1rem;
+  padding: 1.2rem 1.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.035);
+}
+
 .public-success-signature-cluster {
   display: flex;
   flex-direction: column;

@@ -100,7 +100,24 @@ try {
     '[data-field-advance-check="adults"]',
   )
   test('ADULTS_20_CHECK_VISIBLE = YES', Boolean(adultsCheck))
-  await page.$eval('[data-field-advance-check="adults"]', (el) => el.click())
+  const syncAttr = await page.$eval(
+    '[data-field-advance-check="adults"]',
+    (el) => el.getAttribute('data-field-advance-sync'),
+  )
+  test('FOCUS_CALLED_IN_USER_GESTURE_PATH = SYNC_ATTR', syncAttr === 'true')
+  await page.$eval('[data-field-advance-check="adults"]', (el) => {
+    el.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        bubbles: true,
+        cancelable: true,
+        pointerType: 'touch',
+        button: 0,
+      }),
+    )
+    el.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, cancelable: true }),
+    )
+  })
   const afterAdults = await page.evaluate(() => ({
     active: document.activeElement?.getAttribute('data-guest-input'),
     child4: document.activeElement === document.querySelector('[data-guest-input="children-4-12"]'),

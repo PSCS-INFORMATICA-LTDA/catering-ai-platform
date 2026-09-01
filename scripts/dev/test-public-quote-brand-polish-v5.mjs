@@ -153,7 +153,7 @@ test('SUCCESS_CONTACTS_BELOW_LOGO', () => {
   const restartIndex = successScreen.indexOf('data-success-restart')
   // V6 lifted the signature to the top, contacts still close the screen.
   assert.ok(signatureIndex > -1 && signatureIndex < restartIndex)
-  assert.ok(contactsIndex > restartIndex)
+  assert.ok(contactsIndex < restartIndex)
   assert.ok(headingIndex > signatureIndex)
   assert.ok(whatsappIndex > headingIndex)
   assert.ok(instagramIndex > whatsappIndex)

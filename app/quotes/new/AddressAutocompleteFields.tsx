@@ -81,6 +81,7 @@ function FieldCheck({
   advanceLabel?: string
   advanceKey?: string
 }) {
+  const skipClickRef = useRef(false)
   if (!show) return null
   if (!onAdvance) {
     return (
@@ -92,18 +93,32 @@ function FieldCheck({
       </span>
     )
   }
+  const advance = onAdvance
+
+  function advanceFromTrustedGesture() {
+    advance()
+  }
+
   return (
     <button
       type="button"
       data-field-advance-check={advanceKey || ''}
+      data-field-advance-sync="true"
       aria-label={advanceLabel || tCommon('en', 'next')}
       onPointerDown={(event) => {
+        if (event.pointerType === 'mouse' && event.button !== 0) return
+        skipClickRef.current = true
+        advanceFromTrustedGesture()
         event.preventDefault()
       }}
       onClick={(event) => {
         event.preventDefault()
         event.stopPropagation()
-        onAdvance()
+        if (skipClickRef.current) {
+          skipClickRef.current = false
+          return
+        }
+        advanceFromTrustedGesture()
       }}
       className="absolute right-0.5 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-sm font-bold text-cdl-success"
     >

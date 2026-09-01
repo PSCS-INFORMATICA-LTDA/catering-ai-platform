@@ -458,6 +458,28 @@
   opacity: 0.72;
 }
 
+@media screen {
+  .quote-proposal-signature--public .quote-proposal-public-cdl-logo-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .quote-proposal-signature--public .quote-proposal-public-cdl-logo {
+    height: 4rem;
+    width: 4rem;
+    max-height: 4rem;
+    max-width: 4rem;
+    object-fit: contain;
+    object-position: center;
+    background: transparent;
+  }
+
+  .quote-proposal-signature--public .quote-proposal-pscs-mark {
+    height: 1.1rem;
+  }
+}
+
 .quote-proposal-package-split {
   display: grid;
   grid-template-columns: 1fr;

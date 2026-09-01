@@ -95,20 +95,54 @@ function displayableFixedItems(items, groupItems) {
   })
 }
 
-test('REVIEW_ORDER_IMAGE_ITEMS_CHOICES_GARNISH', () => {
+test('REVIEW_ORDER_IMAGE_ITEMS_GARNISH_CHOICES', () => {
   const image = reviewSection.indexOf('data-review-package-image')
   const items = reviewSection.indexOf('data-review-package-items')
-  const choices = reviewSection.indexOf('data-review-included-choices')
   const garnish = reviewSection.indexOf('data-review-garnish')
+  const choices = reviewSection.indexOf('data-review-included-choices')
+  const additionals = reviewSection.indexOf("tw(loc, 'additionalItems')")
   assert.ok(image > 0, 'PACKAGE_IMAGE missing')
   assert.ok(items > image, 'PACKAGE_ITEMS must follow PACKAGE_IMAGE')
-  assert.ok(choices > items, 'INCLUDED_CHOICES must follow PACKAGE_ITEMS')
-  assert.ok(garnish > choices, 'GARNISH must follow INCLUDED_CHOICES')
-  const itemsBeforeChoices = reviewSection.indexOf("tw(loc, 'packageItems')")
-  const choicesTitle = reviewSection.indexOf("tw(loc, 'includedChoices')")
+  assert.ok(garnish > items, 'GARNISH must follow PACKAGE_ITEMS')
+  assert.ok(choices > garnish, 'INCLUDED_CHOICES must follow GARNISH')
+  assert.ok(additionals > choices, 'ADDITIONALS must follow INCLUDED_CHOICES')
+  const itemsTitle = reviewSection.indexOf("tw(loc, 'packageItems')")
   const garnishTitle = reviewSection.indexOf("tw(loc, 'garnish')")
-  assert.ok(itemsBeforeChoices > 0 && itemsBeforeChoices < choicesTitle)
-  assert.ok(choicesTitle < garnishTitle)
+  const choicesTitle = reviewSection.indexOf("tw(loc, 'includedChoices')")
+  assert.ok(itemsTitle > 0 && itemsTitle < garnishTitle)
+  assert.ok(garnishTitle < choicesTitle)
+})
+
+test('INCLUDED_CHOICES_SINGLE_BLOCK', () => {
+  const blocks = reviewSection.match(/data-review-included-choices/g) || []
+  assert.equal(blocks.length, 1, 'INCLUDED_CHOICES_BLOCK_COUNT')
+  const start = reviewSection.indexOf('data-review-included-choices')
+  const block = reviewSection.slice(start, reviewSection.indexOf('showAdditionalItems', start))
+  assert.match(block, /packageSelections\.map/)
+  assert.equal((reviewSection.match(/tw\(loc, 'includedChoices'\)/g) || []).length, 1)
+  const fixture = [
+    { groupId: 'LINGUICA', groupTitle: 'Escolha da linguiça', itemLabel: 'Tradicional Frango' },
+    { groupId: 'GARNISH', groupTitle: 'Escolha da Guarnição', itemLabel: 'Vinagrete' },
+  ]
+  assert.ok(fixture.length >= 2, 'SELECTION_LINE_COUNT')
+  assert.match(block, /selection\.groupTitle/)
+  assert.match(block, /selection\.itemLabel/)
+  assert.doesNotMatch(reviewSection, /escolhas do pacote/i)
+})
+
+test('SAUSAGE_AND_GARNISH_SAME_LIST', () => {
+  const start = reviewSection.indexOf('data-review-included-choices')
+  const block = reviewSection.slice(start, reviewSection.indexOf('showAdditionalItems', start))
+  assert.match(block, /<ul/)
+  assert.equal((block.match(/<ul/g) || []).length, 1)
+  assert.match(block, /packageSelections\.map/)
+})
+
+test('PACKAGE_FIXED_ITEMS_UNCHANGED', () => {
+  assert.match(mapper, /formatDisplayableFixedPackageItemsText/)
+  assert.match(mapper, /buildPackageSelectionLabels/)
+  assert.doesNotMatch(reviewSection, /formatDisplayableFixedPackageItemsText/)
+  assert.doesNotMatch(reviewSection, /buildPackageSelectionLabels/)
 })
 
 test('MAPPER_USES_DISPLAYABLE_FIXED_HELPER', () => {

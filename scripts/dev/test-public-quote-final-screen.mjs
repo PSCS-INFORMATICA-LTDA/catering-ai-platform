@@ -172,7 +172,7 @@ test('REQUIRED_HIGHLIGHT', () => {
 
 test('QUANTITY_BLANK_ZERO', () => {
   assert.match(wizard, /blankZero=\{isPublicMode\}/)
-  assert.match(wizard, /blankZero && next === 0 \? ''/)
+  assert.match(wizard, /if \(blankZero && next === 0\) return ''/)
   assert.match(wizard, /publicAdultsPlaceholder/)
 })
 

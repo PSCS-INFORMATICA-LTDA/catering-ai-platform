@@ -685,7 +685,7 @@ export default function PublicQuoteExperience({
           className="public-success-powered"
         >
           <span className="public-success-powered-label">{copy.poweredBy}</span>
-          <PscsOneMark size="footer" variant="full" className="shadow-sm" />
+          <PscsOneMark size="md" variant="full" className="shadow-sm" />
         </div>
       </footer>
       ) : null}

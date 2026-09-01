@@ -185,9 +185,10 @@ test('SUCCESS_CONTACTS_AFTER_VIDEO', () => {
   const summaryIndex = successScreen.indexOf('data-success-summary')
   assert.ok(logoIndex > -1)
   assert.ok(summaryIndex > logoIndex)
-  assert.ok(restartIndex > summaryIndex)
-  assert.ok(headingIndex > restartIndex)
-  assert.ok(contactsIndex > restartIndex)
+  assert.ok(headingIndex > summaryIndex)
+  assert.ok(restartIndex > headingIndex)
+  assert.ok(contactsIndex > summaryIndex)
+  assert.ok(contactsIndex < restartIndex)
 })
 
 test('SUCCESS_CONTACT_LABELS_REMOVED', () => {

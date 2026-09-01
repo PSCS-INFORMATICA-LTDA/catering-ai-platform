@@ -394,12 +394,14 @@ type FieldCompletion = 'filled' | 'empty'
 
 function focusWizardField(node: HTMLElement | null) {
   if (!node) return
-  // Focus first so iOS can still open the keyboard from the same gesture.
+  // Focus synchronously so iOS can open the keyboard from this gesture.
   node.focus({ preventScroll: true })
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-  node.scrollIntoView({
-    behavior: reduced ? 'auto' : 'smooth',
-    block: 'center',
+  requestAnimationFrame(() => {
+    node.scrollIntoView({
+      behavior: reduced ? 'auto' : 'smooth',
+      block: 'center',
+    })
   })
 }
 
@@ -437,6 +439,7 @@ function FieldCheck({
   advanceLabel?: string
   advanceKey?: string
 }) {
+  const skipClickRef = useRef(false)
   if (!show) return null
   if (!onAdvance) {
     return (
@@ -448,18 +451,34 @@ function FieldCheck({
       </span>
     )
   }
+  const advance = onAdvance
+
+  function advanceFromTrustedGesture() {
+    advance()
+  }
+
   return (
     <button
       type="button"
       data-field-advance-check={advanceKey || ''}
+      data-field-advance-sync="true"
       aria-label={advanceLabel || 'Next'}
       onPointerDown={(event) => {
+        if (event.pointerType === 'mouse' && event.button !== 0) return
+        // Focus the next field inside this trusted gesture, then keep the
+        // button from stealing focus (which would close the iOS keyboard).
+        skipClickRef.current = true
+        advanceFromTrustedGesture()
         event.preventDefault()
       }}
       onClick={(event) => {
         event.preventDefault()
         event.stopPropagation()
-        onAdvance()
+        if (skipClickRef.current) {
+          skipClickRef.current = false
+          return
+        }
+        advanceFromTrustedGesture()
       }}
       className="absolute right-0.5 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-sm font-bold text-cdl-success"
     >
@@ -2546,13 +2565,15 @@ export default function QuoteWizardCore({
   }
 
   function revealGuestChildrenAfterAdults() {
+    childrenUnder3InputRef.current?.focus({ preventScroll: true })
     const root = guestAddressTransitionRef.current
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    root?.scrollIntoView({
-      behavior: reduced ? 'auto' : 'smooth',
-      block: 'start',
+    requestAnimationFrame(() => {
+      root?.scrollIntoView({
+        behavior: reduced ? 'auto' : 'smooth',
+        block: 'start',
+      })
     })
-    childrenUnder3InputRef.current?.focus({ preventScroll: true })
   }
 
   function revealAddressAfterChildren() {

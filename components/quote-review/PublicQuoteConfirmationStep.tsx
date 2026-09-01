@@ -190,6 +190,7 @@ export default function PublicQuoteConfirmationStep({
             variant="confirmation"
             breakdown={breakdown}
             rulesVariant="summary"
+            publicReviewFooter
           />
         </div>
       ) : (

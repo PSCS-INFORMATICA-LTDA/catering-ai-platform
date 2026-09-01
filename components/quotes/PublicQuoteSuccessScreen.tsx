@@ -163,6 +163,58 @@ export default function PublicQuoteSuccessScreen({
           ) : null}
         </dl>
 
+        <div
+          className="public-success-contact-card"
+          data-success-contact-card
+        >
+          <div data-success-contacts className="public-success-contacts">
+            <p data-success-contact-heading className="public-success-contact-heading">
+              {copy.contactTeam}
+            </p>
+            <ul>
+              {contacts.phone || contacts.whatsappUrl ? (
+                <li>
+                  <a
+                    href={whatsappHref || undefined}
+                    target={contacts.whatsappUrl ? '_blank' : undefined}
+                    rel={contacts.whatsappUrl ? 'noreferrer' : undefined}
+                    data-success-whatsapp
+                    aria-label={phoneDisplay || copy.phone}
+                  >
+                    <WhatsAppIcon />
+                    <span>{phoneDisplay || companyName}</span>
+                  </a>
+                </li>
+              ) : null}
+              {contacts.email ? (
+                <li>
+                  <a
+                    href={`mailto:${contacts.email}`}
+                    data-success-email
+                    aria-label={contacts.email}
+                  >
+                    <span>{contacts.email}</span>
+                  </a>
+                </li>
+              ) : null}
+              {contacts.instagramUrl ? (
+                <li>
+                  <a
+                    href={contacts.instagramUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    data-success-instagram
+                    aria-label={contacts.instagramHandle || copy.instagram}
+                  >
+                    <InstagramIcon />
+                    <span>{contacts.instagramHandle || companyName}</span>
+                  </a>
+                </li>
+              ) : null}
+            </ul>
+          </div>
+        </div>
+
         <div className="public-success-actions">
           <Link
             href={restartHref}
@@ -172,55 +224,6 @@ export default function PublicQuoteSuccessScreen({
           >
             {copy.restart}
           </Link>
-        </div>
-      </section>
-
-      <section className="public-success-contact-block">
-        <div data-success-contacts className="public-success-contacts">
-          <p data-success-contact-heading className="public-success-contact-heading">
-            {copy.contactTeam}
-          </p>
-          <ul>
-            {contacts.phone || contacts.whatsappUrl ? (
-              <li>
-                <a
-                  href={whatsappHref || undefined}
-                  target={contacts.whatsappUrl ? '_blank' : undefined}
-                  rel={contacts.whatsappUrl ? 'noreferrer' : undefined}
-                  data-success-whatsapp
-                  aria-label={phoneDisplay || copy.phone}
-                >
-                  <WhatsAppIcon />
-                  <span>{phoneDisplay || companyName}</span>
-                </a>
-              </li>
-            ) : null}
-            {contacts.email ? (
-              <li>
-                <a
-                  href={`mailto:${contacts.email}`}
-                  data-success-email
-                  aria-label={contacts.email}
-                >
-                  <span>{contacts.email}</span>
-                </a>
-              </li>
-            ) : null}
-            {contacts.instagramUrl ? (
-              <li>
-                <a
-                  href={contacts.instagramUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  data-success-instagram
-                  aria-label={contacts.instagramHandle || copy.instagram}
-                >
-                  <InstagramIcon />
-                  <span>{contacts.instagramHandle || companyName}</span>
-                </a>
-              </li>
-            ) : null}
-          </ul>
         </div>
       </section>
     </main>
