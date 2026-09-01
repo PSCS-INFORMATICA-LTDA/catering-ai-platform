@@ -69,11 +69,12 @@ test('PICKER_PORTAL_DIALOG', () => {
   assert.match(field, /onChange=\{\(event\) => setQuery\(event\.target\.value\)\}/)
 })
 
-test('COUNTRY_SELECT_TARGET_AREA_CODE', () => {
+test('COUNTRY_SELECT_TARGET_NATIONAL_PHONE', () => {
   assert.match(field, /function selectCountry\(/)
   assert.match(field, /closePicker\(\{ restoreCountryFocus: false \}\)/)
-  assert.match(field, /areaCodeInputRef\.current\?\.focus\(/)
-  assert.match(field, /data-phone-area/)
+  assert.match(field, /nationalInputRef\.current\?\.focus\(/)
+  assert.match(field, /data-phone-national/)
+  assert.doesNotMatch(field, /data-phone-area/)
   assert.match(field, /countryButtonRef\.current\?\.focus\(\{ preventScroll: true \}\)/)
   assert.match(
     field,

@@ -87,7 +87,7 @@ test('CHILDREN_4_12_ENTER_TARGET = STREET_NUMBER', () => {
     /inputRef=\{children4To12InputRef\}[\s\S]{0,900}revealAddressAfterChildren\(\)/,
   )
   assert.match(wizard, /function revealAddressAfterChildren/)
-  assert.match(wizard, /numberField\?\.focus\(\{ preventScroll: true \}\)/)
+  assert.match(wizard, /focusWizardField\(streetNumberInputRef\.current\)/)
   assert.match(wizard, /streetNumberInputRef\.current/)
 })
 
@@ -106,6 +106,73 @@ test('ADDRESS_STACKED_PUBLIC_ONLY', () => {
   assert.match(address, /event-address-primary-row--stacked/)
   assert.match(css, /\.event-address-primary-row--stacked \{/)
   assert.match(css, /\.event-address-primary-row \{\n  display: grid;\n  grid-template-columns: minmax\(0, 30%\) minmax\(0, 1fr\)/)
+})
+
+test('FIELD_CHECK_OPTIONAL_ADVANCE', () => {
+  assert.match(wizard, /function FieldCheck\(/)
+  assert.match(wizard, /onAdvance\?: \(\) => void/)
+  assert.match(wizard, /if \(!onAdvance\) \{/)
+  assert.match(wizard, /pointer-events-none/)
+  assert.match(wizard, /data-field-advance-check/)
+  assert.match(wizard, /function commitAndAdvance\(\)/)
+  assert.match(wizard, /onCommit\?\.\(commitDraft\(\)\)/)
+  assert.match(wizard, /shouldAdvanceFromFieldBlur/)
+  assert.match(wizard, /related\.closest\('\[data-field-advance-check\]'\)/)
+})
+
+test('ADULTS_CHECK_CLICK_TARGET = CHILD_UNDER_3', () => {
+  assert.match(wizard, /advanceKey="adults"/)
+  assert.match(wizard, /advanceOnCheck=\{isPublicMode\}/)
+  assert.match(
+    wizard,
+    /advanceKey="adults"[\s\S]{0,400}revealGuestChildrenAfterAdults/,
+  )
+})
+
+test('CHILD_UNDER_3_0_CHECK_VISIBLE = YES', () => {
+  assert.match(wizard, /getExplicitCountCompletion/)
+  assert.match(wizard, /import \{ isExplicitNonNegativeInteger \}/)
+  assert.match(wizard, /advanceKey="children-under-3"/)
+  assert.match(
+    source('Lib/quoteGuestFields.ts'),
+    /export function isExplicitNonNegativeInteger/,
+  )
+})
+
+test('CHILD_UNDER_3_CHECK_CLICK_TARGET = CHILD_4_12', () => {
+  assert.match(
+    wizard,
+    /advanceKey="children-under-3"[\s\S]{0,400}focusWizardField\(children4To12InputRef\.current\)/,
+  )
+})
+
+test('CHILD_4_12_0_CHECK_VISIBLE = YES', () => {
+  assert.match(wizard, /advanceKey="children-4-12"/)
+  assert.match(
+    wizard,
+    /getExplicitCountCompletion\(\s*state\.children4To12Count/,
+  )
+})
+
+test('CHILD_4_12_CHECK_CLICK_TARGET = STREET_NUMBER', () => {
+  assert.match(
+    wizard,
+    /advanceKey="children-4-12"[\s\S]{0,400}revealAddressAfterChildren\(\)/,
+  )
+})
+
+test('STREET_NUMBER_CHECK_CLICK_TARGET = ADDRESS_SEARCH', () => {
+  assert.match(address, /showNumberAdvanceCheck = false/)
+  assert.match(wizard, /showNumberAdvanceCheck=\{isPublicMode\}/)
+  assert.match(address, /advanceKey="street-number"/)
+  assert.match(
+    address,
+    /onNumberCommit\?\.\(next\)/,
+  )
+  assert.match(
+    wizard,
+    /onNumberCommit=\{[\s\S]{0,220}focusWizardField\(addressSearchInputRef\.current\)/,
+  )
 })
 
 test('GOOGLE_PLACES_UNCHANGED', () => {

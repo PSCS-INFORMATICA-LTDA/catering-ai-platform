@@ -406,6 +406,7 @@ function focusWizardField(node: HTMLElement | null) {
 function shouldAdvanceFromFieldBlur(related: EventTarget | null) {
   if (!(related instanceof HTMLElement)) return true
   if (related.closest('[data-guest-field]')) return false
+  if (related.closest('[data-field-advance-check]')) return false
   if (related.matches('input, textarea, select, button, [href]')) return false
   return true
 }
@@ -425,15 +426,45 @@ function fieldCompletionClass(completion?: FieldCompletion) {
   return 'border-cdl-border bg-cdl-inset'
 }
 
-function FieldCheck({ show }: { show: boolean }) {
+function FieldCheck({
+  show,
+  onAdvance,
+  advanceLabel,
+  advanceKey,
+}: {
+  show: boolean
+  onAdvance?: () => void
+  advanceLabel?: string
+  advanceKey?: string
+}) {
   if (!show) return null
+  if (!onAdvance) {
+    return (
+      <span
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-cdl-success"
+        aria-hidden
+      >
+        ✓
+      </span>
+    )
+  }
   return (
-    <span
-      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-cdl-success"
-      aria-hidden
+    <button
+      type="button"
+      data-field-advance-check={advanceKey || ''}
+      aria-label={advanceLabel || 'Next'}
+      onPointerDown={(event) => {
+        event.preventDefault()
+      }}
+      onClick={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        onAdvance()
+      }}
+      className="absolute right-0.5 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-sm font-bold text-cdl-success"
     >
       ✓
-    </span>
+    </button>
   )
 }
 
@@ -1031,6 +1062,9 @@ function QuantityField({
   onCommit,
   enterKeyHint,
   guestField,
+  advanceOnCheck = false,
+  advanceLabel,
+  advanceKey,
 }: {
   label: string
   value: number | null
@@ -1048,6 +1082,9 @@ function QuantityField({
   onCommit?: (value: number | null) => void
   enterKeyHint?: React.HTMLAttributes<HTMLInputElement>['enterKeyHint']
   guestField?: boolean
+  advanceOnCheck?: boolean
+  advanceLabel?: string
+  advanceKey?: string
 }) {
   const displayValue = (next: number | null) => {
     if (next === null) return ''
@@ -1082,8 +1119,12 @@ function QuantityField({
     return next
   }
 
+  function commitAndAdvance() {
+    onCommit?.(commitDraft())
+  }
+
   return (
-    <label className={`flex flex-col gap-2 ${className}`}>
+    <div className={`flex flex-col gap-2 ${className}`}>
       <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
         {label}
       </WizardFieldLabel>
@@ -1095,6 +1136,7 @@ function QuantityField({
           pattern="[0-9]*"
           enterKeyHint={enterKeyHint}
           data-guest-field={guestField ? '' : undefined}
+          data-guest-input={advanceKey || undefined}
           value={draft}
           placeholder={placeholder}
           disabled={disabled}
@@ -1103,7 +1145,7 @@ function QuantityField({
             if (event.key !== 'Enter') return
             event.preventDefault()
             event.stopPropagation()
-            onCommit?.(commitDraft())
+            commitAndAdvance()
           }}
           onBlur={(event) => {
             setFocused(false)
@@ -1124,9 +1166,18 @@ function QuantityField({
           }}
           className={`w-full rounded-xl border px-4 py-3.5 pr-10 text-base text-cdl-fg shadow-cdl outline-none transition-colors placeholder:text-cdl-faint focus:border-cdl-accent-border disabled:cursor-not-allowed disabled:opacity-40 ${fieldCompletionClass(completion)}`}
         />
-        <FieldCheck show={completion === 'filled'} />
+        <FieldCheck
+          show={completion === 'filled'}
+          onAdvance={
+            advanceOnCheck && completion === 'filled'
+              ? commitAndAdvance
+              : undefined
+          }
+          advanceLabel={advanceLabel}
+          advanceKey={advanceKey}
+        />
       </div>
-    </label>
+    </div>
   )
 }
 
@@ -2505,11 +2556,7 @@ export default function QuoteWizardCore({
   }
 
   function revealAddressAfterChildren() {
-    const numberField = streetNumberInputRef.current
-    numberField?.focus({ preventScroll: true })
-    revealFloatingPanelWhenReady(
-      () => addressEntryRef.current || numberField,
-    )
+    focusWizardField(streetNumberInputRef.current)
   }
 
   function focusFirstPublicEventIssue() {
@@ -3413,6 +3460,9 @@ export default function QuoteWizardCore({
                   inputRef={adultsInputRef}
                   guestField
                   enterKeyHint={isPublicMode ? 'next' : undefined}
+                  advanceOnCheck={isPublicMode}
+                  advanceLabel={tCommon(uiLocale, 'next')}
+                  advanceKey="adults"
                   onCommit={
                     isPublicMode
                       ? (value) => {
@@ -3438,6 +3488,9 @@ export default function QuoteWizardCore({
                     inputRef={childrenUnder3InputRef}
                     guestField
                     enterKeyHint={isPublicMode ? 'next' : undefined}
+                    advanceOnCheck={isPublicMode}
+                    advanceLabel={tCommon(uiLocale, 'next')}
+                    advanceKey="children-under-3"
                     onCommit={
                       isPublicMode
                         ? (value) => {
@@ -3464,6 +3517,9 @@ export default function QuoteWizardCore({
                     inputRef={children4To12InputRef}
                     guestField
                     enterKeyHint={isPublicMode ? 'next' : undefined}
+                    advanceOnCheck={isPublicMode}
+                    advanceLabel={tCommon(uiLocale, 'next')}
+                    advanceKey="children-4-12"
                     onCommit={
                       isPublicMode
                         ? (value) => {
@@ -3492,6 +3548,7 @@ export default function QuoteWizardCore({
                 stackPrimaryFields={isPublicMode}
                 searchInputRef={addressSearchInputRef}
                 numberInputRef={streetNumberInputRef}
+                showNumberAdvanceCheck={isPublicMode}
                 onNumberCommit={
                   isPublicMode
                     ? (value) => {

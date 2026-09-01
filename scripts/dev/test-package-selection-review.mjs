@@ -36,6 +36,9 @@ function test(name, callback) {
 
 const mapper = source('components/quote-review/mapWizardToQuoteReview.ts')
 const helper = source('Lib/packageConfiguration.ts')
+const reviewSection = source(
+  'components/quote-review/QuoteReviewPackageCdlSection.tsx',
+)
 
 const PACKAGE_ID = 'pkg-bbqtrad'
 const packageItems = [
@@ -91,6 +94,22 @@ function displayableFixedItems(items, groupItems) {
     return true
   })
 }
+
+test('REVIEW_ORDER_IMAGE_ITEMS_CHOICES_GARNISH', () => {
+  const image = reviewSection.indexOf('data-review-package-image')
+  const items = reviewSection.indexOf('data-review-package-items')
+  const choices = reviewSection.indexOf('data-review-included-choices')
+  const garnish = reviewSection.indexOf('data-review-garnish')
+  assert.ok(image > 0, 'PACKAGE_IMAGE missing')
+  assert.ok(items > image, 'PACKAGE_ITEMS must follow PACKAGE_IMAGE')
+  assert.ok(choices > items, 'INCLUDED_CHOICES must follow PACKAGE_ITEMS')
+  assert.ok(garnish > choices, 'GARNISH must follow INCLUDED_CHOICES')
+  const itemsBeforeChoices = reviewSection.indexOf("tw(loc, 'packageItems')")
+  const choicesTitle = reviewSection.indexOf("tw(loc, 'includedChoices')")
+  const garnishTitle = reviewSection.indexOf("tw(loc, 'garnish')")
+  assert.ok(itemsBeforeChoices > 0 && itemsBeforeChoices < choicesTitle)
+  assert.ok(choicesTitle < garnishTitle)
+})
 
 test('MAPPER_USES_DISPLAYABLE_FIXED_HELPER', () => {
   assert.match(mapper, /formatDisplayableFixedPackageItemsText/)

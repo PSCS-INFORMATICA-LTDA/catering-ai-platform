@@ -996,8 +996,7 @@ body {
 
 .public-phone-national-row {
   display: grid;
-  grid-template-columns: minmax(5.25rem, 0.28fr) minmax(0, 1fr);
-  gap: 0.5rem;
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
 }
 

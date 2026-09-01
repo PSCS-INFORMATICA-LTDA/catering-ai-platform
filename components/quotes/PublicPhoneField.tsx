@@ -5,12 +5,10 @@ import { createPortal } from 'react-dom'
 import { tCommon } from '@/Lib/i18n/common'
 import { getQuoteStrings } from '@/Lib/quoteTranslations'
 import {
-  composeNationalFromAreaAndSubscriber,
   composePublicPhoneE164,
-  formatSubscriberPhoneDisplay,
+  formatNationalPhoneDisplay,
   isUsablePublicPhone,
   nationalDigitsOnly,
-  splitNationalIntoAreaAndSubscriber,
   splitPublicPhone,
 } from '@/Lib/publicQuote/phone'
 import {
@@ -68,21 +66,15 @@ export default function PublicPhoneField({
     branchCountry,
   })
   const parts = splitPublicPhone(value, defaultIso2)
-  const initialSplit = splitNationalIntoAreaAndSubscriber(
-    parts.iso2,
-    parts.nationalDigits,
-  )
   const [iso2, setIso2] = useState<string | null>(parts.iso2)
-  const [areaCode, setAreaCode] = useState(initialSplit.areaCode)
-  const [subscriber, setSubscriber] = useState(initialSplit.subscriberNumber)
+  const [national, setNational] = useState(parts.nationalDigits)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [portalReady, setPortalReady] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const countryButtonRef = useRef<HTMLButtonElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
-  const areaCodeInputRef = useRef<HTMLInputElement>(null)
-  const subscriberInputRef = useRef<HTMLInputElement>(null)
+  const nationalInputRef = useRef<HTMLInputElement>(null)
   const chosenIso2Ref = useRef<string | null>(parts.iso2)
 
   useEffect(() => {
@@ -93,15 +85,12 @@ export default function PublicPhoneField({
     const next = splitPublicPhone(value, defaultIso2)
     if (!String(value ?? '').trim()) {
       setIso2(chosenIso2Ref.current ?? next.iso2)
-      setAreaCode('')
-      setSubscriber('')
+      setNational('')
       return
     }
     chosenIso2Ref.current = next.iso2
-    const split = splitNationalIntoAreaAndSubscriber(next.iso2, next.nationalDigits)
     setIso2(next.iso2)
-    setAreaCode(split.areaCode)
-    setSubscriber(split.subscriberNumber)
+    setNational(next.nationalDigits)
   }, [value, defaultIso2])
 
   useEffect(() => {
@@ -158,41 +147,30 @@ export default function PublicPhoneField({
     () => filterPhoneCountries(query, language),
     [query, language],
   )
-  const national = composeNationalFromAreaAndSubscriber(areaCode, subscriber)
   const canonical = composePublicPhoneE164(iso2, national)
-  const displaySubscriber = formatSubscriberPhoneDisplay(iso2, subscriber)
-  const filled = Boolean(iso2 || areaCode || subscriber)
+  const displayNational = formatNationalPhoneDisplay(iso2, national)
+  const filled = Boolean(iso2 || national)
   const usable = Boolean(canonical && isUsablePublicPhone(canonical))
   const countryMissing = required && !iso2
   const nationalMissing = required && Boolean(iso2) && !national
+  const nationalLabel = `${t.phoneAreaCodeLabel} + ${t.phoneSubscriberLabel}`
 
-  function emit(
-    nextIso2: string | null,
-    nextArea: string,
-    nextSubscriber: string,
-  ) {
+  function emit(nextIso2: string | null, nextNational: string) {
+    const digits = nationalDigitsOnly(nextNational)
     chosenIso2Ref.current = nextIso2
     setIso2(nextIso2)
-    setAreaCode(nextArea)
-    setSubscriber(nextSubscriber)
-    const nextNational = composeNationalFromAreaAndSubscriber(
-      nextArea,
-      nextSubscriber,
-    )
-    onChange(composePublicPhoneE164(nextIso2, nextNational) || '')
+    setNational(digits)
+    onChange(composePublicPhoneE164(nextIso2, digits) || '')
   }
 
   function selectCountry(nextIso2: string) {
-    const nextSplit = splitNationalIntoAreaAndSubscriber(nextIso2, national)
-    emit(nextIso2, nextSplit.areaCode, nextSplit.subscriberNumber)
+    emit(nextIso2, national)
     closePicker({ restoreCountryFocus: false })
-    window.requestAnimationFrame(() => {
-      areaCodeInputRef.current?.focus()
-    })
+    nationalInputRef.current?.focus()
   }
 
-  function assignAreaNode(node: HTMLInputElement | null) {
-    areaCodeInputRef.current = node
+  function assignNationalNode(node: HTMLInputElement | null) {
+    nationalInputRef.current = node
     assignRef(inputRef, node)
   }
 
@@ -318,56 +296,24 @@ export default function PublicPhoneField({
         </div>
       </div>
 
-      <div
-        className="public-phone-national-row"
-        data-phone-national-row
-      >
+      <div className="public-phone-national-row" data-phone-national-row>
         <label className="flex min-w-0 flex-col gap-2">
           <span className="cdl-eyebrow">
-            {t.phoneAreaCodeLabel}
-            {required ? <PublicRequiredMark label={requiredLabel || ''} /> : null}
-          </span>
-          <input
-            ref={assignAreaNode}
-            data-phone-area
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            enterKeyHint="next"
-            autoComplete="tel-area-code"
-            value={areaCode}
-            placeholder={iso2 === 'BR' ? '11' : iso2 === 'US' ? '407' : ''}
-            onChange={(event) =>
-              emit(iso2, nationalDigitsOnly(event.target.value), subscriber)
-            }
-            onKeyDown={(event) => {
-              if (event.key !== 'Enter') return
-              event.preventDefault()
-              event.stopPropagation()
-              subscriberInputRef.current?.focus()
-            }}
-            className={`w-full rounded-xl border px-3 py-3.5 text-base text-cdl-fg shadow-cdl outline-none transition-colors placeholder:text-cdl-faint focus:border-cdl-accent-border ${
-              areaCode ? 'cdl-field-filled' : 'cdl-field-empty'
-            }`}
-          />
-        </label>
-        <label className="flex min-w-0 flex-col gap-2">
-          <span className="cdl-eyebrow">
-            {t.phoneSubscriberLabel}
+            {nationalLabel}
             {required ? <PublicRequiredMark label={requiredLabel || ''} /> : null}
           </span>
           <div className="relative">
             <input
-              ref={subscriberInputRef}
+              ref={assignNationalNode}
               data-phone-national
               type="tel"
               inputMode="tel"
               enterKeyHint="next"
               autoComplete="tel-national"
-              value={displaySubscriber}
+              value={displayNational}
               placeholder={t.publicPhonePlaceholder}
               onChange={(event) =>
-                emit(iso2, areaCode, nationalDigitsOnly(event.target.value))
+                emit(iso2, nationalDigitsOnly(event.target.value))
               }
               onKeyDown={(event) => {
                 if (event.key !== 'Enter') return

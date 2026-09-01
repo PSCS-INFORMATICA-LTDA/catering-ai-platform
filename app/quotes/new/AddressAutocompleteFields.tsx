@@ -70,15 +70,45 @@ function FieldLabel({
   )
 }
 
-function FieldCheck({ show }: { show: boolean }) {
+function FieldCheck({
+  show,
+  onAdvance,
+  advanceLabel,
+  advanceKey,
+}: {
+  show: boolean
+  onAdvance?: () => void
+  advanceLabel?: string
+  advanceKey?: string
+}) {
   if (!show) return null
+  if (!onAdvance) {
+    return (
+      <span
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-cdl-success"
+        aria-hidden
+      >
+        ✓
+      </span>
+    )
+  }
   return (
-    <span
-      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-cdl-success"
-      aria-hidden
+    <button
+      type="button"
+      data-field-advance-check={advanceKey || ''}
+      aria-label={advanceLabel || tCommon('en', 'next')}
+      onPointerDown={(event) => {
+        event.preventDefault()
+      }}
+      onClick={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        onAdvance()
+      }}
+      className="absolute right-0.5 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-sm font-bold text-cdl-success"
     >
       ✓
-    </span>
+    </button>
   )
 }
 
@@ -203,6 +233,7 @@ export default function AddressAutocompleteFields({
   onPlaceSelected,
   onNumberCommit,
   stackPrimaryFields = false,
+  showNumberAdvanceCheck = false,
 }: {
   values: AddressValues
   onChange: (patch: Partial<AddressValues>) => void
@@ -233,6 +264,7 @@ export default function AddressAutocompleteFields({
   onPlaceSelected?: (info: { addressNumber: string }) => void
   onNumberCommit?: (value: string) => void
   stackPrimaryFields?: boolean
+  showNumberAdvanceCheck?: boolean
 }) {
   const loc: QuoteLanguage = language === 'en' || language === 'es' ? language : 'pt'
   const copy = ADDRESS_COPY[loc]
@@ -434,33 +466,49 @@ export default function AddressAutocompleteFields({
         }`}
         data-address-primary-stacked={stackPrimaryFields ? 'true' : 'false'}
       >
-      <label className="event-address-number-field flex min-w-0 flex-col gap-2">
+      <div className="event-address-number-field flex min-w-0 flex-col gap-2">
         <FieldLabel required={markRequired} requiredLabel={requiredLabel}>
           {tCommon(loc, 'streetNumber')}
         </FieldLabel>
-        <input
-          ref={numberInputRef}
-          data-address-number
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          enterKeyHint="next"
-          value={values.addressNumber}
-          placeholder={placeholders?.number}
-          onChange={(event) => onChange({ addressNumber: event.target.value })}
-          onKeyDown={(event) => {
-            if (event.key !== 'Enter') return
-            event.preventDefault()
-            event.stopPropagation()
-            const next = event.currentTarget.value.trim()
-            if (!next) return
-            onNumberCommit?.(next)
-          }}
-          className={getInputClassName(
-            values.addressNumber ? 'filled' : 'empty',
-          )}
-        />
-      </label>
+        <div className="relative">
+          <input
+            ref={numberInputRef}
+            data-address-number
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            enterKeyHint="next"
+            value={values.addressNumber}
+            placeholder={placeholders?.number}
+            onChange={(event) => onChange({ addressNumber: event.target.value })}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter') return
+              event.preventDefault()
+              event.stopPropagation()
+              const next = event.currentTarget.value.trim()
+              if (!next) return
+              onNumberCommit?.(next)
+            }}
+            className={getInputClassName(
+              values.addressNumber ? 'filled' : 'empty',
+            )}
+          />
+          <FieldCheck
+            show={showNumberAdvanceCheck && Boolean(values.addressNumber.trim())}
+            onAdvance={
+              showNumberAdvanceCheck
+                ? () => {
+                    const next = values.addressNumber.trim()
+                    if (!next) return
+                    onNumberCommit?.(next)
+                  }
+                : undefined
+            }
+            advanceLabel={tCommon(loc, 'next')}
+            advanceKey="street-number"
+          />
+        </div>
+      </div>
 
       <label className="event-address-search-field flex min-w-0 flex-col gap-2">
         <FieldLabel required={markRequired} requiredLabel={requiredLabel}>
