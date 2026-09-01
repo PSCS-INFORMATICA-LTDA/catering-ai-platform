@@ -228,6 +228,9 @@ type QuoteStrings = {
     phoneCountryPlaceholder: string
     phoneCountrySearch: string
     phoneCountryRequired: string
+    phoneCountryDdiLabel: string
+    phoneAreaCodeLabel: string
+    phoneSubscriberLabel: string
     phoneNationalRequired: string
     phoneInvalidSplit: string
     publicAddressPlaceholder: string
@@ -702,6 +705,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       phoneCountryPlaceholder: 'DDI',
       phoneCountrySearch: 'Buscar país ou DDI',
       phoneCountryRequired: 'Selecione o país / DDI.',
+      phoneCountryDdiLabel: 'País / DDI',
+      phoneAreaCodeLabel: 'DDD',
+      phoneSubscriberLabel: 'Número',
       phoneNationalRequired: 'Informe DDD e número.',
       phoneInvalidSplit: 'Telefone incompleto. Confira o DDI e o número.',
       publicAddressPlaceholder: 'Ex.: 123 Example Ave',
@@ -1207,6 +1213,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       phoneCountryPlaceholder: 'Code',
       phoneCountrySearch: 'Search country or code',
       phoneCountryRequired: 'Select the country / calling code.',
+      phoneCountryDdiLabel: 'Country / code',
+      phoneAreaCodeLabel: 'Area code',
+      phoneSubscriberLabel: 'Phone number',
       phoneNationalRequired: 'Enter the area code and number.',
       phoneInvalidSplit: 'Incomplete phone. Check the calling code and number.',
       publicAddressPlaceholder: 'Ex.: 123 Example Ave',
@@ -1712,6 +1721,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       phoneCountryPlaceholder: 'DDI',
       phoneCountrySearch: 'Buscar país o código',
       phoneCountryRequired: 'Seleccione el país / código.',
+      phoneCountryDdiLabel: 'País / código',
+      phoneAreaCodeLabel: 'Código de área',
+      phoneSubscriberLabel: 'Número',
       phoneNationalRequired: 'Informe el área y el número.',
       phoneInvalidSplit: 'Teléfono incompleto. Revise el código y el número.',
       publicAddressPlaceholder: 'Ej.: 123 Example Ave',

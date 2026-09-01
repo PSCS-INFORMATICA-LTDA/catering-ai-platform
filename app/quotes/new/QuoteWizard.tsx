@@ -1311,6 +1311,7 @@ export default function QuoteWizardCore({
   const firstNameInputRef = useRef<HTMLInputElement>(null)
   const lastNameInputRef = useRef<HTMLInputElement>(null)
   const phoneInputRef = useRef<HTMLInputElement>(null)
+  const emailInputRef = useRef<HTMLInputElement>(null)
   const adultsInputRef = useRef<HTMLInputElement>(null)
   const childrenUnder3InputRef = useRef<HTMLInputElement>(null)
   const children4To12InputRef = useRef<HTMLInputElement>(null)
@@ -3220,6 +3221,9 @@ export default function QuoteWizardCore({
                   inputRef={phoneInputRef}
                   allowedCountries={publicContext?.allowedCountries}
                   branchCountry={publicContext?.branchCountry}
+                  onValidAdvance={() =>
+                    focusWizardField(emailInputRef.current)
+                  }
                   onChange={(value) =>
                     updateState({
                       customerDraftPhone: value,
@@ -3257,6 +3261,18 @@ export default function QuoteWizardCore({
                 })`}
                 value={state.customerDraftEmail}
                 type="email"
+                inputRef={emailInputRef}
+                enterKeyHint={isPublicMode ? 'next' : undefined}
+                onKeyDown={
+                  isPublicMode
+                    ? (event) => {
+                        if (event.key !== 'Enter') return
+                        event.preventDefault()
+                        event.stopPropagation()
+                        goNext()
+                      }
+                    : undefined
+                }
                 onChange={(value) =>
                   updateState({ customerDraftEmail: value })
                 }
@@ -3473,6 +3489,7 @@ export default function QuoteWizardCore({
                 {w.eventAddressSection}
               </p>
               <AddressAutocompleteFields
+                stackPrimaryFields={isPublicMode}
                 searchInputRef={addressSearchInputRef}
                 numberInputRef={streetNumberInputRef}
                 onNumberCommit={

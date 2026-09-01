@@ -1,8 +1,7 @@
 import type { QuoteTotals } from '@/Lib/calculateQuoteTotals'
 import {
-  formatPackageItemsText,
+  formatDisplayableFixedPackageItemsText,
   formatPackageSideItemsText,
-  getPackageItemsForPackage,
   getPackageSideItemsForPackage,
   type PackageItem,
   type PackageSideItem,
@@ -13,7 +12,6 @@ import {
   buildPackageSelectionLabels,
   getPackageOptionGroupsForPackage,
   isCustomPackage,
-  resolvePackageItemsWithSelections,
   type PackageOptionGroupItem,
   type PackageOptionGroupRecord,
 } from '@/Lib/packageOptionGroups'
@@ -114,31 +112,30 @@ export function mapWizardToQuoteReview(
     language: lang,
   })
 
-  const configuredItems =
-    state.packageId && input.packageItems
-      ? getPackageItemsForPackage(state.packageId, input.packageItems)
-      : []
   const configuredSides =
     state.packageId && input.packageSideItems
       ? getPackageSideItemsForPackage(state.packageId, input.packageSideItems)
       : []
 
-  const baseItemsText =
-    configuredItems.length > 0
-      ? formatPackageItemsText(configuredItems, lang)
-      : getPackageItemsDescription(input.selectedPackage, lang)
+  const configuredPackageId = state.packageId?.trim() || ''
+  const hasConfiguredPackageItems = Boolean(
+    configuredPackageId && (input.packageItems?.length ?? 0) > 0,
+  )
+  const displayableFixedItemsText = hasConfiguredPackageItems
+    ? formatDisplayableFixedPackageItemsText(
+        configuredPackageId,
+        input.packageItems ?? [],
+        lang,
+        {
+          optionGroups: input.packageOptionGroups,
+          optionGroupItems: input.packageOptionGroupItems,
+        },
+      )
+    : ''
 
-  const resolvedItemsDescription =
-    input.selectedPackage && baseItemsText
-      ? packageSelectionLabels.length > 0
-        ? resolvePackageItemsWithSelections(
-            baseItemsText,
-            state.packageSelections,
-            packageGroups,
-            lang,
-          )
-        : baseItemsText
-      : null
+  const resolvedItemsDescription = hasConfiguredPackageItems
+    ? displayableFixedItemsText || null
+    : getPackageItemsDescription(input.selectedPackage, lang) || null
 
   const resolvedGarnishDescription =
     configuredSides.length > 0
@@ -148,9 +145,10 @@ export function mapWizardToQuoteReview(
   const packageSummary = packageSummaryBase
     ? {
         ...packageSummaryBase,
-        packageItemsDescription:
-          resolvedItemsDescription ??
-          packageSummaryBase.packageItemsDescription,
+        packageItemsDescription: hasConfiguredPackageItems
+          ? displayableFixedItemsText || null
+          : resolvedItemsDescription ??
+            packageSummaryBase.packageItemsDescription,
         garnishDescription:
           resolvedGarnishDescription ??
           packageSummaryBase.garnishDescription,

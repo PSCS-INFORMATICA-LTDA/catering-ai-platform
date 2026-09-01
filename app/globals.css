@@ -994,11 +994,22 @@ body {
   }
 }
 
+.public-phone-national-row {
+  display: grid;
+  grid-template-columns: minmax(5.25rem, 0.28fr) minmax(0, 1fr);
+  gap: 0.5rem;
+  min-width: 0;
+}
+
 .event-address-primary-row {
   display: grid;
   grid-template-columns: minmax(0, 30%) minmax(0, 1fr);
   gap: 0.75rem;
   min-width: 0;
+}
+
+.event-address-primary-row--stacked {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .event-address-number-field,

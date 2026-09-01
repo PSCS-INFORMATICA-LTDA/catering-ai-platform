@@ -202,6 +202,7 @@ export default function AddressAutocompleteFields({
   searchInputRef,
   onPlaceSelected,
   onNumberCommit,
+  stackPrimaryFields = false,
 }: {
   values: AddressValues
   onChange: (patch: Partial<AddressValues>) => void
@@ -231,6 +232,7 @@ export default function AddressAutocompleteFields({
   searchInputRef?: React.RefObject<HTMLInputElement | null>
   onPlaceSelected?: (info: { addressNumber: string }) => void
   onNumberCommit?: (value: string) => void
+  stackPrimaryFields?: boolean
 }) {
   const loc: QuoteLanguage = language === 'en' || language === 'es' ? language : 'pt'
   const copy = ADDRESS_COPY[loc]
@@ -426,7 +428,12 @@ export default function AddressAutocompleteFields({
 
   return (
     <div className={`grid grid-cols-1 gap-4 lg:grid-cols-12 ${className}`}>
-      <div className="event-address-primary-row lg:col-span-12">
+      <div
+        className={`event-address-primary-row lg:col-span-12${
+          stackPrimaryFields ? ' event-address-primary-row--stacked' : ''
+        }`}
+        data-address-primary-stacked={stackPrimaryFields ? 'true' : 'false'}
+      >
       <label className="event-address-number-field flex min-w-0 flex-col gap-2">
         <FieldLabel required={markRequired} requiredLabel={requiredLabel}>
           {tCommon(loc, 'streetNumber')}

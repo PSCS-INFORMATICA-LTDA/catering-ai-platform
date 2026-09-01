@@ -238,3 +238,58 @@ export function formatNationalPhoneDisplay(
   }
   return digits
 }
+
+const NANP_AREA_ISO2 = new Set(['US', 'CA', 'PR', 'DO'])
+
+export function getPublicPhoneAreaHintLength(
+  iso2: string | null | undefined,
+): number | null {
+  const country = getPhoneCountry(iso2)
+  if (!country) return null
+  if (country.iso2 === 'BR') return 2
+  if (NANP_AREA_ISO2.has(country.iso2)) return 3
+  return null
+}
+
+export function splitNationalIntoAreaAndSubscriber(
+  iso2: string | null | undefined,
+  nationalRaw: string | null | undefined,
+): { areaCode: string; subscriberNumber: string } {
+  const digits = nationalDigitsOnly(nationalRaw)
+  const areaLen = getPublicPhoneAreaHintLength(iso2)
+  if (areaLen && digits.length >= areaLen) {
+    return {
+      areaCode: digits.slice(0, areaLen),
+      subscriberNumber: digits.slice(areaLen),
+    }
+  }
+  if (areaLen) {
+    return { areaCode: digits, subscriberNumber: '' }
+  }
+  return { areaCode: '', subscriberNumber: digits }
+}
+
+export function composeNationalFromAreaAndSubscriber(
+  areaCode: string | null | undefined,
+  subscriberNumber: string | null | undefined,
+): string {
+  return `${nationalDigitsOnly(areaCode)}${nationalDigitsOnly(subscriberNumber)}`
+}
+
+export function formatSubscriberPhoneDisplay(
+  iso2: string | null | undefined,
+  subscriberRaw: string | null | undefined,
+): string {
+  const digits = nationalDigitsOnly(subscriberRaw)
+  if (!digits) return ''
+  const country = getPhoneCountry(iso2)
+  if (country?.iso2 === 'BR') {
+    if (digits.length <= 4) return digits
+    return `${digits.slice(0, -4)}-${digits.slice(-4)}`
+  }
+  if (country && NANP_AREA_ISO2.has(country.iso2)) {
+    if (digits.length <= 3) return digits
+    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}`
+  }
+  return digits
+}
