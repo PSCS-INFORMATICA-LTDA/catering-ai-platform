@@ -1,5 +1,8 @@
 /**
- * Real click on event ✓ buttons. Requires a running public quote server.
+ * Real click on event guest ✓ labels. Requires a running public quote server.
+ *
+ * AUTOMATION_IOS_KEYBOARD_PROOF: NOT POSSIBLE
+ * These checks prove HTML targets and document.activeElement only.
  *
  * Run: PUBLIC_QUOTE_BASE=http://127.0.0.1:3122 npm run test:dev:public-event-advance-check
  */
@@ -104,11 +107,17 @@ try {
     tag: el.tagName,
     htmlFor: el.getAttribute('for'),
     mode: el.getAttribute('data-field-advance-mode'),
+    sync: el.getAttribute('data-field-advance-sync'),
   }))
   test('ADULTS_CHECK_ELEMENT = LABEL', adultsMeta.tag === 'LABEL', JSON.stringify(adultsMeta))
   test(
     'ADULTS_CHECK_FOR = public-event-child-under-3',
     adultsMeta.htmlFor === 'public-event-child-under-3',
+    JSON.stringify(adultsMeta),
+  )
+  test(
+    'ADULTS_CHECK_SYNC = NATIVE_LABEL',
+    adultsMeta.sync === 'native-label',
     JSON.stringify(adultsMeta),
   )
   const targetChild3 = await page.$('#public-event-child-under-3')
@@ -237,6 +246,7 @@ try {
     el.getAttribute('data-address-primary-stacked'),
   )
   test('ADDRESS_STACKED_PUBLIC = YES', stacked === 'true')
+  test('AUTOMATION_IOS_KEYBOARD_PROOF = NOT POSSIBLE', true)
 } catch (error) {
   failed += 1
   console.error(`FAIL  runtime — ${error instanceof Error ? error.message : error}`)

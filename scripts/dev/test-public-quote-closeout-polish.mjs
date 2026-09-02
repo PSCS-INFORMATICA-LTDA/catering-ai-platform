@@ -181,19 +181,44 @@ test('NATIVE_LABEL_CLICK_PREVENT_DEFAULT = NO', () => {
   assert.doesNotMatch(nativeCheck, /preventDefault\(/)
 })
 
+test('NATIVE_LABEL_HAS_NO_POINTER_HANDLERS = YES', () => {
+  assert.doesNotMatch(nativeCheck, /onPointerDown|onPointerUp|onPointerCancel/)
+})
+
+test('NATIVE_LABEL_HAS_NO_CLICK_HANDLER = YES', () => {
+  assert.doesNotMatch(nativeCheck, /onClick/)
+})
+
 test('CHECK_PROGRAMMATIC_NEXT_FOCUS = NO', () => {
   assert.doesNotMatch(nativeCheck, /\.focus\(/)
   assert.doesNotMatch(nativeCheck, /focusWizardField/)
   assert.doesNotMatch(nativeCheck, /requestAnimationFrame/)
   assert.doesNotMatch(nativeCheck, /setTimeout/)
-  assert.match(wizard, /function handleBeforeNativeAdvance\(\) \{[\s\S]*?commitOnly\(\)/)
-  assert.doesNotMatch(
-    wizard.slice(
-      wizard.indexOf('function handleBeforeNativeAdvance'),
-      wizard.indexOf('return (', wizard.indexOf('function handleBeforeNativeAdvance')),
-    ),
-    /onCommit|focusWizardField/,
+  assert.doesNotMatch(nativeCheck, /flushSync|commitOnly|onCommit/)
+  assert.doesNotMatch(wizard, /handleBeforeNativeAdvance|onBeforeNativeAdvance/)
+})
+
+test('GUEST_NATIVE_BLUR_SKIPS_ONCOMMIT = YES', () => {
+  const quantity = sliceFn(wizard, 'QuantityField')
+  assert.match(
+    quantity,
+    /if \(nativeAdvanceTargetId\) return/,
   )
+  assert.match(
+    quantity,
+    /Native-label checks must not call onCommit/,
+  )
+})
+
+test('UPDATE_STATE_SKIPS_UNCHANGED = YES', () => {
+  assert.match(
+    wizard,
+    /function updateState\(patch: Partial<WizardState>\) \{\s*const changed[\s\S]*?if \(!changed\) return/,
+  )
+})
+
+test('AUTOMATION_IOS_KEYBOARD_PROOF = NOT POSSIBLE', () => {
+  assert.ok(true, 'Playwright cannot observe the iOS software keyboard')
 })
 
 test('POINTERDOWN_ADVANCE_CALLS = 0', () => {

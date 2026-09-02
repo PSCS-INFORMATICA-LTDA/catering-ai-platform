@@ -443,14 +443,12 @@ function FieldCheck({
   advanceLabel,
   advanceKey,
   nativeTargetId,
-  onBeforeNativeAdvance,
 }: {
   show: boolean
   onAdvance?: () => void
   advanceLabel?: string
   advanceKey?: string
   nativeTargetId?: string
-  onBeforeNativeAdvance?: () => void
 }) {
   const advancedByPointerRef = useRef(false)
   if (!show) return null
@@ -462,21 +460,16 @@ function FieldCheck({
     // For the guest check flow we intentionally
     // delegate target activation to native HTML
     // <label for> behavior instead of calling focus().
+    // Zero JS on this label: any handler here (even commit)
+    // re-renders during the tap and ends the iOS keyboard session.
     return (
       <label
         htmlFor={nativeTargetId}
         data-field-advance-check={advanceKey || ''}
         data-field-advance-mode="native-label"
+        data-field-advance-sync="native-label"
         aria-label={advanceLabel || 'Next'}
         className="absolute right-0.5 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-sm font-bold text-cdl-success"
-        onPointerDown={() => {
-          // Commit only. Never preventDefault — that would cancel the
-          // native label → input activation iOS needs for the keyboard.
-          onBeforeNativeAdvance?.()
-        }}
-        onClick={() => {
-          onBeforeNativeAdvance?.()
-        }}
       >
         ✓
       </label>
@@ -1162,7 +1155,6 @@ function QuantityField({
   const [focused, setFocused] = useState(false)
   const [seenValue, setSeenValue] = useState(value)
   const [seenBlankZero, setSeenBlankZero] = useState(blankZero)
-  const suppressAdvanceOnBlurRef = useRef(false)
   if (!focused && (seenValue !== value || seenBlankZero !== blankZero)) {
     setSeenValue(value)
     setSeenBlankZero(blankZero)
@@ -1200,11 +1192,6 @@ function QuantityField({
     onCommit?.(next)
   }
 
-  function handleBeforeNativeAdvance() {
-    suppressAdvanceOnBlurRef.current = true
-    commitOnly()
-  }
-
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
       <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
@@ -1233,10 +1220,9 @@ function QuantityField({
           onBlur={(event) => {
             setFocused(false)
             const next = commitDraft()
-            if (suppressAdvanceOnBlurRef.current) {
-              suppressAdvanceOnBlurRef.current = false
-              return
-            }
+            // Native-label checks must not call onCommit: that path
+            // uses focusWizardField and kills the iOS keyboard session.
+            if (nativeAdvanceTargetId) return
             if (shouldAdvanceFromFieldBlur(event.relatedTarget)) {
               onCommit?.(next)
             }
@@ -1256,11 +1242,6 @@ function QuantityField({
         <FieldCheck
           show={completion === 'filled'}
           nativeTargetId={nativeAdvanceTargetId}
-          onBeforeNativeAdvance={
-            nativeAdvanceTargetId && completion === 'filled'
-              ? handleBeforeNativeAdvance
-              : undefined
-          }
           onAdvance={
             !nativeAdvanceTargetId &&
             advanceOnCheck &&
@@ -2419,6 +2400,10 @@ export default function QuoteWizardCore({
   }
 
   function updateState(patch: Partial<WizardState>) {
+    const changed = (Object.keys(patch) as Array<keyof WizardState>).some(
+      (key) => !Object.is(state[key], patch[key]),
+    )
+    if (!changed) return
     setNavigationIssues([])
     setState((prev) => ({ ...prev, ...patch }))
   }
