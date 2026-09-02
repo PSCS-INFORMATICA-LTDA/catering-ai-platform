@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import AdminCompactMenu from '../../../components/quotes/AdminCompactMenu'
 import { useTenant } from '../../../components/tenant/TenantProvider'
 import CatalogImageFrame from '../../../components/CatalogImageFrame'
@@ -396,6 +397,14 @@ function focusWizardField(node: HTMLElement | null) {
   if (!node) return
   // Focus synchronously so iOS can open the keyboard from this gesture.
   node.focus({ preventScroll: true })
+  if (node instanceof HTMLInputElement) {
+    const end = node.value.length
+    try {
+      node.setSelectionRange(end, end)
+    } catch {
+      /* some input types reject selection */
+    }
+  }
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
   requestAnimationFrame(() => {
     node.scrollIntoView({
@@ -459,11 +468,9 @@ function FieldCheck({
       data-field-advance-sync="click"
       aria-label={advanceLabel || 'Next'}
       onPointerDown={(event) => {
-        // Mouse only: keep the current field focused. Never advance here —
-        // iOS needs the following click to open the software keyboard.
-        if (event.pointerType === 'mouse' && event.button === 0) {
-          event.preventDefault()
-        }
+        // Keep the current input focused so iOS does not close the keyboard.
+        // Advance stays on click, which is the trusted gesture for next focus.
+        if (event.button === 0) event.preventDefault()
       }}
       onClick={(event) => {
         event.preventDefault()
@@ -1129,7 +1136,11 @@ function QuantityField({
   }
 
   function commitAndAdvance() {
-    onCommit?.(commitDraft())
+    let next: number | null = null
+    flushSync(() => {
+      next = commitDraft()
+    })
+    onCommit?.(next)
   }
 
   return (
@@ -2555,15 +2566,7 @@ export default function QuoteWizardCore({
   }
 
   function revealGuestChildrenAfterAdults() {
-    childrenUnder3InputRef.current?.focus({ preventScroll: true })
-    const root = guestAddressTransitionRef.current
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    requestAnimationFrame(() => {
-      root?.scrollIntoView({
-        behavior: reduced ? 'auto' : 'smooth',
-        block: 'start',
-      })
-    })
+    focusWizardField(childrenUnder3InputRef.current)
   }
 
   function revealAddressAfterChildren() {

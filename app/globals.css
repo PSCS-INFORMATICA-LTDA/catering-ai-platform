@@ -3283,6 +3283,10 @@ body {
   color: #f5d0c5;
 }
 
+.public-success-contacts [data-success-email] .public-success-contact-icon {
+  color: #9ec5ff;
+}
+
 .public-success-actions {
   display: flex;
   flex-direction: column;

@@ -209,6 +209,12 @@ test('SUCCESS_WHATSAPP_LINK', () => {
   assert.equal(cdl.whatsappUrl, 'https://wa.me/14079152242')
 })
 
+test('SUCCESS_EMAIL_ICON', () => {
+  assert.match(successScreen, /data-success-email/)
+  assert.match(successScreen, /<EmailIcon \/>/)
+  assert.match(successScreen, /function EmailIcon/)
+})
+
 test('SUCCESS_INSTAGRAM_LINK', () => {
   assert.match(successScreen, /data-success-instagram/)
   assert.match(successScreen, /aria-label=\{contacts\.instagramHandle/)

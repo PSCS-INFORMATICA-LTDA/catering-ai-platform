@@ -46,6 +46,17 @@ function InstagramIcon() {
   )
 }
 
+function EmailIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="public-success-contact-icon" aria-hidden>
+      <path
+        fill="currentColor"
+        d="M4.5 5.25h15A1.75 1.75 0 0 1 21.25 7v10A1.75 1.75 0 0 1 19.5 18.75h-15A1.75 1.75 0 0 1 2.75 17V7A1.75 1.75 0 0 1 4.5 5.25m.3 1.5 6.7 4.85a.85.85 0 0 0 1 0l6.7-4.85zm14.95 1.66-6.42 4.65a2.35 2.35 0 0 1-2.66 0L4.25 8.41V16.75h15.5z"
+      />
+    </svg>
+  )
+}
+
 export default function PublicQuoteSuccessScreen({
   locale,
   companySlug,
@@ -193,6 +204,7 @@ export default function PublicQuoteSuccessScreen({
                     data-success-email
                     aria-label={contacts.email}
                   >
+                    <EmailIcon />
                     <span>{contacts.email}</span>
                   </a>
                 </li>

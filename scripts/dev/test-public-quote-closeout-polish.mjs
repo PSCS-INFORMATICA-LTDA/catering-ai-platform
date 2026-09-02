@@ -123,7 +123,7 @@ test('CHECK_ACTIVATION_PATH = CLICK', () => {
     wizardCheck.indexOf('onClick'),
   )
   assert.doesNotMatch(pointerBlock, /advance\(/)
-  assert.match(pointerBlock, /pointerType === 'mouse'/)
+  assert.match(pointerBlock, /event.preventDefault\(\)/)
   assert.match(wizardCheck, /data-field-advance-sync="click"/)
   const clickBlock = wizardCheck.slice(wizardCheck.indexOf('onClick'))
   assert.match(clickBlock, /advance\(\)/)
@@ -131,11 +131,14 @@ test('CHECK_ACTIVATION_PATH = CLICK', () => {
 
 test('FOCUS_SYNCHRONOUS = YES', () => {
   assert.match(focusFn, /node\.focus\(\{ preventScroll: true \}\)/)
+  assert.match(focusFn, /setSelectionRange/)
   const focusAt = focusFn.indexOf('node.focus({ preventScroll: true })')
   const rafAt = focusFn.indexOf('requestAnimationFrame')
   assert.ok(rafAt > focusAt, 'RAF may only follow the sync focus')
   assert.doesNotMatch(focusFn, /setTimeout/)
   assert.doesNotMatch(wizardCheck, /setTimeout|requestAnimationFrame\(|\.then\(|await |useEffect/)
+  assert.match(wizard, /flushSync/)
+  assert.match(wizard, /function commitAndAdvance\(\) \{[\s\S]*?flushSync\(/)
 })
 
 test('ONE_TAP_ONE_ADVANCE = YES', () => {
@@ -269,6 +272,17 @@ test('SUCCESS_CONTACT_SOURCE_CANONICAL', () => {
   )
   assert.equal(contacts.phone, '+14079152242')
   assert.equal(contacts.email, 'team@example.com')
+})
+
+test('SUCCESS_EMAIL_ICON_ADDED = YES', () => {
+  assert.match(successScreen, /function EmailIcon/)
+  assert.match(successScreen, /data-success-email[\s\S]{0,220}<EmailIcon \/>/)
+  assert.match(successScreen, /<WhatsAppIcon \/>/)
+  assert.match(successScreen, /<InstagramIcon \/>/)
+  assert.match(
+    css,
+    /\.public-success-contacts \[data-success-email\] \.public-success-contact-icon/,
+  )
 })
 
 test('SUCCESS_CONTACT_LEFT_ALIGNED = YES', () => {
