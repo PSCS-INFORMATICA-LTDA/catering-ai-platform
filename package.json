@@ -100,6 +100,7 @@
     "test:dev:public-quote-included-extra-visibility": "node --experimental-strip-types scripts/dev/test-public-quote-included-extra-visibility.mjs",
     "test:dev:public-quote-event-extras": "node --experimental-strip-types scripts/dev/test-public-quote-event-extras-hardening.mjs",
     "test:dev:public-quote-v5": "node --experimental-strip-types scripts/dev/test-public-quote-v5-contact-extras.mjs",
+    "test:dev:brasinha-foundation": "node --experimental-strip-types scripts/dev/test-brasinha-foundation-v0.mjs",
     "test:dev:public-phone-country-picker": "node --experimental-strip-types scripts/dev/test-public-phone-country-picker.mjs",
     "test:dev:public-phone-split-focus": "node --experimental-strip-types scripts/dev/test-public-phone-split-focus.mjs",
     "test:dev:public-event-enter-chain": "node --experimental-strip-types scripts/dev/test-public-event-enter-chain.mjs",
