@@ -3186,7 +3186,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 3rem 1.15rem 2.15rem;
+  padding: 8.5rem 1.15rem 2.75rem;
   background: #070707;
 }
 
@@ -3196,6 +3196,10 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
+  width: min(11.5rem, 58%);
+  margin: 0 auto;
+  padding-top: 1.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
   text-align: center;
 }
 
@@ -3208,7 +3212,7 @@ body {
 }
 
 .public-success-powered [data-pscs-one-mark] {
-  transform: scale(1.12);
+  transform: scale(0.84);
   transform-origin: center;
 }
 

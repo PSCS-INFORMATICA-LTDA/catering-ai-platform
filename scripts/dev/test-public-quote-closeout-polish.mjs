@@ -307,9 +307,12 @@ test('SUCCESS_PSCS_VARIANT_AND_SIZE', () => {
   assert.doesNotMatch(successFooter, /size="footer"/)
   assert.match(pscs, /size === 'footer' \? 'h-\[22px\]'/)
   assert.match(pscs, /: 'h-7'/)
-  assert.match(css, /\.public-success-powered \[data-pscs-one-mark\] \{[\s\S]*?scale\(1\.12\)/)
+  assert.match(css, /\.public-success-powered \[data-pscs-one-mark\] \{[\s\S]*?scale\(0\.84\)/)
   const footer = css.match(/\.public-success-footer \{([^}]+)\}/)?.[1] || ''
-  assert.match(footer, /padding: 3rem/)
+  assert.match(footer, /padding: 8\.5rem/)
+  const powered = css.match(/\.public-success-powered \{([^}]+)\}/)?.[1] || ''
+  assert.match(powered, /border-top: 1px solid rgba\(255, 255, 255, 0\.22\)/)
+  assert.match(powered, /padding-top: 1\.35rem/)
   const label = css.match(/\.public-success-powered-label \{([^}]+)\}/)?.[1] || ''
   assert.match(label, /font-size: 0\.74rem/)
 })

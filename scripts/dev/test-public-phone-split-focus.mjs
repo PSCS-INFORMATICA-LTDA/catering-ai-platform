@@ -135,6 +135,21 @@ test('PHONE_E164_CHANGED = NO', () => {
   assert.doesNotMatch(field, /phone_ddi|phone_ddd|phone_number/)
 })
 
+test('BRAZIL_PLACEHOLDER_USES_2_DIGIT_DDD', () => {
+  assert.match(field, /function resolveNationalPhonePlaceholder/)
+  const helper = field.slice(
+    field.indexOf('function resolveNationalPhonePlaceholder'),
+    field.indexOf('function blurActiveElement'),
+  )
+  assert.match(helper, /iso2 === 'BR'/)
+  assert.match(helper, /11 97618-2170/)
+  assert.doesNotMatch(helper, /407/)
+  assert.match(field, /placeholder=\{resolveNationalPhonePlaceholder/)
+  assert.equal(getQuoteStrings('pt').wizard.publicPhonePlaceholder, 'Ex.: 407 555 1234')
+  assert.equal(getQuoteStrings('en').wizard.publicPhonePlaceholder, 'Ex.: 407 555 1234')
+  assert.equal(getQuoteStrings('es').wizard.publicPhonePlaceholder, 'Ej.: 407 555 1234')
+})
+
 test('PHONE_LABELS_PT_EN_ES', () => {
   assert.equal(getQuoteStrings('pt').wizard.phoneCountryDdiLabel, 'País / DDI')
   assert.equal(getQuoteStrings('pt').wizard.phoneAreaCodeLabel, 'DDD')

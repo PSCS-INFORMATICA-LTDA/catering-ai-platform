@@ -24,6 +24,17 @@ import PublicRequiredMark from '@/components/quotes/PublicRequiredMark'
 const PICKER_ID = 'public-phone-country-picker'
 const PICKER_VIEWPORT_VAR = '--public-phone-country-picker-vh'
 
+function resolveNationalPhonePlaceholder(
+  iso2: string | null,
+  language: QuoteLanguage,
+  fallback: string,
+) {
+  if (iso2 === 'BR') {
+    return language === 'es' ? 'Ej.: 11 97618-2170' : 'Ex.: 11 97618-2170'
+  }
+  return fallback
+}
+
 function blurActiveElement() {
   if (typeof document === 'undefined') return
   const active = document.activeElement
@@ -311,7 +322,12 @@ export default function PublicPhoneField({
               enterKeyHint="next"
               autoComplete="tel-national"
               value={displayNational}
-              placeholder={t.publicPhonePlaceholder}
+              placeholder={resolveNationalPhonePlaceholder(
+                iso2,
+                language,
+                t.publicPhonePlaceholder,
+              )}
+              data-phone-national-example={iso2 === 'BR' ? 'br' : 'default'}
               onChange={(event) =>
                 emit(iso2, nationalDigitsOnly(event.target.value))
               }

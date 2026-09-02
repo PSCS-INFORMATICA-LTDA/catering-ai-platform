@@ -145,7 +145,9 @@ test('CONTACTS', () => {
 
 test('PHONE_PLACEHOLDER_ONLY', () => {
   assert.equal(PUBLIC_PHONE_EXAMPLE, '+1 407 555 1234')
-  assert.match(phone, /placeholder=\{t\.publicPhonePlaceholder\}/)
+  assert.match(phone, /resolveNationalPhonePlaceholder/)
+  assert.match(phone, /iso2 === 'BR'/)
+  assert.match(phone, /11 97618-2170/)
   assert.equal(getQuoteStrings('pt').wizard.publicPhonePlaceholder, 'Ex.: 407 555 1234')
   assert.equal(getQuoteStrings('en').wizard.publicPhonePlaceholder, 'Ex.: 407 555 1234')
   assert.equal(getQuoteStrings('es').wizard.publicPhonePlaceholder, 'Ej.: 407 555 1234')
