@@ -117,23 +117,45 @@ test('NO_EFFECT_BASED_ADVANCE_FOCUS', () => {
   assert.doesNotMatch(focusFn, /useEffect/)
 })
 
-test('FIELD_CHECK_ADVANCES_ON_TRUSTED_POINTER_GESTURE = PASS', () => {
-  const pointerBlock = wizardCheck.slice(
-    wizardCheck.indexOf('onPointerDown'),
-    wizardCheck.indexOf('onClick'),
-  )
-  assert.match(pointerBlock, /advance\(\)/)
-  assert.match(pointerBlock, /event.preventDefault\(\)/)
-  assert.match(wizardCheck, /data-field-advance-sync="pointerdown"/)
+test('FIELD_CHECK_PRIMARY_EVENT = POINTERUP', () => {
+  assert.match(wizardCheck, /data-field-advance-sync="pointerup"/)
+  assert.match(wizardCheck, /onPointerUp=\{/)
 })
 
-test('FIELD_CHECK_CLICK_DOES_NOT_DOUBLE_ADVANCE = PASS', () => {
+test('POINTERDOWN_ADVANCE_CALLS = 0', () => {
+  const pointerDownBlock = wizardCheck.slice(
+    wizardCheck.indexOf('onPointerDown'),
+    wizardCheck.indexOf('onPointerUp'),
+  )
+  assert.match(pointerDownBlock, /event.preventDefault\(\)/)
+  assert.doesNotMatch(pointerDownBlock, /advance\(/)
+})
+
+test('POINTERUP_ADVANCE_CALLS = 1', () => {
+  const pointerUpBlock = wizardCheck.slice(
+    wizardCheck.indexOf('onPointerUp'),
+    wizardCheck.indexOf('onPointerCancel'),
+  )
+  assert.equal((pointerUpBlock.match(/advance\(\)/g) || []).length, 1)
+  assert.match(pointerUpBlock, /event.preventDefault\(\)/)
+  assert.match(pointerUpBlock, /event.stopPropagation\(\)/)
+})
+
+test('CLICK_AFTER_POINTERUP_ADVANCE_CALLS = 0', () => {
   assert.match(wizardCheck, /advancedByPointerRef/)
   assert.match(
     wizardCheck,
     /if \(advancedByPointerRef\.current\) \{\s*advancedByPointerRef\.current = false\s*return/,
   )
   const clickBlock = wizardCheck.slice(wizardCheck.indexOf('onClick'))
+  assert.match(clickBlock, /advance\(\)/)
+})
+
+test('FIELD_CHECK_CLICK_DOES_NOT_DOUBLE_ADVANCE = PASS', () => {
+  assert.match(wizardCheck, /onPointerCancel/)
+  assert.match(wizardCheck, /advancedByPointerRef/)
+  const clickBlock = wizardCheck.slice(wizardCheck.indexOf('onClick'))
+  assert.match(clickBlock, /if \(advancedByPointerRef\.current\)/)
   assert.match(clickBlock, /advance\(\)/)
 })
 
@@ -150,13 +172,28 @@ test('FOCUS_SYNCHRONOUS = YES', () => {
 })
 
 test('FOCUS_IS_SYNCHRONOUS = PASS', () => {
-  const pointerBlock = wizardCheck.slice(
-    wizardCheck.indexOf('onPointerDown'),
-    wizardCheck.indexOf('onClick'),
+  const pointerUpBlock = wizardCheck.slice(
+    wizardCheck.indexOf('onPointerUp'),
+    wizardCheck.indexOf('onPointerCancel'),
   )
-  assert.match(pointerBlock, /advance\(\)/)
-  assert.doesNotMatch(pointerBlock, /setTimeout|requestAnimationFrame\(|\.then\(|await |useEffect/)
+  assert.match(pointerUpBlock, /advance\(\)/)
+  assert.doesNotMatch(pointerUpBlock, /setTimeout|requestAnimationFrame\(|\.then\(|await |useEffect/)
   assert.match(focusFn, /node\.focus\(\{ preventScroll: true \}\)/)
+})
+
+test('NO_SET_TIMEOUT = YES', () => {
+  assert.doesNotMatch(wizardCheck, /setTimeout/)
+  assert.doesNotMatch(focusFn, /setTimeout/)
+})
+
+test('NO_PROMISE = YES', () => {
+  assert.doesNotMatch(wizardCheck, /\.then\(|await |Promise/)
+  assert.doesNotMatch(focusFn, /\.then\(|await |Promise/)
+})
+
+test('NO_EFFECT_FOCUS = YES', () => {
+  assert.doesNotMatch(wizardCheck, /useEffect/)
+  assert.doesNotMatch(focusFn, /useEffect/)
 })
 
 test('ADULTS_TARGET = CHILD_UNDER_3', () => {

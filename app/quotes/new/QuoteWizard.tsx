@@ -466,16 +466,22 @@ function FieldCheck({
     <button
       type="button"
       data-field-advance-check={advanceKey || ''}
-      data-field-advance-sync="pointerdown"
+      data-field-advance-sync="pointerup"
       aria-label={advanceLabel || 'Next'}
       onPointerDown={(event) => {
-        if (event.button !== 0) return
-        // iOS opens the software keyboard only if the next input is focused
-        // inside this trusted pointer gesture — not on the later click.
+        if (event.pointerType === 'mouse' && event.button !== 0) return
+        // Keep the current input focused while the finger is still down.
+        event.preventDefault()
+      }}
+      onPointerUp={(event) => {
+        if (event.pointerType === 'mouse' && event.button !== 0) return
         event.preventDefault()
         event.stopPropagation()
         advancedByPointerRef.current = true
         advance()
+      }}
+      onPointerCancel={() => {
+        advancedByPointerRef.current = false
       }}
       onClick={(event) => {
         event.preventDefault()

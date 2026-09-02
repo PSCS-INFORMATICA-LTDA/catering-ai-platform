@@ -104,10 +104,24 @@ try {
     '[data-field-advance-check="adults"]',
     (el) => el.getAttribute('data-field-advance-sync'),
   )
-  test('FIELD_CHECK_ADVANCES_ON_TRUSTED_POINTER_GESTURE = PASS', syncAttr === 'pointerdown')
+  test('FIELD_CHECK_PRIMARY_EVENT = POINTERUP', syncAttr === 'pointerup')
   await page.$eval('[data-field-advance-check="adults"]', (el) => {
     el.dispatchEvent(
       new PointerEvent('pointerdown', {
+        bubbles: true,
+        cancelable: true,
+        pointerType: 'touch',
+        button: 0,
+      }),
+    )
+  })
+  const afterAdultsDown = await page.evaluate(() =>
+    document.activeElement?.getAttribute('data-guest-input'),
+  )
+  test('POINTERDOWN_ADVANCE_CALLS = 0', afterAdultsDown === 'adults', afterAdultsDown)
+  await page.$eval('[data-field-advance-check="adults"]', (el) => {
+    el.dispatchEvent(
+      new PointerEvent('pointerup', {
         bubbles: true,
         cancelable: true,
         pointerType: 'touch',
@@ -132,6 +146,10 @@ try {
     'ADULTS_SINGLE_CLICK_ADVANCES_ONE_FIELD = YES',
     afterAdults.active === 'children-under-3' && !afterAdults.child4 && !afterAdults.street,
   )
+  test(
+    'CLICK_AFTER_POINTERUP_ADVANCE_CALLS = 0',
+    afterAdults.active === 'children-under-3' && !afterAdults.child4 && !afterAdults.street,
+  )
 
   await page.keyboard.type('0')
   const child3Check = await page.waitForSelector(
@@ -139,17 +157,10 @@ try {
   )
   test('CHILD_UNDER_3_0_CHECK_VISIBLE = YES', Boolean(child3Check))
   await page.$eval('[data-field-advance-check="children-under-3"]', (el) => {
-    el.dispatchEvent(
-      new PointerEvent('pointerdown', {
-        bubbles: true,
-        cancelable: true,
-        pointerType: 'touch',
-        button: 0,
-      }),
-    )
-    el.dispatchEvent(
-      new MouseEvent('click', { bubbles: true, cancelable: true }),
-    )
+    const opts = { bubbles: true, cancelable: true, pointerType: 'touch', button: 0 }
+    el.dispatchEvent(new PointerEvent('pointerdown', opts))
+    el.dispatchEvent(new PointerEvent('pointerup', opts))
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
   })
   const afterChild3 = await page.evaluate(() => ({
     active: document.activeElement?.getAttribute('data-guest-input'),
@@ -171,17 +182,10 @@ try {
   )
   test('CHILD_4_12_0_CHECK_VISIBLE = YES', Boolean(child412Check))
   await page.$eval('[data-field-advance-check="children-4-12"]', (el) => {
-    el.dispatchEvent(
-      new PointerEvent('pointerdown', {
-        bubbles: true,
-        cancelable: true,
-        pointerType: 'touch',
-        button: 0,
-      }),
-    )
-    el.dispatchEvent(
-      new MouseEvent('click', { bubbles: true, cancelable: true }),
-    )
+    const opts = { bubbles: true, cancelable: true, pointerType: 'touch', button: 0 }
+    el.dispatchEvent(new PointerEvent('pointerdown', opts))
+    el.dispatchEvent(new PointerEvent('pointerup', opts))
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
   })
   const afterChild412 = await page.evaluate(() => ({
     street: document.activeElement === document.querySelector('[data-address-number]'),
