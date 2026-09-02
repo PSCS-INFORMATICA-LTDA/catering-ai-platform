@@ -117,14 +117,22 @@ test('NO_EFFECT_BASED_ADVANCE_FOCUS', () => {
   assert.doesNotMatch(focusFn, /useEffect/)
 })
 
-test('CHECK_ACTIVATION_PATH = CLICK', () => {
+test('FIELD_CHECK_ADVANCES_ON_TRUSTED_POINTER_GESTURE = PASS', () => {
   const pointerBlock = wizardCheck.slice(
     wizardCheck.indexOf('onPointerDown'),
     wizardCheck.indexOf('onClick'),
   )
-  assert.doesNotMatch(pointerBlock, /advance\(/)
+  assert.match(pointerBlock, /advance\(\)/)
   assert.match(pointerBlock, /event.preventDefault\(\)/)
-  assert.match(wizardCheck, /data-field-advance-sync="click"/)
+  assert.match(wizardCheck, /data-field-advance-sync="pointerdown"/)
+})
+
+test('FIELD_CHECK_CLICK_DOES_NOT_DOUBLE_ADVANCE = PASS', () => {
+  assert.match(wizardCheck, /advancedByPointerRef/)
+  assert.match(
+    wizardCheck,
+    /if \(advancedByPointerRef\.current\) \{\s*advancedByPointerRef\.current = false\s*return/,
+  )
   const clickBlock = wizardCheck.slice(wizardCheck.indexOf('onClick'))
   assert.match(clickBlock, /advance\(\)/)
 })
@@ -141,8 +149,66 @@ test('FOCUS_SYNCHRONOUS = YES', () => {
   assert.match(wizard, /function commitAndAdvance\(\) \{[\s\S]*?flushSync\(/)
 })
 
+test('FOCUS_IS_SYNCHRONOUS = PASS', () => {
+  const pointerBlock = wizardCheck.slice(
+    wizardCheck.indexOf('onPointerDown'),
+    wizardCheck.indexOf('onClick'),
+  )
+  assert.match(pointerBlock, /advance\(\)/)
+  assert.doesNotMatch(pointerBlock, /setTimeout|requestAnimationFrame\(|\.then\(|await |useEffect/)
+  assert.match(focusFn, /node\.focus\(\{ preventScroll: true \}\)/)
+})
+
+test('ADULTS_TARGET = CHILD_UNDER_3', () => {
+  assert.match(
+    wizard,
+    /function revealGuestChildrenAfterAdults\(\) \{\s*focusWizardField\(childrenUnder3InputRef\.current\)/,
+  )
+  assert.match(wizard, /advanceKey="adults"[\s\S]*?revealGuestChildrenAfterAdults/)
+})
+
+test('CHILD_UNDER_3_TARGET = CHILD_4_12', () => {
+  assert.match(
+    wizard,
+    /advanceKey="children-under-3"[\s\S]*?focusWizardField\(children4To12InputRef\.current\)/,
+  )
+})
+
+test('CHILD_4_12_TARGET = STREET_NUMBER', () => {
+  assert.match(
+    wizard,
+    /function revealAddressAfterChildren\(\) \{\s*focusWizardField\(streetNumberInputRef\.current\)/,
+  )
+  assert.match(wizard, /advanceKey="children-4-12"[\s\S]*?revealAddressAfterChildren/)
+})
+
+test('NO_SET_TIMEOUT_FOR_KEYBOARD = PASS', () => {
+  assert.doesNotMatch(wizardCheck, /setTimeout/)
+  assert.doesNotMatch(focusFn, /setTimeout/)
+})
+
+test('NO_PROMISE_FOR_KEYBOARD = PASS', () => {
+  assert.doesNotMatch(wizardCheck, /\.then\(|await |Promise/)
+  assert.doesNotMatch(focusFn, /\.then\(|await |Promise/)
+})
+
+test('NO_USE_EFFECT_FOR_KEYBOARD = PASS', () => {
+  assert.doesNotMatch(wizardCheck, /useEffect/)
+  assert.doesNotMatch(focusFn, /useEffect/)
+})
+
+test('DOUBLE_ADVANCE = 0', () => {
+  assert.match(wizardCheck, /advancedByPointerRef/)
+  assert.match(
+    wizardCheck,
+    /if \(advancedByPointerRef\.current\) \{\s*advancedByPointerRef\.current = false\s*return/,
+  )
+  assert.equal((wizardCheck.match(/advance\(\)/g) || []).length, 2)
+})
+
 test('ONE_TAP_ONE_ADVANCE = YES', () => {
-  assert.equal((wizardCheck.match(/advance\(\)/g) || []).length, 1)
+  assert.equal((wizardCheck.match(/advance\(\)/g) || []).length, 2)
+  assert.match(wizardCheck, /advancedByPointerRef/)
   assert.doesNotMatch(wizardCheck, /skipClickRef/)
 })
 

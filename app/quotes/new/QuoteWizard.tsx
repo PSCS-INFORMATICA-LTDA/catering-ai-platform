@@ -448,6 +448,7 @@ function FieldCheck({
   advanceLabel?: string
   advanceKey?: string
 }) {
+  const advancedByPointerRef = useRef(false)
   if (!show) return null
   if (!onAdvance) {
     return (
@@ -465,16 +466,24 @@ function FieldCheck({
     <button
       type="button"
       data-field-advance-check={advanceKey || ''}
-      data-field-advance-sync="click"
+      data-field-advance-sync="pointerdown"
       aria-label={advanceLabel || 'Next'}
       onPointerDown={(event) => {
-        // Keep the current input focused so iOS does not close the keyboard.
-        // Advance stays on click, which is the trusted gesture for next focus.
-        if (event.button === 0) event.preventDefault()
+        if (event.button !== 0) return
+        // iOS opens the software keyboard only if the next input is focused
+        // inside this trusted pointer gesture — not on the later click.
+        event.preventDefault()
+        event.stopPropagation()
+        advancedByPointerRef.current = true
+        advance()
       }}
       onClick={(event) => {
         event.preventDefault()
         event.stopPropagation()
+        if (advancedByPointerRef.current) {
+          advancedByPointerRef.current = false
+          return
+        }
         advance()
       }}
       className="absolute right-0.5 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-sm font-bold text-cdl-success"
