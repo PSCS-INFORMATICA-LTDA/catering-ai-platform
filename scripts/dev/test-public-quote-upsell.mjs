@@ -60,8 +60,48 @@ test('ACCOMPANIMENTS_COME_FROM_CANONICAL_CONFIG', () => {
   ]) {
     assert.match(rules, new RegExp(`'${item}'`), `${item} missing from config`)
   }
-  // No second list was invented in the component.
-  assert.doesNotMatch(editorial, /const .*=\s*\[\s*'/)
+  // Visual-only proteins/sides for the first black block. Must stay out of
+  // PACKAGE_COMMON_ITEMS so buildDescription() does not duplicate them.
+  assert.match(editorial, /PACKAGE_EDITORIAL_FIXED_ITEMS/)
+  assert.match(editorial, /translateCdlItemList/)
+  const commonBlock = rules.slice(
+    rules.indexOf('export const PACKAGE_COMMON_ITEMS'),
+    rules.indexOf('export const SIDES_ITEMS'),
+  )
+  for (const item of [
+    'Picanha Angus',
+    'Frango sobrecoxa desossada',
+    'Pão de alho',
+    'Queijo coalho',
+    'Milho',
+  ]) {
+    assert.match(editorial, new RegExp(`'${item}'`), `${item} missing from editorial list`)
+    assert.doesNotMatch(
+      commonBlock,
+      new RegExp(`'${item}'`),
+      `${item} must not be added to PACKAGE_COMMON_ITEMS`,
+    )
+  }
+  assert.doesNotMatch(editorial, /Linguiça/)
+  assert.match(rules, /function buildDescription/)
+  assert.match(editorial, /Sobrecoxa sem osso/)
+  for (const [pt, en, es] of [
+    ['Picanha Angus', 'Angus picanha', 'Picaña Angus'],
+    ['Frango sobrecoxa desossada', 'Boneless chicken thigh', 'Muslo de pollo deshuesado'],
+    ['Pão de alho', 'Garlic bread', 'Pan de ajo'],
+    ['Queijo coalho', 'Grilled coalho cheese', 'Queso coalho a la parrilla'],
+    ['Milho', 'Corn', 'Maíz'],
+    ['Chimichurri', 'Chimichurri', 'Chimichurri'],
+    ['Farofa', 'Farofa', 'Farofa'],
+    ['Mel', 'Honey', 'Miel'],
+    ['Goiabada', 'Guava paste', 'Dulce de guayaba'],
+    ['Pimenta de bico', "Bird's eye pepper", 'Ají de bico'],
+    ['Geleia de pimenta', 'Pepper jelly', 'Jalea de pimiento'],
+  ]) {
+    assert.match(itemI18n, new RegExp(`'${pt}'|[\\s,]${pt}:`), `${pt} missing from i18n`)
+    assert.match(itemI18n, new RegExp(en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `${en} missing`)
+    assert.match(itemI18n, new RegExp(es.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `${es} missing`)
+  }
 })
 
 test('SIDES_LIST_CANONICAL_AND_BLACK_BEANS', () => {

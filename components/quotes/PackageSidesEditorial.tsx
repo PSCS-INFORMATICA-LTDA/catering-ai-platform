@@ -11,12 +11,25 @@ import { tw } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 /**
+ * Proteins/sides that every standard CDL package already carries in `items`.
+ * Display-only for this black block — do not fold them into PACKAGE_COMMON_ITEMS,
+ * because that constant also feeds buildDescription() and would duplicate copy.
+ */
+const PACKAGE_EDITORIAL_FIXED_ITEMS = [
+  'Picanha Angus',
+  'Frango sobrecoxa desossada',
+  'Pão de alho',
+  'Queijo coalho',
+  'Milho',
+] as const
+
+/**
  * Tells the customer what every package already includes before they choose
  * between with and without sides — two things that were easy to confuse.
  *
- * Both lists come from the commercial rules, and the price is the same
- * `sidesPricePerPerson` the cards price with, so nothing here can drift from
- * what is actually charged.
+ * Common accompaniments still come from the commercial rules. The five
+ * editorial proteins/sides above are prepended only for this frame.
+ * The price is the same `sidesPricePerPerson` the cards price with.
  *
  * PLUS composition is display-only: Farofa stays in the commercial SIDES_ITEMS
  * list but is not repeated here because it already appears under ACOMPANHAM.
@@ -34,7 +47,14 @@ export default function PackageSidesEditorial({
   formatMoney: (value: number) => string
   optionGroups?: ReadonlyArray<PackageOptionGroup>
 }) {
-  const included = translateCdlItemList([...PACKAGE_COMMON_ITEMS], language)
+  const included = translateCdlItemList(
+    [...PACKAGE_EDITORIAL_FIXED_ITEMS, ...PACKAGE_COMMON_ITEMS],
+    language,
+  ).map((label) =>
+    language === 'pt' && label === 'Frango sobrecoxa desossada'
+      ? 'Sobrecoxa sem osso'
+      : label,
+  )
   const fixedSides = getPlusGuarnicoesFixedSideLabels(language, optionGroups)
   const choiceLabels = getPlusGuarnicoesChoiceLabels(optionGroups, language)
   const price = formatMoney(sidesPricePerPerson)
