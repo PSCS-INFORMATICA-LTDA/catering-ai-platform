@@ -604,11 +604,13 @@ function ConfirmationProposalBody({
         ) : null}
         <p className="quote-proposal-footer-brand">BBQ AT HOME</p>
         <p className="quote-proposal-footer-tagline">Orlando, Florida</p>
-        <img
-          src="/brand/pscs-one.png"
-          alt="PSCS One"
-          className="quote-proposal-pscs-mark bg-transparent"
-        />
+        {!publicReviewFooter ? (
+          <img
+            src="/brand/pscs-one.png"
+            alt="PSCS One"
+            className="quote-proposal-pscs-mark bg-transparent"
+          />
+        ) : null}
       </footer>
     </>
   )

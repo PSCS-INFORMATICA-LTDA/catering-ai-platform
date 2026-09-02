@@ -439,7 +439,6 @@ function FieldCheck({
   advanceLabel?: string
   advanceKey?: string
 }) {
-  const skipClickRef = useRef(false)
   if (!show) return null
   if (!onAdvance) {
     return (
@@ -453,32 +452,23 @@ function FieldCheck({
   }
   const advance = onAdvance
 
-  function advanceFromTrustedGesture() {
-    advance()
-  }
-
   return (
     <button
       type="button"
       data-field-advance-check={advanceKey || ''}
-      data-field-advance-sync="true"
+      data-field-advance-sync="click"
       aria-label={advanceLabel || 'Next'}
       onPointerDown={(event) => {
-        if (event.pointerType === 'mouse' && event.button !== 0) return
-        // Focus the next field inside this trusted gesture, then keep the
-        // button from stealing focus (which would close the iOS keyboard).
-        skipClickRef.current = true
-        advanceFromTrustedGesture()
-        event.preventDefault()
+        // Mouse only: keep the current field focused. Never advance here —
+        // iOS needs the following click to open the software keyboard.
+        if (event.pointerType === 'mouse' && event.button === 0) {
+          event.preventDefault()
+        }
       }}
       onClick={(event) => {
         event.preventDefault()
         event.stopPropagation()
-        if (skipClickRef.current) {
-          skipClickRef.current = false
-          return
-        }
-        advanceFromTrustedGesture()
+        advance()
       }}
       className="absolute right-0.5 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-sm font-bold text-cdl-success"
     >

@@ -117,48 +117,47 @@ test('NO_EFFECT_BASED_ADVANCE_FOCUS', () => {
   assert.doesNotMatch(focusFn, /useEffect/)
 })
 
-test('FOCUS_CALLED_IN_USER_GESTURE_PATH', () => {
-  for (const check of [wizardCheck, addressCheck]) {
-    const pointer = check.indexOf('onPointerDown')
-    const advance = check.indexOf('advanceFromTrustedGesture()', pointer)
-    const prevent = check.indexOf('event.preventDefault()', pointer)
-    assert.ok(pointer > 0 && advance > pointer)
-    assert.ok(prevent > advance, 'preventDefault must follow the sync advance/focus')
-    assert.match(check, /data-field-advance-sync="true"/)
-    assert.match(check, /type="button"/)
-  }
+test('CHECK_ACTIVATION_PATH = CLICK', () => {
+  const pointerBlock = wizardCheck.slice(
+    wizardCheck.indexOf('onPointerDown'),
+    wizardCheck.indexOf('onClick'),
+  )
+  assert.doesNotMatch(pointerBlock, /advance\(/)
+  assert.match(pointerBlock, /pointerType === 'mouse'/)
+  assert.match(wizardCheck, /data-field-advance-sync="click"/)
+  const clickBlock = wizardCheck.slice(wizardCheck.indexOf('onClick'))
+  assert.match(clickBlock, /advance\(\)/)
+})
+
+test('FOCUS_SYNCHRONOUS = YES', () => {
   assert.match(focusFn, /node\.focus\(\{ preventScroll: true \}\)/)
   const focusAt = focusFn.indexOf('node.focus({ preventScroll: true })')
   const rafAt = focusFn.indexOf('requestAnimationFrame')
   assert.ok(rafAt > focusAt, 'RAF may only follow the sync focus')
+  assert.doesNotMatch(focusFn, /setTimeout/)
+  assert.doesNotMatch(wizardCheck, /setTimeout|requestAnimationFrame\(|\.then\(|await |useEffect/)
 })
 
-test('ONE_POINTER_ACTIVATION_ONE_ADVANCE', () => {
-  for (const check of [wizardCheck, addressCheck]) {
-    assert.match(check, /skipClickRef/)
-    assert.match(check, /skipClickRef\.current = true/)
-    assert.match(
-      check,
-      /if \(skipClickRef\.current\) \{\s*skipClickRef\.current = false\s*return/,
-    )
-  }
-})
-
-test('MOUSE_CLICK_FALLBACK_WORKS', () => {
-  for (const check of [wizardCheck, addressCheck]) {
-    assert.match(check, /onClick=\{/)
-    assert.match(check, /if \(skipClickRef\.current\)/)
-    assert.match(check, /advanceFromTrustedGesture\(\)/)
-  }
+test('ONE_TAP_ONE_ADVANCE = YES', () => {
+  assert.equal((wizardCheck.match(/advance\(\)/g) || []).length, 1)
+  assert.doesNotMatch(wizardCheck, /skipClickRef/)
 })
 
 test('KEYBOARD_BUTTON_ACTIVATION_WORKS', () => {
-  for (const check of [wizardCheck, addressCheck]) {
-    assert.match(check, /type="button"/)
-    assert.match(check, /aria-label/)
-    assert.match(check, /onClick=\{/)
-    assert.match(check, /h-11 w-11/)
-  }
+  assert.match(wizardCheck, /type="button"/)
+  assert.match(wizardCheck, /aria-label/)
+  assert.match(wizardCheck, /onClick=\{/)
+  assert.match(wizardCheck, /h-11 w-11/)
+})
+
+test('NUMBER_TO_ADDRESS_CODE_UNCHANGED', () => {
+  assert.match(addressCheck, /skipClickRef/)
+  assert.match(addressCheck, /advanceFromTrustedGesture\(\)/)
+  assert.match(address, /advanceKey="street-number"/)
+  assert.match(
+    wizard,
+    /onNumberCommit=\{[\s\S]{0,220}focusWizardField\(addressSearchInputRef\.current\)/,
+  )
 })
 
 test('INPUT_MODE_GATES', () => {
@@ -190,19 +189,23 @@ test('CDL_LOGO_CENTERED = YES', () => {
 })
 
 test('FOOTER_BRAND_AND_LOCATION', () => {
-  const footer = layout.slice(layout.indexOf('data-public-review-footer'))
+  const footer = layout.slice(
+    layout.indexOf('data-public-review-footer'),
+    layout.indexOf('function DefaultProposalBody'),
+  )
   assert.match(footer, /BBQ AT HOME/)
   assert.match(footer, /Orlando, Florida/)
-  assert.match(footer, /quote-proposal-pscs-mark/)
+  assert.match(footer, /data-public-review-cdl-logo/)
 })
 
-test('PSCS_ONE_SLIGHTLY_LARGER = YES', () => {
-  assert.match(printCss, /\.quote-proposal-pscs-mark \{[\s\S]*?height: 0\.9rem/)
-  const publicBlock = printCss.slice(
-    printCss.indexOf('.quote-proposal-signature--public .quote-proposal-pscs-mark'),
+test('PUBLIC_REVIEW_PSCS_ONE_COUNT = 0', () => {
+  const footer = layout.slice(
+    layout.indexOf('data-public-review-footer'),
+    layout.indexOf('function DefaultProposalBody'),
   )
-  assert.match(publicBlock, /height: 1\.1rem/)
-  assert.match(printCss, /@media screen \{[\s\S]*quote-proposal-signature--public/)
+  assert.match(footer, /\{!publicReviewFooter \?/)
+  assert.match(footer, /quote-proposal-pscs-mark/)
+  assert.match(printCss, /\.quote-proposal-pscs-mark \{[\s\S]*?height: 0\.9rem/)
 })
 
 test('PRINT_LAYOUT_CHANGED = NO', () => {
@@ -268,6 +271,35 @@ test('SUCCESS_CONTACT_SOURCE_CANONICAL', () => {
   assert.equal(contacts.email, 'team@example.com')
 })
 
+test('SUCCESS_CONTACT_LEFT_ALIGNED = YES', () => {
+  const scoped = css.slice(css.indexOf('.public-success-contact-card .public-success-contacts {'))
+  assert.match(scoped, /text-align: left/)
+  assert.match(scoped, /max-width: none/)
+  assert.match(
+    css,
+    /\.public-success-contact-card \.public-success-contacts li \{[\s\S]*?justify-content: flex-start/,
+  )
+  assert.match(
+    css,
+    /\.public-success-contact-card \.public-success-contacts a \{[\s\S]*?justify-content: flex-start/,
+  )
+  assert.match(
+    css,
+    /\.public-success-contact-card \.public-success-contacts a \{[\s\S]*?overflow-wrap: anywhere/,
+  )
+})
+
+test('CONTACT_HEADING_USES_SUMMARY_VISUAL_LANGUAGE = YES', () => {
+  const heading = css.match(
+    /\.public-success-contact-card \.public-success-contact-heading \{([^}]+)\}/,
+  )?.[1] || ''
+  assert.match(heading, /text-transform: uppercase/)
+  assert.match(heading, /font-size: 0\.68rem/)
+  assert.match(heading, /font-weight: 800/)
+  assert.match(heading, /letter-spacing: 0\.16em/)
+  assert.match(heading, /color: rgba\(255, 255, 255, 0\.58\)/)
+})
+
 test('SUCCESS_PSCS_VARIANT_AND_SIZE', () => {
   assert.match(successFooter, /PscsOneMark/)
   assert.match(successFooter, /variant="full"/)
@@ -275,6 +307,11 @@ test('SUCCESS_PSCS_VARIANT_AND_SIZE', () => {
   assert.doesNotMatch(successFooter, /size="footer"/)
   assert.match(pscs, /size === 'footer' \? 'h-\[22px\]'/)
   assert.match(pscs, /: 'h-7'/)
+  assert.match(css, /\.public-success-powered \[data-pscs-one-mark\] \{[\s\S]*?scale\(1\.12\)/)
+  const footer = css.match(/\.public-success-footer \{([^}]+)\}/)?.[1] || ''
+  assert.match(footer, /padding: 3rem/)
+  const label = css.match(/\.public-success-powered-label \{([^}]+)\}/)?.[1] || ''
+  assert.match(label, /font-size: 0\.74rem/)
 })
 
 if (failed > 0) {

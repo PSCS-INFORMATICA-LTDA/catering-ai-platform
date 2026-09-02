@@ -165,36 +165,38 @@ test('SUCCESS_CONTACT_BLOCK_PREMIUM', () => {
   assert.equal(PUBLIC_SUCCESS_COPY.pt.contactTeam, 'Contate o nosso time')
   assert.equal(PUBLIC_SUCCESS_COPY.en.contactTeam, 'Contact our team')
   assert.equal(PUBLIC_SUCCESS_COPY.es.contactTeam, 'Contacta a nuestro equipo')
-  const heading = css.match(/\.public-success-contact-heading \{([^}]+)\}/)?.[1]
-  assert.ok(heading, 'missing contact heading rule')
-  const headingSize = Number(heading.match(/font-size: ([\d.]+)rem/)?.[1]) * 16
-  const headingWeight = Number(heading.match(/font-weight: (\d+)/)?.[1])
-  assert.ok(headingSize >= 17 && headingSize <= 19, `heading ${headingSize}px`)
-  assert.ok(headingWeight >= 650 && headingWeight <= 750, `weight ${headingWeight}`)
-  assert.doesNotMatch(heading, /text-transform: uppercase/)
-  const link = css.match(/\.public-success-contacts a \{([^}]+)\}/)?.[1]
-  assert.ok(link, 'missing contact link rule')
-  const valueSize = Number(link.match(/font-size: ([\d.]+)rem/)?.[1]) * 16
-  const valueWeight = Number(link.match(/font-weight: (\d+)/)?.[1])
-  assert.ok(valueSize >= 16 && valueSize <= 18, `value ${valueSize}px`)
-  assert.ok(valueWeight >= 600 && valueWeight <= 700, `weight ${valueWeight}`)
-  assert.match(link, /display: inline-flex/)
+  const heading = css.match(
+    /\.public-success-contact-card \.public-success-contact-heading \{([^}]+)\}/,
+  )?.[1]
+  assert.ok(heading, 'missing scoped contact heading rule')
+  assert.match(heading, /text-transform: uppercase/)
+  assert.match(heading, /font-size: 0\.68rem/)
+  assert.match(heading, /font-weight: 800/)
+  const link = css.match(
+    /\.public-success-contact-card \.public-success-contacts a \{([^}]+)\}/,
+  )?.[1]
+  assert.ok(link, 'missing scoped contact link rule')
+  assert.match(link, /font-size: 1\.05rem/)
+  assert.match(link, /font-weight: 800/)
+  assert.match(link, /justify-content: flex-start/)
   const icon = css.match(/\.public-success-contact-icon \{([^}]+)\}/)?.[1]
   const iconSize = Number(icon.match(/width: ([\d.]+)rem/)?.[1]) * 16
   assert.ok(iconSize >= 21 && iconSize <= 24, `icon ${iconSize}px`)
 })
 
 test('SUCCESS_CONTACTS_CENTERED', () => {
-  const block = css.match(/\.public-success-contacts \{([^}]+)\}/)?.[1]
-  assert.match(block, /text-align: center/)
-  assert.match(block, /max-width: 18\.75rem/)
-  assert.match(block, /margin: 0 auto/)
-  const list = css.match(/\.public-success-contacts ul \{([^}]+)\}/)?.[1]
-  assert.match(list, /flex-direction: column/)
-  assert.match(list, /align-items: center/)
+  const block = css.match(
+    /\.public-success-contact-card \.public-success-contacts \{([^}]+)\}/,
+  )?.[1]
+  assert.match(block, /text-align: left/)
+  assert.match(block, /max-width: none/)
+  const list = css.match(
+    /\.public-success-contact-card \.public-success-contacts ul \{([^}]+)\}/,
+  )?.[1]
+  assert.match(list, /align-items: stretch/)
   assert.doesNotMatch(
     css,
-    /\.public-success-contacts ul \{[\s\S]*?flex-direction: row/,
+    /\.public-success-contact-card \.public-success-contacts ul \{[\s\S]*?flex-direction: row/,
   )
 })
 

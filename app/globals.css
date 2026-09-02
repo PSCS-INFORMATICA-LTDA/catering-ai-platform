@@ -3134,6 +3134,43 @@ body {
   background: rgba(255, 255, 255, 0.035);
 }
 
+.public-success-contact-card .public-success-contacts {
+  max-width: none;
+  margin: 0;
+  text-align: left;
+}
+
+.public-success-contact-card .public-success-contact-heading {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  line-height: 1.25;
+}
+
+.public-success-contact-card .public-success-contacts ul {
+  align-items: stretch;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.public-success-contact-card .public-success-contacts li {
+  justify-content: flex-start;
+}
+
+.public-success-contact-card .public-success-contacts a {
+  justify-content: flex-start;
+  text-align: left;
+  min-height: 0;
+  padding: 0.15rem 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
 .public-success-signature-cluster {
   display: flex;
   flex-direction: column;
@@ -3149,7 +3186,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.15rem 1.15rem 2.15rem;
+  padding: 3rem 1.15rem 2.15rem;
   background: #070707;
 }
 
@@ -3164,10 +3201,15 @@ body {
 
 .public-success-powered-label {
   color: rgba(255, 255, 255, 0.44);
-  font-size: 0.68rem;
+  font-size: 0.74rem;
   font-weight: 600;
   letter-spacing: 0.14em;
   line-height: 1;
+}
+
+.public-success-powered [data-pscs-one-mark] {
+  transform: scale(1.12);
+  transform-origin: center;
 }
 
 .public-success-contact-block {
@@ -3425,10 +3467,18 @@ body {
     max-width: 18.75rem;
   }
 
+  .public-success-contact-card .public-success-contacts {
+    max-width: none;
+  }
+
   .public-success-contacts ul {
     flex-direction: column;
     justify-content: center;
     gap: 0.7rem;
+  }
+
+  .public-success-contact-card .public-success-contacts ul {
+    justify-content: flex-start;
   }
 
   .public-landing-cdl-logo {
