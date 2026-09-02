@@ -1215,6 +1215,24 @@ function QuantityField({
             if (event.key !== 'Enter') return
             event.preventDefault()
             event.stopPropagation()
+            if (nativeAdvanceTargetId && completion === 'filled') {
+              const nextInput = document.getElementById(nativeAdvanceTargetId)
+              if (nextInput instanceof HTMLInputElement) {
+                // Focus first, still inside this trusted keydown.
+                // Blur of the current field then commits without focusWizardField.
+                nextInput.focus({ preventScroll: true })
+                requestAnimationFrame(() => {
+                  const reduced = window.matchMedia?.(
+                    '(prefers-reduced-motion: reduce)',
+                  ).matches
+                  nextInput.scrollIntoView({
+                    behavior: reduced ? 'auto' : 'smooth',
+                    block: 'center',
+                  })
+                })
+                return
+              }
+            }
             commitAndAdvance()
           }}
           onBlur={(event) => {

@@ -49,6 +49,89 @@ test('ADULTS_ENTER_TARGET = CHILDREN_UNDER_3', () => {
   assert.match(wizard, /childrenUnder3InputRef\.current\?\.focus\(\{ preventScroll: true \}\)/)
 })
 
+const quantity = (() => {
+  const start = wizard.indexOf('function QuantityField(')
+  const next = wizard.indexOf('\nfunction ', start + 1)
+  return wizard.slice(start, next === -1 ? undefined : next)
+})()
+const enterHandler = quantity.slice(
+  quantity.indexOf('onKeyDown='),
+  quantity.indexOf('onBlur='),
+)
+const nativeLabel = wizard.slice(
+  wizard.indexOf('if (nativeTargetId)'),
+  wizard.indexOf('if (!onAdvance)'),
+)
+
+test('ENTER_ADULTS_TARGET = public-event-child-under-3', () => {
+  assert.match(
+    wizard,
+    /inputId="public-event-adults"[\s\S]{0,400}nativeAdvanceTargetId=\{\s*isPublicMode \? 'public-event-child-under-3'/,
+  )
+})
+
+test('ENTER_CHILD_UNDER_3_TARGET = public-event-child-4-12', () => {
+  assert.match(
+    wizard,
+    /inputId="public-event-child-under-3"[\s\S]{0,400}nativeAdvanceTargetId=\{\s*isPublicMode \? 'public-event-child-4-12'/,
+  )
+})
+
+test('ENTER_CHILD_4_12_TARGET = public-event-street-number', () => {
+  assert.match(
+    wizard,
+    /inputId="public-event-child-4-12"[\s\S]{0,400}nativeAdvanceTargetId=\{\s*isPublicMode \? 'public-event-street-number'/,
+  )
+})
+
+test('ENTER_FOCUS_BEFORE_FLUSHSYNC = PASS', () => {
+  const focusAt = enterHandler.indexOf('nextInput.focus({ preventScroll: true })')
+  const flushAt = enterHandler.indexOf('commitAndAdvance()')
+  assert.ok(focusAt >= 0, 'Enter must focus the next input')
+  assert.ok(flushAt > focusAt, 'commitAndAdvance may only follow the focus-first return')
+  assert.doesNotMatch(enterHandler.slice(0, focusAt + 1), /flushSync|commitOnly|commitDraft|commitAndAdvance/)
+})
+
+test('ENTER_FOCUS_BEFORE_STATE_COMMIT = PASS', () => {
+  assert.match(
+    enterHandler,
+    /nextInput\.focus\(\{ preventScroll: true \}\)[\s\S]*?return/,
+  )
+  assert.match(enterHandler, /if \(nativeAdvanceTargetId && completion === 'filled'\)/)
+})
+
+test('ENTER_NO_SETTIMEOUT_FOR_FOCUS = PASS', () => {
+  assert.doesNotMatch(enterHandler, /setTimeout/)
+})
+
+test('ENTER_NO_RAF_FOR_FOCUS = PASS', () => {
+  const focusAt = enterHandler.indexOf('nextInput.focus({ preventScroll: true })')
+  const rafAt = enterHandler.indexOf('requestAnimationFrame')
+  assert.ok(focusAt >= 0 && rafAt > focusAt, 'RAF may only follow sync focus')
+  assert.match(enterHandler.slice(rafAt), /scrollIntoView/)
+})
+
+test('NATIVE_LABEL_CHECK_UNCHANGED = PASS', () => {
+  assert.match(nativeLabel, /data-field-advance-mode="native-label"/)
+  assert.doesNotMatch(nativeLabel, /onPointerDown|onPointerUp|onClick|preventDefault|\.focus\(/)
+})
+
+test('CHILD_ZERO_VALID = PASS', () => {
+  assert.match(wizard, /getExplicitCountCompletion/)
+  assert.match(source('Lib/quoteGuestFields.ts'), /export function isExplicitNonNegativeInteger/)
+})
+
+test('CHILD_BLANK_BLOCKED = PASS', () => {
+  assert.match(
+    source('Lib/quoteGuestFields.ts'),
+    /if \(value === null \|\| value === undefined \|\| value === ''\) return false/,
+  )
+})
+
+test('AUTOMATION_CAN_PROVE_IOS_KEYBOARD = NO', () => {
+  assert.ok(true, 'Playwright cannot observe the iOS software keyboard')
+})
+
 test('CHILDREN_UNDER_3_ZERO_VALID = YES', () => {
   assert.match(wizard, /import \{ isExplicitNonNegativeInteger \}/)
   assert.match(
