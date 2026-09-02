@@ -170,3 +170,111 @@ export function pruneBlockedAdditionalSelections(
   }
   return { additionals: next, removedIds }
 }
+
+export type ExtraAvailabilityStatus =
+  | 'AVAILABLE'
+  | 'INCLUDED_IN_PACKAGE'
+  | 'SELECTED_IN_PACKAGE'
+
+export const CDL_STANDARD_PACKAGE_INCLUDED_ACCOMPANIMENT_KEYS = [
+  'ITEM_CHIMICHURRI',
+  'ITEM_059',
+  'ITEM_060',
+  'ITEM_061',
+  'ITEM_066',
+  'ITEM_067',
+] as const
+
+const STANDARD_PACKAGE_INCLUDED_ACCOMPANIMENT_KEY_SET = new Set<string>(
+  CDL_STANDARD_PACKAGE_INCLUDED_ACCOMPANIMENT_KEYS,
+)
+
+function normalizeCatalogIdList(ids: ReadonlyArray<string>): string[] {
+  return [...new Set(ids.map((id) => id.trim()).filter(Boolean))]
+}
+
+export function isStandardPackageIncludedAccompanimentKey(
+  itemKey: string | null | undefined,
+): boolean {
+  return STANDARD_PACKAGE_INCLUDED_ACCOMPANIMENT_KEY_SET.has(
+    String(itemKey || '').trim(),
+  )
+}
+
+/**
+ * Canonical accompaniments declared on standard CDL packages but not
+ * modeled as package_items / package_side_items. Identity is item_key.
+ * Custom packages (package_key / isCustomPackage) stay chargeable.
+ */
+export function getUniversalIncludedCatalogIds(
+  items: ReadonlyArray<{ id: string; item_key?: string | null }>,
+  pkg: PackageKeySource | null | undefined,
+): string[] {
+  if (!pkg || shouldShowAccompanimentExtras(pkg)) return []
+  return items
+    .filter((item) => isStandardPackageIncludedAccompanimentKey(item.item_key))
+    .map((item) => item.id.trim())
+    .filter(Boolean)
+}
+
+export function getNonChargeableExtraIds(
+  packageCompositionBlockedIds: ReadonlyArray<string>,
+  universalIncludedIds: ReadonlyArray<string>,
+): string[] {
+  return normalizeCatalogIdList([
+    ...packageCompositionBlockedIds,
+    ...universalIncludedIds,
+  ])
+}
+
+export function getSelectedInPackageCatalogIds(
+  compositionBlockedIds: ReadonlyArray<string>,
+  compositionBlockedWithoutSelections: ReadonlyArray<string>,
+): string[] {
+  const includedWithoutSelections = new Set(
+    normalizeCatalogIdList(compositionBlockedWithoutSelections),
+  )
+  return normalizeCatalogIdList(compositionBlockedIds).filter(
+    (id) => !includedWithoutSelections.has(id),
+  )
+}
+
+export function getExtraAvailabilityStatus(
+  itemId: string,
+  nonChargeableExtraIds: ReadonlyArray<string>,
+  selectedInPackageIds: ReadonlyArray<string>,
+): ExtraAvailabilityStatus {
+  const id = itemId.trim()
+  if (selectedInPackageIds.some((value) => value.trim() === id)) {
+    return 'SELECTED_IN_PACKAGE'
+  }
+  if (nonChargeableExtraIds.some((value) => value.trim() === id)) {
+    return 'INCLUDED_IN_PACKAGE'
+  }
+  return 'AVAILABLE'
+}
+
+export function buildExtraAvailabilityByItemId(
+  itemIds: ReadonlyArray<string>,
+  nonChargeableExtraIds: ReadonlyArray<string>,
+  selectedInPackageIds: ReadonlyArray<string>,
+): Record<string, ExtraAvailabilityStatus> {
+  const availability: Record<string, ExtraAvailabilityStatus> = {}
+  for (const itemId of itemIds) {
+    availability[itemId] = getExtraAvailabilityStatus(
+      itemId,
+      nonChargeableExtraIds,
+      selectedInPackageIds,
+    )
+  }
+  return availability
+}
+
+export function canSetPublicAdditionalQuantity(
+  itemId: string,
+  nonChargeableExtraIds: ReadonlyArray<string>,
+): boolean {
+  const id = itemId.trim()
+  if (!id) return false
+  return !nonChargeableExtraIds.some((value) => value.trim() === id)
+}

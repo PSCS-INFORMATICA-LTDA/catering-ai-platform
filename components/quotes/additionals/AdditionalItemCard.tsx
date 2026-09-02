@@ -26,6 +26,7 @@ import {
   normalizeAdditionalQuantity,
   type QuoteAdditionalItem,
 } from '@/Lib/quoteAdditionalDisplay'
+import type { ExtraAvailabilityStatus } from '@/Lib/publicQuote/extrasEligibility'
 import { getCategoryLabel, getQuoteStrings } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
@@ -90,12 +91,14 @@ export default function AdditionalItemCard({
   quantity,
   billableGuestCount,
   language,
+  availability = 'AVAILABLE',
   onChangeQty,
 }: {
   item: QuoteAdditionalItem
   quantity: number
   billableGuestCount: number
   language: QuoteLanguage
+  availability?: ExtraAvailabilityStatus
   onChangeQty: (qty: number) => void
 }) {
   const t = getQuoteStrings(language)
@@ -112,7 +115,8 @@ export default function AdditionalItemCard({
     quantity,
     billableGuestCount,
   )
-  const isSelected = normalizedQty > 0
+  const locked = availability !== 'AVAILABLE'
+  const isSelected = !locked && normalizedQty > 0
   const totalWeight =
     !perPerson && normalizedQty > 1
       ? getAdditionalTotalWeight(item, quantity)
@@ -126,8 +130,12 @@ export default function AdditionalItemCard({
     : null
 
   const cardClass = `public-additional-card grid grid-cols-[7.5rem_minmax(0,1fr)] ${
-    isSelected ? 'is-selected' : ''
+    locked ? 'is-package-locked' : isSelected ? 'is-selected' : ''
   }`
+  const lockBadge =
+    availability === 'SELECTED_IN_PACKAGE'
+      ? t.wizard.selectedInPackage
+      : t.wizard.includedInPackage
   const [previewOpen, setPreviewOpen] = useState(false)
   const pressRef = useRef<{
     timer: number | null
@@ -245,7 +253,9 @@ export default function AdditionalItemCard({
       <p className="public-additional-card-name">{label}</p>
       <div className="public-additional-card-price">
         <span className="public-additional-card-price-kicker">
-          {t.wizard.additionalPriceKicker}
+          {locked
+            ? t.wizard.extraPriceAsAdditional
+            : t.wizard.additionalPriceKicker}
         </span>
         <span className="public-additional-card-price-value">{priceLabel}</span>
         <span className="public-additional-card-price-unit">
@@ -263,11 +273,35 @@ export default function AdditionalItemCard({
     </>
   )
 
+  if (locked) {
+    return (
+      <article
+        data-additional-item-card
+        data-item-key={item.item_key ?? item.id}
+        data-extra-availability={availability}
+        aria-disabled="true"
+        className={cardClass}
+      >
+        {media}
+        <div className="public-additional-card-body">
+          {copy}
+          <span
+            className="public-additional-card-lock-badge"
+            data-extra-lock-badge
+          >
+            ✓ {lockBadge}
+          </span>
+        </div>
+      </article>
+    )
+  }
+
   if (perPerson) {
     return (
       <article
         data-additional-item-card
         data-item-key={item.item_key ?? item.id}
+        data-extra-availability={availability}
         className={cardClass}
       >
         {media}
@@ -296,6 +330,7 @@ export default function AdditionalItemCard({
     <article
       data-additional-item-card
       data-item-key={item.item_key ?? item.id}
+      data-extra-availability={availability}
       className={cardClass}
     >
       {media}

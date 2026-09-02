@@ -3522,6 +3522,59 @@ body {
   box-shadow: 0 0 0 2px rgba(226, 27, 27, 0.18);
 }
 
+.public-additional-card.is-package-locked {
+  cursor: default;
+  border-color: #e4dfd8;
+  background: #faf8f4;
+  box-shadow: none;
+}
+
+.public-additional-card.is-package-locked .public-additional-card-media img {
+  filter: saturate(0.88) brightness(0.98);
+}
+
+.public-additional-card.is-package-locked .public-additional-card-name,
+.public-additional-card.is-package-locked .public-additional-card-price-value {
+  color: #3f3b36;
+}
+
+.public-additional-card-lock-badge {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.8rem;
+  border: 1px solid #c9ddd1;
+  background: #eef6f0;
+  color: #1f6b45;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  text-align: center;
+  text-transform: uppercase;
+  cursor: default;
+  white-space: normal;
+}
+
+.public-additional-summary-lock-badge {
+  display: inline-flex;
+  margin-left: 0.5rem;
+  padding: 0.08rem 0.45rem;
+  border-radius: 999px;
+  background: #eef6f0;
+  color: #1f6b45;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 .public-additional-card-media {
   position: relative;
   aspect-ratio: 1;

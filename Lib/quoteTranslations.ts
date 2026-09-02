@@ -296,6 +296,10 @@ type QuoteStrings = {
     disposableKitDecline: string
     disposableKitAdd: string
     includedInPackage: string
+    selectedInPackage: string
+    extraPriceAsAdditional: string
+    extraIncludedShort: string
+    extraSelectedShort: string
     withoutSidesGroupTitle: string
     withSidesGroupHint: string
     withoutSidesGroupHint: string
@@ -778,6 +782,10 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       disposableKitDecline: 'Sem descartáveis',
       disposableKitAdd: 'Adicionar kit',
       includedInPackage: 'Incluído no pacote',
+      selectedInPackage: 'Selecionado no pacote',
+      extraPriceAsAdditional: 'Preço como adicional',
+      extraIncludedShort: 'Incluído',
+      extraSelectedShort: 'Selecionado',
       withoutSidesGroupTitle: 'SEM GUARNIÇÕES',
       withSidesGroupHint:
         'Uma experiência completa, com acompanhamentos preparados para complementar o churrasco e deixar o serviço pronto para receber seus convidados. Explore {count} opções de pacotes disponíveis e escolha a combinação ideal para o seu evento.',
@@ -1286,6 +1294,10 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       disposableKitDecline: 'No disposables',
       disposableKitAdd: 'Add kit',
       includedInPackage: 'Included in package',
+      selectedInPackage: 'Selected in package',
+      extraPriceAsAdditional: 'Extra price',
+      extraIncludedShort: 'Included',
+      extraSelectedShort: 'Selected',
       withoutSidesGroupTitle: 'WITHOUT SIDES',
       withSidesGroupHint:
         'A complete experience, with sides prepared to complement the barbecue and ready your service for guests. Explore {count} available packages and choose the ideal combination for your event.',
@@ -1794,6 +1806,10 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       disposableKitDecline: 'Sin desechables',
       disposableKitAdd: 'Agregar kit',
       includedInPackage: 'Incluido en el paquete',
+      selectedInPackage: 'Seleccionado en el paquete',
+      extraPriceAsAdditional: 'Precio como adicional',
+      extraIncludedShort: 'Incluido',
+      extraSelectedShort: 'Seleccionado',
       withoutSidesGroupTitle: 'SIN ACOMPAÑAMIENTOS',
       withSidesGroupHint:
         'Una experiencia completa, con acompañamientos preparados para complementar el asado y dejar el servicio listo para recibir a tus invitados. Explora {count} opciones de paquetes disponibles y elige la combinación ideal para tu evento.',

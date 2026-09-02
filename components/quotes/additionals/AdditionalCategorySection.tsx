@@ -15,6 +15,7 @@ import {
   getLocalizedAdditionalLabel,
   type QuoteAdditionalItem,
 } from '@/Lib/quoteAdditionalDisplay'
+import type { ExtraAvailabilityStatus } from '@/Lib/publicQuote/extrasEligibility'
 import { getQuoteStrings } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
@@ -164,6 +165,7 @@ export default function AdditionalCategorySection({
   emphasize = false,
   featured = false,
   quantities,
+  extraAvailabilityByItemId = {},
   billableGuestCount,
   language,
   exposeEpoch = 0,
@@ -181,6 +183,7 @@ export default function AdditionalCategorySection({
   emphasize?: boolean
   featured?: boolean
   quantities: Record<string, number>
+  extraAvailabilityByItemId?: Record<string, ExtraAvailabilityStatus>
   billableGuestCount: number
   language: QuoteLanguage
   exposeEpoch?: number
@@ -265,13 +268,20 @@ export default function AdditionalCategorySection({
     >
       {items.map((item) => {
         const quantity = quantities[item.id] ?? 0
+        const availability = extraAvailabilityByItemId[item.id] ?? 'AVAILABLE'
+        const locked = availability !== 'AVAILABLE'
+        const summaryBadge =
+          availability === 'SELECTED_IN_PACKAGE'
+            ? t.wizard.extraSelectedShort
+            : t.wizard.extraIncludedShort
         return (
           <li
             key={item.id}
             data-additional-summary-item
+            data-extra-availability={availability}
             className={`flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1 text-sm leading-snug${
               featured ? ' is-featured-summary-item' : ''
-            }`}
+            }${locked ? ' is-package-locked-summary' : ''}`}
           >
             <span
               className={
@@ -291,7 +301,7 @@ export default function AdditionalCategorySection({
               }
             >
               {getLocalizedAdditionalLabel(item, language)}
-              {quantity > 0 ? (
+              {!locked && quantity > 0 ? (
                 <span
                   className={
                     featured
@@ -300,6 +310,14 @@ export default function AdditionalCategorySection({
                   }
                 >
                   ×{quantity}
+                </span>
+              ) : null}
+              {locked ? (
+                <span
+                  className="public-additional-summary-lock-badge"
+                  data-extra-summary-badge
+                >
+                  {summaryBadge}
                 </span>
               ) : null}
             </span>
@@ -400,6 +418,7 @@ export default function AdditionalCategorySection({
                   quantity={quantities[item.id] ?? 0}
                   billableGuestCount={billableGuestCount}
                   language={language}
+                  availability={extraAvailabilityByItemId[item.id] ?? 'AVAILABLE'}
                   onChangeQty={(qty) => onChangeQty(item.id, qty)}
                 />
               ))}

@@ -127,7 +127,12 @@ import type {
   PackageSideItem,
 } from '../../../Lib/packageConfiguration'
 import {
+  buildExtraAvailabilityByItemId,
+  canSetPublicAdditionalQuantity,
   filterPublicExtraItemsForPackage,
+  getNonChargeableExtraIds,
+  getSelectedInPackageCatalogIds,
+  getUniversalIncludedCatalogIds,
   getVisiblePublicExtraItems,
   isDisposableKitItem,
   isWaiterServiceItem,
@@ -1859,13 +1864,62 @@ export default function QuoteWizardCore({
     selectedPackage,
   ])
 
+  const blockedCatalogItemIdsWithoutSelections = useMemo(() => {
+    if (!state.packageId || !selectedPackage) return []
+    return getBlockedCatalogItemIds(
+      state.packageId,
+      flatOptionGroups,
+      isCustomPackage(selectedPackage),
+      {
+        packageItems,
+        packageSideItems,
+        groupItems: flatOptionGroupItems,
+        selectedPackageOptions: {},
+      },
+    )
+  }, [
+    state.packageId,
+    flatOptionGroups,
+    flatOptionGroupItems,
+    packageItems,
+    packageSideItems,
+    selectedPackage,
+  ])
+
+  const nonChargeableExtraIds = useMemo(
+    () =>
+      getNonChargeableExtraIds(
+        blockedCatalogItemIds,
+        getUniversalIncludedCatalogIds(itemCatalog, selectedPackage),
+      ),
+    [blockedCatalogItemIds, itemCatalog, selectedPackage],
+  )
+
   const visibleAdditionalItems = useMemo(
     () =>
       filterPublicExtraItemsForPackage(
-        getVisiblePublicExtraItems(itemCatalog, blockedCatalogItemIds),
+        getVisiblePublicExtraItems(itemCatalog, []),
         selectedPackage,
       ),
-    [itemCatalog, blockedCatalogItemIds, selectedPackage],
+    [itemCatalog, selectedPackage],
+  )
+
+  const extraAvailabilityByItemId = useMemo(
+    () =>
+      buildExtraAvailabilityByItemId(
+        visibleAdditionalItems.map((item) => item.id),
+        nonChargeableExtraIds,
+        getSelectedInPackageCatalogIds(
+          blockedCatalogItemIds,
+          blockedCatalogItemIdsWithoutSelections,
+        ),
+      ),
+    [
+      visibleAdditionalItems,
+      nonChargeableExtraIds,
+      blockedCatalogItemIds,
+      blockedCatalogItemIdsWithoutSelections,
+    ],
   )
 
   const waiterItem = useMemo(
@@ -1921,16 +1975,16 @@ export default function QuoteWizardCore({
   }, [additionalItemsByCategory, state.additionals])
 
   useEffect(() => {
-    if (blockedCatalogItemIds.length === 0) return
+    if (nonChargeableExtraIds.length === 0) return
     setState((prev) => {
       const { additionals, removedIds } = pruneBlockedAdditionalSelections(
         prev.additionals,
-        blockedCatalogItemIds,
+        nonChargeableExtraIds,
       )
       if (removedIds.length === 0) return prev
       return { ...prev, additionals }
     })
-  }, [blockedCatalogItemIds])
+  }, [nonChargeableExtraIds])
 
   useEffect(() => {
     setState((prev) => {
@@ -2586,6 +2640,7 @@ export default function QuoteWizardCore({
   }, [step])
 
   function setAdditionalQty(itemId: string, quantity: number) {
+    if (!canSetPublicAdditionalQuantity(itemId, nonChargeableExtraIds)) return
     const item = itemCatalog.find((row) => row.id === itemId)
     const sanitized = sanitizePublicAdditionalQuantity(quantity)
     const normalizedQty = item
@@ -3866,6 +3921,7 @@ export default function QuoteWizardCore({
                     emphasize={emphasizedAdditionalCategory === categoryKey}
                     featured={categoryKey === SUGGESTED_EXTRAS_DISPLAY_KEY}
                     quantities={state.additionals}
+                    extraAvailabilityByItemId={extraAvailabilityByItemId}
                     billableGuestCount={billableGuestCount}
                     language={uiLocale}
                     onToggle={() => toggleAdditionalCategory(categoryKey)}
