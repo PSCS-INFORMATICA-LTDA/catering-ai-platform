@@ -100,55 +100,40 @@ try {
     '[data-field-advance-check="adults"]',
   )
   test('ADULTS_20_CHECK_VISIBLE = YES', Boolean(adultsCheck))
-  const syncAttr = await page.$eval(
-    '[data-field-advance-check="adults"]',
-    (el) => el.getAttribute('data-field-advance-sync'),
+  const adultsMeta = await page.$eval('[data-field-advance-check="adults"]', (el) => ({
+    tag: el.tagName,
+    htmlFor: el.getAttribute('for'),
+    mode: el.getAttribute('data-field-advance-mode'),
+  }))
+  test('ADULTS_CHECK_ELEMENT = LABEL', adultsMeta.tag === 'LABEL', JSON.stringify(adultsMeta))
+  test(
+    'ADULTS_CHECK_FOR = public-event-child-under-3',
+    adultsMeta.htmlFor === 'public-event-child-under-3',
+    JSON.stringify(adultsMeta),
   )
-  test('FIELD_CHECK_PRIMARY_EVENT = POINTERUP', syncAttr === 'pointerup')
+  const targetChild3 = await page.$('#public-event-child-under-3')
+  const targetChild412 = await page.$('#public-event-child-4-12')
+  const targetStreet = await page.$('#public-event-street-number')
+  test('TARGET_CHILD_UNDER_3_EXISTS = YES', Boolean(targetChild3))
+  test('TARGET_CHILD_4_12_EXISTS = YES', Boolean(targetChild412))
+  test('TARGET_STREET_NUMBER_EXISTS = YES', Boolean(targetStreet))
   await page.$eval('[data-field-advance-check="adults"]', (el) => {
-    el.dispatchEvent(
-      new PointerEvent('pointerdown', {
-        bubbles: true,
-        cancelable: true,
-        pointerType: 'touch',
-        button: 0,
-      }),
-    )
-  })
-  const afterAdultsDown = await page.evaluate(() =>
-    document.activeElement?.getAttribute('data-guest-input'),
-  )
-  test('POINTERDOWN_ADVANCE_CALLS = 0', afterAdultsDown === 'adults', afterAdultsDown)
-  await page.$eval('[data-field-advance-check="adults"]', (el) => {
-    el.dispatchEvent(
-      new PointerEvent('pointerup', {
-        bubbles: true,
-        cancelable: true,
-        pointerType: 'touch',
-        button: 0,
-      }),
-    )
-    el.dispatchEvent(
-      new MouseEvent('click', { bubbles: true, cancelable: true }),
-    )
+    el.click()
   })
   const afterAdults = await page.evaluate(() => ({
+    id: document.activeElement?.id,
     active: document.activeElement?.getAttribute('data-guest-input'),
     child4: document.activeElement === document.querySelector('[data-guest-input="children-4-12"]'),
     street: document.activeElement === document.querySelector('[data-address-number]'),
   }))
   test(
     'ADULTS_CHECK_CLICK_TARGET = CHILD_UNDER_3',
-    afterAdults.active === 'children-under-3',
+    afterAdults.id === 'public-event-child-under-3',
     JSON.stringify(afterAdults),
   )
   test(
     'ADULTS_SINGLE_CLICK_ADVANCES_ONE_FIELD = YES',
-    afterAdults.active === 'children-under-3' && !afterAdults.child4 && !afterAdults.street,
-  )
-  test(
-    'CLICK_AFTER_POINTERUP_ADVANCE_CALLS = 0',
-    afterAdults.active === 'children-under-3' && !afterAdults.child4 && !afterAdults.street,
+    afterAdults.id === 'public-event-child-under-3' && !afterAdults.child4 && !afterAdults.street,
   )
 
   await page.keyboard.type('0')
@@ -156,24 +141,36 @@ try {
     '[data-field-advance-check="children-under-3"]',
   )
   test('CHILD_UNDER_3_0_CHECK_VISIBLE = YES', Boolean(child3Check))
+  const child3Meta = await page.$eval(
+    '[data-field-advance-check="children-under-3"]',
+    (el) => ({
+      tag: el.tagName,
+      htmlFor: el.getAttribute('for'),
+      mode: el.getAttribute('data-field-advance-mode'),
+    }),
+  )
+  test('CHILD_UNDER_3_CHECK_ELEMENT = LABEL', child3Meta.tag === 'LABEL', JSON.stringify(child3Meta))
+  test(
+    'CHILD_UNDER_3_CHECK_FOR = public-event-child-4-12',
+    child3Meta.htmlFor === 'public-event-child-4-12',
+    JSON.stringify(child3Meta),
+  )
   await page.$eval('[data-field-advance-check="children-under-3"]', (el) => {
-    const opts = { bubbles: true, cancelable: true, pointerType: 'touch', button: 0 }
-    el.dispatchEvent(new PointerEvent('pointerdown', opts))
-    el.dispatchEvent(new PointerEvent('pointerup', opts))
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    el.click()
   })
   const afterChild3 = await page.evaluate(() => ({
+    id: document.activeElement?.id,
     active: document.activeElement?.getAttribute('data-guest-input'),
     street: document.activeElement === document.querySelector('[data-address-number]'),
   }))
   test(
     'CHILD_UNDER_3_CHECK_CLICK_TARGET = CHILD_4_12',
-    afterChild3.active === 'children-4-12',
+    afterChild3.id === 'public-event-child-4-12',
     JSON.stringify(afterChild3),
   )
   test(
     'CHILD_UNDER_3_SINGLE_CLICK_ADVANCES_ONE_FIELD = YES',
-    afterChild3.active === 'children-4-12' && !afterChild3.street,
+    afterChild3.id === 'public-event-child-4-12' && !afterChild3.street,
   )
 
   await page.keyboard.type('0')
@@ -181,24 +178,36 @@ try {
     '[data-field-advance-check="children-4-12"]',
   )
   test('CHILD_4_12_0_CHECK_VISIBLE = YES', Boolean(child412Check))
+  const child412Meta = await page.$eval(
+    '[data-field-advance-check="children-4-12"]',
+    (el) => ({
+      tag: el.tagName,
+      htmlFor: el.getAttribute('for'),
+      mode: el.getAttribute('data-field-advance-mode'),
+    }),
+  )
+  test('CHILD_4_12_CHECK_ELEMENT = LABEL', child412Meta.tag === 'LABEL', JSON.stringify(child412Meta))
+  test(
+    'CHILD_4_12_CHECK_FOR = public-event-street-number',
+    child412Meta.htmlFor === 'public-event-street-number',
+    JSON.stringify(child412Meta),
+  )
   await page.$eval('[data-field-advance-check="children-4-12"]', (el) => {
-    const opts = { bubbles: true, cancelable: true, pointerType: 'touch', button: 0 }
-    el.dispatchEvent(new PointerEvent('pointerdown', opts))
-    el.dispatchEvent(new PointerEvent('pointerup', opts))
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    el.click()
   })
   const afterChild412 = await page.evaluate(() => ({
+    id: document.activeElement?.id,
     street: document.activeElement === document.querySelector('[data-address-number]'),
     address: document.activeElement === document.querySelector('[data-address-search]'),
   }))
   test(
     'CHILD_4_12_CHECK_CLICK_TARGET = STREET_NUMBER',
-    afterChild412.street,
+    afterChild412.id === 'public-event-street-number',
     JSON.stringify(afterChild412),
   )
   test(
     'CHILD_4_12_SINGLE_CLICK_ADVANCES_ONE_FIELD = YES',
-    afterChild412.street && !afterChild412.address,
+    afterChild412.id === 'public-event-street-number' && !afterChild412.address,
   )
 
   await page.keyboard.type('2353')

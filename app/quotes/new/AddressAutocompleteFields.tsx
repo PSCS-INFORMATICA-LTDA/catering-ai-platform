@@ -244,6 +244,7 @@ export default function AddressAutocompleteFields({
   requiredLabel,
   placeholders,
   numberInputRef,
+  numberInputId,
   searchInputRef,
   onPlaceSelected,
   onNumberCommit,
@@ -275,6 +276,7 @@ export default function AddressAutocompleteFields({
     postal?: string
   }
   numberInputRef?: React.RefObject<HTMLInputElement | null>
+  numberInputId?: string
   searchInputRef?: React.RefObject<HTMLInputElement | null>
   onPlaceSelected?: (info: { addressNumber: string }) => void
   onNumberCommit?: (value: string) => void
@@ -487,6 +489,7 @@ export default function AddressAutocompleteFields({
         </FieldLabel>
         <div className="relative">
           <input
+            id={numberInputId}
             ref={numberInputRef}
             data-address-number
             type="text"

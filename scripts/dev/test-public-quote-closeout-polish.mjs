@@ -54,6 +54,10 @@ const pscs = source('components/brand/PscsOneMark.tsx')
 const mapper = source('components/quote-review/mapWizardToQuoteReview.ts')
 
 const wizardCheck = sliceFn(wizard, 'FieldCheck')
+const nativeCheck = wizardCheck.slice(
+  wizardCheck.indexOf('if (nativeTargetId)'),
+  wizardCheck.indexOf('if (!onAdvance)'),
+)
 const addressCheck = sliceFn(address, 'FieldCheck')
 const focusFn = sliceFn(wizard, 'focusWizardField')
 const successFooter = (() => {
@@ -117,9 +121,79 @@ test('NO_EFFECT_BASED_ADVANCE_FOCUS', () => {
   assert.doesNotMatch(focusFn, /useEffect/)
 })
 
-test('FIELD_CHECK_PRIMARY_EVENT = POINTERUP', () => {
-  assert.match(wizardCheck, /data-field-advance-sync="pointerup"/)
-  assert.match(wizardCheck, /onPointerUp=\{/)
+test('ADULTS_CHECK_ELEMENT = LABEL', () => {
+  assert.match(wizard, /advanceKey="adults"/)
+  assert.match(wizard, /nativeAdvanceTargetId=\{[\s\S]*?public-event-child-under-3/)
+  assert.match(nativeCheck, /<label/)
+  assert.match(nativeCheck, /htmlFor=\{nativeTargetId\}/)
+  assert.match(nativeCheck, /data-field-advance-mode="native-label"/)
+  assert.doesNotMatch(nativeCheck, /<button/)
+})
+
+test('ADULTS_CHECK_FOR = public-event-child-under-3', () => {
+  assert.match(wizard, /inputId="public-event-adults"/)
+  assert.match(
+    wizard,
+    /advanceKey="adults"[\s\S]{0,220}nativeAdvanceTargetId=\{[\s\S]{0,80}public-event-child-under-3/,
+  )
+})
+
+test('CHILD_UNDER_3_CHECK_ELEMENT = LABEL', () => {
+  assert.match(wizard, /advanceKey="children-under-3"/)
+  assert.match(wizard, /nativeAdvanceTargetId=\{[\s\S]*?public-event-child-4-12/)
+})
+
+test('CHILD_UNDER_3_CHECK_FOR = public-event-child-4-12', () => {
+  assert.match(wizard, /inputId="public-event-child-under-3"/)
+  assert.match(
+    wizard,
+    /advanceKey="children-under-3"[\s\S]{0,220}nativeAdvanceTargetId=\{[\s\S]{0,80}public-event-child-4-12/,
+  )
+})
+
+test('CHILD_4_12_CHECK_ELEMENT = LABEL', () => {
+  assert.match(wizard, /advanceKey="children-4-12"/)
+  assert.match(wizard, /nativeAdvanceTargetId=\{[\s\S]*?public-event-street-number/)
+})
+
+test('CHILD_4_12_CHECK_FOR = public-event-street-number', () => {
+  assert.match(wizard, /inputId="public-event-child-4-12"/)
+  assert.match(
+    wizard,
+    /advanceKey="children-4-12"[\s\S]{0,220}nativeAdvanceTargetId=\{[\s\S]{0,80}public-event-street-number/,
+  )
+})
+
+test('TARGET_CHILD_UNDER_3_EXISTS = YES', () => {
+  assert.match(wizard, /inputId="public-event-child-under-3"/)
+})
+
+test('TARGET_CHILD_4_12_EXISTS = YES', () => {
+  assert.match(wizard, /inputId="public-event-child-4-12"/)
+})
+
+test('TARGET_STREET_NUMBER_EXISTS = YES', () => {
+  assert.match(wizard, /numberInputId="public-event-street-number"/)
+  assert.match(address, /id=\{numberInputId\}/)
+})
+
+test('NATIVE_LABEL_CLICK_PREVENT_DEFAULT = NO', () => {
+  assert.doesNotMatch(nativeCheck, /preventDefault\(/)
+})
+
+test('CHECK_PROGRAMMATIC_NEXT_FOCUS = NO', () => {
+  assert.doesNotMatch(nativeCheck, /\.focus\(/)
+  assert.doesNotMatch(nativeCheck, /focusWizardField/)
+  assert.doesNotMatch(nativeCheck, /requestAnimationFrame/)
+  assert.doesNotMatch(nativeCheck, /setTimeout/)
+  assert.match(wizard, /function handleBeforeNativeAdvance\(\) \{[\s\S]*?commitOnly\(\)/)
+  assert.doesNotMatch(
+    wizard.slice(
+      wizard.indexOf('function handleBeforeNativeAdvance'),
+      wizard.indexOf('return (', wizard.indexOf('function handleBeforeNativeAdvance')),
+    ),
+    /onCommit|focusWizardField/,
+  )
 })
 
 test('POINTERDOWN_ADVANCE_CALLS = 0', () => {
@@ -168,7 +242,8 @@ test('FOCUS_SYNCHRONOUS = YES', () => {
   assert.doesNotMatch(focusFn, /setTimeout/)
   assert.doesNotMatch(wizardCheck, /setTimeout|requestAnimationFrame\(|\.then\(|await |useEffect/)
   assert.match(wizard, /flushSync/)
-  assert.match(wizard, /function commitAndAdvance\(\) \{[\s\S]*?flushSync\(/)
+  assert.match(wizard, /function commitOnly\(\) \{[\s\S]*?flushSync\(/)
+  assert.match(wizard, /function commitAndAdvance\(\) \{[\s\S]*?commitOnly\(\)/)
 })
 
 test('FOCUS_IS_SYNCHRONOUS = PASS', () => {

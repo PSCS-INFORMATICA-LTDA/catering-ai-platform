@@ -442,14 +442,46 @@ function FieldCheck({
   onAdvance,
   advanceLabel,
   advanceKey,
+  nativeTargetId,
+  onBeforeNativeAdvance,
 }: {
   show: boolean
   onAdvance?: () => void
   advanceLabel?: string
   advanceKey?: string
+  nativeTargetId?: string
+  onBeforeNativeAdvance?: () => void
 }) {
   const advancedByPointerRef = useRef(false)
   if (!show) return null
+  if (nativeTargetId) {
+    // Previous pointerdown/pointerup approaches
+    // successfully changed document.activeElement
+    // but did not reopen the iOS software keyboard.
+    //
+    // For the guest check flow we intentionally
+    // delegate target activation to native HTML
+    // <label for> behavior instead of calling focus().
+    return (
+      <label
+        htmlFor={nativeTargetId}
+        data-field-advance-check={advanceKey || ''}
+        data-field-advance-mode="native-label"
+        aria-label={advanceLabel || 'Next'}
+        className="absolute right-0.5 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-sm font-bold text-cdl-success"
+        onPointerDown={() => {
+          // Commit only. Never preventDefault — that would cancel the
+          // native label → input activation iOS needs for the keyboard.
+          onBeforeNativeAdvance?.()
+        }}
+        onClick={() => {
+          onBeforeNativeAdvance?.()
+        }}
+      >
+        ✓
+      </label>
+    )
+  }
   if (!onAdvance) {
     return (
       <span
@@ -1096,6 +1128,8 @@ function QuantityField({
   advanceOnCheck = false,
   advanceLabel,
   advanceKey,
+  inputId,
+  nativeAdvanceTargetId,
 }: {
   label: string
   value: number | null
@@ -1116,6 +1150,8 @@ function QuantityField({
   advanceOnCheck?: boolean
   advanceLabel?: string
   advanceKey?: string
+  inputId?: string
+  nativeAdvanceTargetId?: string
 }) {
   const displayValue = (next: number | null) => {
     if (next === null) return ''
@@ -1126,6 +1162,7 @@ function QuantityField({
   const [focused, setFocused] = useState(false)
   const [seenValue, setSeenValue] = useState(value)
   const [seenBlankZero, setSeenBlankZero] = useState(blankZero)
+  const suppressAdvanceOnBlurRef = useRef(false)
   if (!focused && (seenValue !== value || seenBlankZero !== blankZero)) {
     setSeenValue(value)
     setSeenBlankZero(blankZero)
@@ -1150,12 +1187,22 @@ function QuantityField({
     return next
   }
 
-  function commitAndAdvance() {
+  function commitOnly() {
     let next: number | null = null
     flushSync(() => {
       next = commitDraft()
     })
+    return next
+  }
+
+  function commitAndAdvance() {
+    const next = commitOnly()
     onCommit?.(next)
+  }
+
+  function handleBeforeNativeAdvance() {
+    suppressAdvanceOnBlurRef.current = true
+    commitOnly()
   }
 
   return (
@@ -1165,6 +1212,7 @@ function QuantityField({
       </WizardFieldLabel>
       <div className="relative">
         <input
+          id={inputId}
           ref={inputRef}
           type="text"
           inputMode="numeric"
@@ -1185,6 +1233,10 @@ function QuantityField({
           onBlur={(event) => {
             setFocused(false)
             const next = commitDraft()
+            if (suppressAdvanceOnBlurRef.current) {
+              suppressAdvanceOnBlurRef.current = false
+              return
+            }
             if (shouldAdvanceFromFieldBlur(event.relatedTarget)) {
               onCommit?.(next)
             }
@@ -1203,8 +1255,16 @@ function QuantityField({
         />
         <FieldCheck
           show={completion === 'filled'}
+          nativeTargetId={nativeAdvanceTargetId}
+          onBeforeNativeAdvance={
+            nativeAdvanceTargetId && completion === 'filled'
+              ? handleBeforeNativeAdvance
+              : undefined
+          }
           onAdvance={
-            advanceOnCheck && completion === 'filled'
+            !nativeAdvanceTargetId &&
+            advanceOnCheck &&
+            completion === 'filled'
               ? commitAndAdvance
               : undefined
           }
@@ -3487,11 +3547,15 @@ export default function QuoteWizardCore({
                   required={isPublicMode}
                   requiredLabel={requiredLabel}
                   inputRef={adultsInputRef}
+                  inputId="public-event-adults"
                   guestField
                   enterKeyHint={isPublicMode ? 'next' : undefined}
                   advanceOnCheck={isPublicMode}
                   advanceLabel={tCommon(uiLocale, 'next')}
                   advanceKey="adults"
+                  nativeAdvanceTargetId={
+                    isPublicMode ? 'public-event-child-under-3' : undefined
+                  }
                   onCommit={
                     isPublicMode
                       ? (value) => {
@@ -3515,11 +3579,15 @@ export default function QuoteWizardCore({
                     required={isPublicMode}
                     requiredLabel={requiredLabel}
                     inputRef={childrenUnder3InputRef}
+                    inputId="public-event-child-under-3"
                     guestField
                     enterKeyHint={isPublicMode ? 'next' : undefined}
                     advanceOnCheck={isPublicMode}
                     advanceLabel={tCommon(uiLocale, 'next')}
                     advanceKey="children-under-3"
+                    nativeAdvanceTargetId={
+                      isPublicMode ? 'public-event-child-4-12' : undefined
+                    }
                     onCommit={
                       isPublicMode
                         ? (value) => {
@@ -3544,11 +3612,15 @@ export default function QuoteWizardCore({
                     required={isPublicMode}
                     requiredLabel={requiredLabel}
                     inputRef={children4To12InputRef}
+                    inputId="public-event-child-4-12"
                     guestField
                     enterKeyHint={isPublicMode ? 'next' : undefined}
                     advanceOnCheck={isPublicMode}
                     advanceLabel={tCommon(uiLocale, 'next')}
                     advanceKey="children-4-12"
+                    nativeAdvanceTargetId={
+                      isPublicMode ? 'public-event-street-number' : undefined
+                    }
                     onCommit={
                       isPublicMode
                         ? (value) => {
@@ -3577,6 +3649,7 @@ export default function QuoteWizardCore({
                 stackPrimaryFields={isPublicMode}
                 searchInputRef={addressSearchInputRef}
                 numberInputRef={streetNumberInputRef}
+                numberInputId="public-event-street-number"
                 showNumberAdvanceCheck={isPublicMode}
                 onNumberCommit={
                   isPublicMode
