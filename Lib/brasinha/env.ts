@@ -36,9 +36,17 @@ export function isWhatsAppChannelEnabled(
   return false && source.WHATSAPP_ENABLED === 'true'
 }
 
-/** Sidebar / DEV entry. Hidden when the runtime is PROD or not Catering DEV. */
+/**
+ * Sidebar / DEV entry. Hidden when the runtime is PROD or not Catering DEV.
+ * Read NEXT_PUBLIC_* via static access so the client bundle keeps the inlined values.
+ * Spreading `process.env` in the browser drops those keys.
+ */
 export function isBrasinhaDevNavVisible(
-  source: Record<string, string | undefined> = process.env,
+  source: Record<string, string | undefined> = {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+    NEXT_PUBLIC_VERCEL_ENV: process.env.NEXT_PUBLIC_VERCEL_ENV,
+  },
 ): boolean {
   return isBrasinhaDevRuntimeAllowed({
     ...source,

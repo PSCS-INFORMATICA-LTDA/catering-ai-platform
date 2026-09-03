@@ -18,6 +18,7 @@ import {
 } from '../../Lib/brasinha/env.ts'
 import { detectBrasinhaIntent } from '../../Lib/brasinha/core/intent.ts'
 import { extraHourHandoffReply, serviceTimingReply } from '../../Lib/brasinha/core/copy.ts'
+import { CATERING_DEV_SUPABASE_REF } from '../../Lib/pscs-one/devSupabaseGuard.ts'
 import { createWhatsAppChannel, whatsappExternalCalls } from '../../Lib/brasinha/channels/whatsapp.ts'
 import { assertDevUrl, loadDevEnv } from './loadDevEnv.mjs'
 
@@ -526,6 +527,17 @@ await test('PROD_RUNTIME_AND_PUBLIC_CTA_BLOCKED', () => {
   )
   assert.match(source('components/layout/navConfig.ts'), /devOnly: true/)
   assert.match(source('components/layout/CateringSidebar.tsx'), /isBrasinhaDevNavVisible/)
+  assert.match(
+    source('Lib/brasinha/env.ts'),
+    /NEXT_PUBLIC_SUPABASE_URL: process\.env\.NEXT_PUBLIC_SUPABASE_URL/,
+  )
+  assert.equal(
+    isBrasinhaDevNavVisible({
+      NEXT_PUBLIC_SUPABASE_URL: `https://${CATERING_DEV_SUPABASE_REF}.supabase.co`,
+      VERCEL_ENV: 'preview',
+    }),
+    true,
+  )
   assert.doesNotMatch(
     source('components/quotes/PublicLandingCinematic.tsx'),
     /\/dev\/brasinha|\/brasinha/,
