@@ -223,6 +223,7 @@ type QuoteStrings = {
     endTime: string
     endTimeHint: string
     endTimeHintPublic: string
+    serviceTimingHintPublic: string
     publicPhoneHint: string
     publicPhonePlaceholder: string
     phoneCountryPlaceholder: string
@@ -703,6 +704,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Preenchido automaticamente com +4h. Você pode alterar se quiser.',
       endTimeHintPublic:
         'Calculado automaticamente a partir do horário de início. Não é possível editar.',
+      serviceTimingHintPublic:
+        'O serviço tem duração padrão de até 4 horas. Nossa equipe chega aproximadamente 1 hora antes do horário de início para montagem e preparação.',
       publicPhoneHint:
         'Escolha o país e o DDI. Depois digite DDD e número. O telefone é salvo no formato internacional.',
       publicPhonePlaceholder: 'Ex.: 407 555 1234',
@@ -1215,6 +1218,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       endTimeHint: 'Filled automatically with +4h. You can change it if needed.',
       endTimeHintPublic:
         'Calculated automatically from the start time. This field cannot be edited.',
+      serviceTimingHintPublic:
+        'Service lasts up to 4 hours. Our team arrives approximately 1 hour before the selected start time for setup and preparation.',
       publicPhoneHint:
         'Choose the country and calling code, then type the area code and number. The phone is stored in international format.',
       publicPhonePlaceholder: 'Ex.: 407 555 1234',
@@ -1727,6 +1732,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Completado automáticamente con +4h. Puede cambiarlo si desea.',
       endTimeHintPublic:
         'Calculado automáticamente a partir del horario de inicio. No se puede editar.',
+      serviceTimingHintPublic:
+        'El servicio tiene una duración estándar de hasta 4 horas. Nuestro equipo llega aproximadamente 1 hora antes del horario de inicio para el montaje y la preparación.',
       publicPhoneHint:
         'Elija el país y el código, luego escriba el área y el número. El teléfono se guarda en formato internacional.',
       publicPhonePlaceholder: 'Ej.: 407 555 1234',

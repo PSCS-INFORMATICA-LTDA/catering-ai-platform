@@ -7,7 +7,7 @@ import { loadPackageConfiguration } from '@/Lib/packageConfiguration'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { fetchSupabaseCommercialRules } from '@/Lib/supabaseCommercialRules'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
-import { resolveServiceDurationMinutes } from './eventDuration'
+import { serviceDurationMinutesFromHours } from './eventDuration'
 import { resolvePublicLocationBias } from './locationBias'
 import {
   isPublicCatalogFixtureItem,
@@ -360,25 +360,6 @@ function sanitizeOptionGroup(row: Record<string, unknown>) {
   }
 }
 
-async function loadServiceDurationMinutes(companyId: string): Promise<number> {
-  const supabase = getSupabaseServerClient()
-  const { data, error } = await supabase
-    .from('commercial_rules')
-    .select('rule_key, rule_value, active')
-    .eq('company_id', companyId)
-    .eq('rule_key', 'service_duration_minutes')
-    .maybeSingle()
-  if (error || !data || data.active === false) {
-    return resolveServiceDurationMinutes(null)
-  }
-  const raw = data.rule_value
-  const value =
-    raw && typeof raw === 'object' && 'value' in raw
-      ? Number((raw as { value: unknown }).value)
-      : Number(raw)
-  return resolveServiceDurationMinutes(Number.isFinite(value) ? value : null)
-}
-
 function sanitizeOptionItem(row: Record<string, unknown>) {
   return {
     id: String(row.id),
@@ -427,12 +408,8 @@ export async function getPublicQuoteBootstrap(
   )
   if (packages.length === 0) return null
 
-  const [
-    catalogResult,
-    configurationResult,
-    commercialRules,
-    serviceDurationMinutes,
-  ] = await Promise.all([
+  const [catalogResult, configurationResult, commercialRules] =
+    await Promise.all([
       fetchCatalogItems({
         activeOnly: true,
         usage: 'additional',
@@ -446,9 +423,11 @@ export async function getPublicQuoteBootstrap(
         companyId: company.id,
       }),
       fetchSupabaseCommercialRules(company.id),
-      loadServiceDurationMinutes(company.id),
     ])
   if (catalogResult.error || configurationResult.error) return null
+  const serviceDurationMinutes = serviceDurationMinutesFromHours(
+    commercialRules.serviceDurationHours,
+  )
 
   const landing = localizedObject(settings.landing_copy, locale)
   const displayName =

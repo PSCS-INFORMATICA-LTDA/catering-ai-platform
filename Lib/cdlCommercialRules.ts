@@ -35,6 +35,13 @@ export const CHILD_FREE_AGE_MAX = 3
 export const CHILD_HALF_AGE_MAX = 12
 
 export const SERVICE_DURATION_HOURS = 4
+/** Informational only: crew arrives before service start. Not a billed hour. */
+export const CREW_SETUP_LEAD_MINUTES = 60
+/**
+ * Future commercial rule only. MUST stay inactive.
+ * Do not apply to pricing, invoice, extras, or public quote totals.
+ */
+export const EXTRA_SERVICE_HOUR_PERCENTAGE = 25
 export const WAITER_SERVICE_FEE = 250
 export const GRILL_RENTAL_FEE = 100
 

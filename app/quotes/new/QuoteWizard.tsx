@@ -3589,6 +3589,14 @@ export default function QuoteWizardCore({
                   </p>
                 </div>
               </div>
+              {isPublicMode ? (
+                <p
+                  data-service-timing-hint-public
+                  className="max-w-full text-pretty text-xs leading-relaxed text-cdl-subtle"
+                >
+                  {w.serviceTimingHintPublic}
+                </p>
+              ) : null}
               <div
                 ref={guestAddressTransitionRef}
                 data-guest-address-transition

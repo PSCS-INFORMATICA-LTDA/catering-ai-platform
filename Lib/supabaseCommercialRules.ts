@@ -1,6 +1,7 @@
 import {
   CHILD_FREE_AGE_MAX,
   CHILD_HALF_AGE_MAX,
+  CREW_SETUP_LEAD_MINUTES,
   HOLIDAY_MIN_ORDER,
   HOLIDAY_SURCHARGE_PERCENT,
   MILEAGE_BASE_LOCATION,
@@ -10,6 +11,7 @@ import {
   MIN_ORDER_WEEKDAY,
   MIN_ORDER_WEEKEND,
   RESERVATION_PERCENTAGE,
+  SERVICE_DURATION_HOURS,
   SIDES_PRICE_PER_PERSON,
 } from './cdlCommercialRules'
 import {
@@ -34,6 +36,8 @@ export type CommercialRulesSnapshot = {
   holidayMinOrder: number
   childFreeAgeMax: number
   childHalfAgeMax: number
+  serviceDurationHours: number
+  crewSetupLeadMinutes: number
   source: 'supabase' | 'fallback'
 }
 
@@ -73,6 +77,8 @@ export function getFallbackCommercialRules(): CommercialRulesSnapshot {
     holidayMinOrder: HOLIDAY_MIN_ORDER,
     childFreeAgeMax: CHILD_FREE_AGE_MAX,
     childHalfAgeMax: CHILD_HALF_AGE_MAX,
+    serviceDurationHours: SERVICE_DURATION_HOURS,
+    crewSetupLeadMinutes: CREW_SETUP_LEAD_MINUTES,
     source: 'fallback',
   }
 }
@@ -146,6 +152,14 @@ function mapKeyValueRules(rows: RuleRow[]): CommercialRulesSnapshot {
       byKey.get('child_half_age_max'),
       fallback.childHalfAgeMax,
     ),
+    serviceDurationHours: toNumber(
+      byKey.get('service_duration_hours'),
+      fallback.serviceDurationHours,
+    ),
+    crewSetupLeadMinutes: toNumber(
+      byKey.get('crew_setup_lead_minutes'),
+      fallback.crewSetupLeadMinutes,
+    ),
     source: 'supabase',
   }
 }
@@ -186,6 +200,14 @@ function mapSingleRowRules(row: RuleRow): CommercialRulesSnapshot {
     childHalfAgeMax: toNumber(
       row.child_half_age_max,
       fallback.childHalfAgeMax,
+    ),
+    serviceDurationHours: toNumber(
+      row.service_duration_hours,
+      fallback.serviceDurationHours,
+    ),
+    crewSetupLeadMinutes: toNumber(
+      row.crew_setup_lead_minutes,
+      fallback.crewSetupLeadMinutes,
     ),
     source: 'supabase',
   }
