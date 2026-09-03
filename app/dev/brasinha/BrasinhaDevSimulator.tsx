@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { tCommon } from '@/Lib/i18n/common'
 
 const STORAGE_KEY = 'brasinha-dev-conversation-id'
 
@@ -28,6 +29,9 @@ type ConversationPayload = {
   toolsCalled?: string[]
   traces?: Trace[]
   reply?: string
+  reasonerKind?: string
+  reasonerModel?: string | null
+  providerFailure?: boolean
   messages?: Array<{
     role?: ChatRow['role']
     content?: string
@@ -64,11 +68,13 @@ function persistPointer(conversationId: string | null) {
 
 export default function BrasinhaDevSimulator({
   companyId,
+  companyDisplayName,
   personaName,
   personaRole,
   initialConversationId,
 }: {
   companyId: string
+  companyDisplayName?: string | null
   personaName: string
   personaRole: string
   initialConversationId?: string | null
@@ -83,9 +89,13 @@ export default function BrasinhaDevSimulator({
   const [handoffReason, setHandoffReason] = useState<string | null>(null)
   const [tools, setTools] = useState<string[]>([])
   const [traces, setTraces] = useState<Trace[]>([])
+  const [reasonerKind, setReasonerKind] = useState<string>('deterministic')
+  const [reasonerModel, setReasonerModel] = useState<string | null>(null)
+  const [providerFailure, setProviderFailure] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
+  const sendLabel = tCommon(language, 'send')
 
   useEffect(() => {
     let cancelled = false
@@ -165,6 +175,9 @@ export default function BrasinhaDevSimulator({
       setHandoffReason(payload.handoffReason ?? null)
       setTools(payload.toolsCalled ?? [])
       setTraces(payload.traces ?? [])
+      setReasonerKind(payload.reasonerKind ?? 'deterministic')
+      setReasonerModel(payload.reasonerModel ?? null)
+      setProviderFailure(Boolean(payload.providerFailure))
       if (payload.messages?.length) {
         setRows(rowsFromMessages(payload.messages))
       } else if (payload.reply) {
@@ -198,60 +211,70 @@ export default function BrasinhaDevSimulator({
     setTraces([])
     setHandoff('AI_ACTIVE')
     setHandoffReason(null)
+    setReasonerKind('deterministic')
+    setReasonerModel(null)
+    setProviderFailure(false)
     setError(null)
     setBusy(false)
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4">
-      <header>
-        <p className="text-xs uppercase tracking-wide text-cdl-muted">
-          DEV simulator
+    <div className="mx-auto flex min-h-[calc(100dvh-7rem)] max-w-3xl flex-col gap-3">
+      <header className="shrink-0">
+        <p className="text-2xl font-semibold">🔥 {personaName}</p>
+        <p className="text-sm font-medium">
+          EMPRESA DO BRASINHA:{' '}
+          {companyDisplayName || '—'}
         </p>
-        <h1 className="text-2xl font-semibold">
-          {personaName} 🔥
-        </h1>
-        <p className="text-sm text-cdl-muted">{personaRole}</p>
+        <p className="text-sm text-cdl-muted">Assistente digital — DEV</p>
+        <p className="mt-1 font-mono text-[10px] text-cdl-muted">{companyId}</p>
+        <p className="sr-only">{personaRole}</p>
       </header>
 
-      <section className="grid gap-2 rounded-xl border border-white/10 bg-black/30 p-3 text-xs sm:grid-cols-2">
-        <p>company: <span className="font-mono">{companyId}</span></p>
-        <p>language: {language}</p>
-        <p className="sm:col-span-2">
-          conversation id:{' '}
-          <span className="font-mono">{conversationId || '—'}</span>
-        </p>
-        <p>handoff: {handoff}</p>
-        <p>handoff reason: {handoffReason || '—'}</p>
-        <p className="sm:col-span-2">tools: {tools.join(', ') || '—'}</p>
-        <ul className="sm:col-span-2 space-y-1">
-          {traces.map((trace, index) => (
-            <li key={`${trace.tool}-${index}`}>
-              {trace.denied ? 'DENIED' : 'SOURCE'} {trace.tool} ← {trace.source}
-              {trace.reason ? ` (${trace.reason})` : ''}
-            </li>
-          ))}
-        </ul>
-      </section>
+      <details className="shrink-0 rounded-xl border border-white/10 bg-black/30 p-3 text-xs">
+        <summary className="cursor-pointer font-medium">Diagnóstico DEV</summary>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <p>reasoner: {reasonerKind}</p>
+          <p>model: {reasonerModel || '—'}</p>
+          <p>language: {language}</p>
+          <p>provider failure: {providerFailure ? 'yes' : 'no'}</p>
+          <p className="sm:col-span-2">
+            conversation id:{' '}
+            <span className="font-mono">{conversationId || '—'}</span>
+          </p>
+          <p>handoff: {handoff}</p>
+          <p>handoff reason: {handoffReason || '—'}</p>
+          <p className="sm:col-span-2">tools: {tools.join(', ') || '—'}</p>
+          <ul className="sm:col-span-2 space-y-1">
+            {traces.map((trace, index) => (
+              <li key={`${trace.tool}-${index}`}>
+                {trace.denied ? 'DENIED' : 'SOURCE'} {trace.tool} ← {trace.source}
+                {trace.reason ? ` (${trace.reason})` : ''}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </details>
 
-      <div className="min-h-72 space-y-3 rounded-xl border border-white/10 bg-[#111] p-4">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto rounded-xl border border-white/10 bg-[#111] p-4">
         {!ready ? (
           <p className="text-sm text-cdl-muted">Loading saved conversation…</p>
         ) : rows.length === 0 ? (
           <p className="text-sm text-cdl-muted">
-            Send a message to test the canonical brain. Saved conversations
-            survive reload.
+            Envie uma mensagem para conversar. O histórico salvo sobrevive ao reload.
           </p>
         ) : (
           rows.map((row, index) => (
             <div
               key={`${row.role}-${index}`}
-              className={row.role === 'customer' ? 'text-right' : 'text-left'}
+              className={row.role === 'customer' ? 'ml-8 text-right' : 'mr-8 text-left'}
             >
-              <p className="mb-1 text-[10px] uppercase text-cdl-muted">{row.role}</p>
-              <pre className="whitespace-pre-wrap rounded-lg bg-white/5 px-3 py-2 text-sm">
+              <p className="mb-1 text-[10px] uppercase text-cdl-muted">
+                {row.role === 'assistant' ? personaName : 'Você'}
+              </p>
+              <p className="whitespace-pre-wrap rounded-2xl bg-white/5 px-3 py-2 text-sm">
                 {row.content}
-              </pre>
+              </p>
             </div>
           ))
         )}
@@ -260,7 +283,7 @@ export default function BrasinhaDevSimulator({
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
       <form
-        className="flex flex-col gap-2 sm:flex-row"
+        className="sticky bottom-0 z-10 flex flex-col gap-2 bg-cdl-bg/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 sm:flex-row"
         onSubmit={(event) => {
           event.preventDefault()
           void send()
@@ -269,21 +292,21 @@ export default function BrasinhaDevSimulator({
         <input
           value={input}
           onChange={(event) => setInput(event.target.value)}
-          placeholder="Mensagem de teste"
-          className="flex-1 rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm"
+          placeholder="Mensagem"
+          className="flex-1 rounded-lg border border-white/15 bg-black/40 px-3 py-3 text-sm sm:py-2"
         />
         <button
           type="submit"
           disabled={busy}
-          className="rounded-lg bg-[#991b1b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          className="rounded-lg bg-[#991b1b] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50 sm:py-2"
         >
-          Send
+          {sendLabel}
         </button>
         <button
           type="button"
           onClick={() => void newConversation()}
           disabled={busy}
-          className="rounded-lg border border-white/20 px-4 py-2 text-sm disabled:opacity-50"
+          className="rounded-lg border border-white/20 px-4 py-3 text-sm disabled:opacity-50 sm:py-2"
         >
           Nova conversa
         </button>

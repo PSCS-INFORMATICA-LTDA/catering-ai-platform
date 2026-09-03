@@ -102,6 +102,7 @@
     "test:dev:public-quote-v5": "node --experimental-strip-types scripts/dev/test-public-quote-v5-contact-extras.mjs",
     "test:dev:brasinha-foundation": "node --experimental-strip-types scripts/dev/test-brasinha-foundation-v0.mjs",
     "test:dev:brasinha-persistence": "node --experimental-strip-types scripts/dev/test-brasinha-persistence.mjs",
+    "test:dev:brasinha-ai-reasoner": "node --experimental-strip-types scripts/dev/test-brasinha-ai-reasoner.mjs",
     "apply:dev:brasinha-persistence": "node scripts/dev/apply-brasinha-persistence-migration.mjs",
     "test:dev:public-phone-country-picker": "node --experimental-strip-types scripts/dev/test-public-phone-country-picker.mjs",
     "test:dev:public-phone-split-focus": "node --experimental-strip-types scripts/dev/test-public-phone-split-focus.mjs",
@@ -210,6 +211,7 @@
     "@supabase/supabase-js": "^2.107.0",
     "lucide-react": "^1.18.0",
     "next": "16.2.7",
+    "openai": "^7.9.0",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },

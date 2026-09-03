@@ -13,6 +13,9 @@ import type {
   BrasinhaTurnResult,
   InboundMessage,
 } from '../types.ts'
+import { extraHourHandoffReply } from './copy.ts'
+import { selectConversationHistory } from './history.ts'
+import { detectBrasinhaIntent } from './intent.ts'
 import {
   createDeterministicReasoner,
   type BrasinhaReasoner,
@@ -74,6 +77,8 @@ export async function runBrasinhaTurn(input: {
   let text: string
   let toolsCalled: string[] = []
   const reasoner = input.reasoner ?? createDeterministicReasoner()
+  let reasonerModel: string | null = null
+  let providerFailure = false
 
   if (policy.action === 'deny') {
     traces.push(blockedToolTrace('approve_discount', companyId, policy.reason))
@@ -98,16 +103,28 @@ export async function runBrasinhaTurn(input: {
       'HUMAN_REVIEW_REQUIRED',
       policy.reason,
     )
+  } else if (detectBrasinhaIntent(input.inbound.text) === 'extra_service_hour') {
+    text = extraHourHandoffReply(language)
+    await input.store.setHandoff(
+      companyId,
+      conversation.id,
+      'HUMAN_REVIEW_REQUIRED',
+      'extra_service_hour',
+    )
   } else {
+    const stored = await input.store.listMessages(companyId, conversation.id)
     const answer = await reasoner.answer({
       companyId,
       language,
       text: input.inbound.text,
       catalog: input.catalog,
+      history: selectConversationHistory(stored, { excludeLastInbound: true }),
     })
     text = answer.text
     traces.push(...answer.traces)
     toolsCalled = answer.toolsCalled
+    reasonerModel = answer.model ?? null
+    providerFailure = Boolean(answer.providerFailure)
     if (answer.handoff) {
       await input.store.setHandoff(
         companyId,
@@ -148,5 +165,8 @@ export async function runBrasinhaTurn(input: {
     traces,
     detectedLanguage: language,
     toolsCalled,
+    reasonerKind: reasoner.kind,
+    reasonerModel,
+    providerFailure,
   }
 }

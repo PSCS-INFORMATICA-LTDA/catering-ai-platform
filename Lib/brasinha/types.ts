@@ -64,10 +64,15 @@ export type BrasinhaStoredMessage = {
   createdAt: string
 }
 
+export type BrasinhaReasonerKind = 'deterministic' | 'openai'
+
 export type BrasinhaTurnResult = {
   conversation: BrasinhaConversation
   reply: OutboundMessage
   traces: BrasinhaToolTrace[]
   detectedLanguage: BrasinhaLanguage
   toolsCalled: string[]
+  reasonerKind: BrasinhaReasonerKind
+  reasonerModel: string | null
+  providerFailure: boolean
 }

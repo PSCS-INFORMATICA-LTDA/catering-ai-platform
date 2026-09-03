@@ -3,6 +3,8 @@ import { handoffReply } from '../policy.ts'
 import type { BrasinhaCatalogPort } from '../tools/types.ts'
 import type {
   BrasinhaLanguage,
+  BrasinhaReasonerKind,
+  BrasinhaStoredMessage,
   BrasinhaToolTrace,
 } from '../types.ts'
 import {
@@ -15,6 +17,7 @@ import {
   quoteStatusReply,
   rulesReply,
   serviceTimingReply,
+  socialReply,
   waiterReply,
 } from './copy.ts'
 import {
@@ -22,12 +25,14 @@ import {
   extractGuestCount,
   extractPackageQuery,
 } from './intent.ts'
+import { detectSocialTurn, extractCustomerName } from './social.ts'
 
 export type BrasinhaReasonerInput = {
   companyId: string
   language: BrasinhaLanguage
   text: string
   catalog: BrasinhaCatalogPort
+  history?: BrasinhaStoredMessage[]
 }
 
 export type BrasinhaReasonerResult = {
@@ -35,10 +40,13 @@ export type BrasinhaReasonerResult = {
   traces: BrasinhaToolTrace[]
   toolsCalled: string[]
   handoff: string | null
+  provider?: BrasinhaReasonerKind
+  model?: string | null
+  providerFailure?: boolean
 }
 
 export type BrasinhaReasoner = {
-  kind: 'deterministic'
+  kind: BrasinhaReasonerKind
   answer(input: BrasinhaReasonerInput): Promise<BrasinhaReasonerResult>
 }
 
@@ -46,6 +54,21 @@ export async function answerDeterministicIntent(
   input: BrasinhaReasonerInput,
 ): Promise<BrasinhaReasonerResult> {
   const persona = getCompanyPersona(input.companyId)
+  const social = detectSocialTurn(input.text)
+  if (social) {
+    return {
+      text: socialReply(
+        input.language,
+        social,
+        extractCustomerName(input.text),
+        input.text,
+      ),
+      traces: [],
+      toolsCalled: [],
+      handoff: null,
+      provider: 'deterministic',
+    }
+  }
   const intent = detectBrasinhaIntent(input.text)
   const traces: BrasinhaToolTrace[] = []
   const toolsCalled: string[] = []

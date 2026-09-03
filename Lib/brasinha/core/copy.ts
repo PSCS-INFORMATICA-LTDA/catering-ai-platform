@@ -195,3 +195,39 @@ export function quoteStatusReply(
   }
   return `${found.quoteNumber} está nesta empresa. Status: ${found.status || 'n/d'}${total ? `. Total registrado: ${total}` : ''}.`
 }
+
+export function socialReply(
+  language: BrasinhaLanguage,
+  kind: 'greeting' | 'thanks' | 'ack' | 'name',
+  name?: string | null,
+  sourceText = '',
+): string {
+  if (kind === 'name') {
+    const who = name?.trim() || (language === 'en' ? 'there' : language === 'es' ? 'ahí' : 'aí')
+    if (language === 'en') return `Nice to meet you, ${who}! How can I help with your event?`
+    if (language === 'es') return `Encantado, ${who}! ¿Cómo puedo ayudarte con tu evento?`
+    return `Prazer, ${who}! Como posso te ajudar com seu evento?`
+  }
+  if (kind === 'thanks') {
+    if (language === 'en') return "You're welcome! If you want, I can help with packages or event details."
+    if (language === 'es') return '¡Con gusto! Si quieres, te ayudo con paquetes o detalles del evento.'
+    return 'Por nada! Se quiser, te ajudo com pacotes ou detalhes do evento.'
+  }
+  if (kind === 'ack') {
+    if (language === 'en') return 'Got it. What would you like to check for the event?'
+    if (language === 'es') return 'Perfecto. ¿Qué quieres revisar para el evento?'
+    return 'Beleza. O que você quer ver para o evento?'
+  }
+  const night = /noite|night|noches/i.test(sourceText)
+  const afternoon = /tarde|afternoon|tardes/i.test(sourceText)
+  if (language === 'en') {
+    const hello = night ? 'Good evening!' : afternoon ? 'Good afternoon!' : 'Hello!'
+    return `${hello} All good here 😊\nHow can I help with your event?`
+  }
+  if (language === 'es') {
+    const hello = night ? '¡Buenas noches!' : afternoon ? '¡Buenas tardes!' : '¡Hola!'
+    return `${hello} Todo bien por aquí 😊\n¿Cómo puedo ayudarte con tu evento?`
+  }
+  const hello = night ? 'Boa noite!' : afternoon ? 'Boa tarde!' : 'Olá!'
+  return `${hello} Tudo ótimo por aqui 😊\nComo posso te ajudar com seu evento?`
+}

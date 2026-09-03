@@ -53,3 +53,42 @@ export function assertBrasinhaDevRuntime(
     throw new Error('brasinha_dev_runtime_forbidden')
   }
 }
+
+export const BRASINHA_AI_PROVIDER_DEFAULT = 'openai'
+export const BRASINHA_OPENAI_MODEL_DEFAULT = 'gpt-5.6-luna'
+
+/** Server-side only. Off unless explicitly `true` so tests run without a provider. */
+export function isBrasinhaAiEnabled(
+  source: Record<string, string | undefined> = process.env,
+): boolean {
+  return source.BRASINHA_AI_ENABLED === 'true'
+}
+
+export function resolveBrasinhaAiProvider(
+  source: Record<string, string | undefined> = process.env,
+): string {
+  return source.BRASINHA_AI_PROVIDER?.trim() || BRASINHA_AI_PROVIDER_DEFAULT
+}
+
+export function resolveBrasinhaOpenAiModel(
+  source: Record<string, string | undefined> = process.env,
+): string {
+  return source.BRASINHA_OPENAI_MODEL?.trim() || BRASINHA_OPENAI_MODEL_DEFAULT
+}
+
+/** Presence only — never return or log the key value. */
+export function hasOpenAiApiKey(
+  source: Record<string, string | undefined> = process.env,
+): boolean {
+  return Boolean(source.OPENAI_API_KEY?.trim())
+}
+
+export function isBrasinhaOpenAiReady(
+  source: Record<string, string | undefined> = process.env,
+): boolean {
+  return (
+    isBrasinhaAiEnabled(source) &&
+    resolveBrasinhaAiProvider(source) === 'openai' &&
+    hasOpenAiApiKey(source)
+  )
+}

@@ -51,11 +51,11 @@ const PAYMENT =
 const MARK_PAID =
   /\b(marque|marca|mark).{0,24}\b(pago|paid|pagado)\b|\b(confirm(e|a)? (o )?pagamento|mark.{0,12}payment)\b/i
 const SECRETS =
-  /\b(credencia\w*|credentials?|secret|token|service.role|api key|senha|password)\b/i
+  /\b(credencia\w*|credentials?|secret|token|service.role|api[_ -]?key|openai[_ -]?api[_ -]?key|senha|password)\b/i
 const OTHER_COMPANY =
   /\b(outra empresa|other company|otra empresa|company b|empresa b)\b/i
 const OVERRIDE =
-  /\b(ignore (suas |the )?regras|ignore (your |the )?(rules|instructions)|system prompt|jailbreak|mude o pre[cç]o|change the price|override)\b/i
+  /\b(ignore (suas |as |os |the |your )?(regras|rules|instructions|tools|ferramentas)|system prompt|jailbreak|mude o pre[cç]o|change the price|override)\b/i
 const HUMAN =
   /\b(atendente|humano|human|pessoa real|hablar con (alguien|una persona)|speak to (a )?human|falar com (algu[eé]m|um humano))\b/i
 const COMPLAINT =

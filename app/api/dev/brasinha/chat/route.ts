@@ -4,8 +4,9 @@ import {
   requireApiAuth,
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
-import { assertBrasinhaDevRuntime } from '@/Lib/brasinha/env'
+import { resolveBrasinhaReasoner } from '@/Lib/brasinha/core/registry'
 import { runBrasinhaTurn } from '@/Lib/brasinha/core/runTurn'
+import { assertBrasinhaDevRuntime } from '@/Lib/brasinha/env'
 import { createSupabaseConversationStore } from '@/Lib/brasinha/store/supabaseConversationStore'
 import { COMPANY_SCOPE_VIOLATION } from '@/Lib/brasinha/store/types'
 import { createCanonicalCatalogPort } from '@/Lib/brasinha/tools/canonicalPort'
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
       },
       store,
       catalog: createCanonicalCatalogPort(),
+      reasoner: resolveBrasinhaReasoner(),
     })
     const messages = await store.listMessages(companyId, result.conversation.id)
     return NextResponse.json({
@@ -57,6 +59,9 @@ export async function POST(request: Request) {
       toolsCalled: result.toolsCalled,
       traces: result.traces,
       reply: result.reply.text,
+      reasonerKind: result.reasonerKind,
+      reasonerModel: result.reasonerModel,
+      providerFailure: result.providerFailure,
       messages,
     })
   } catch (error) {
