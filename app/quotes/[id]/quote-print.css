@@ -67,6 +67,29 @@
   max-width: min(6rem, 40vw);
 }
 
+/* Public Review cover only — do not reuse on post-accept or print. */
+.quote-review-cover-logo {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-inline: auto;
+  background: transparent;
+}
+
+.quote-review-cover-logo .cdl-brand-logo,
+.quote-review-cover-logo .cdl-review-logo,
+.quote-review-cover-logo img {
+  display: block;
+  width: 8rem;
+  height: 8rem;
+  max-width: min(8rem, 42vw);
+  max-height: min(8rem, 42vw);
+  margin-inline: auto;
+  background: transparent;
+  object-fit: contain;
+  object-position: center;
+}
+
 .quote-print-compact-header {
   display: none;
 }
@@ -94,9 +117,24 @@
   align-items: flex-start;
 }
 
+.quote-proposal-hero-brand--review {
+  align-items: center;
+  text-align: center;
+}
+
+.quote-proposal-hero-brand--review .quote-proposal-hero-copy {
+  width: 100%;
+  text-align: center;
+}
+
 @media (min-width: 640px) {
   .quote-proposal-hero-brand {
     flex-direction: row;
+    align-items: center;
+  }
+
+  .quote-proposal-hero-brand.quote-proposal-hero-brand--review {
+    flex-direction: column;
     align-items: center;
   }
 }
@@ -418,6 +456,28 @@
   object-fit: contain;
   background: transparent;
   opacity: 0.72;
+}
+
+@media screen {
+  .quote-proposal-signature--public .quote-proposal-public-cdl-logo-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .quote-proposal-signature--public .quote-proposal-public-cdl-logo {
+    height: 4rem;
+    width: 4rem;
+    max-height: 4rem;
+    max-width: 4rem;
+    object-fit: contain;
+    object-position: center;
+    background: transparent;
+  }
+
+  .quote-proposal-signature--public .quote-proposal-pscs-mark {
+    height: 1.1rem;
+  }
 }
 
 .quote-proposal-package-split {

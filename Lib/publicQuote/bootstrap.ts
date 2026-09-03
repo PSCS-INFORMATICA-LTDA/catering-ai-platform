@@ -7,7 +7,7 @@ import { loadPackageConfiguration } from '@/Lib/packageConfiguration'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { fetchSupabaseCommercialRules } from '@/Lib/supabaseCommercialRules'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
-import { resolveServiceDurationMinutes } from './eventDuration'
+import { serviceDurationMinutesFromHours } from './eventDuration'
 import { resolvePublicLocationBias } from './locationBias'
 import {
   isPublicCatalogFixtureItem,
@@ -35,6 +35,7 @@ export type PublicQuoteCompanyRow = {
   default_language?: string | null
   currency_code?: string | null
   default_currency?: string | null
+  billing_email?: string | null
   logo_url?: string | null
   brand_logo_url?: string | null
   primary_color?: string | null
@@ -134,7 +135,7 @@ export async function resolvePublicQuoteTenant(
   const { data, error } = await supabase
     .from('companies')
     .select(
-      'id, company_name, trade_name, slug, default_language, currency_code, default_currency, logo_url, brand_logo_url, primary_color, secondary_color, active',
+      'id, company_name, trade_name, slug, default_language, currency_code, default_currency, billing_email, logo_url, brand_logo_url, primary_color, secondary_color, active',
     )
     .eq('slug', companySlug)
     .eq('active', true)
@@ -158,7 +159,7 @@ export async function resolvePublicQuoteTenantByCompanyId(
   const { data, error } = await supabase
     .from('companies')
     .select(
-      'id, company_name, trade_name, slug, default_language, currency_code, default_currency, logo_url, brand_logo_url, primary_color, secondary_color, active',
+      'id, company_name, trade_name, slug, default_language, currency_code, default_currency, billing_email, logo_url, brand_logo_url, primary_color, secondary_color, active',
     )
     .eq('id', companyId)
     .eq('active', true)
@@ -285,6 +286,12 @@ function sanitizeCatalogItem(row: Record<string, unknown>) {
       typeof row.pricing_type === 'string' ? row.pricing_type : null,
     unit_label:
       typeof row.unit_label === 'string' ? row.unit_label : null,
+    quantity: Number.isFinite(Number(row.quantity)) ? Number(row.quantity) : null,
+    unit: typeof row.unit === 'string' ? row.unit : null,
+    quantity_2: Number.isFinite(Number(row.quantity_2))
+      ? Number(row.quantity_2)
+      : null,
+    uom_2: typeof row.uom_2 === 'string' ? row.uom_2 : null,
     currency_code:
       typeof row.currency_code === 'string' ? row.currency_code : null,
     display_order: Number(row.display_order ?? 0),
@@ -353,25 +360,6 @@ function sanitizeOptionGroup(row: Record<string, unknown>) {
   }
 }
 
-async function loadServiceDurationMinutes(companyId: string): Promise<number> {
-  const supabase = getSupabaseServerClient()
-  const { data, error } = await supabase
-    .from('commercial_rules')
-    .select('rule_key, rule_value, active')
-    .eq('company_id', companyId)
-    .eq('rule_key', 'service_duration_minutes')
-    .maybeSingle()
-  if (error || !data || data.active === false) {
-    return resolveServiceDurationMinutes(null)
-  }
-  const raw = data.rule_value
-  const value =
-    raw && typeof raw === 'object' && 'value' in raw
-      ? Number((raw as { value: unknown }).value)
-      : Number(raw)
-  return resolveServiceDurationMinutes(Number.isFinite(value) ? value : null)
-}
-
 function sanitizeOptionItem(row: Record<string, unknown>) {
   return {
     id: String(row.id),
@@ -420,12 +408,8 @@ export async function getPublicQuoteBootstrap(
   )
   if (packages.length === 0) return null
 
-  const [
-    catalogResult,
-    configurationResult,
-    commercialRules,
-    serviceDurationMinutes,
-  ] = await Promise.all([
+  const [catalogResult, configurationResult, commercialRules] =
+    await Promise.all([
       fetchCatalogItems({
         activeOnly: true,
         usage: 'additional',
@@ -439,9 +423,11 @@ export async function getPublicQuoteBootstrap(
         companyId: company.id,
       }),
       fetchSupabaseCommercialRules(company.id),
-      loadServiceDurationMinutes(company.id),
     ])
   if (catalogResult.error || configurationResult.error) return null
+  const serviceDurationMinutes = serviceDurationMinutesFromHours(
+    commercialRules.serviceDurationHours,
+  )
 
   const landing = localizedObject(settings.landing_copy, locale)
   const displayName =
@@ -529,6 +515,7 @@ export async function getPublicQuoteBootstrap(
       support: {
         phone: settings.support_phone?.trim() || null,
         whatsappUrl: safePublicUrl(settings.support_whatsapp_url),
+        email: company.billing_email?.trim() || null,
       },
       serviceDurationMinutes,
       locationBias: resolvePublicLocationBias({ companySlug: company.slug }),

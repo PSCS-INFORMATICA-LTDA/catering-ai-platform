@@ -8,6 +8,7 @@ export const PRICING_BREAKDOWN_SCHEMA_VERSION = 1
 
 export type PricingBreakdownSourceType =
   | 'package'
+  | 'package_sides'
   | 'catalog_item'
   | 'commercial_rule'
   | 'guest_adjustment'
@@ -18,6 +19,7 @@ export type PricingBreakdownSourceType =
 
 export type PricingBreakdownLineKey =
   | 'package'
+  | 'package_sides'
   | 'additional_item'
   | 'guest_billable'
   | 'guest_physical'

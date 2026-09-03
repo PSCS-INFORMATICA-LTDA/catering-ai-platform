@@ -1,4 +1,6 @@
 import { buildQuoteDraftSnapshotPayload } from '@/Lib/calculateQuoteDraftFromSupabasePricing'
+import { includedSidesPricePerPerson } from '@/Lib/cdlSeasonalRules'
+import { normalizeGrillRentalQty } from '@/Lib/grillRental'
 import {
   calcAdditionalLineTotal,
   calcBillableGuestCount,
@@ -90,7 +92,10 @@ export async function computeQuotePricing(
     })),
     mileageDistance: input.mileageDistance ?? 0,
     grillRentalRequired: input.grillRentalRequired,
-    grillRentalQty: input.grillRentalQty,
+    grillRentalQty: normalizeGrillRentalQty(Boolean(input.grillRentalRequired)),
+    includedSidesPricePerPerson: includedSidesPricePerPerson(
+      resolved.context.package.package_key,
+    ),
     pricing: rules,
     reservationPercentage,
     reservationAmountOverride: input.reservationAmountOverride ?? undefined,
@@ -108,7 +113,7 @@ export async function computeQuotePricing(
     discountAmount,
     mileageDistance: input.mileageDistance ?? 0,
     grillRentalRequired: Boolean(input.grillRentalRequired),
-    grillRentalQty: input.grillRentalQty ?? 0,
+    grillRentalQty: normalizeGrillRentalQty(Boolean(input.grillRentalRequired)),
   })
 
   if (discountAmount > 0) {
@@ -164,7 +169,7 @@ export function parseQuotePricingPreviewBody(
     eventDate: body.eventDate ?? null,
     mileageDistance: Math.max(0, Number(body.mileageDistance ?? 0)),
     grillRentalRequired: Boolean(body.grillRentalRequired),
-    grillRentalQty: Math.max(0, Number(body.grillRentalQty ?? 0)),
+    grillRentalQty: normalizeGrillRentalQty(Boolean(body.grillRentalRequired)),
     reservationPercentage:
       body.reservationPercentage != null
         ? Number(body.reservationPercentage)

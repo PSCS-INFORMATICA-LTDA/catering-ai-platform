@@ -13,6 +13,20 @@ export type HolidayDateParts = {
   day: number
 }
 
+/** Parse YYYY-MM-DD from the event local calendar date. Never shift via UTC. */
+export function parseEventDateParts(
+  isoDate: string | null | undefined,
+): HolidayDateParts | null {
+  if (!isoDate) return null
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(isoDate.trim())
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  if (!year || month < 1 || month > 12 || day < 1 || day > 31) return null
+  return { year, month, day }
+}
+
 export type UsHolidayMatch = {
   key: string
   label: string

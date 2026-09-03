@@ -15,8 +15,10 @@ import {
 import {
   collectBlockedCatalogItemIds,
   extraIdsIntersectingIncluded,
+  filterPublicExtraItemsForPackage,
   getVisiblePublicExtraItems,
   pruneBlockedAdditionalSelections,
+  shouldShowAccompanimentExtras,
 } from '../../Lib/publicQuote/extrasEligibility.ts'
 import { filterCatalogItems } from '../../Lib/itemCatalog.ts'
 
@@ -183,7 +185,7 @@ test('included package catalog ids never appear in extras (intersection empty)',
   assert.ok(!visibleIds.includes(PICANHA_ANGUS))
   assert.ok(!visibleIds.includes(FRALDINHA_ANGUS))
   assert.ok(visibleIds.includes(FRALDINHA_WAGYU))
-  assert.ok(visibleIds.includes(GRILL_RENTAL))
+  assert.ok(!visibleIds.includes(GRILL_RENTAL))
 })
 
 test('inclusion blocks extras even when blocks_additional_item is false', () => {
@@ -203,7 +205,7 @@ test('package without the item exposes that extra again', () => {
   assert.ok(!pkgA.visible.some((row) => row.id === PICANHA_ANGUS))
   assert.ok(pkgB.visible.some((row) => row.id === PICANHA_ANGUS))
   assert.ok(!pkgB.visible.some((row) => row.id === FRALDINHA_ANGUS))
-  assert.ok(pkgB.visible.some((row) => row.id === GRILL_RENTAL))
+  assert.ok(!pkgB.visible.some((row) => row.id === GRILL_RENTAL))
 })
 
 test('selected extra is dropped when the new package already includes it', () => {
@@ -232,12 +234,12 @@ test('selected option choice also leaves extras (no duplicate seafood charge)', 
   assert.equal(additionals[CAMARAO], 1)
 })
 
-test('equipment remains eligible when it is not in the package composition', () => {
+test('grill rental stays in catalog fetch but is hidden from generic extras', () => {
   const { visible } = extrasFor(packageAIncludedRows)
   const grill = visible.find((row) => row.id === GRILL_RENTAL)
-  assert.ok(grill)
-  assert.equal(grill.item_type, 'EQUIPMENT')
-  assert.equal(grill.price, 100)
+  assert.equal(grill, undefined)
+  const eligibility = source('Lib/publicQuote/extrasEligibility.ts')
+  assert.match(eligibility, /isStructuralPublicExtraItem/)
 })
 
 test('eligibility uses canonical ids, not translated names', () => {
@@ -254,7 +256,59 @@ test('wizard prunes blocked extras and bootstrap hides fixture items', () => {
   const bootstrap = source('Lib/publicQuote/bootstrap.ts')
   assert.match(wizard, /pruneBlockedAdditionalSelections/)
   assert.match(wizard, /getVisiblePublicExtraItems/)
+  assert.match(wizard, /filterPublicExtraItemsForPackage/)
+  assert.match(wizard, /appendServiceSupplyGroup/)
   assert.match(bootstrap, /isPublicCatalogFixtureItem/)
+})
+
+test('accompaniment extras stay visible unless their catalog id is included', () => {
+  const items = [
+    extra('acc-1', {
+      item_key: 'ITEM_061',
+      category_key: 'ACOMPANHAMENTOS',
+      label_pt: 'Goiabada',
+    }),
+    extra('beef-1', {
+      item_key: 'ITEM_001',
+      category_key: 'BOVINO_NOBRE',
+      label_pt: 'Picanha',
+    }),
+  ]
+  assert.equal(shouldShowAccompanimentExtras({ package_key: 'BBQLUX' }), false)
+  assert.equal(shouldShowAccompanimentExtras({ package_key: 'BBQPRI' }), false)
+  assert.equal(shouldShowAccompanimentExtras({ package_key: 'BBQPERS' }), true)
+  assert.equal(shouldShowAccompanimentExtras({ package_key: 'BBQPERS+' }), true)
+  assert.equal(
+    shouldShowAccompanimentExtras({ package_name: 'Pacote Personalizado' }),
+    false,
+  )
+  const regular = filterPublicExtraItemsForPackage(items, {
+    package_key: 'BBQLUX',
+  })
+  assert.deepEqual(
+    regular.map((row) => row.item_key),
+    ['ITEM_061', 'ITEM_001'],
+  )
+  const custom = filterPublicExtraItemsForPackage(items, {
+    package_key: 'BBQPERS',
+  })
+  assert.deepEqual(
+    custom.map((row) => row.item_key),
+    ['ITEM_061', 'ITEM_001'],
+  )
+  const hiddenOnlyIncluded = getVisiblePublicExtraItems(items, ['acc-1'])
+  assert.deepEqual(
+    hiddenOnlyIncluded.map((row) => row.item_key),
+    ['ITEM_001'],
+  )
+  const eligibility = source('Lib/publicQuote/extrasEligibility.ts')
+  assert.doesNotMatch(eligibility, /name\.includes\(['"]personalizado['"]\)/)
+  assert.doesNotMatch(
+    eligibility,
+    /extraCategoryKey\(item\) !== 'ACOMPANHAMENTOS'/,
+  )
+  assert.match(eligibility, /BBQPERS/)
+  assert.match(eligibility, /package_key/)
 })
 
 if (failed > 0) {

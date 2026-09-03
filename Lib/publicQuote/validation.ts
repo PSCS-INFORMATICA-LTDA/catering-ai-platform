@@ -4,6 +4,9 @@ import { isPublicEventDateBookable } from './eventDate'
 import { toPublicPhoneE164 } from './phone'
 import { parsePublicQuoteLocale, PublicQuoteHttpError } from './security'
 import type { PublicQuoteDraft } from './types'
+import { normalizeGrillRentalQty } from '@/Lib/grillRental'
+import { CDL_CANCEL_POLICY_VERSION } from '@/Lib/cdlCancellationPolicy'
+import { isExplicitNonNegativeInteger } from '../quoteGuestFields.ts'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -25,6 +28,17 @@ function nullableText(value: unknown, max = 1000): string | null {
 function nonNegativeInteger(value: unknown, max = 10000): number {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return 0
+  return Math.min(max, Math.max(0, Math.floor(parsed)))
+}
+
+function optionalNonNegativeInteger(
+  value: unknown,
+  max = 10000,
+): number | null {
+  if (value === null || value === undefined || value === '') return null
+  if (typeof value === 'string' && value.trim() === '') return null
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return null
   return Math.min(max, Math.max(0, Math.floor(parsed)))
 }
 
@@ -110,11 +124,11 @@ export function sanitizePublicQuoteDraft(value: unknown): PublicQuoteDraft {
       startTime: shortText(event.startTime, 5),
       endTime: shortText(event.endTime, 5),
       adultCount: nonNegativeInteger(event.adultCount, 10000),
-      childrenUnder3Count: nonNegativeInteger(
+      childrenUnder3Count: optionalNonNegativeInteger(
         event.childrenUnder3Count,
         10000,
       ),
-      children4To12Count: nonNegativeInteger(
+      children4To12Count: optionalNonNegativeInteger(
         event.children4To12Count,
         10000,
       ),
@@ -143,8 +157,28 @@ export function sanitizePublicQuoteDraft(value: unknown): PublicQuoteDraft {
       hasGrill: grill.hasGrill === true,
       photoReference: nullableText(grill.photoReference, 500),
       rentalRequired: grill.rentalRequired === true,
-      rentalQty: nonNegativeInteger(grill.rentalQty, 20),
+      rentalQty: normalizeGrillRentalQty(grill.rentalRequired === true),
       notes: nullableText(grill.notes, 1000),
+    },
+    consents: sanitizeCancellationConsent(root.consents, parsePublicQuoteLocale(root.locale) ?? 'pt'),
+  }
+}
+
+function sanitizeCancellationConsent(
+  value: unknown,
+  locale: PublicQuoteDraft['locale'],
+): PublicQuoteDraft['consents'] {
+  const root = record(value)
+  const cancellation = record(root.cancellation)
+  const accepted = cancellation.accepted === true
+  return {
+    cancellation: {
+      accepted,
+      version: accepted ? CDL_CANCEL_POLICY_VERSION : '',
+      locale,
+      acceptedAt: accepted
+        ? nullableText(cancellation.acceptedAt, 40)
+        : null,
     },
   }
 }
@@ -213,9 +247,16 @@ export function validateCompletePublicQuoteDraft(
   if (draft.event.adultCount < 1) {
     throw new PublicQuoteHttpError(400, 'invalid_payload')
   }
+  if (
+    !isExplicitNonNegativeInteger(draft.event.childrenUnder3Count) ||
+    !isExplicitNonNegativeInteger(draft.event.children4To12Count)
+  ) {
+    throw new PublicQuoteHttpError(400, 'invalid_payload')
+  }
   const address = draft.event.address
   if (
     !address.route ||
+    !address.number ||
     !address.city ||
     !address.region ||
     !address.postalCode ||
@@ -231,16 +272,17 @@ export function validateCompletePublicQuoteDraft(
   }
   if (draft.grill.hasGrill) {
     const expectedPrefix = `public-quote-grill/${options.companyId}/${options.sessionId}/`
-    if (!draft.grill.photoReference?.startsWith(expectedPrefix)) {
+    if (
+      draft.grill.photoReference &&
+      !draft.grill.photoReference.startsWith(expectedPrefix)
+    ) {
       throw new PublicQuoteHttpError(400, 'invalid_payload')
     }
     draft.grill.rentalRequired = false
     draft.grill.rentalQty = 0
-  } else if (
-    draft.grill.rentalRequired &&
-    draft.grill.rentalQty < 1
-  ) {
-    throw new PublicQuoteHttpError(400, 'invalid_payload')
+  } else {
+    draft.grill.rentalRequired = true
+    draft.grill.rentalQty = 1
   }
 
   draft.event.eventName = deriveEventName(

@@ -103,7 +103,7 @@ const SIDES_ITEMS_PT = [
   'Feijão preto',
   'Vinagrete',
   'Farofa',
-  'Mandioca',
+  'Maionese',
 ]
 
 function isGarnishCatalogItem(item) {

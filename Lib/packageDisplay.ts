@@ -16,7 +16,7 @@ import {
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 const DEFAULT_GARNISH_TEXT_PT =
-  'Arroz branco • Feijão preto • Vinagrete • Farofa • Mandioca'
+  'Arroz branco • Feijão preto • Vinagrete • Farofa • Maionese'
 
 const TRADITIONAL_BASE_ITEMS = [
   'Picanha Angus',
@@ -36,7 +36,7 @@ const TRADITIONAL_COMMON_ITEMS = [
   'Geleia de pimenta',
 ] as const
 
-const PACKAGE_TIER_ORDER = ['PRI', 'CHO', 'SEL', 'TRAD', 'PERS'] as const
+const PACKAGE_TIER_ORDER = ['TRAD', 'SEL', 'CHO', 'PRI', 'LUX', 'PERS'] as const
 
 type PackageCommercialTier = (typeof PACKAGE_TIER_ORDER)[number]
 
@@ -49,10 +49,24 @@ const TIER_EXTRA_ITEMS: Record<PackageCommercialTier, readonly string[]> = {
     'Salmão ou camarão',
     'Costela de boi ou costela de porco',
   ],
+  LUX: [
+    'Picanha Wagyu',
+    'Lagosta ou Vieira com bacon',
+    'Salmão ou camarão',
+    'Costela de boi ou costela de porco',
+    'Carré de cordeiro',
+  ],
   PERS: [],
 }
 
 const PACKAGE_HIGHLIGHTS_PT: Record<PackageCommercialTier, readonly string[]> = {
+  LUX: [
+    'Picanha Wagyu',
+    'Lagosta ou Vieira com bacon',
+    'Salmão ou camarão',
+    'Costela de boi ou costela de porco',
+    'Experiência luxury completa',
+  ],
   PRI: [
     'Carré de cordeiro',
     'Salmão ou camarão',
@@ -100,6 +114,7 @@ const PACKAGE_TIER_NAMES: Record<
   string
 > = {
   PRI: 'Prime',
+  LUX: 'Luxury',
   CHO: 'Choice',
   SEL: 'Select',
   TRAD: 'Traditional',
@@ -196,7 +211,7 @@ export function getPackageTierSortIndex(
   return PACKAGE_TIER_ORDER.indexOf(tier)
 }
 
-/** Prime → Choice → Select → Traditional → Personalized */
+/** Traditional → Select → Choice → Prime → Luxury → Personalized */
 export function sortPackagesByCommercialTier<
   T extends PackageFieldSource,
 >(packages: ReadonlyArray<T>): T[] {

@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   findBasePackage,
   formatPackageCatalogPriceLabel,
@@ -14,11 +14,26 @@ import {
   resolvePackageSidesPricing,
   type PackageCatalogFields,
 } from '@/Lib/packageCatalogVisual'
-import type { PackageOptionGroup } from '@/Lib/packageOptionGroups'
+import {
+  areRequiredPackageOptionsComplete,
+  type PackageOptionGroup,
+} from '@/Lib/packageOptionGroups'
+import { revealFloatingPanelWhenReady } from '@/Lib/revealFloatingPanel'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import PackageIncludedOptions from '@/components/quotes/PackageIncludedOptions'
 import PackageCatalogHeroArt from '@/components/quotes/PackageCatalogHeroArt'
+import PackageSidesEditorial from '@/components/quotes/PackageSidesEditorial'
+import {
+  isSpecialCdlEventDate,
+  specialDateEffectivePackagePrice,
+} from '@/Lib/cdlSeasonalRules'
+
+export type PackageSpecialDatePricing = {
+  active: boolean
+  surchargePercent: number
+  minimumOrderAmount: number
+}
 
 type PackageSidesGroup = 'with_sides' | 'without_sides'
 
@@ -62,23 +77,17 @@ function PackageExperienceBody({
       nodes.push(<span key={key++}>{remaining.slice(0, index)}</span>)
     }
     nodes.push(
-      <strong key={key++} className="font-black text-cdl-title">
+      <em key={key++} className="public-package-intro-mark">
         {remaining.slice(index, index + mark.length)}
-      </strong>,
+      </em>,
     )
     remaining = remaining.slice(index + mark.length)
   }
   if (remaining) nodes.push(<span key={key++}>{remaining}</span>)
   return (
-    <p className="mt-3 text-sm leading-relaxed text-cdl-muted">{nodes}</p>
+    <p className="public-package-intro-body">{nodes}</p>
   )
 }
-
-const PACKAGE_EDITORIAL_HEADLINE = {
-  pt: 'PACOTES CDL',
-  en: 'CDL PACKAGES',
-  es: 'PAQUETES CDL',
-} as const
 
 function PackageGroupChevron({ open }: { open: boolean }) {
   return (
@@ -160,6 +169,7 @@ function PackageCatalogCard({
   active,
   language,
   sidesPricePerPerson,
+  specialDatePricing,
   onClick,
 }: {
   pkg: PublicPackageCard
@@ -167,10 +177,12 @@ function PackageCatalogCard({
   active: boolean
   language: QuoteLanguage
   sidesPricePerPerson: number
+  specialDatePricing?: PackageSpecialDatePricing | null
   onClick: () => void
 }) {
   const name = getPackageCatalogName(pkg, language)
-  const image = getPackageCatalogImage(pkg, allPackages)
+  // Folders carry text, so the art follows the locale like the copy does.
+  const image = getPackageCatalogImage(pkg, allPackages, language)
   const variant = getPackageCatalogVariant(pkg)
   const selectedLabel = getQuoteStrings(language).selected
   const currency = pkg.currency_code?.trim() || 'USD'
@@ -188,6 +200,19 @@ function PackageCatalogCard({
     sidesPricing?.mode === 'breakdown' &&
     sidesPricing.basePricePerPerson != null &&
     sidesPricing.sidesPricePerPerson > 0
+  const specialActive = Boolean(specialDatePricing?.active)
+  const specialPrices = specialActive
+    ? specialDateEffectivePackagePrice({
+        packagePricePerPerson: displayTotal,
+        packageKey: pkg.package_key,
+        surchargePercent: specialDatePricing?.surchargePercent,
+      })
+    : null
+  const packageLineOriginal = showGarnishLine
+    ? sidesPricing.basePricePerPerson!
+    : packagePrice
+  const packageLineDisplay = specialPrices?.effectiveMeat ?? packageLineOriginal
+  const totalDisplay = specialPrices?.effective ?? displayTotal
 
   return (
     <button
@@ -195,6 +220,7 @@ function PackageCatalogCard({
       aria-pressed={active}
       data-package-key={pkg.package_key ?? ''}
       data-package-sides-group={getPublicPackageSidesGroup(pkg)}
+      data-package-selected={active ? 'true' : 'false'}
       onClick={onClick}
       className={`public-package-card flex w-full min-w-0 flex-col overflow-hidden rounded-2xl border bg-cdl-surface text-left transition ${
         active
@@ -211,9 +237,23 @@ function PackageCatalogCard({
         ) : null}
       </span>
       <span className="flex min-w-0 flex-col gap-1 px-4 py-3">
-        <span className="text-base font-black leading-tight text-cdl-title sm:text-lg">
+        {/* The tier is what the customer picks by, so the name carries the card. */}
+        <span
+          data-package-card-name
+          className="text-lg font-black leading-tight tracking-tight text-cdl-title sm:text-xl"
+        >
           {name}
         </span>
+        {specialActive ? (
+          <span
+            data-special-date-package-badge
+            className="mt-1 inline-flex w-fit rounded-full bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-[var(--brand-primary)]"
+          >
+            {tw(language, 'specialDatePackageBadge', {
+              pct: specialDatePricing?.surchargePercent ?? 100,
+            })}
+          </span>
+        ) : null}
         {priceOnRequest ? (
           <span className="text-sm font-semibold text-[var(--brand-primary)] sm:text-base">
             {formatPackageCatalogPriceLabel(pkg, language, money)}
@@ -229,8 +269,12 @@ function PackageCatalogCard({
               </span>
               <span className="min-w-0 break-words text-right font-semibold tabular-nums text-cdl-title">
                 <span className="public-package-price-unit">
-                  {money(showGarnishLine ? sidesPricing.basePricePerPerson! : packagePrice)}{' '}
-                  / {perPerson}
+                  {specialActive ? (
+                    <span className="mr-2 text-xs font-semibold text-cdl-muted line-through">
+                      {money(packageLineOriginal)}
+                    </span>
+                  ) : null}
+                  {money(packageLineDisplay)} / {perPerson}
                 </span>
               </span>
             </span>
@@ -252,10 +296,19 @@ function PackageCatalogCard({
               </span>
               <span
                 data-package-display-total
+                data-package-effective-price={specialActive ? 'true' : 'false'}
                 className="min-w-0 break-words text-right text-base font-black tabular-nums text-[var(--brand-primary)]"
               >
                 <span className="public-package-price-unit">
-                  {money(displayTotal)} / {perPerson}
+                  {specialActive ? (
+                    <span
+                      data-package-original-price
+                      className="mr-2 text-xs font-semibold text-cdl-muted line-through"
+                    >
+                      {money(displayTotal)}
+                    </span>
+                  ) : null}
+                  {money(totalDisplay)} / {perPerson}
                 </span>
               </span>
             </span>
@@ -278,6 +331,9 @@ export default function PublicPackageCatalog({
   onSelectionChange,
   pendingSelectionGroupIds,
   onSelect,
+  eventDate,
+  specialDatePricing,
+  disposableKitOffer = null,
 }: {
   packagesWithoutSides: PublicPackageCard[]
   packagesWithSides: PublicPackageCard[]
@@ -290,32 +346,119 @@ export default function PublicPackageCatalog({
   onSelectionChange: (groupId: string, itemId: string) => void
   pendingSelectionGroupIds: string[]
   onSelect: (id: string) => void
+  eventDate?: string | null
+  specialDatePricing?: PackageSpecialDatePricing | null
+  disposableKitOffer?: ReactNode
 }) {
+  const resolvedSpecial: PackageSpecialDatePricing | null =
+    specialDatePricing ??
+    (isSpecialCdlEventDate(eventDate)
+      ? { active: true, surchargePercent: 100, minimumOrderAmount: 2000 }
+      : null)
   const t = getQuoteStrings(language)
   const optionsRef = useRef<HTMLDivElement>(null)
+  const disposableKitRevealRef = useRef<HTMLDivElement>(null)
+  const kitRevealCycleRef = useRef<{
+    packageId: string | null
+    wasComplete: boolean | null
+    revealed: boolean
+  }>({ packageId: null, wasComplete: null, revealed: false })
   const [openGroup, setOpenGroup] = useState<PackageSidesGroup | null>(() => {
     if (!selectedPackageId) return null
     const selected = allPackages.find((pkg) => pkg.id === selectedPackageId)
     return selected ? getPublicPackageSidesGroup(selected) : null
   })
+  const [expandedPackageId, setExpandedPackageId] = useState<string | null>(
+    () => selectedPackageId,
+  )
+  const sideOptionGroups = useMemo(() => {
+    for (const pkg of packagesWithSides) {
+      const groups = optionGroupsForPackage(pkg.id).filter(
+        (group) => group.option_group_key?.trim().toUpperCase() === 'SIDE_OPTION',
+      )
+      if (groups.length) return groups
+    }
+    return []
+  }, [optionGroupsForPackage, packagesWithSides])
+
+  const selectedPackage = useMemo(
+    () => allPackages.find((pkg) => pkg.id === selectedPackageId) ?? null,
+    [allPackages, selectedPackageId],
+  )
+  const selectedOptionGroups = useMemo(
+    () =>
+      selectedPackageId ? optionGroupsForPackage(selectedPackageId) : [],
+    [optionGroupsForPackage, selectedPackageId],
+  )
+  const requiredOptionsComplete = areRequiredPackageOptionsComplete(
+    selectedOptionGroups,
+    selections,
+  )
+  const selectedIsWithoutSides =
+    selectedPackage != null &&
+    getPublicPackageSidesGroup(selectedPackage) === 'without_sides'
 
   useEffect(() => {
     if (!selectedPackageId) return
     const node = optionsRef.current
     if (!node) return
     node.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [selectedPackageId, openGroup])
+  }, [selectedPackageId, expandedPackageId, openGroup])
 
-  function renderGroup(packages: PublicPackageCard[]) {
+  useEffect(() => {
+    const cycle = kitRevealCycleRef.current
+    if (cycle.packageId !== selectedPackageId) {
+      cycle.packageId = selectedPackageId
+      cycle.wasComplete = requiredOptionsComplete
+      cycle.revealed = false
+      return
+    }
+    const justCompleted =
+      requiredOptionsComplete && cycle.wasComplete === false
+    cycle.wasComplete = requiredOptionsComplete
+    if (!justCompleted || cycle.revealed) return
+    if (!selectedIsWithoutSides || !disposableKitOffer) return
+    cycle.revealed = true
+    return revealFloatingPanelWhenReady(() => disposableKitRevealRef.current)
+  }, [
+    disposableKitOffer,
+    requiredOptionsComplete,
+    selectedIsWithoutSides,
+    selectedPackageId,
+  ])
+
+  function handlePackageClick(id: string) {
+    const pkg = allPackages.find((item) => item.id === id)
+    if (pkg) setOpenGroup(getPublicPackageSidesGroup(pkg))
+    if (selectedPackageId !== id) {
+      onSelect(id)
+      setExpandedPackageId(id)
+      return
+    }
+    setExpandedPackageId((current) => (current === id ? null : id))
+  }
+
+  function renderGroup(
+    packages: PublicPackageCard[],
+    { includeDisposableKit = false }: { includeDisposableKit?: boolean } = {},
+  ) {
     return (
       <div className="mt-4 grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
         {packages.map((pkg) => {
           const active = selectedPackageId === pkg.id
+          const expanded = expandedPackageId === pkg.id
           const selectableGroups = active
             ? optionGroupsForPackage(pkg.id).filter(
                 (group) => group.items.length > 0,
               )
             : []
+          const showDisposableKit = Boolean(
+            includeDisposableKit && disposableKitOffer,
+          )
+          const showOptions =
+            active &&
+            expanded &&
+            (selectableGroups.length > 0 || showDisposableKit)
 
           return (
             <Fragment key={pkg.id}>
@@ -325,12 +468,14 @@ export default function PublicPackageCatalog({
                 active={active}
                 language={language}
                 sidesPricePerPerson={sidesPricePerPerson}
-                onClick={() => onSelect(pkg.id)}
+                specialDatePricing={resolvedSpecial}
+                onClick={() => handlePackageClick(pkg.id)}
               />
-              {active && selectableGroups.length > 0 ? (
+              {showOptions ? (
                 <div
                   ref={optionsRef}
                   data-public-package-options
+                  data-expanded-package={pkg.id}
                   className="min-w-0 lg:col-span-2"
                 >
                   <section className="rounded-2xl border-2 border-[color-mix(in_srgb,var(--brand-primary-2)_35%,transparent)] bg-cdl-surface p-4 sm:p-5">
@@ -340,14 +485,24 @@ export default function PublicPackageCatalog({
                     <p className="mt-1 text-sm font-semibold text-cdl-title">
                       {getPackageCatalogName(pkg, language)}
                     </p>
-                    <div className="mt-4 min-w-0">
-                      <PackageIncludedOptions
-                        optionGroups={selectableGroups}
-                        selections={selections}
-                        onChange={onSelectionChange}
-                        language={language}
-                        pendingGroupIds={pendingSelectionGroupIds}
-                      />
+                    <div className="mt-4 min-w-0 space-y-2.5">
+                      {selectableGroups.length > 0 ? (
+                        <PackageIncludedOptions
+                          optionGroups={selectableGroups}
+                          selections={selections}
+                          onChange={onSelectionChange}
+                          language={language}
+                          pendingGroupIds={pendingSelectionGroupIds}
+                        />
+                      ) : null}
+                      {showDisposableKit ? (
+                        <div
+                          ref={active ? disposableKitRevealRef : undefined}
+                          data-disposable-kit-in-no-sides
+                        >
+                          {disposableKitOffer}
+                        </div>
+                      ) : null}
                     </div>
                   </section>
                 </div>
@@ -369,21 +524,52 @@ export default function PublicPackageCatalog({
         className="public-package-intro"
         data-package-experience-intro
       >
-        <p className="public-package-kicker">
-          {tw(language, 'publicPackageExperienceTitle')}
-        </p>
-        <h2 className="public-package-headline">
-          <span className="public-package-headline-mark">
-            {PACKAGE_EDITORIAL_HEADLINE[language]}
+        <div className="public-package-title-band" data-package-title-band>
+          <h2 className="public-package-headline">
+            <span
+              className="public-package-headline-mark"
+              data-package-headline-tag
+            >
+              {tw(language, 'publicPackageEditorialHeadline')}
+            </span>
+          </h2>
+          <span className="public-package-title-corner" aria-hidden>
+            ▲
           </span>
-        </h2>
-        <PackageExperienceBody
-          language={language}
-          text={tw(language, 'publicPackageExperienceBody')}
-        />
+        </div>
+        <div className="public-package-intro-copy">
+          <p
+            className="public-package-kicker"
+            data-package-experience-title
+          >
+            {tw(language, 'publicPackageExperienceTitle')}
+          </p>
+          <PackageExperienceBody
+            language={language}
+            text={tw(language, 'publicPackageExperienceBody')}
+          />
+        </div>
       </section>
+      {/* What every package already includes, before the with/without choice. */}
+      <PackageSidesEditorial
+        language={language}
+        sidesPricePerPerson={sidesPricePerPerson}
+        formatMoney={(value) => formatMoney(value, language, 'USD')}
+        optionGroups={sideOptionGroups}
+      />
+      {resolvedSpecial?.active ? (
+        <p
+          data-special-date-package-min
+          className="rounded-2xl border border-cdl-border bg-cdl-inset px-4 py-3 text-sm font-semibold text-cdl-title"
+        >
+          {tw(language, 'specialDatePackageMin', {
+            amount: formatMoney(resolvedSpecial.minimumOrderAmount, language, 'USD'),
+          })}
+        </p>
+      ) : null}
       <div
         data-package-group-controls
+        data-expanded-package-id={expandedPackageId ?? ''}
         className="public-package-groups"
       >
         {packagesWithSides.length > 0 ? (
@@ -416,11 +602,34 @@ export default function PublicPackageCatalog({
         ) : null}
       </div>
       {openGroup === 'with_sides' ? (
-        <section className="min-w-0">{renderGroup(packagesWithSides)}</section>
+        <section
+          className="min-w-0 space-y-5 rounded-2xl border border-cdl-border bg-cdl-inset/70 p-3 sm:p-4"
+          data-package-group-panel="with_sides"
+        >
+          {sidesPricePerPerson > 0 ? (
+            <div
+              data-with-sides-includes-disposables
+              className="rounded-2xl border border-cdl-border bg-cdl-surface px-4 py-3"
+            >
+              <p className="text-sm font-black text-[var(--brand-primary)]">
+                {tw(language, 'packageWithSidesPriceLead', {
+                  price: formatMoney(sidesPricePerPerson, language, 'USD'),
+                })}
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-cdl-muted">
+                {tw(language, 'packageWithSidesIncludesDisposables')}
+              </p>
+            </div>
+          ) : null}
+          {renderGroup(packagesWithSides)}
+        </section>
       ) : null}
       {openGroup === 'without_sides' ? (
-        <section className="min-w-0">
-          {renderGroup(packagesWithoutSides)}
+        <section
+          className="min-w-0 space-y-5 rounded-2xl border border-cdl-border bg-cdl-inset/70 p-3 sm:p-4"
+          data-package-group-panel="without_sides"
+        >
+          {renderGroup(packagesWithoutSides, { includeDisposableKit: true })}
         </section>
       ) : null}
     </div>

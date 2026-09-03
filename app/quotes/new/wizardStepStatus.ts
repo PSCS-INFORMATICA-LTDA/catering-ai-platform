@@ -8,6 +8,7 @@ import type { GrillPhotoStatus } from '@/Lib/grillPhotoStatus'
 import { isUsablePostalCode } from '@/Lib/cep'
 import { isUsablePhone } from '@/Lib/normalizePhone'
 import { isUsablePublicPhone } from '@/Lib/publicQuote/phone'
+import { isExplicitNonNegativeInteger } from '@/Lib/quoteGuestFields'
 import { isPublicEventDateBookable } from '@/Lib/publicQuote/eventDate'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
@@ -15,9 +16,9 @@ import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 export const WIZARD_STEP_LABELS = [
   'Cliente',
   'Evento',
+  'Churrasco',
   'Pacote',
   'Adicionais',
-  'Churrasco',
   'Confirmação',
 ] as const
 
@@ -56,8 +57,8 @@ export type WizardStateSnapshot = {
   addressPlaceId?: string | null
   addressSource?: 'google' | 'manual' | null
   adultCount: number
-  childrenUnder3Count: number
-  children4To12Count: number
+  childrenUnder3Count: number | null
+  children4To12Count: number | null
   hasGrill: boolean
   grillSetupAnswered: boolean
   grillPhotoRequired: boolean
@@ -120,7 +121,7 @@ export type PendingStepIssue = {
 }
 
 /** Etapas com validação obrigatória antes do save. */
-const MANDATORY_STEP_INDICES = [0, 1, 2, 4] as const
+const MANDATORY_STEP_INDICES = [0, 1, 2, 3] as const
 
 function isFilled(value: string) {
   return value.trim().length > 0
@@ -260,8 +261,27 @@ export function getStepIssues(
       if (!(state.adultCount > 0)) {
         issues.push(tw(language, 'issueAdults'))
       }
+      if (ctx.isPublicMode) {
+        if (!isExplicitNonNegativeInteger(state.childrenUnder3Count)) {
+          issues.push(tw(language, 'issueChildrenUnder3'))
+        }
+        if (!isExplicitNonNegativeInteger(state.children4To12Count)) {
+          issues.push(tw(language, 'issueChildren4To12'))
+        }
+        if (!isFilled(state.addressNumber)) {
+          issues.push(tw(language, 'issueAddressNumber'))
+        }
+      }
       break
-    case 2: {
+    case 2:
+      if (!state.grillSetupAnswered) {
+        issues.push(tw(language, 'issueHasGrill'))
+      }
+      if (state.grillRentalRequired && state.grillRentalQty <= 0) {
+        issues.push(tw(language, 'grillPendingRentalQty'))
+      }
+      break
+    case 3: {
       if (!hasValidPackage(ctx)) {
         issues.push(tw(language, 'issueSelectPackage'))
         break
@@ -288,18 +308,7 @@ export function getStepIssues(
       }
       break
     }
-    case 3:
-      break
     case 4:
-      if (!state.grillSetupAnswered) {
-        issues.push(tw(language, 'issueHasGrill'))
-      }
-      if (isGrillPhotoRequiredAndMissing(state)) {
-        issues.push(tw(language, 'grillPendingPhoto'))
-      }
-      if (state.grillRentalRequired && state.grillRentalQty <= 0) {
-        issues.push(tw(language, 'grillPendingRentalQty'))
-      }
       break
     case 5:
       if (!areMandatoryStepsComplete(ctx)) {
@@ -332,7 +341,7 @@ export function areMandatoryStepsComplete(ctx: StepStatusContext): boolean {
 export function getMandatoryPendingSteps(
   ctx: StepStatusContext,
 ): PendingStepIssue[] {
-  const indices = [...MANDATORY_STEP_INDICES, 3, 5]
+  const indices = [...MANDATORY_STEP_INDICES, 4, 5]
   return indices
     .filter((stepIndex) => !isMandatoryStepComplete(stepIndex, ctx))
     .map((stepIndex) => ({
@@ -349,13 +358,13 @@ export function isStepContentComplete(
   if (stepIndex === 0) {
     return hasLinkedCustomer(ctx) && getStepIssues(0, ctx).length === 0
   }
-  if (stepIndex === 3) {
-    return ctx.currentStep > 3
+  if (stepIndex === 4) {
+    return ctx.currentStep > 4
   }
   if (stepIndex === 5) {
     return (
       areMandatoryStepsComplete(ctx) &&
-      ctx.currentStep > 3 &&
+      ctx.currentStep > 4 &&
       Boolean(ctx.pricingPreviewReady)
     )
   }
@@ -365,8 +374,8 @@ export function isStepContentComplete(
 /** Primeira etapa ainda inválida, ou a última se 1–5 estiverem válidas. */
 export function getMaxReachableStep(ctx: StepStatusContext): number {
   for (let index = 0; index < STEPS_COUNT - 1; index += 1) {
-    if (index === 3) {
-      if (ctx.currentStep < 3) return 3
+    if (index === 4) {
+      if (ctx.currentStep < 4) return 4
       continue
     }
     if (!isStepContentComplete(index, ctx)) return index
@@ -403,7 +412,7 @@ export type StepStatus = 'current' | 'complete' | 'incomplete' | 'empty'
 export function isQuoteReadyToSave(ctx: StepStatusContext) {
   return (
     areMandatoryStepsComplete(ctx) &&
-    isMandatoryStepComplete(4, ctx) &&
+    isMandatoryStepComplete(2, ctx) &&
     isMandatoryStepComplete(5, ctx)
   )
 }

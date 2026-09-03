@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { createHash, createHmac, randomBytes } from 'node:crypto'
+import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto'
 import type { NextRequest, NextResponse } from 'next/server'
 import { PUBLIC_QUOTE_LOCALES, type PublicQuoteLocale } from './types'
 
@@ -162,23 +162,34 @@ export function clearPublicSessionCookie(response: NextResponse) {
 
 export function publicErrorResponse(error: unknown): {
   status: number
-  body: { error: string; code: string }
+  body: { error: string; code: string; requestId: string }
 } {
+  const requestId = randomUUID()
   if (error instanceof PublicQuoteHttpError) {
     console.warn('[public-quote] request rejected', {
+      requestId,
       code: error.code,
       status: error.status,
     })
     return {
       status: error.status,
-      body: { error: 'Request could not be processed.', code: error.code },
+      body: {
+        error: 'Request could not be processed.',
+        code: error.code,
+        requestId,
+      },
     }
   }
   console.error('[public-quote] request failed', {
+    requestId,
     name: error instanceof Error ? error.name : 'unknown',
   })
   return {
     status: 500,
-    body: { error: 'Request could not be processed.', code: 'server_error' },
+    body: {
+      error: 'Request could not be processed.',
+      code: 'server_error',
+      requestId,
+    },
   }
 }

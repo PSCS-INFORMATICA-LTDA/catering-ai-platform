@@ -1,0 +1,232 @@
+{
+  "official_mayo_source": "assets/additionals/guarnicoes/item-076-clean.webp",
+  "ai_generated_food": false,
+  "pricing_changed": false,
+  "jobs": {
+    "bbqpers-plus-pt-v8.webp": {
+      "dest": "bbqpers-plus-pt-v9.webp",
+      "locale": "pt",
+      "label": "Maionese",
+      "plaque": [
+        626,
+        1356,
+        236,
+        79
+      ],
+      "food_px": 62368,
+      "mae": 1.9897903866238065,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-plus-pt-v8.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-plus-pt-v9.webp"
+    },
+    "bbqpers-plus-en-v6.webp": {
+      "dest": "bbqpers-plus-en-v9.webp",
+      "locale": "en",
+      "label": "Potato salad",
+      "plaque": [
+        574,
+        1339,
+        236,
+        78
+      ],
+      "food_px": 61994,
+      "mae": 1.688015619913737,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-plus-en-v6.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-plus-en-v9.webp"
+    },
+    "bbqpers-plus-es-v6.webp": {
+      "dest": "bbqpers-plus-es-v9.webp",
+      "locale": "es",
+      "label": "Ensalada de papa",
+      "plaque": [
+        716,
+        1296,
+        236,
+        68
+      ],
+      "food_px": 65600,
+      "mae": 1.8012729220920138,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-plus-es-v6.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-plus-es-v9.webp"
+    },
+    "bbqtrad-plus-pt-v4.webp": {
+      "dest": "bbqtrad-plus-pt-v9.webp",
+      "locale": "pt",
+      "label": "Maionese",
+      "plaque": [
+        626,
+        1356,
+        236,
+        79
+      ],
+      "food_px": 63294,
+      "mae": 2.0566418965657554,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqtrad-plus-pt-v4.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqtrad-plus-pt-v9.webp"
+    },
+    "bbqtrad-plus-en-v4.webp": {
+      "dest": "bbqtrad-plus-en-v9.webp",
+      "locale": "en",
+      "label": "Potato salad",
+      "plaque": [
+        649,
+        1378,
+        236,
+        76
+      ],
+      "food_px": 54901,
+      "mae": 1.5991658104790583,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqtrad-plus-en-v4.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqtrad-plus-en-v9.webp"
+    },
+    "bbqtrad-plus-es-v3.webp": {
+      "dest": "bbqtrad-plus-es-v9.webp",
+      "locale": "es",
+      "label": "Ensalada de papa",
+      "plaque": [
+        644,
+        1365,
+        236,
+        72
+      ],
+      "food_px": 57920,
+      "mae": 1.8709150950113933,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqtrad-plus-es-v3.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqtrad-plus-es-v9.webp"
+    },
+    "bbqsel-plus-pt-v4.webp": {
+      "dest": "bbqsel-plus-pt-v9.webp",
+      "locale": "pt",
+      "label": "Maionese",
+      "plaque": [
+        710,
+        1394,
+        236,
+        84
+      ],
+      "food_px": 56455,
+      "mae": 1.7492872873942058,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqsel-plus-pt-v4.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqsel-plus-pt-v9.webp"
+    },
+    "bbqsel-plus-en-v3.webp": {
+      "dest": "bbqsel-plus-en-v9.webp",
+      "locale": "en",
+      "label": "Potato salad",
+      "plaque": [
+        679,
+        1359,
+        276,
+        79
+      ],
+      "food_px": 44010,
+      "mae": 1.497296863132053,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqsel-plus-en-v3.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqsel-plus-en-v9.webp"
+    },
+    "bbqsel-plus-es-v3.webp": {
+      "dest": "bbqsel-plus-es-v9.webp",
+      "locale": "es",
+      "label": "Ensalada de papa",
+      "plaque": [
+        724,
+        1423,
+        236,
+        69
+      ],
+      "food_px": 51024,
+      "mae": 1.2661389244927301,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqsel-plus-es-v3.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqsel-plus-es-v9.webp"
+    },
+    "bbqcho-plus-pt-v3.webp": {
+      "dest": "bbqcho-plus-pt-v9.webp",
+      "locale": "pt",
+      "label": "Maionese",
+      "plaque": [
+        726,
+        1361,
+        238,
+        76
+      ],
+      "food_px": 27847,
+      "mae": 0.9708644019232856,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqcho-plus-pt-v3.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqcho-plus-pt-v9.webp"
+    },
+    "bbqcho-plus-en-v4.webp": {
+      "dest": "bbqcho-plus-en-v9.webp",
+      "locale": "en",
+      "label": "Potato salad",
+      "plaque": [
+        752,
+        1354,
+        238,
+        76
+      ],
+      "food_px": 31724,
+      "mae": 1.1655245886908636,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqcho-plus-en-v4.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqcho-plus-en-v9.webp"
+    },
+    "bbqcho-plus-es-v3.webp": {
+      "dest": "bbqcho-plus-es-v9.webp",
+      "locale": "es",
+      "label": "Ensalada de papa",
+      "plaque": [
+        727,
+        1417,
+        236,
+        68
+      ],
+      "food_px": 60939,
+      "mae": 1.9185362921820746,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqcho-plus-es-v3.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqcho-plus-es-v9.webp"
+    },
+    "bbqpri-plus-pt-v4.webp": {
+      "dest": "bbqpri-plus-pt-v9.webp",
+      "locale": "pt",
+      "label": "Maionese",
+      "plaque": [
+        619,
+        1259,
+        236,
+        79
+      ],
+      "food_px": 59817,
+      "mae": 1.6997506883409288,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpri-plus-pt-v4.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpri-plus-pt-v9.webp"
+    },
+    "bbqpri-plus-en-v4.webp": {
+      "dest": "bbqpri-plus-en-v9.webp",
+      "locale": "en",
+      "label": "Potato salad",
+      "plaque": [
+        674,
+        1334,
+        236,
+        74
+      ],
+      "food_px": 64551,
+      "mae": 1.8545343610975478,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpri-plus-en-v4.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpri-plus-en-v9.webp"
+    },
+    "bbqpri-plus-es-v3.webp": {
+      "dest": "bbqpri-plus-es-v9.webp",
+      "locale": "es",
+      "label": "Ensalada de papa",
+      "plaque": [
+        720,
+        1350,
+        236,
+        75
+      ],
+      "food_px": 39366,
+      "mae": 1.2355630662706163,
+      "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpri-plus-es-v3.webp",
+      "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpri-plus-es-v9.webp"
+    }
+  }
+}

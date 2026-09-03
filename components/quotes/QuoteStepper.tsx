@@ -76,7 +76,7 @@ export default function QuoteStepper({
           const status = getStepStatus(index)
           const isCurrent = index === currentStep
           const stepTitle =
-            index === 3 && additionalsCount > 0
+            index === 4 && additionalsCount > 0
               ? t.stepperAdditionals(additionalsCount)
               : label
 

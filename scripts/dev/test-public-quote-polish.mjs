@@ -102,10 +102,7 @@ test('TEST 6 Package groups start collapsed', () => {
   assert.match(catalog, /if \(!selectedPackageId\) return null/)
   assert.doesNotMatch(catalog, /setOpenGroup\(['\"]with_sides['\"]\)/)
   assert.doesNotMatch(catalog, /setOpenGroup\(['\"]without_sides['\"]\)/)
-  assert.doesNotMatch(
-    catalog,
-    /setOpenGroup\(getPublicPackageSidesGroup/,
-  )
+  assert.match(catalog, /expandedPackageId/)
 })
 
 test('TEST 7 Compact with-sides selector has no inner count', () => {
@@ -140,7 +137,10 @@ test('TEST 9 Premium copy lives above the selectors', () => {
   assert.equal(tw('es', 'withoutSidesGroupTitle'), 'SIN ACOMPAÑAMIENTOS')
   assert.doesNotMatch(catalog, /Playfair_Display/)
   assert.match(catalog, /public-package-group/)
-  assert.match(catalog, /PACOTES CDL/)
+  assert.match(catalog, /publicPackageEditorialHeadline/)
+  assert.equal(tw('pt', 'publicPackageEditorialHeadline'), 'ESCOLHA SEU PACOTE')
+  assert.equal(tw('en', 'publicPackageEditorialHeadline'), 'CHOOSE YOUR PACKAGE')
+  assert.equal(tw('es', 'publicPackageEditorialHeadline'), 'ELIGE TU PAQUETE')
 })
 
 test('TEST 10 Package name canonical', () => {
@@ -181,7 +181,7 @@ test('TEST 12 Package pricing unchanged', () => {
 
 test('TEST 13 Package options inline unchanged', () => {
   assert.match(catalog, /data-public-package-options/)
-  assert.match(catalog, /active && selectableGroups\.length > 0/)
+  assert.match(catalog, /active && expanded && selectableGroups\.length > 0/)
   assert.match(catalog, /lg:col-span-2/)
 })
 
@@ -211,7 +211,7 @@ test('TEST 17 Click on summary item/price area opens category', () => {
 
 test('TEST 18 Expanded interactive control does not accidentally collapse', () => {
   const expanded = extras.slice(
-    extras.indexOf('{expanded ? ('),
+    extras.indexOf('{isExpanded ? ('),
     extras.indexOf('data-additional-category-hitarea'),
   )
   assert.match(expanded, /<AdditionalItemCard/)
@@ -328,7 +328,6 @@ test('TEST 32 Powered by PSCS One is discreet', () => {
   assert.doesNotMatch(experience, /Powered by Catering AI/)
   assert.doesNotMatch(experience, /Catering App/)
   assert.match(experience, /data-powered-by/)
-  assert.match(experience, /data-footer-cdl-logo/)
   assert.match(experience, /data-footer-since-pioneer/)
   assert.match(experience, /PscsOneMark/)
   assert.match(experience, /size="footer"/)
@@ -347,15 +346,19 @@ test('TEST 32 Powered by PSCS One is discreet', () => {
   )
 })
 
-test('TEST 33 No image files edited/generated', () => {
+test('TEST 33 No protected brand imagery edited', () => {
+  // Package folder art is edited deliberately and gated by
+  // test-public-package-folder-marks. The approved brand, landing and final
+  // screen assets are not: nothing in this flow may touch them.
+  const protectedAsset = (file) =>
+    /\.(png|jpe?g|webp|gif|pdf|svg|mp4)$/i.test(file) &&
+    !file.startsWith('assets/packages/')
   const changed = execSync('git diff --name-only HEAD', {
     cwd: ROOT,
     encoding: 'utf8',
   })
-  const images = changed
-    .split('\n')
-    .filter((file) => /\.(png|jpe?g|webp|gif|pdf|svg)$/i.test(file))
-  assert.deepEqual(images, [])
+  const touched = changed.split('\n').filter(protectedAsset)
+  assert.deepEqual(touched, [])
 })
 
 test('TEST 34 No horizontal overflow', () => {
@@ -492,7 +495,14 @@ test('TEST 43 CDL flame emblem and discreet PSCS One footer', () => {
   assert.match(lockup, /CDL_FLAME_EMBLEM_SRC/)
   assert.match(lockup, /\/cdl\/logo\.png/)
   assert.match(experience, /publicQuoteEmblemSrc/)
-  assert.match(experience, /data-success-flame-art/)
+  assert.match(
+    source('components/quotes/PublicQuoteSuccessScreen.tsx'),
+    /CdlFireSignature/,
+  )
+  assert.match(
+    source('components/quotes/CdlFireSignature.tsx'),
+    /data-success-fire-logo/,
+  )
   assert.match(experience, /data-public-wizard-product/)
   assert.doesNotMatch(experience, /data-public-wizard-pscs/)
   assert.match(experience, /PscsOneMark/)

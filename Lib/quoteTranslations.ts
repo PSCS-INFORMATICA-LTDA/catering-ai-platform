@@ -4,9 +4,9 @@ import { fillTemplate } from './i18n/makeModule.ts'
 export const WIZARD_STEP_KEYS = [
   'customer',
   'event',
+  'bbq',
   'package',
   'additionals',
-  'bbq',
   'confirmation',
 ] as const
 
@@ -66,6 +66,31 @@ const CATEGORY_LABEL_MAP: Record<string, Record<QuoteLanguage, string>> = {
     en: 'Vegetables & Salads',
     es: 'Verduras y Ensaladas',
   },
+  ACOMPANHAMENTOS: {
+    pt: 'Acompanhamentos',
+    en: 'Accompaniments',
+    es: 'Acompañamientos',
+  },
+  SERVICOS_E_SUPRIMENTOS: {
+    pt: 'Serviços e Suprimentos',
+    en: 'Services & Supplies',
+    es: 'Servicios y Suministros',
+  },
+  LEGUMES_E_VEGETAIS: {
+    pt: 'Legumes e Vegetais',
+    en: 'Vegetables',
+    es: 'Verduras',
+  },
+  FRUTAS: {
+    pt: 'Frutas',
+    en: 'Fruit',
+    es: 'Frutas',
+  },
+  SUGGESTED_EXTRAS: {
+    pt: 'Extras Sugeridos',
+    en: 'Suggested Extras',
+    es: 'Extras Sugeridos',
+  },
   OUTROS: {
     pt: 'Outros',
     en: 'Other',
@@ -73,19 +98,30 @@ const CATEGORY_LABEL_MAP: Record<string, Record<QuoteLanguage, string>> = {
   },
 }
 
+/**
+ * Canonical extras order AFTER the virtual Suggested Extras row.
+ * Display only — it never touches an item's category, price, eligibility
+ * or the review requirement. Empty groups are never invented.
+ *
+ * Order matches the CDL 2026 commercial source provided by the PO.
+ */
 const CATEGORY_SORT_ORDER = [
-  'BOVINO_TRADICIONAL',
   'BOVINO_NOBRE',
-  'LINGUICAS',
-  'FRANGO',
-  'FRUTOS_DO_MAR',
-  'PEIXES',
+  'BOVINO_TRADICIONAL',
   'PORCO',
   'CORDEIRO',
+  'FRANGO',
+  'LINGUICAS',
+  'FRUTOS_DO_MAR',
+  'LEGUMES_E_VEGETAIS',
+  'FRUTAS',
+  'ACOMPANHAMENTOS',
   'GUARNICOES',
-  'LEGUMES_E_SALADAS',
   'EQUIPAMENTOS',
+  'PEIXES',
+  'LEGUMES_E_SALADAS',
   'OUTROS',
+  'SERVICOS_E_SUPRIMENTOS',
 ] as const
 
 type QuoteStrings = {
@@ -117,6 +153,8 @@ type QuoteStrings = {
   removeUnit: string
   eachUnit: (pack: string) => string
   totalWeight: (amount: number, uom: string) => string
+  weightPerUnit: string
+  estimatedTotalWeight: string
   stepperAdditionals: (count: number) => string
   review: {
     packageSection: string
@@ -185,8 +223,24 @@ type QuoteStrings = {
     endTime: string
     endTimeHint: string
     endTimeHintPublic: string
+    serviceTimingHintPublic: string
     publicPhoneHint: string
     publicPhonePlaceholder: string
+    phoneCountryPlaceholder: string
+    phoneCountrySearch: string
+    phoneCountryRequired: string
+    phoneCountryDdiLabel: string
+    phoneAreaCodeLabel: string
+    phoneSubscriberLabel: string
+    phoneNationalRequired: string
+    phoneInvalidSplit: string
+    publicAddressPlaceholder: string
+    publicAddressNumberPlaceholder: string
+    publicCityPlaceholder: string
+    publicStatePlaceholder: string
+    publicPostalPlaceholder: string
+    publicAdultsPlaceholder: string
+    publicChildrenPlaceholder: string
     firstName: string
     lastName: string
     contactPrivacyHint: string
@@ -194,8 +248,59 @@ type QuoteStrings = {
     publicPackageChooseHint: string
     publicPackageExperienceTitle: string
     publicPackageExperienceBody: string
+    /** Short red stamp on the black package intro — not a full-width bar. */
+    publicPackageEditorialHeadline: string
     footerSincePioneer: string
+    publicAdditionalsKicker: string
+    additionalPriceKicker: string
     withSidesGroupTitle: string
+    /** Editorial block above the sides toggles on the package step. */
+    packageIncludedTitle: string
+    packageIncludedHelper: string
+    packageSidesUpsellTitle: string
+    packageSidesUpsellText: string
+    /** Lead before the live SIDE_OPTION labels on the PLUS block. */
+    packageSidesChoiceLead: string
+    packageSidesDisposables: string
+    includedServiceTitle: string
+    includedServiceBody: string
+    includedServiceDisposablesWithSides: string
+    packageWithSidesPriceLead: string
+    packageWithSidesIncludesDisposables: string
+    grillRentalMandatory: string
+    grillRentalFixedQty: string
+    specialDatePackageBadge: string
+    specialDatePackageMin: string
+    cancellationPolicyAccept: string
+    cancellationPolicyRequired: string
+    bothConsentsRequired: string
+    /** Featured virtual extras category — merchandising only. */
+    suggestedExtrasTitle: string
+    suggestedExtrasBody: string
+    suggestedExtrasLead: string
+    suggestedExtrasProducts: string
+    suggestedExtrasClose: string
+    postSuggestedCategoryHintTitle: string
+    postSuggestedCategoryHintBody: string
+    photoEnlargeHint: string
+    additionalQuantityLabel: string
+    waiterSectionTitle: string
+    waiterSectionHint: string
+    waiterUnitPrice: string
+    waiterSubtotal: string
+    increaseWaiters: string
+    decreaseWaiters: string
+    disposableKitTitle: string
+    disposableKitDescription: string
+    disposableKitPrice: string
+    disposableKitOptional: string
+    disposableKitDecline: string
+    disposableKitAdd: string
+    includedInPackage: string
+    selectedInPackage: string
+    extraPriceAsAdditional: string
+    extraIncludedShort: string
+    extraSelectedShort: string
     withoutSidesGroupTitle: string
     withSidesGroupHint: string
     withoutSidesGroupHint: string
@@ -218,6 +323,8 @@ type QuoteStrings = {
     adults: string
     childrenUnder3: string
     children4to12: string
+    /** Separates the guest counts from the address block on the Event step. */
+    eventAddressSection: string
     hasGrill: string
     grillPhotoReceived: string
     yes: string
@@ -228,6 +335,10 @@ type QuoteStrings = {
     photoPendingHint: string
     attachGrillPhoto: string
     grillPhotoHint: string
+    grillPhotoGuidancePrimary: string
+    grillPhotoGuidanceContinue: string
+    grillNoPhotoWarning: string
+    grillNoPhotoReviewNote: string
     grillRentalRequired: string
     grillRentalQty: string
     grillNotes: string
@@ -276,6 +387,9 @@ type QuoteStrings = {
     issueState: string
     issueZip: string
     issueAdults: string
+    issueChildrenUnder3: string
+    issueChildren4To12: string
+    issueAddressNumber: string
     issueSelectPackage: string
     issueNoAdditionals: string
     issueHasGrill: string
@@ -389,6 +503,7 @@ type QuoteStrings = {
     listOr: string
     optionFallback: string
     seafoodOption: string
+    lobsterScallopOption: string
     ribOption: string
     sideOption: string
     comingSoon: string
@@ -472,28 +587,30 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     customerNotLinked:
       'Cliente ainda não vinculado. A cotação pode ser criada, mas deverá ser revisada antes do envio final.',
     currentCustomer: 'Cliente atual',
+    weightPerUnit: 'Peso por unidade',
+    estimatedTotalWeight: 'Peso total estimado',
     stepSubtitles: {
       0: 'Identifique o cliente para começar a cotação.',
       1: 'Informe data, local e detalhes do evento.',
-      2: 'Escolha o pacote e confira as opções disponíveis.',
-      3: 'Adicione itens extras se quiser. A seleção é opcional.',
-      4: 'Configure churrasqueira, foto e rental quando aplicável.',
+      2: 'Configure churrasqueira, foto e rental quando aplicável.',
+      3: 'Escolha o pacote e confira as opções disponíveis.',
+      4: 'Adicione itens extras se quiser. A seleção é opcional.',
       5: 'Revise e confirme a cotação comercial completa.',
     },
     wizardSteps: [
       'Cliente',
       'Evento',
+      'Churrasco',
       'Pacote',
       'Adicionais',
-      'Churrasco',
       'Confirmação',
     ],
     wizardStepsShort: [
       'Cliente',
       'Evento',
+      'BBQ',
       'Pacote',
       'Extras',
-      'BBQ',
       'Revisão',
     ],
     next: 'Próximo',
@@ -587,9 +704,26 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Preenchido automaticamente com +4h. Você pode alterar se quiser.',
       endTimeHintPublic:
         'Calculado automaticamente a partir do horário de início. Não é possível editar.',
+      serviceTimingHintPublic:
+        'O serviço tem duração padrão de até 4 horas. Nossa equipe chega aproximadamente 1 hora antes do horário de início para montagem e preparação.',
       publicPhoneHint:
-        'Comece pelo código do país. Estados Unidos é +1; para outro país use o DDI, por exemplo +55.',
-      publicPhonePlaceholder: 'Ex.: +1 407 555 0123',
+        'Escolha o país e o DDI. Depois digite DDD e número. O telefone é salvo no formato internacional.',
+      publicPhonePlaceholder: 'Ex.: 407 555 1234',
+      phoneCountryPlaceholder: 'DDI',
+      phoneCountrySearch: 'Buscar país ou DDI',
+      phoneCountryRequired: 'Selecione o país / DDI.',
+      phoneCountryDdiLabel: 'País / DDI',
+      phoneAreaCodeLabel: 'DDD',
+      phoneSubscriberLabel: 'Número',
+      phoneNationalRequired: 'Informe DDD e número.',
+      phoneInvalidSplit: 'Telefone incompleto. Confira o DDI e o número.',
+      publicAddressPlaceholder: 'Ex.: 123 Example Ave',
+      publicAddressNumberPlaceholder: 'Ex.: 250',
+      publicCityPlaceholder: 'Ex.: Orlando',
+      publicStatePlaceholder: 'Ex.: FL',
+      publicPostalPlaceholder: 'Ex.: 32801',
+      publicAdultsPlaceholder: 'Ex.: 20',
+      publicChildrenPlaceholder: 'Ex.: 4',
       firstName: 'Primeiro nome',
       lastName: 'Sobrenome',
       contactPrivacyHint:
@@ -600,8 +734,61 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicPackageExperienceTitle: 'Escolha sua experiência',
       publicPackageExperienceBody:
         'Escolha o estilo do seu churrasco: com ou sem guarnições. Explore os pacotes, encontre o que combina com o seu evento e personalize só o que fizer sentido. O valor atualiza na hora.',
+      publicPackageEditorialHeadline: 'ESCOLHA SEU PACOTE',
       footerSincePioneer: 'Desde 2017 · Pioneira em Orlando, Flórida',
+      publicAdditionalsKicker: 'Adicionais',
+      additionalPriceKicker: 'Preço',
       withSidesGroupTitle: 'COM GUARNIÇÕES',
+      packageIncludedTitle: 'TODOS OS PACOTES ACOMPANHAM',
+      packageIncludedHelper: 'Incluídos sem custo adicional.',
+      packageSidesUpsellTitle: 'PLUS GUARNIÇÕES',
+      packageSidesUpsellText: 'Adicione guarnições por {price} por pessoa.',
+      packageSidesChoiceLead: 'Escolha 1 opção:',
+      packageSidesDisposables:
+        'Estrutura de mesas do buffet com rechauds.',
+      includedServiceTitle: 'INCLUÍDO NO SERVIÇO',
+      includedServiceBody:
+        'Estrutura de mesas do buffet com rechauds.',
+      includedServiceDisposablesWithSides:
+        'Com guarnições: descartáveis incluídos — pratos, talheres e guardanapos.',
+      packageWithSidesPriceLead: '+ {price} por pessoa',
+      packageWithSidesIncludesDisposables:
+        'Inclui as guarnições selecionadas e descartáveis: pratos, talheres e guardanapos.',
+      grillRentalMandatory: 'Aluguel de churrasqueira necessário',
+      grillRentalFixedQty: '1 churrasqueira',
+      specialDatePackageBadge: 'DATA ESPECIAL · +{pct}%',
+      specialDatePackageMin: 'Pedido mínimo nesta data: {amount}',
+      cancellationPolicyAccept: 'Li e concordo com a Política de Cancelamento.',
+      cancellationPolicyRequired: 'Aceite a Política de Cancelamento para enviar.',
+      bothConsentsRequired:
+        'Aceite a Política de Cancelamento e o consentimento de contato para enviar.',
+      suggestedExtrasTitle: 'EXTRAS SUGERIDOS',
+      suggestedExtrasBody:
+        'Selecionamos alguns dos cortes e extras premium mais procurados para você personalizar seu evento.',
+      suggestedExtrasLead: 'Quer deixar seu churrasco ainda mais especial?',
+      suggestedExtrasProducts: 'Explore cortes e extras premium como {products}.',
+      suggestedExtrasClose: 'Escolha seus favoritos abaixo.',
+      postSuggestedCategoryHintTitle: 'Explore mais opções',
+      postSuggestedCategoryHintBody: 'Toque em uma categoria abaixo para visualizar todos os itens disponíveis.',
+      photoEnlargeHint: 'Toque e segure a foto para ampliar.',
+      additionalQuantityLabel: 'Quantidade',
+      waiterSectionTitle: 'Serviço de garçom',
+      waiterSectionHint: 'Adicione garçons para apoio ao seu evento.',
+      waiterUnitPrice: 'US$250 por garçom',
+      waiterSubtotal: 'Subtotal',
+      increaseWaiters: 'Aumentar garçons',
+      decreaseWaiters: 'Diminuir garçons',
+      disposableKitTitle: 'Kit de descartáveis',
+      disposableKitDescription: 'Pratos, talheres e guardanapos',
+      disposableKitPrice: '{price} por pessoa',
+      disposableKitOptional: 'opcional',
+      disposableKitDecline: 'Sem descartáveis',
+      disposableKitAdd: 'Adicionar kit',
+      includedInPackage: 'Incluído no pacote',
+      selectedInPackage: 'Selecionado no pacote',
+      extraPriceAsAdditional: 'Preço como adicional',
+      extraIncludedShort: 'Incluído',
+      extraSelectedShort: 'Selecionado',
       withoutSidesGroupTitle: 'SEM GUARNIÇÕES',
       withSidesGroupHint:
         'Uma experiência completa, com acompanhamentos preparados para complementar o churrasco e deixar o serviço pronto para receber seus convidados. Explore {count} opções de pacotes disponíveis e escolha a combinação ideal para o seu evento.',
@@ -627,10 +814,11 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       mileageDistanceKm: '{km} km',
       mileageRuleLabel: 'Regra aplicada',
       mileageRuleSummary:
-        'Até {included} mi inclusas. Acima disso, {rate} por milha.',
+        'Até {included} mi: sem taxa. Acima disso, {rate} por milha sobre o trajeto total. Ex.: 30 mi = US$60.',
       adults: 'Adultos',
       childrenUnder3: 'Crianças até 3 anos',
       children4to12: 'Crianças 4 a 12 anos',
+      eventAddressSection: 'Endereço do evento',
       hasGrill: 'Cliente tem churrasqueira?',
       grillPhotoReceived: 'Foto da churrasqueira recebida?',
       yes: 'Sim',
@@ -642,7 +830,15 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       attachGrillPhoto: 'Anexar foto da churrasqueira',
       grillPhotoHint:
         'Se o cliente possui churrasqueira própria, confirme se a foto foi recebida para validar tamanho, condição e estrutura antes do evento.',
-      grillRentalRequired: 'Necessário alugar churrasqueira?',
+      grillPhotoGuidancePrimary:
+        'Anexe uma foto da churrasqueira para que nossa equipe possa confirmar se ela é adequada para o serviço.',
+      grillPhotoGuidanceContinue:
+        'Se não tiver disponibilidade para enviar a foto agora, você pode continuar normalmente. Após o fechamento da cotação, a equipe CDL entrará em contato para revisar essa etapa.',
+      grillNoPhotoWarning:
+        'Cliente informou que possui churrasqueira própria e não enviou uma foto. A equipe CDL entrará em contato para confirmar a churrasqueira antes do evento.',
+      grillNoPhotoReviewNote:
+        'Cliente informou que possui churrasqueira própria e não enviou uma foto. A equipe CDL entrará em contato para confirmar a churrasqueira antes do evento.',
+      grillRentalRequired: 'Aluguel de churrasqueira',
       grillRentalQty: 'Quantidade de churrasqueiras para aluguel',
       grillNotes: 'Observações sobre a churrasqueira',
       grillNotesPlaceholder:
@@ -697,6 +893,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       issueState: 'Informe o estado.',
       issueZip: 'Informe um CEP brasileiro (ex.: 01310-100) ou ZIP dos EUA.',
       issueAdults: 'Informe o número de adultos (mínimo 1).',
+      issueChildrenUnder3: 'Informe quantas crianças até 3 anos. Zero é válido.',
+      issueChildren4To12: 'Informe quantas crianças de 4 a 12 anos. Zero é válido.',
+      issueAddressNumber: 'Informe o número do endereço.',
       issueSelectPackage: 'Selecione um pacote.',
       issueNoAdditionals: 'Nenhum adicional selecionado (opcional).',
       issueHasGrill: 'Informe se o cliente possui churrasqueira.',
@@ -816,6 +1015,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       listOr: 'ou',
       optionFallback: 'Opção',
       seafoodOption: 'Frutos do mar',
+      lobsterScallopOption: 'Lagosta ou Vieira com bacon',
       ribOption: 'Costela',
       sideOption: 'Guarnição',
       comingSoon: 'Em breve',
@@ -904,28 +1104,30 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     customerNotLinked:
       'Customer not linked yet. The quote can be created, but must be reviewed before final send.',
     currentCustomer: 'Current customer',
+    weightPerUnit: 'Weight per unit',
+    estimatedTotalWeight: 'Estimated total weight',
     stepSubtitles: {
       0: 'Identify the customer to start the quote.',
       1: 'Enter date, location, and event details.',
-      2: 'Choose the package and review available options.',
-      3: 'Add extra items if you want. Selection is optional.',
-      4: 'Configure grill, photo and rental when applicable.',
+      2: 'Configure grill, photo and rental when applicable.',
+      3: 'Choose the package and review available options.',
+      4: 'Add extra items if you want. Selection is optional.',
       5: 'Review and confirm the full commercial quote.',
     },
     wizardSteps: [
       'Customer',
       'Event',
+      'BBQ',
       'Package',
       'Extras',
-      'BBQ',
       'Confirmation',
     ],
     wizardStepsShort: [
       'Client',
       'Event',
+      'BBQ',
       'Pack',
       'Extras',
-      'BBQ',
       'Review',
     ],
     next: 'Next',
@@ -1016,9 +1218,26 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       endTimeHint: 'Filled automatically with +4h. You can change it if needed.',
       endTimeHintPublic:
         'Calculated automatically from the start time. This field cannot be edited.',
+      serviceTimingHintPublic:
+        'Service lasts up to 4 hours. Our team arrives approximately 1 hour before the selected start time for setup and preparation.',
       publicPhoneHint:
-        'Start with the country code. United States is +1; for another country use its code, for example +55.',
-      publicPhonePlaceholder: 'e.g. +1 407 555 0123',
+        'Choose the country and calling code, then type the area code and number. The phone is stored in international format.',
+      publicPhonePlaceholder: 'Ex.: 407 555 1234',
+      phoneCountryPlaceholder: 'Code',
+      phoneCountrySearch: 'Search country or code',
+      phoneCountryRequired: 'Select the country / calling code.',
+      phoneCountryDdiLabel: 'Country / code',
+      phoneAreaCodeLabel: 'Area code',
+      phoneSubscriberLabel: 'Phone number',
+      phoneNationalRequired: 'Enter the area code and number.',
+      phoneInvalidSplit: 'Incomplete phone. Check the calling code and number.',
+      publicAddressPlaceholder: 'Ex.: 123 Example Ave',
+      publicAddressNumberPlaceholder: 'Ex.: 250',
+      publicCityPlaceholder: 'Ex.: Orlando',
+      publicStatePlaceholder: 'Ex.: FL',
+      publicPostalPlaceholder: 'Ex.: 32801',
+      publicAdultsPlaceholder: 'Ex.: 20',
+      publicChildrenPlaceholder: 'Ex.: 4',
       firstName: 'First name',
       lastName: 'Last name',
       contactPrivacyHint:
@@ -1029,8 +1248,61 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicPackageExperienceTitle: 'Choose your experience',
       publicPackageExperienceBody:
         'Choose the style of your barbecue: with or without sides. Explore the packages, find what fits your event, and customize only what applies. Pricing updates as you go.',
+      publicPackageEditorialHeadline: 'CHOOSE YOUR PACKAGE',
       footerSincePioneer: 'Since 2017 · Pioneer in Orlando, Florida',
+      publicAdditionalsKicker: 'Add-ons',
+      additionalPriceKicker: 'Price',
       withSidesGroupTitle: 'WITH SIDES',
+      packageIncludedTitle: 'INCLUDED WITH EVERY PACKAGE',
+      packageIncludedHelper: 'Included at no additional charge.',
+      packageSidesUpsellTitle: 'PLUS SIDES',
+      packageSidesUpsellText: 'Add sides for {price} per person.',
+      packageSidesChoiceLead: 'Choose 1 option:',
+      packageSidesDisposables:
+        'Buffet table setup with chafing dishes.',
+      includedServiceTitle: 'INCLUDED IN THE SERVICE',
+      includedServiceBody:
+        'Buffet table setup with chafing dishes.',
+      includedServiceDisposablesWithSides:
+        'With side dishes: disposables included — plates, utensils and napkins.',
+      packageWithSidesPriceLead: '+ {price} per person',
+      packageWithSidesIncludesDisposables:
+        'Includes the selected side dishes and disposables: plates, cutlery and napkins.',
+      grillRentalMandatory: 'Grill rental required',
+      grillRentalFixedQty: '1 grill',
+      specialDatePackageBadge: 'SPECIAL DATE · +{pct}%',
+      specialDatePackageMin: 'Minimum order on this date: {amount}',
+      cancellationPolicyAccept: 'I have read and agree to the Cancellation Policy.',
+      cancellationPolicyRequired: 'Accept the Cancellation Policy to submit.',
+      bothConsentsRequired:
+        'Accept the Cancellation Policy and the contact consent to submit.',
+      suggestedExtrasTitle: 'SUGGESTED EXTRAS',
+      suggestedExtrasBody:
+        'Explore a selection of premium cuts and extras to personalize your event.',
+      suggestedExtrasLead: 'Want to make your BBQ even more special?',
+      suggestedExtrasProducts: 'Explore premium cuts and extras such as {products}.',
+      suggestedExtrasClose: 'Choose your favorites below.',
+      postSuggestedCategoryHintTitle: 'Explore more options',
+      postSuggestedCategoryHintBody: 'Tap a category below to view all available items.',
+      photoEnlargeHint: 'Touch and hold the photo to enlarge.',
+      additionalQuantityLabel: 'Quantity',
+      waiterSectionTitle: 'Waiter service',
+      waiterSectionHint: 'Add waiters to support your event.',
+      waiterUnitPrice: 'US$250 per waiter',
+      waiterSubtotal: 'Subtotal',
+      increaseWaiters: 'Increase waiters',
+      decreaseWaiters: 'Decrease waiters',
+      disposableKitTitle: 'Disposable kit',
+      disposableKitDescription: 'Plates, cutlery and napkins',
+      disposableKitPrice: '{price} per person',
+      disposableKitOptional: 'optional',
+      disposableKitDecline: 'No disposables',
+      disposableKitAdd: 'Add kit',
+      includedInPackage: 'Included in package',
+      selectedInPackage: 'Selected in package',
+      extraPriceAsAdditional: 'Extra price',
+      extraIncludedShort: 'Included',
+      extraSelectedShort: 'Selected',
       withoutSidesGroupTitle: 'WITHOUT SIDES',
       withSidesGroupHint:
         'A complete experience, with sides prepared to complement the barbecue and ready your service for guests. Explore {count} available packages and choose the ideal combination for your event.',
@@ -1055,10 +1327,11 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       mileageDistanceKm: '{km} km',
       mileageRuleLabel: 'Applied rule',
       mileageRuleSummary:
-        'Up to {included} mi included. Above that, {rate} per mile.',
+        'Up to {included} mi: no travel fee. Over that, {rate} per mile on the full trip. Example: 30 mi = US$60.',
       adults: 'Adults',
       childrenUnder3: 'Children up to 3 years',
       children4to12: 'Children 4 to 12 years',
+      eventAddressSection: 'Event address',
       hasGrill: 'Does the customer have a grill?',
       grillPhotoReceived: 'Grill photo received?',
       yes: 'Yes',
@@ -1070,7 +1343,15 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       attachGrillPhoto: 'Attach grill photo',
       grillPhotoHint:
         'If the customer has their own grill, confirm the photo was received to validate size, condition and structure before the event.',
-      grillRentalRequired: 'Grill rental required?',
+      grillPhotoGuidancePrimary:
+        'Upload a photo of the grill so our team can confirm that it is suitable for the service.',
+      grillPhotoGuidanceContinue:
+        'If you are unable to upload the photo now, you may continue normally. After the quote is submitted, the CDL team will contact you to review this step.',
+      grillNoPhotoWarning:
+        'The customer informed that they have their own grill and did not upload a photo. The CDL team will contact them to confirm the grill before the event.',
+      grillNoPhotoReviewNote:
+        'The customer informed that they have their own grill and did not upload a photo. The CDL team will contact them to confirm the grill before the event.',
+      grillRentalRequired: 'Grill rental',
       grillRentalQty: 'Number of grills to rent',
       grillNotes: 'Grill notes',
       grillNotesPlaceholder:
@@ -1124,6 +1405,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       issueState: 'Enter the state.',
       issueZip: 'Enter a Brazilian ZIP (e.g. 01310-100) or a US ZIP code.',
       issueAdults: 'Enter the number of adults (minimum 1).',
+      issueChildrenUnder3: 'Enter how many children are up to 3 years. Zero is valid.',
+      issueChildren4To12: 'Enter how many children are 4 to 12 years. Zero is valid.',
+      issueAddressNumber: 'Enter the street number.',
       issueSelectPackage: 'Select a package.',
       issueNoAdditionals: 'No extras selected (optional).',
       issueHasGrill: 'Indicate whether the customer has a grill.',
@@ -1243,6 +1527,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       listOr: 'or',
       optionFallback: 'Option',
       seafoodOption: 'Seafood',
+      lobsterScallopOption: 'Lobster or scallops with bacon',
       ribOption: 'Ribs',
       sideOption: 'Side',
       comingSoon: 'Coming soon',
@@ -1330,28 +1615,30 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
     customerNotLinked:
       'Cliente aún no vinculado. La cotización puede crearse, pero debe revisarse antes del envío final.',
     currentCustomer: 'Cliente actual',
+    weightPerUnit: 'Peso por unidad',
+    estimatedTotalWeight: 'Peso total estimado',
     stepSubtitles: {
       0: 'Identifique al cliente para comenzar la cotización.',
       1: 'Indique fecha, lugar y detalles del evento.',
-      2: 'Elija el paquete y revise las opciones disponibles.',
-      3: 'Agregue ítems extra si quiere. La selección es opcional.',
-      4: 'Configure parrilla, foto y rental cuando aplique.',
+      2: 'Configure parrilla, foto y rental cuando aplique.',
+      3: 'Elija el paquete y revise las opciones disponibles.',
+      4: 'Agregue ítems extra si quiere. La selección es opcional.',
       5: 'Revise y confirme la cotización comercial completa.',
     },
     wizardSteps: [
       'Cliente',
       'Evento',
+      'Parrilla',
       'Paquete',
       'Adicionales',
-      'Parrilla',
       'Confirmación',
     ],
     wizardStepsShort: [
       'Cliente',
       'Evento',
+      'BBQ',
       'Pack',
       'Extra',
-      'BBQ',
       'Revisión',
     ],
     next: 'Siguiente',
@@ -1445,9 +1732,26 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
         'Completado automáticamente con +4h. Puede cambiarlo si desea.',
       endTimeHintPublic:
         'Calculado automáticamente a partir del horario de inicio. No se puede editar.',
+      serviceTimingHintPublic:
+        'El servicio tiene una duración estándar de hasta 4 horas. Nuestro equipo llega aproximadamente 1 hora antes del horario de inicio para el montaje y la preparación.',
       publicPhoneHint:
-        'Empiece por el código del país. Estados Unidos es +1; para otro país use su código, por ejemplo +55.',
-      publicPhonePlaceholder: 'Ej.: +1 407 555 0123',
+        'Elija el país y el código, luego escriba el área y el número. El teléfono se guarda en formato internacional.',
+      publicPhonePlaceholder: 'Ej.: 407 555 1234',
+      phoneCountryPlaceholder: 'DDI',
+      phoneCountrySearch: 'Buscar país o código',
+      phoneCountryRequired: 'Seleccione el país / código.',
+      phoneCountryDdiLabel: 'País / código',
+      phoneAreaCodeLabel: 'Código de área',
+      phoneSubscriberLabel: 'Número',
+      phoneNationalRequired: 'Informe el área y el número.',
+      phoneInvalidSplit: 'Teléfono incompleto. Revise el código y el número.',
+      publicAddressPlaceholder: 'Ej.: 123 Example Ave',
+      publicAddressNumberPlaceholder: 'Ej.: 250',
+      publicCityPlaceholder: 'Ej.: Orlando',
+      publicStatePlaceholder: 'Ej.: FL',
+      publicPostalPlaceholder: 'Ej.: 32801',
+      publicAdultsPlaceholder: 'Ej.: 20',
+      publicChildrenPlaceholder: 'Ej.: 4',
       firstName: 'Nombre',
       lastName: 'Apellido',
       contactPrivacyHint:
@@ -1458,8 +1762,61 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       publicPackageExperienceTitle: 'Elige tu experiencia',
       publicPackageExperienceBody:
         'Elige el estilo de tu asado: con o sin acompañamientos. Explora los paquetes, encuentra lo que combina con tu evento y personaliza solo lo que aplique. El precio se actualiza al momento.',
+      publicPackageEditorialHeadline: 'ELIGE TU PAQUETE',
       footerSincePioneer: 'Desde 2017 · Pionera en Orlando, Florida',
+      publicAdditionalsKicker: 'Adicionales',
+      additionalPriceKicker: 'Precio',
       withSidesGroupTitle: 'CON ACOMPAÑAMIENTOS',
+      packageIncludedTitle: 'INCLUIDO EN TODOS LOS PAQUETES',
+      packageIncludedHelper: 'Incluido sin costo adicional.',
+      packageSidesUpsellTitle: 'PLUS GUARNICIONES',
+      packageSidesUpsellText: 'Agrega guarniciones por {price} por persona.',
+      packageSidesChoiceLead: 'Elige 1 opción:',
+      packageSidesDisposables:
+        'Estructura de mesas de buffet con chafing dishes.',
+      includedServiceTitle: 'INCLUIDO EN EL SERVICIO',
+      includedServiceBody:
+        'Estructura de mesas de buffet con chafing dishes.',
+      includedServiceDisposablesWithSides:
+        'Con guarniciones: desechables incluidos — platos, cubiertos y servilletas.',
+      packageWithSidesPriceLead: '+ {price} por persona',
+      packageWithSidesIncludesDisposables:
+        'Incluye las guarniciones seleccionadas y desechables: platos, cubiertos y servilletas.',
+      grillRentalMandatory: 'Alquiler de parrilla obligatorio',
+      grillRentalFixedQty: '1 parrilla',
+      specialDatePackageBadge: 'FECHA ESPECIAL · +{pct}%',
+      specialDatePackageMin: 'Pedido mínimo en esta fecha: {amount}',
+      cancellationPolicyAccept: 'He leído y acepto la Política de Cancelación.',
+      cancellationPolicyRequired: 'Acepta la Política de Cancelación para enviar.',
+      bothConsentsRequired:
+        'Acepta la Política de Cancelación y el consentimiento de contacto para enviar.',
+      suggestedExtrasTitle: 'EXTRAS SUGERIDOS',
+      suggestedExtrasBody:
+        'Descubre una selección de cortes premium y extras para personalizar tu evento.',
+      suggestedExtrasLead: '¿Quieres llevar tu BBQ a otro nivel?',
+      suggestedExtrasProducts: 'Descubre cortes y extras premium como {products}.',
+      suggestedExtrasClose: 'Elige tus favoritos abajo.',
+      postSuggestedCategoryHintTitle: 'Explora más opciones',
+      postSuggestedCategoryHintBody: 'Toca una categoría abajo para ver todos los artículos disponibles.',
+      photoEnlargeHint: 'Mantén pulsada la foto para ampliarla.',
+      additionalQuantityLabel: 'Cantidad',
+      waiterSectionTitle: 'Servicio de mesero',
+      waiterSectionHint: 'Agregue meseros para apoyar su evento.',
+      waiterUnitPrice: 'US$250 por mesero',
+      waiterSubtotal: 'Subtotal',
+      increaseWaiters: 'Aumentar meseros',
+      decreaseWaiters: 'Disminuir meseros',
+      disposableKitTitle: 'Kit de desechables',
+      disposableKitDescription: 'Platos, cubiertos y servilletas',
+      disposableKitPrice: '{price} por persona',
+      disposableKitOptional: 'opcional',
+      disposableKitDecline: 'Sin desechables',
+      disposableKitAdd: 'Agregar kit',
+      includedInPackage: 'Incluido en el paquete',
+      selectedInPackage: 'Seleccionado en el paquete',
+      extraPriceAsAdditional: 'Precio como adicional',
+      extraIncludedShort: 'Incluido',
+      extraSelectedShort: 'Seleccionado',
       withoutSidesGroupTitle: 'SIN ACOMPAÑAMIENTOS',
       withSidesGroupHint:
         'Una experiencia completa, con acompañamientos preparados para complementar el asado y dejar el servicio listo para recibir a tus invitados. Explora {count} opciones de paquetes disponibles y elige la combinación ideal para tu evento.',
@@ -1484,10 +1841,11 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       mileageDistanceKm: '{km} km',
       mileageRuleLabel: 'Regla aplicada',
       mileageRuleSummary:
-        'Hasta {included} mi incluidas. Por encima, {rate} por milla.',
+        'Hasta {included} mi: sin cargo. Por encima, {rate} por milla sobre el trayecto total. Ej.: 30 mi = US$60.',
       adults: 'Adultos',
       childrenUnder3: 'Niños hasta 3 años',
       children4to12: 'Niños de 4 a 12 años',
+      eventAddressSection: 'Dirección del evento',
       hasGrill: '¿El cliente tiene parrilla?',
       grillPhotoReceived: '¿Foto de la parrilla recibida?',
       yes: 'Sí',
@@ -1499,7 +1857,15 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       attachGrillPhoto: 'Adjuntar foto de la parrilla',
       grillPhotoHint:
         'Si el cliente tiene parrilla propia, confirme si la foto fue recibida para validar tamaño, condición y estructura antes del evento.',
-      grillRentalRequired: '¿Necesita alquilar parrilla?',
+      grillPhotoGuidancePrimary:
+        'Adjunte una foto de la parrilla para que nuestro equipo pueda confirmar que es adecuada para el servicio.',
+      grillPhotoGuidanceContinue:
+        'Si no puede enviar la foto ahora, puede continuar normalmente. Después de enviar la cotización, el equipo de CDL se pondrá en contacto para revisar esta etapa.',
+      grillNoPhotoWarning:
+        'El cliente informó que tiene su propia parrilla y no envió una foto. El equipo de CDL se pondrá en contacto para confirmar la parrilla antes del evento.',
+      grillNoPhotoReviewNote:
+        'El cliente informó que tiene su propia parrilla y no envió una foto. El equipo de CDL se pondrá en contacto para confirmar la parrilla antes del evento.',
+      grillRentalRequired: 'Alquiler de parrilla',
       grillRentalQty: 'Cantidad de parrillas para alquiler',
       grillNotes: 'Observaciones sobre la parrilla',
       grillNotesPlaceholder:
@@ -1554,6 +1920,9 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       issueState: 'Indique el estado.',
       issueZip: 'Indique un CEP de Brasil (ej.: 01310-100) o ZIP de EE. UU.',
       issueAdults: 'Indique el número de adultos (mínimo 1).',
+      issueChildrenUnder3: 'Indique cuántos niños hay hasta 3 años. Cero es válido.',
+      issueChildren4To12: 'Indique cuántos niños hay de 4 a 12 años. Cero es válido.',
+      issueAddressNumber: 'Indique el número de la dirección.',
       issueSelectPackage: 'Seleccione un paquete.',
       issueNoAdditionals: 'Ningún adicional seleccionado (opcional).',
       issueHasGrill: 'Indique si el cliente tiene parrilla.',
@@ -1673,6 +2042,7 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       listOr: 'o',
       optionFallback: 'Opción',
       seafoodOption: 'Mariscos',
+      lobsterScallopOption: 'Langosta o Vieira con bacon',
       ribOption: 'Costilla',
       sideOption: 'Guarnición',
       comingSoon: 'Próximamente',

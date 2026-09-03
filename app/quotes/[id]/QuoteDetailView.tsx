@@ -18,21 +18,49 @@ import {
   getChargedMilesFromSnapshot,
   readQuoteSnapshot,
 } from '../../../Lib/readQuoteSnapshot'
-import QuoteProposalSharePanel from '@/components/quotes/QuoteProposalSharePanel'
-import QuoteTeamAssignmentPanel from '@/components/quotes/QuoteTeamAssignmentPanel'
 import QuoteConvertPanel from '@/components/quotes/QuoteConvertPanel'
+import { QuoteSecondaryPanels } from '@/components/quotes/QuoteSecondaryPanels'
 import QuoteDetailToolbar from './QuoteDetailToolbar'
 import QuoteFlashBanner from '@/components/QuoteFlashBanner'
-import { Suspense } from 'react'
 import QuoteDebugPanel from './QuoteDebugPanel'
+import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import dynamic from 'next/dynamic'
+import { Suspense } from 'react'
+
+const QuoteProposalSharePanel = dynamic(
+  () => import('@/components/quotes/QuoteProposalSharePanel'),
+  {
+    loading: () => (
+      <div className="mt-4 h-24 animate-pulse rounded-2xl bg-neutral-100" />
+    ),
+  },
+)
+const QuoteTeamAssignmentPanel = dynamic(
+  () => import('@/components/quotes/QuoteTeamAssignmentPanel'),
+  {
+    loading: () => (
+      <div className="mt-4 h-20 animate-pulse rounded-2xl bg-neutral-100" />
+    ),
+  },
+)
+const QuoteInvoicePanel = dynamic(
+  () => import('@/components/payments/QuoteInvoicePanel'),
+  {
+    loading: () => (
+      <div className="mt-4 h-20 animate-pulse rounded-2xl bg-neutral-100" />
+    ),
+  },
+)
 
 export default function QuoteDetailView({
   quote,
   canConvert = false,
+  canManageInvoice = false,
   uiLocale,
 }: {
   quote: QuoteDetail
   canConvert?: boolean
+  canManageInvoice?: boolean
   uiLocale?: string | null
 }) {
   const lang = uiLocale === 'en' || uiLocale === 'es' || uiLocale === 'pt'
@@ -102,7 +130,16 @@ export default function QuoteDetailView({
             editHref={`/quotes/${quote.id}/edit?step=churrasqueira`}
           />
           <div className="mt-4">
+            <QuoteConvertPanel
+              quoteId={quote.id}
+              quoteNumber={quote.quote_number}
+              proposalResponse={quote.proposal_response}
+              convertedServiceOrderId={quote.converted_service_order_id}
+              canConvert={canConvert}
+            />
+            <QuoteSecondaryPanels label={tQuotesOrders(lang, 'openShare')}>
             <QuoteProposalSharePanel
+              uiLocale={lang}
               quoteId={quote.id}
               quoteNumber={quoteNumber}
               customerName={customerDisplayName}
@@ -167,18 +204,27 @@ export default function QuoteDetailView({
                 quote_status: quote.quote_status ?? null,
               }}
             />
+            </QuoteSecondaryPanels>
+            <QuoteSecondaryPanels label={tQuotesOrders(lang, 'openTeam')}>
             <QuoteTeamAssignmentPanel
               quoteId={quote.id}
               proposalResponse={quote.proposal_response}
               quoteStatus={quote.quote_status}
             />
-            <QuoteConvertPanel
+            </QuoteSecondaryPanels>
+            <QuoteSecondaryPanels label={tQuotesOrders(lang, 'openInvoice')}>
+            <QuoteInvoicePanel
               quoteId={quote.id}
-              quoteNumber={quote.quote_number}
-              proposalResponse={quote.proposal_response}
-              convertedServiceOrderId={quote.converted_service_order_id}
-              canConvert={canConvert}
+              canManage={canManageInvoice}
+              language={lang}
+              quoteAccepted={
+                quote.proposal_response === 'accepted' ||
+                quote.quote_status === 'accepted' ||
+                quote.quote_status === 'approved' ||
+                quote.quote_status === 'converted'
+              }
             />
+            </QuoteSecondaryPanels>
           </div>
           <Suspense fallback={null}>
             <QuoteFlashBanner />

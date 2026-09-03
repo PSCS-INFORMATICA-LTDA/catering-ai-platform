@@ -1,4 +1,49 @@
 import { isPublicCatalogFixtureItem } from './catalogVisibility.ts'
+import { isGrillRentalAdditional } from './grillRentalDisplay.ts'
+
+type PackageKeySource = {
+  package_key?: string | null
+}
+
+export const SERVICES_SUPPLIES_CATEGORY_KEY = 'SERVICOS_E_SUPRIMENTOS'
+
+export const WAITER_SERVICE_ITEM_KEY = 'CDL_WAITER_SERVICE'
+export const DISPOSABLE_KIT_ITEM_KEY = 'KIT_DESCARTAVEIS'
+/** Catalog/inventory linkage only. No per-person kit stock decrement yet. */
+
+const STRUCTURAL_PUBLIC_EXTRA_KEYS = new Set([
+  'ITEM_084',
+  WAITER_SERVICE_ITEM_KEY,
+  DISPOSABLE_KIT_ITEM_KEY,
+])
+
+export function isWaiterServiceItem(item: {
+  item_key?: string | null
+}): boolean {
+  return item.item_key?.trim().toUpperCase() === WAITER_SERVICE_ITEM_KEY
+}
+
+export function isDisposableKitItem(item: {
+  item_key?: string | null
+}): boolean {
+  return item.item_key?.trim().toUpperCase() === DISPOSABLE_KIT_ITEM_KEY
+}
+
+export function isStructuralPublicExtraItem(item: {
+  id?: string | null
+  item_key?: string | null
+}): boolean {
+  const key = item.item_key?.trim().toUpperCase() ?? ''
+  return STRUCTURAL_PUBLIC_EXTRA_KEYS.has(key) || isGrillRentalAdditional(item)
+}
+
+export function sanitizePublicAdditionalQuantity(value: unknown): number {
+  if (typeof value === 'boolean') return 0
+  if (typeof value === 'string' && !/^\s*\d+\s*$/.test(value)) return 0
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isInteger(parsed) || parsed < 0) return 0
+  return Math.min(10_000, parsed)
+}
 
 export type ExtraEligibilityItem = {
   id: string
@@ -51,6 +96,7 @@ function isCustomerAdditionalCandidate(item: ExtraEligibilityItem): boolean {
     return false
   }
   if (isPublicCatalogFixtureItem(item)) return false
+  if (isStructuralPublicExtraItem(item)) return false
   return true
 }
 
@@ -68,6 +114,29 @@ export function getVisiblePublicExtraItems<T extends ExtraEligibilityItem>(
   return items.filter(
     (item) => isCustomerAdditionalCandidate(item) && !blocked.has(item.id),
   )
+}
+
+/**
+ * Same identity as isCustomPackage: package_key, never translated name.
+ * Personalized packages skip included-item subtraction; they still use
+ * getVisiblePublicExtraItems for active / customer / additional flags.
+ */
+export function shouldShowAccompanimentExtras(
+  pkg: PackageKeySource | null | undefined,
+): boolean {
+  const key = (pkg?.package_key ?? '').trim().toUpperCase()
+  return /\bPERS\b|BBQPERS/i.test(key)
+}
+
+/**
+ * Package-aware extras stay ID-based (blockedCatalogItemIds).
+ * Never hide an entire category because one included SKU lives in it.
+ */
+export function filterPublicExtraItemsForPackage<T extends ExtraEligibilityItem>(
+  items: ReadonlyArray<T>,
+  _pkg?: PackageKeySource | null,
+): T[] {
+  return [...items]
 }
 
 export function extraIdsIntersectingIncluded(
@@ -100,4 +169,112 @@ export function pruneBlockedAdditionalSelections(
     removedIds.push(itemId)
   }
   return { additionals: next, removedIds }
+}
+
+export type ExtraAvailabilityStatus =
+  | 'AVAILABLE'
+  | 'INCLUDED_IN_PACKAGE'
+  | 'SELECTED_IN_PACKAGE'
+
+export const CDL_STANDARD_PACKAGE_INCLUDED_ACCOMPANIMENT_KEYS = [
+  'ITEM_CHIMICHURRI',
+  'ITEM_059',
+  'ITEM_060',
+  'ITEM_061',
+  'ITEM_066',
+  'ITEM_067',
+] as const
+
+const STANDARD_PACKAGE_INCLUDED_ACCOMPANIMENT_KEY_SET = new Set<string>(
+  CDL_STANDARD_PACKAGE_INCLUDED_ACCOMPANIMENT_KEYS,
+)
+
+function normalizeCatalogIdList(ids: ReadonlyArray<string>): string[] {
+  return [...new Set(ids.map((id) => id.trim()).filter(Boolean))]
+}
+
+export function isStandardPackageIncludedAccompanimentKey(
+  itemKey: string | null | undefined,
+): boolean {
+  return STANDARD_PACKAGE_INCLUDED_ACCOMPANIMENT_KEY_SET.has(
+    String(itemKey || '').trim(),
+  )
+}
+
+/**
+ * Canonical accompaniments declared on standard CDL packages but not
+ * modeled as package_items / package_side_items. Identity is item_key.
+ * Custom packages (package_key / isCustomPackage) stay chargeable.
+ */
+export function getUniversalIncludedCatalogIds(
+  items: ReadonlyArray<{ id: string; item_key?: string | null }>,
+  pkg: PackageKeySource | null | undefined,
+): string[] {
+  if (!pkg || shouldShowAccompanimentExtras(pkg)) return []
+  return items
+    .filter((item) => isStandardPackageIncludedAccompanimentKey(item.item_key))
+    .map((item) => item.id.trim())
+    .filter(Boolean)
+}
+
+export function getNonChargeableExtraIds(
+  packageCompositionBlockedIds: ReadonlyArray<string>,
+  universalIncludedIds: ReadonlyArray<string>,
+): string[] {
+  return normalizeCatalogIdList([
+    ...packageCompositionBlockedIds,
+    ...universalIncludedIds,
+  ])
+}
+
+export function getSelectedInPackageCatalogIds(
+  compositionBlockedIds: ReadonlyArray<string>,
+  compositionBlockedWithoutSelections: ReadonlyArray<string>,
+): string[] {
+  const includedWithoutSelections = new Set(
+    normalizeCatalogIdList(compositionBlockedWithoutSelections),
+  )
+  return normalizeCatalogIdList(compositionBlockedIds).filter(
+    (id) => !includedWithoutSelections.has(id),
+  )
+}
+
+export function getExtraAvailabilityStatus(
+  itemId: string,
+  nonChargeableExtraIds: ReadonlyArray<string>,
+  selectedInPackageIds: ReadonlyArray<string>,
+): ExtraAvailabilityStatus {
+  const id = itemId.trim()
+  if (selectedInPackageIds.some((value) => value.trim() === id)) {
+    return 'SELECTED_IN_PACKAGE'
+  }
+  if (nonChargeableExtraIds.some((value) => value.trim() === id)) {
+    return 'INCLUDED_IN_PACKAGE'
+  }
+  return 'AVAILABLE'
+}
+
+export function buildExtraAvailabilityByItemId(
+  itemIds: ReadonlyArray<string>,
+  nonChargeableExtraIds: ReadonlyArray<string>,
+  selectedInPackageIds: ReadonlyArray<string>,
+): Record<string, ExtraAvailabilityStatus> {
+  const availability: Record<string, ExtraAvailabilityStatus> = {}
+  for (const itemId of itemIds) {
+    availability[itemId] = getExtraAvailabilityStatus(
+      itemId,
+      nonChargeableExtraIds,
+      selectedInPackageIds,
+    )
+  }
+  return availability
+}
+
+export function canSetPublicAdditionalQuantity(
+  itemId: string,
+  nonChargeableExtraIds: ReadonlyArray<string>,
+): boolean {
+  const id = itemId.trim()
+  if (!id) return false
+  return !nonChargeableExtraIds.some((value) => value.trim() === id)
 }

@@ -191,6 +191,16 @@ report(
     css.includes('public-cinematic-chapter--editorial'),
 )
 
+const videoChapterAt = cinematic.indexOf('data-landing-chapter="video"')
+const finalChapterAt = cinematic.indexOf('data-landing-chapter="final-cta"')
+const howChapterAt = cinematic.indexOf('data-landing-chapter="how-it-works"')
+report(
+  'PUBLIC_LANDING_VIDEO_BEFORE_FINAL_CTA',
+  howChapterAt > -1 &&
+    videoChapterAt > howChapterAt &&
+    finalChapterAt > videoChapterAt,
+)
+
 report(
   'PUBLIC_LANDING_PT_MOBILE_LAYOUT',
   PUBLIC_LANDING_STORY.pt.hero.title[0].breakAfter === true &&

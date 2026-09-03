@@ -8,6 +8,10 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getQuoteStrings } from '../../Lib/quoteTranslations.ts'
 import {
+  isOwnGrillWithoutPhoto,
+  toFinalizePayloadForCurrentRpc,
+} from '../../Lib/publicQuote/ownGrillSubmitCompat.ts'
+import {
   calendarDateInTimeZone,
   isPublicEventDateBookable,
 } from '../../Lib/publicQuote/eventDate.ts'
@@ -37,6 +41,10 @@ const confirm = source(
 const experience = source(
   'app/quote/[companySlug]/[locale]/PublicQuoteExperience.tsx',
 )
+const successScreen = source(
+  'components/quotes/PublicQuoteSuccessScreen.tsx',
+)
+const successCopy = source('Lib/publicQuote/successCopy.ts')
 const submitRoute = source('app/api/public/quote-intake/submit/route.ts')
 const validation = source('Lib/publicQuote/validation.ts')
 const stepStatus = source('app/quotes/new/wizardStepStatus.ts')
@@ -57,15 +65,74 @@ test('TEST 8 Privacy unchecked blocks submit', () => {
   assert.match(wizard, /!state\.publicConsentAccepted/)
 })
 
+test('TEST 8b Cancellation unchecked blocks submit', () => {
+  assert.match(confirm, /cancellationPolicyAccepted/)
+  assert.match(confirm, /data-cancellation-consent/)
+  assert.match(wizard, /!state\.cancellationPolicyAccepted/)
+  assert.match(wizard, /cancellationConsent:/)
+})
+
 test('TEST 9 Privacy checked allows submit', () => {
   assert.match(confirm, /canSubmit =/)
   assert.match(confirm, /state\.publicConsentAccepted/)
+  assert.match(confirm, /cancellationPolicyAccepted/)
   assert.match(wizard, /consent: \{\s*accepted: true/)
 })
 
 test('TEST 10 Quote persistence requires RPC', () => {
   assert.match(submitRoute, /finalize_public_quote/)
   assert.match(wizard, /!result\.quote\?\.id/)
+})
+
+test('OWN_GRILL_NO_PHOTO_RPC_COMPAT_DOES_NOT_FAKE_SUCCESS', () => {
+  const compat = source('Lib/publicQuote/ownGrillSubmitCompat.ts')
+  assert.match(submitRoute, /toFinalizePayloadForCurrentRpc/)
+  assert.match(submitRoute, /persistOwnGrillWithoutPhoto/)
+  assert.match(submitRoute, /rollbackPublicQuoteFinalize/)
+  assert.match(compat, /has_grill: true/)
+  assert.match(compat, /grill_photo_required: false/)
+  assert.doesNotMatch(submitRoute, /status:\s*200[\s\S]{0,80}invalid_photo/)
+  const draft = {
+    locale: 'pt',
+    contact: { firstName: 'QA', lastName: 'Photo', phone: '+12025550100', email: null },
+    event: {
+      eventName: 'QA',
+      eventDate: '2026-09-21',
+      startTime: '18:00',
+      endTime: '22:00',
+      adultCount: 10,
+      childrenUnder3Count: 0,
+      children4To12Count: 0,
+      address: {
+        route: 'Main',
+        number: '1',
+        city: 'Orlando',
+        region: 'FL',
+        postalCode: '32801',
+        country: 'US',
+        formattedAddress: '1 Main',
+        placeId: null,
+        latitude: null,
+        longitude: null,
+        source: 'manual',
+      },
+    },
+    selection: { packageId: 'pkg', packageSelections: {}, additionals: [], reviewedCategoryKeys: [] },
+    grill: {
+      setupAnswered: true,
+      hasGrill: true,
+      photoReference: null,
+      rentalRequired: false,
+      rentalQty: 0,
+      notes: null,
+    },
+  }
+  assert.equal(isOwnGrillWithoutPhoto(draft), true)
+  const rpcDraft = toFinalizePayloadForCurrentRpc(draft)
+  assert.equal(rpcDraft.grill.hasGrill, false)
+  assert.equal(rpcDraft.grill.rentalRequired, false)
+  assert.equal(rpcDraft.grill.rentalQty, 0)
+  assert.equal(draft.grill.hasGrill, true)
 })
 
 test('TEST 11 Correct company_id from session', () => {
@@ -98,23 +165,23 @@ test('TEST 15 Double submit protection', () => {
 test('TEST 16 Success screen only after persisted quote', () => {
   assert.match(wizard, /onPublicSuccess\?\.\(result\)/)
   assert.match(experience, /success \? \(/)
-  assert.match(experience, /success\.quote\.number/)
-  assert.match(experience, /data-success-screen/)
+  assert.match(successScreen, /success\.quote\.number/)
+  assert.match(successScreen, /data-success-screen/)
 })
 
 test('TEST 17 Success localized PT', () => {
-  assert.match(experience, /successEyebrow: 'Solicitação recebida'/)
-  assert.match(experience, /entrará em contato/)
+  assert.match(successCopy, /kicker: 'SOLICITAÇÃO RECEBIDA'/)
+  assert.match(successCopy, /entrar em contato/)
 })
 
 test('TEST 18 Success localized EN', () => {
-  assert.match(experience, /successEyebrow: 'Request received'/)
-  assert.match(experience, /get in touch/)
+  assert.match(successCopy, /kicker: 'REQUEST RECEIVED'/)
+  assert.match(successCopy, /get in touch/)
 })
 
 test('TEST 19 Success localized ES', () => {
-  assert.match(experience, /successEyebrow: 'Solicitud recibida'/)
-  assert.match(experience, /pondrá en contacto/)
+  assert.match(successCopy, /kicker: 'SOLICITUD RECIBIDA'/)
+  assert.match(successCopy, /pondrá en contacto/)
 })
 
 test('TEST 20 Past event date is the submit blocker', () => {
@@ -130,10 +197,11 @@ test('TEST 20 Past event date is the submit blocker', () => {
   assert.ok(getQuoteStrings('es').wizard.publicEventDatePast.includes('hoy'))
 })
 
-test('Success uses official CDL emblem CSS flame, not generated art', () => {
-  assert.match(experience, /data-success-flame-art/)
-  assert.match(experience, /cdl-success-emblem/)
-  assert.match(source('app/globals.css'), /cdl-success-turn/)
+test('Success uses official CDL fire logo, not grill photography', () => {
+  assert.match(successScreen, /CdlFireSignature/)
+  assert.match(source('components/quotes/CdlFireSignature.tsx'), /data-success-fire-logo/)
+  assert.doesNotMatch(successScreen, /cdl-grill-flames/)
+  assert.match(source('app/globals.css'), /public-success-cdl-signature/)
   assert.match(source('components/quotes/PublicQuoteBrandLockup.tsx'), /CDL_FLAME_EMBLEM_SRC/)
 })
 

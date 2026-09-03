@@ -136,12 +136,14 @@ function QuoteCardActions({
     >
       <Link
         href={`/quotes/${quote.id}`}
+        prefetch={false}
         className="pscs-btn-primary inline-flex min-h-[44px] items-center justify-center rounded-xl px-3 py-2.5 text-xs font-bold uppercase tracking-wider sm:min-w-[4.5rem]"
       >
         Ver
       </Link>
       <Link
         href={`/quotes/${quote.id}/edit?step=churrasqueira`}
+        prefetch={false}
         className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-[var(--brand-border)] bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--brand-primary)] transition-colors hover:border-[var(--brand-primary-2)]"
       >
         Editar
@@ -154,6 +156,7 @@ function QuoteCardActions({
       />
       <Link
         href={`/quotes/${quote.id}?pdf=1`}
+        prefetch={false}
         className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-[var(--brand-border)] bg-[#f6f7f9] px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--brand-text)] transition-colors hover:border-[var(--brand-primary-2)]"
       >
         PDF

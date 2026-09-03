@@ -3,15 +3,18 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
+  memo,
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
 import DeleteQuoteButton from '@/components/DeleteQuoteButton'
 import {
   getQuoteListPackageName,
+  QUOTE_LIST_PAGE_SIZE,
   type QuoteListItem,
 } from '@/Lib/fetchQuoteList'
 import { glassBtn } from '@/Lib/liquidGlass'
@@ -21,6 +24,7 @@ import {
   quoteStatusLabel,
   tQuotesOrders,
 } from '@/Lib/i18n/quotesOrders'
+import { CANONICAL_STATUSES } from '@/Lib/quotes/statusMachine'
 
 type StatusFilter = 'all' | string
 type AcceptanceFilter = 'all' | 'pending' | 'accepted' | 'rejected'
@@ -39,6 +43,9 @@ const EMPTY_FILTERS: QuotesFilters = {
   acceptance: 'all',
   hasOrder: 'all',
 }
+
+const IDLE_PREFETCH_DELAY_MS = 2000
+const IDLE_PREFETCH_MAX = 2
 
 function formatMoney(value: number | null | undefined) {
   if (value == null) return '—'
@@ -101,27 +108,65 @@ function Pill({
   )
 }
 
-function buildQuery(filters: QuotesFilters) {
-  const params = new URLSearchParams({ _: String(Date.now()) })
+const FILTERS_STORAGE_KEY = 'cdl-quotes-filters-v1'
+const SCROLL_STORAGE_KEY = 'cdl-quotes-scroll-v1'
+
+function isDefaultFilters(filters: QuotesFilters) {
+  return (
+    filters.q === '' &&
+    filters.status === 'all' &&
+    filters.acceptance === 'all' &&
+    filters.hasOrder === 'all'
+  )
+}
+
+function readStoredFilters(): QuotesFilters {
+  try {
+    const raw = sessionStorage.getItem(FILTERS_STORAGE_KEY)
+    if (!raw) return EMPTY_FILTERS
+    const parsed = JSON.parse(raw) as Partial<QuotesFilters>
+    return {
+      q: typeof parsed.q === 'string' ? parsed.q : '',
+      status: (parsed.status as StatusFilter) || 'all',
+      acceptance: (parsed.acceptance as AcceptanceFilter) || 'all',
+      hasOrder: (parsed.hasOrder as HasOrderFilter) || 'all',
+    }
+  } catch {
+    return EMPTY_FILTERS
+  }
+}
+
+function buildQuery(filters: QuotesFilters, cursor?: string | null) {
+  const params = new URLSearchParams()
   if (filters.q.trim()) params.set('q', filters.q.trim())
   if (filters.status !== 'all') params.set('status', filters.status)
   if (filters.acceptance !== 'all') params.set('has_acceptance', filters.acceptance)
   if (filters.hasOrder !== 'all') params.set('has_order', filters.hasOrder)
-  params.set('pageSize', '200')
+  params.set('pageSize', String(QUOTE_LIST_PAGE_SIZE))
+  if (cursor) params.set('cursor', cursor)
   return params
+}
+
+type QuoteListApiPage = {
+  items: QuoteListItem[]
+  hasMore: boolean
+  nextCursor: string | null
 }
 
 async function fetchQuotesFromApi(
   filters: QuotesFilters,
   locale: Parameters<typeof tQuotesOrders>[0],
-): Promise<QuoteListItem[]> {
-  const params = buildQuery(filters)
+  cursor?: string | null,
+): Promise<QuoteListApiPage> {
+  const params = buildQuery(filters, cursor)
   const response = await fetch(`/api/quotes?${params.toString()}`, {
     cache: 'no-store',
     headers: { 'Cache-Control': 'no-cache' },
   })
   const result = (await response.json()) as {
     data?: QuoteListItem[]
+    hasMore?: boolean
+    nextCursor?: string | null
     error?: string
   }
 
@@ -129,7 +174,11 @@ async function fetchQuotesFromApi(
     throw new Error(result.error ?? tQuotesOrders(locale, 'fetchQuotesError'))
   }
 
-  return result.data ?? []
+  return {
+    items: result.data ?? [],
+    hasMore: Boolean(result.hasMore),
+    nextCursor: result.nextCursor ?? null,
+  }
 }
 
 function isConvertEligible(quote: QuoteListItem) {
@@ -139,26 +188,31 @@ function isConvertEligible(quote: QuoteListItem) {
 export default function QuotesDashboard({
   initialQuotes,
   canConvert = false,
+  hasMore: initialHasMore = false,
+  nextCursor: initialNextCursor = null,
+  initialFilters = EMPTY_FILTERS,
 }: {
   initialQuotes: QuoteListItem[]
   canConvert?: boolean
+  hasMore?: boolean
+  nextCursor?: string | null
+  initialFilters?: QuotesFilters
 }) {
   const router = useRouter()
   const locale = useAuthLocaleFromMe()
   const [quotes, setQuotes] = useState<QuoteListItem[]>(initialQuotes)
-  const [filters, setFilters] = useState<QuotesFilters>(EMPTY_FILTERS)
+  const [filters, setFilters] = useState<QuotesFilters>(initialFilters)
   const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [convertingId, setConvertingId] = useState<string | null>(null)
   const [convertHint, setConvertHint] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(initialHasMore)
+  const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor)
+  const skipFirstEmptyRefresh = useRef(true)
+  const idlePrefetchDone = useRef(false)
 
-  const availableStatuses = useMemo(() => {
-    const set = new Set<string>()
-    for (const quote of initialQuotes) {
-      if (quote.quote_status) set.add(quote.quote_status)
-    }
-    return Array.from(set).sort()
-  }, [initialQuotes])
+  const availableStatuses = useMemo(() => [...CANONICAL_STATUSES], [])
 
   const refreshQuotes = useCallback(
     async (nextFilters: QuotesFilters) => {
@@ -166,7 +220,9 @@ export default function QuotesDashboard({
       setError(null)
       try {
         const next = await fetchQuotesFromApi(nextFilters, locale)
-        setQuotes(next)
+        setQuotes(next.items)
+        setHasMore(next.hasMore)
+        setNextCursor(next.nextCursor)
       } catch (refreshError) {
         setError(
           refreshError instanceof Error
@@ -180,97 +236,135 @@ export default function QuotesDashboard({
     [locale],
   )
 
+  const loadMore = useCallback(async () => {
+    if (!hasMore || !nextCursor || loadingMore) return
+    setLoadingMore(true)
+    try {
+      const next = await fetchQuotesFromApi(filters, locale, nextCursor)
+      setQuotes((current) => {
+        const seen = new Set(current.map((row) => row.id))
+        return [...current, ...next.items.filter((row) => !seen.has(row.id))]
+      })
+      setHasMore(next.hasMore)
+      setNextCursor(next.nextCursor)
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : tQuotesOrders(locale, 'fetchQuotesError'),
+      )
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [filters, hasMore, locale, loadingMore, nextCursor])
+
   useEffect(() => {
+    const stored = readStoredFilters()
+    if (!isDefaultFilters(stored)) {
+      skipFirstEmptyRefresh.current = false
+      setFilters(stored)
+    }
+    const savedScroll = Number(sessionStorage.getItem(SCROLL_STORAGE_KEY) || '0')
+    if (savedScroll > 0) {
+      window.requestAnimationFrame(() => window.scrollTo(0, savedScroll))
+    }
+    const onScroll = () => {
+      sessionStorage.setItem(SCROLL_STORAGE_KEY, String(window.scrollY))
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    sessionStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters))
+    const params = buildQuery(filters)
+    const next = params.toString()
+    const current = window.location.search.replace(/^\?/, '')
+    if (next !== current) {
+      window.history.replaceState(null, '', next ? `/quotes?${next}` : '/quotes')
+    }
+    if (skipFirstEmptyRefresh.current && isDefaultFilters(filters)) {
+      skipFirstEmptyRefresh.current = false
+      return
+    }
     const timeout = setTimeout(() => {
       void refreshQuotes(filters)
     }, 250)
     return () => clearTimeout(timeout)
   }, [filters, refreshQuotes])
 
-  function handleQuoteDeleted(quoteId: string) {
+  useEffect(() => {
+    if (idlePrefetchDone.current || quotes.length === 0) return
+    const ids = quotes.slice(0, IDLE_PREFETCH_MAX).map((quote) => quote.id)
+    const timer = window.setTimeout(() => {
+      const start = () => {
+        if (idlePrefetchDone.current) return
+        idlePrefetchDone.current = true
+        ids.forEach((id) => {
+          void router.prefetch(`/quotes/${id}`)
+        })
+      }
+      if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(start, { timeout: 1500 })
+      } else {
+        start()
+      }
+    }, IDLE_PREFETCH_DELAY_MS)
+    return () => window.clearTimeout(timer)
+  }, [quotes, router])
+
+  const handleQuoteDeleted = useCallback((quoteId: string) => {
     setQuotes((current) => current.filter((quote) => quote.id !== quoteId))
-  }
+  }, [])
 
-  async function handleConvert(quote: QuoteListItem) {
-    if (!isConvertEligible(quote)) return
-    if (!window.confirm(tQuotesOrders(locale, 'convertConfirm'))) {
-      return
-    }
-    setConvertingId(quote.id)
-    setConvertHint(null)
-    setError(null)
-    try {
-      const response = await fetch(`/api/quotes/${quote.id}/convert`, {
-        method: 'POST',
-      })
-      const result = (await response.json()) as {
-        data?: { id: string; service_order_number: string }
-        error?: string
+  const handleConvert = useCallback(
+    async (quote: QuoteListItem) => {
+      if (convertingId) return
+      if (!isConvertEligible(quote)) return
+      setConvertingId(quote.id)
+      setConvertHint(null)
+      setError(null)
+      if (!window.confirm(tQuotesOrders(locale, 'convertConfirm'))) {
+        setConvertingId(null)
+        return
       }
-      if (!response.ok) {
-        throw new Error(result.error ?? tQuotesOrders(locale, 'fetchQuotesError'))
+      try {
+        const response = await fetch(`/api/quotes/${quote.id}/convert`, {
+          method: 'POST',
+        })
+        const result = (await response.json()) as {
+          data?: { id: string; service_order_number: string }
+          error?: string
+        }
+        if (!response.ok) {
+          throw new Error(result.error ?? tQuotesOrders(locale, 'fetchQuotesError'))
+        }
+        setQuotes((current) =>
+          current.map((row) =>
+            row.id === quote.id
+              ? {
+                  ...row,
+                  converted_service_order_id: result.data?.id ?? row.converted_service_order_id,
+                  quote_status: 'converted',
+                }
+              : row,
+          ),
+        )
+        setConvertHint(
+          `${tQuotesOrders(locale, 'orderNumber')} ${result.data?.service_order_number ?? ''} — ${tQuotesOrders(locale, 'convertSuccess')}`,
+        )
+      } catch (convertError) {
+        setError(
+          convertError instanceof Error
+            ? convertError.message
+            : tQuotesOrders(locale, 'fetchQuotesError'),
+        )
+      } finally {
+        setConvertingId(null)
       }
-      setConvertHint(
-        `${tQuotesOrders(locale, 'orderNumber')} ${result.data?.service_order_number ?? ''} — ${tQuotesOrders(locale, 'convertSuccess')}`,
-      )
-      await refreshQuotes(filters)
-      if (result.data?.id) {
-        router.push(`/orders/${result.data.id}`)
-      }
-    } catch (convertError) {
-      setError(
-        convertError instanceof Error
-          ? convertError.message
-          : tQuotesOrders(locale, 'fetchQuotesError'),
-      )
-    } finally {
-      setConvertingId(null)
-    }
-  }
-
-  function renderActions(quote: QuoteListItem) {
-    const eligible = isConvertEligible(quote)
-    const actionBtn =
-      'liquid-glass-btn liquid-glass-btn--secondary !min-h-[28px] !px-2 !py-1 !text-[10px] !font-bold uppercase tracking-wide'
-    return (
-      <div className="flex flex-wrap items-center justify-center gap-1">
-        <Link href={`/quotes/${quote.id}`} className={actionBtn}>
-          {tQuotesOrders(locale, 'view')}
-        </Link>
-        <Link
-          href={`/quotes/${quote.id}/edit?step=churrasqueira`}
-          className={actionBtn}
-        >
-          {tQuotesOrders(locale, 'edit')}
-        </Link>
-        <Link href={`/quotes/${quote.id}?pdf=1`} className={actionBtn}>
-          {tQuotesOrders(locale, 'pdf')}
-        </Link>
-        {canConvert && quote.converted_service_order_id ? (
-          <span className="inline-flex min-h-[28px] items-center justify-center rounded-lg border border-cdl-success-border bg-cdl-success-soft px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-cdl-success">
-            {tQuotesOrders(locale, 'converted')}
-          </span>
-        ) : canConvert && eligible ? (
-          <button
-            type="button"
-            onClick={() => void handleConvert(quote)}
-            disabled={convertingId === quote.id}
-            className={`${glassBtn('primary')} !min-h-[28px] whitespace-nowrap !px-2 !py-1 !text-[10px]`}
-          >
-            {convertingId === quote.id
-              ? tQuotesOrders(locale, 'converting')
-              : tQuotesOrders(locale, 'convert')}
-          </button>
-        ) : null}
-        <DeleteQuoteButton
-          quoteId={quote.id}
-          compact
-          redirectToList={false}
-          onDeleted={handleQuoteDeleted}
-        />
-      </div>
-    )
-  }
+    },
+    [convertingId, locale],
+  )
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
@@ -416,7 +510,14 @@ export default function QuotesDashboard({
                   </Pill>
                 </div>
                 <div className="mt-3 border-t border-neutral-100 pt-3">
-                  {renderActions(quote)}
+                  <QuoteListActions
+                    quote={quote}
+                    locale={locale}
+                    canConvert={canConvert}
+                    convertingId={convertingId}
+                    onConvert={handleConvert}
+                    onDeleted={handleQuoteDeleted}
+                  />
                 </div>
               </li>
             ))}
@@ -503,15 +604,101 @@ export default function QuotesDashboard({
                       {formatMoney(quote.quote_total)}
                     </td>
                     <td className="align-middle px-2 py-2.5">
-                      {renderActions(quote)}
+                      <QuoteListActions
+                        quote={quote}
+                        locale={locale}
+                        canConvert={canConvert}
+                        convertingId={convertingId}
+                        onConvert={handleConvert}
+                        onDeleted={handleQuoteDeleted}
+                      />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          {hasMore ? (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => void loadMore()}
+                disabled={loadingMore}
+                className={glassBtn('secondary', 'min-h-[44px] px-5')}
+              >
+                {loadingMore
+                  ? tQuotesOrders(locale, 'loadingQuotes')
+                  : tQuotesOrders(locale, 'loadMore')}
+              </button>
+            </div>
+          ) : null}
         </>
       )}
     </div>
   )
 }
+
+const QuoteListActions = memo(function QuoteListActions({
+  quote,
+  locale,
+  canConvert,
+  convertingId,
+  onConvert,
+  onDeleted,
+}: {
+  quote: QuoteListItem
+  locale: Parameters<typeof tQuotesOrders>[0]
+  canConvert: boolean
+  convertingId: string | null
+  onConvert: (quote: QuoteListItem) => void
+  onDeleted: (quoteId: string) => void
+}) {
+  const eligible = isConvertEligible(quote)
+  const converting = convertingId === quote.id
+  const viewHref = `/quotes/${quote.id}`
+  const actionBtn =
+    'liquid-glass-btn liquid-glass-btn--secondary !min-h-[28px] !px-2 !py-1 !text-[10px] !font-bold uppercase tracking-wide'
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-1">
+      <Link href={viewHref} prefetch={false} className={actionBtn}>
+        {tQuotesOrders(locale, 'view')}
+      </Link>
+      <Link
+        href={`/quotes/${quote.id}/edit?step=churrasqueira`}
+        prefetch={false}
+        className={actionBtn}
+      >
+        {tQuotesOrders(locale, 'edit')}
+      </Link>
+      <Link
+        href={`/quotes/${quote.id}?pdf=1`}
+        prefetch={false}
+        className={actionBtn}
+      >
+        {tQuotesOrders(locale, 'pdf')}
+      </Link>
+      {canConvert && quote.converted_service_order_id ? (
+        <span className="inline-flex min-h-[28px] items-center justify-center rounded-lg border border-cdl-success-border bg-cdl-success-soft px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-cdl-success">
+          {tQuotesOrders(locale, 'converted')}
+        </span>
+      ) : canConvert && eligible ? (
+        <button
+          type="button"
+          onClick={() => onConvert(quote)}
+          disabled={Boolean(convertingId)}
+          className={`${glassBtn('primary')} !min-h-[28px] whitespace-nowrap !px-2 !py-1 !text-[10px]`}
+        >
+          {converting
+            ? tQuotesOrders(locale, 'converting')
+            : tQuotesOrders(locale, 'convert')}
+        </button>
+      ) : null}
+      <DeleteQuoteButton
+        quoteId={quote.id}
+        compact
+        redirectToList={false}
+        onDeleted={onDeleted}
+      />
+    </div>
+  )
+})

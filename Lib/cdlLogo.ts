@@ -1,5 +1,8 @@
 export const CDL_LOGO_PATH = '/cdl/logo.png'
 
+/** Official circular emblem with transparent corners — Review cover only. */
+export const CDL_REVIEW_LOGO_PATH = '/cdl/logo-review-circle.png'
+
 /** @deprecated Use CDL_LOGO_PATH */
 export const CDL_LOGO_SRC = CDL_LOGO_PATH
 

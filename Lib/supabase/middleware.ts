@@ -3,11 +3,14 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { safeInternalNext } from '@/Lib/auth/safeNext'
 import { isPublicRoutePathname } from '@/Lib/publicRoutes'
 
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
+function nextWithPathname(request: NextRequest, pathname: string) {
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-pathname', pathname)
+  return NextResponse.next({ request: { headers: requestHeaders } })
+}
 
+export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
-  // Public aliases expected by QA / UX (canonical pages live under /auth/*)
   if (pathname === '/forgot-password') {
     return NextResponse.redirect(new URL('/auth/forgot-password', request.url))
   }
@@ -15,11 +18,22 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(new URL('/auth/reset-password', request.url))
   }
 
+  const isApi = pathname.startsWith('/api/')
+  const isPublic = isPublicRoutePathname(pathname)
+  const isLogin = pathname === '/login'
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !anon) {
-    return supabaseResponse
+
+  if (isPublic && !isLogin) {
+    return nextWithPathname(request, pathname)
   }
+
+  if (!url || !anon) {
+    return nextWithPathname(request, pathname)
+  }
+
+  let supabaseResponse = nextWithPathname(request, pathname)
 
   const supabase = createServerClient(url, anon, {
     cookies: {
@@ -28,7 +42,7 @@ export async function updateSession(request: NextRequest) {
       },
       setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-        supabaseResponse = NextResponse.next({ request })
+        supabaseResponse = nextWithPathname(request, pathname)
         cookiesToSet.forEach(({ name, value, options }) =>
           supabaseResponse.cookies.set(name, value, options),
         )
@@ -39,9 +53,6 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
-  const isApi = pathname.startsWith('/api/')
-  const isPublic = isPublicRoutePathname(pathname)
 
   if (!user && !isPublic) {
     if (isApi) {
@@ -54,7 +65,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  if (user && pathname === '/login') {
+  if (user && isLogin) {
     const dest = safeInternalNext(request.nextUrl.searchParams.get('next'), '/quotes')
     return NextResponse.redirect(new URL(dest, request.nextUrl.origin))
   }

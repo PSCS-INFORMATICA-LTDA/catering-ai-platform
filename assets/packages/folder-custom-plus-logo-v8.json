@@ -1,0 +1,17 @@
+{
+  "source": "bbqpers-plus-pt-v7.webp",
+  "dest": "bbqpers-plus-pt-v8.webp",
+  "logo": {
+    "asset": "cdl-badge-official.png",
+    "left": 18,
+    "top": 1348,
+    "size": 176,
+    "cover_pad": 3
+  },
+  "mask_px": 25997,
+  "outside_logo_mae": 0.0,
+  "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-plus-pt-v7.webp",
+  "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-plus-pt-v8.webp",
+  "pioneer": false,
+  "price_in_image": false
+}

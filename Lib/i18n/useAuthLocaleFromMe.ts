@@ -1,45 +1,37 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useOptionalAppSession } from '@/components/auth/AppSessionProvider'
 import { resolveAuthLocale, type AuthLocale } from '@/Lib/i18n/authUsers'
 import { toBcp47Locale } from '@/Lib/i18n/locales'
 import { useAuthLocale } from '@/Lib/i18n/useAuthLocale'
 
 /**
- * Locale de UI resolvido via `/api/auth/me` (`app_users.preferred_language`).
- * Mesmo padrão usado em `app/users/page.tsx`: parte de `pt` (ou `initial`) no
- * primeiro paint e atualiza assim que a sessão responde, para evitar
- * mismatch de hidratação.
+ * Locale de UI a partir do bootstrap autenticado (AppSessionProvider).
+ * NÃO chama `/api/auth/me` no caminho normal — isso gerava uma tempestade
+ * de requests (um por componente hidratado).
  */
 export function useAuthLocaleFromMe(
   initial?: string | null,
   options: { disabled?: boolean } = {},
 ): AuthLocale {
-  const { locale, setLocale } = useAuthLocale(initial)
+  const session = useOptionalAppSession()
+  const sessionLocale = options.disabled ? null : session?.locale
+  const { locale, setLocale } = useAuthLocale(sessionLocale ?? initial)
 
   useEffect(() => {
     if (options.disabled) return
-    let cancelled = false
+    if (sessionLocale) {
+      setLocale(resolveAuthLocale(sessionLocale))
+      return
+    }
     try {
       const stored = window.localStorage.getItem('catering.auth.locale')
       if (stored) setLocale(resolveAuthLocale(stored))
     } catch {
       /* ignore */
     }
-    fetch('/api/auth/me', { cache: 'no-store' })
-      .then(async (res) => {
-        if (!res.ok || cancelled) return
-        const json = (await res.json().catch(() => null)) as
-          | { locale?: string }
-          | null
-        if (cancelled || !json?.locale) return
-        setLocale(resolveAuthLocale(json.locale))
-      })
-      .catch(() => null)
-    return () => {
-      cancelled = true
-    }
-  }, [options.disabled, setLocale])
+  }, [options.disabled, sessionLocale, setLocale])
 
   useEffect(() => {
     if (typeof document === 'undefined') return

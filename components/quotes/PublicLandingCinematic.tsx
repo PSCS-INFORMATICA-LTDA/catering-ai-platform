@@ -1,5 +1,6 @@
 'use client'
 
+import PublicLandingChapterCue from '@/components/quotes/PublicLandingChapterCue'
 import PublicLandingReveal from '@/components/quotes/PublicLandingReveal'
 import PublicLandingTitle from '@/components/quotes/PublicLandingTitle'
 import CdlHighlight from '@/components/quotes/CdlHighlight'
@@ -62,7 +63,14 @@ export default function PublicLandingCinematic({
           className="public-cinematic-chapter public-cinematic-chapter--intro"
         >
           <PublicLandingReveal eager className="public-cinematic-copy">
-            <p className="public-cinematic-eyebrow">{story.hero.eyebrow}</p>
+            <p className="public-cinematic-eyebrow" data-landing-hero-kicker>
+              {story.hero.eyebrow}
+              <span
+                data-landing-brazil-accent
+                className="cdl-brazil-accent"
+                aria-hidden
+              />
+            </p>
             <PublicLandingTitle
               as="h1"
               parts={story.hero.title}
@@ -85,6 +93,11 @@ export default function PublicLandingCinematic({
               <p className="public-cinematic-error">{startErrorText}</p>
             ) : null}
           </PublicLandingReveal>
+          <PublicLandingChapterCue
+            variant="lead"
+            label={story.scrollHint}
+            ariaLabel={story.scrollHint}
+          />
         </section>
 
         <section
@@ -97,6 +110,7 @@ export default function PublicLandingCinematic({
               className="public-cinematic-editorial"
             />
           </PublicLandingReveal>
+          <PublicLandingChapterCue variant="arrow" ariaLabel={story.scrollNext} />
         </section>
 
         {story.stories.map((chapter) => (
@@ -118,8 +132,28 @@ export default function PublicLandingCinematic({
               />
               <p className="public-cinematic-body">{chapter.body}</p>
             </PublicLandingReveal>
+            <PublicLandingChapterCue variant="arrow" ariaLabel={story.scrollNext} />
           </section>
         ))}
+
+        <section
+          data-landing-chapter="video"
+          className="public-cinematic-chapter public-cinematic-chapter--video"
+        >
+          <PublicLandingReveal className="public-cinematic-copy">
+            <p className="public-cinematic-eyebrow">{story.video.eyebrow}</p>
+            <p className="public-cinematic-body">{story.video.body}</p>
+            <PublicQuoteHowItWorks
+              label={story.video.play}
+              title={story.video.title}
+              closeLabel={story.video.close}
+              videos={videos}
+              routeLocale={locale}
+              localeLabels={story.video.locales}
+            />
+          </PublicLandingReveal>
+          <PublicLandingChapterCue variant="arrow" ariaLabel={story.scrollNext} />
+        </section>
 
         <section
           data-landing-chapter="final-cta"
@@ -144,24 +178,7 @@ export default function PublicLandingCinematic({
               <span aria-hidden>→</span>
             </button>
           </PublicLandingReveal>
-        </section>
-
-        <section
-          data-landing-chapter="video"
-          className="public-cinematic-chapter public-cinematic-chapter--video"
-        >
-          <PublicLandingReveal className="public-cinematic-copy">
-            <p className="public-cinematic-eyebrow">{story.video.eyebrow}</p>
-            <p className="public-cinematic-body">{story.video.body}</p>
-            <PublicQuoteHowItWorks
-              label={story.video.play}
-              title={story.video.title}
-              closeLabel={story.video.close}
-              videos={videos}
-              routeLocale={locale}
-              localeLabels={story.video.locales}
-            />
-          </PublicLandingReveal>
+          <PublicLandingChapterCue variant="end" ariaLabel={story.scrollNext} />
         </section>
       </div>
     </div>

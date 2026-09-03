@@ -209,19 +209,30 @@ export default function QuoteReviewPackageCdlSection({
           .join(' · ')
       : tw(loc, 'none')
 
+  // Canonical review order for every consumer of this section
+  // (public confirmation + proposal/PDF): image → fixed items →
+  // garnish → included choices. All packageSelections stay in one block.
   const details = (
     <div className="quote-proposal-package-split-main">
       {showHeroImage && packageImageUrl?.trim() ? (
-        <PackageHeroImage
-          src={packageImageUrl}
-          alt={packageName ?? tw(loc, 'packageSummary')}
-          fallbackLabel={tw(loc, 'packageImageMissing')}
-          compact
-          expand={false}
-        />
+        <div data-review-package-image>
+          <PackageHeroImage
+            src={packageImageUrl}
+            alt={packageName ?? tw(loc, 'packageSummary')}
+            fallbackLabel={tw(loc, 'packageImageMissing')}
+            compact
+            expand={false}
+          />
+        </div>
       ) : null}
+      <div data-review-package-items>
+        <PackageDetailLine label={tw(loc, 'packageItems')} value={itemsText} />
+      </div>
+      <div data-review-garnish>
+        <PackageDetailLine label={tw(loc, 'garnish')} value={garnishText} />
+      </div>
       {packageSelections.length > 0 ? (
-        <div className="space-y-1">
+        <div className="space-y-1" data-review-included-choices>
           <p className="quote-proposal-package-detail">
             <span className="quote-proposal-package-detail-label font-bold">
               {tw(loc, 'includedChoices')}
@@ -236,8 +247,6 @@ export default function QuoteReviewPackageCdlSection({
           </ul>
         </div>
       ) : null}
-      <PackageDetailLine label={tw(loc, 'packageItems')} value={itemsText} />
-      <PackageDetailLine label={tw(loc, 'garnish')} value={garnishText} />
       {showAdditionalItems ? (
         <PackageDetailLine
           label={tw(loc, 'additionalItems')}

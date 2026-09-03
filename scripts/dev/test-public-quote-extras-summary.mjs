@@ -184,7 +184,11 @@ test('TEST 5 package pricing box stays below the art with canonical math', () =>
 
 test('TEST 6 package options remain inline under the selected package', () => {
   assert.match(catalogSrc, /data-public-package-options/)
-  assert.match(catalogSrc, /active && selectableGroups\.length > 0/)
+  assert.match(catalogSrc, /const showOptions =/)
+  assert.match(
+    catalogSrc,
+    /active &&\s+expanded &&\s+\(selectableGroups\.length > 0 \|\| showDisposableKit\)/,
+  )
   assert.match(catalogSrc, /lg:col-span-2/)
 })
 
@@ -255,7 +259,7 @@ test('TEST 13 summary price and expanded price share one source', () => {
 })
 
 test('TEST 14 opening a category still renders the detailed cards', () => {
-  assert.match(sectionSrc, /\{expanded \? \(/)
+  assert.match(sectionSrc, /\{isExpanded \? \(/)
   assert.match(sectionSrc, /data-additional-items-grid/)
   assert.match(sectionSrc, /<AdditionalItemCard/)
   assert.match(cardSrc, /loading="lazy"/)
@@ -368,8 +372,8 @@ test('TEST 21c End/Home jumps do not review skipped summaries', () => {
 
 test('TEST 22 back navigation preserves review and selections', () => {
   assert.match(wizardSrc, /pruneVisitedAdditionalCategories/)
-  assert.doesNotMatch(wizardSrc, /step !== 3[\s\S]{0,80}setVisitedAdditionalCategories\(new Set\(\)\)/)
-  assert.match(wizardSrc, /if \(step !== 3\) \{\s*setOpenAdditionalCategories\(new Set\(\)\)/)
+  assert.doesNotMatch(wizardSrc, /step !== 4[\s\S]{0,80}setVisitedAdditionalCategories\(new Set\(\)\)/)
+  assert.match(wizardSrc, /if \(step !== 4\) \{\s*setOpenAdditionalCategories\(new Set\(\)\)/)
 })
 
 test('TEST 23 a new quote resets the review state', () => {
@@ -459,7 +463,7 @@ test('TEST 29 collapsed category uses a full-card hit area', () => {
 
 test('TEST 30 expanded item controls do not collapse the category', () => {
   const expandedBlock = sectionSrc.slice(
-    sectionSrc.indexOf('{expanded ? ('),
+    sectionSrc.indexOf('{isExpanded ? ('),
     sectionSrc.indexOf('data-additional-category-hitarea'),
   )
   assert.match(expandedBlock, /<AdditionalItemCard/)

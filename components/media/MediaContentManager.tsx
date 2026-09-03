@@ -16,6 +16,11 @@ import HeroBatchImporter from './HeroBatchImporter'
 import HeroDeviceCompare from './HeroDeviceCompare'
 import HeroFocusEditor from './HeroFocusEditor'
 import HeroMediaCard, { type HeroDraft } from './HeroMediaCard'
+import PackageFolderMatrix from './PackageFolderMatrix'
+import {
+  MEDIA_WORKSPACE_VIEWS,
+  type MediaWorkspaceView,
+} from './mediaWorkspace'
 
 type Tab = 'hero' | 'how_it_works' | 'video' | 'packages' | 'additionals'
 
@@ -94,15 +99,26 @@ function toDraft(asset: PublicMediaAsset, importedIds: string[] = []): HeroDraft
   }
 }
 
+function workspaceLabel(view: MediaWorkspaceView, locale: string) {
+  if (view === 'library') return tMedia(locale, 'viewLibrary')
+  if (view === 'packages') return tMedia(locale, 'viewPackages')
+  if (view === 'review') return tMedia(locale, 'viewReview')
+  if (view === 'published') return tMedia(locale, 'viewPublished')
+  return tMedia(locale, 'viewArchived')
+}
+
 export default function MediaContentManager({
   locale,
   canManage,
   canDelete = false,
+  initialView = 'library',
 }: {
   locale: string
   canManage: boolean
   canDelete?: boolean
+  initialView?: MediaWorkspaceView
 }) {
+  const [workspace, setWorkspace] = useState<MediaWorkspaceView>(initialView)
   const [tab, setTab] = useState<Tab>('hero')
   const [drafts, setDrafts] = useState<HeroDraft[]>([])
   const [catalog, setCatalog] = useState<MediaCatalogImageItem[]>([])
@@ -121,9 +137,10 @@ export default function MediaContentManager({
   const [importedIds, setImportedIds] = useState<string[]>([])
   const [onlyImported, setOnlyImported] = useState(false)
 
-  const loadAssets = useCallback(async (placement: Tab, keepImported = importedIds) => {
+  const loadAssets = useCallback(async (placement: Tab | 'all', keepImported = importedIds) => {
     if (placement === 'packages' || placement === 'additionals') return
-    const response = await fetch(`/api/media/assets?placement=${placement}`, {
+    const query = placement === 'all' ? '' : `?placement=${placement}`
+    const response = await fetch(`/api/media/assets${query}`, {
       cache: 'no-store',
     })
     const json = (await response.json()) as { assets?: PublicMediaAsset[]; error?: string }
@@ -143,6 +160,11 @@ export default function MediaContentManager({
     let cancelled = false
     void (async () => {
       try {
+        if (workspace === 'packages') return
+        if (workspace !== 'library') {
+          await loadAssets('all')
+          return
+        }
         if (tab === 'packages' || tab === 'additionals') {
           await loadCatalog(tab)
         } else {
@@ -155,16 +177,20 @@ export default function MediaContentManager({
     return () => {
       cancelled = true
     }
-  }, [loadAssets, loadCatalog, tab])
+  }, [loadAssets, loadCatalog, tab, workspace])
 
   const visibleDrafts = useMemo(
     () =>
       drafts.filter((draft) => {
+        if (workspace === 'published' && !draft.active) return false
+        if ((workspace === 'review' || workspace === 'archived') && draft.active) {
+          return false
+        }
         if (onlyImported && !draft.imported) return false
         const hay = `${draft.entityKey} ${draft.copy.title_pt}`.toLowerCase()
         return hay.includes(query.trim().toLowerCase())
       }),
-    [drafts, onlyImported, query],
+    [drafts, onlyImported, query, workspace],
   )
   const selectedIds = drafts.filter((draft) => draft.selected && draft.persisted).map((draft) => draft.persisted!.id)
   const focusDraft = drafts.find((draft) => draft.id === focusId) ?? addDraft
@@ -429,9 +455,31 @@ export default function MediaContentManager({
         <h1 className="text-2xl font-black tracking-tight text-cdl-title">
           {tMedia(locale, 'title')}
         </h1>
-        <p className="text-sm text-cdl-muted">{tMedia(locale, 'subtitle')}</p>
+        <p className="text-sm text-cdl-muted">{tMedia(locale, 'workspaceHint')}</p>
       </header>
 
+      <nav className="flex flex-wrap gap-2" aria-label={tMedia(locale, 'title')} data-media-workspace>
+        {MEDIA_WORKSPACE_VIEWS.map((item) => (
+          <button
+            key={item}
+            type="button"
+            aria-current={workspace === item}
+            onClick={() => {
+              setWorkspace(item)
+              setError(null)
+            }}
+            className={`rounded-full px-4 py-2 text-sm font-semibold ${
+              workspace === item
+                ? 'bg-[var(--brand-primary)] text-white'
+                : 'border border-cdl-border bg-cdl-surface text-cdl-title'
+            }`}
+          >
+            {workspaceLabel(item, locale)}
+          </button>
+        ))}
+      </nav>
+
+      {workspace === 'library' ? (
       <div className="flex flex-wrap gap-2" role="tablist">
         {TABS.map((item) => (
           <button
@@ -454,13 +502,25 @@ export default function MediaContentManager({
           </button>
         ))}
       </div>
+      ) : null}
 
-      {tab === 'how_it_works' ? (
+      {workspace === 'review' ? (
+        <p className="rounded-2xl border border-cdl-border bg-cdl-surface px-4 py-3 text-sm text-cdl-muted">
+          {tMedia(locale, 'reviewNeedsSchema')}
+        </p>
+      ) : null}
+      {workspace === 'archived' ? (
+        <p className="rounded-2xl border border-cdl-border bg-cdl-surface px-4 py-3 text-sm text-cdl-muted">
+          {tMedia(locale, 'archiveNeedsSchema')}
+        </p>
+      ) : null}
+
+      {workspace === 'library' && tab === 'how_it_works' ? (
         <p className="rounded-2xl border border-cdl-border bg-cdl-surface px-4 py-3 text-sm text-cdl-muted">
           {tMedia(locale, 'howPhaseNote')}
         </p>
       ) : null}
-      {tab === 'packages' || tab === 'additionals' ? (
+      {workspace === 'library' && (tab === 'packages' || tab === 'additionals') ? (
         <p className="rounded-2xl border border-cdl-border bg-cdl-surface px-4 py-3 text-sm text-cdl-muted">
           {tMedia(locale, 'catalogMediaOnly')}
         </p>
@@ -477,14 +537,16 @@ export default function MediaContentManager({
           placeholder={tMedia(locale, 'search')}
           className="min-h-11 w-full max-w-sm rounded-xl border border-cdl-border bg-white px-3 text-sm"
         />
-        {canManage && tab === 'hero' ? (
+        {canManage && workspace !== 'packages' ? (
           <>
             <button
               type="button"
+              data-media-include-image
               className="min-h-11 rounded-xl bg-[var(--brand-primary)] px-4 text-sm font-bold text-white"
               onClick={() => void openAdd()}
             >
-              {tMedia(locale, 'actionAdd')}
+              {tMedia(locale, 'actionIncludeImage')}
+              <span className="sr-only">{tMedia(locale, 'actionAdd')}</span>
             </button>
             <button
               type="button"
@@ -559,7 +621,9 @@ export default function MediaContentManager({
         </p>
       ) : null}
 
-      {tab === 'hero' ? (
+      {workspace === 'packages' ? (
+        <PackageFolderMatrix locale={locale} canManage={canManage} />
+      ) : workspace !== 'library' || tab === 'hero' ? (
         <div className="space-y-4" data-media-playlist>
           {visibleDrafts.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-cdl-border p-6 text-sm text-cdl-muted">

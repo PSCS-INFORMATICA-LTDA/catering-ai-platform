@@ -1,0 +1,19 @@
+{
+  "base": "bbqpers-pt-v4.webp",
+  "sides_donor": "bbqtrad-plus-pt-v4.webp",
+  "sides_y0": 1035,
+  "blend_h": 72,
+  "dest": "bbqpers-plus-pt-v7.webp",
+  "logo": {
+    "asset": "cdl-badge-official.png",
+    "left": 18,
+    "top": 1348,
+    "size": 176
+  },
+  "top_matches_custom_without_sides_mae": 0.0,
+  "sides_match_trad_plus_mae": 0.0,
+  "OLD_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-plus-pt-v6.webp",
+  "NEW_IMAGE_PATH": "package-images/cdl-folders-v3/bbqpers-plus-pt-v7.webp",
+  "pioneer": false,
+  "price_in_image": false
+}

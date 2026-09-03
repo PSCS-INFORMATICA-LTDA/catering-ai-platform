@@ -19,8 +19,8 @@ export type WizardState = {
   startTime: string
   endTime: string
   adultCount: number
-  childrenUnder3Count: number
-  children4To12Count: number
+  childrenUnder3Count: number | null
+  children4To12Count: number | null
   address: string
   addressNumber: string
   city: string
@@ -57,6 +57,9 @@ export type WizardState = {
   reservationNotes: string
   publicConsentAccepted: boolean
   publicConsentVersion: string | null
+  cancellationPolicyAccepted: boolean
+  cancellationPolicyVersion: string | null
+  cancellationPolicyAcceptedAt: string | null
 }
 
 export function createInitialWizardState(
@@ -113,6 +116,9 @@ export function createInitialWizardState(
     reservationNotes: '',
     publicConsentAccepted: false,
     publicConsentVersion: null,
+    cancellationPolicyAccepted: false,
+    cancellationPolicyVersion: null,
+    cancellationPolicyAcceptedAt: null,
   }
 }
 
@@ -124,8 +130,8 @@ export function buildPricingFingerprint(state: WizardState): string {
   return JSON.stringify({
     packageId: state.packageId,
     adultCount: state.adultCount,
-    childrenUnder3Count: state.childrenUnder3Count,
-    children4To12Count: state.children4To12Count,
+    childrenUnder3Count: state.childrenUnder3Count ?? 0,
+    children4To12Count: state.children4To12Count ?? 0,
     distance: state.distance,
     baseLocation: state.baseLocation.trim(),
     additionals,

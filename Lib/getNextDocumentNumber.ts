@@ -1,7 +1,12 @@
 import { getSupabaseServerClient } from './supabaseServer'
 
-/** quote=Q-YYYY-000001 · order=O · service_order=SO · customer/address book=AB000001 */
-export type DocumentType = 'quote' | 'order' | 'service_order' | 'customer'
+/** quote=Q-YYYY-000001 · order=O · service_order=SO · customer=AB000001 · invoice=INV */
+export type DocumentType =
+  | 'quote'
+  | 'order'
+  | 'service_order'
+  | 'customer'
+  | 'invoice'
 
 export type GetNextDocumentNumberResult = {
   number: string | null
@@ -73,3 +78,7 @@ export function getNextCustomerNumber(companyId: string) {
 }
 
 export const getNextAbNumber = getNextCustomerNumber
+
+export function getNextInvoiceNumber(companyId: string) {
+  return getNextDocumentNumber(companyId, 'invoice')
+}

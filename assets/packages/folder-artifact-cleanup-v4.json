@@ -1,0 +1,38 @@
+{
+  "audit": "All 30 V3 package folders were inspected around the official CDL mark.",
+  "method": "Verified wood donors + colour-matched tile for table-wood flyers; small red-only inpaint for a few charcoal flyers. Brown-on-charcoal fills were rejected.",
+  "published_v4": {
+    "bbqcho-en-v3.webp": "cleaned -> bbqcho-en-v4.webp",
+    "bbqcho-es-v3.webp": "cleaned -> bbqcho-es-v4.webp",
+    "bbqcho-plus-en-v3.webp": "cleaned -> bbqcho-plus-en-v4.webp",
+    "bbqpers-en-v3.webp": "cleaned -> bbqpers-en-v4.webp",
+    "bbqpers-es-v3.webp": "cleaned -> bbqpers-es-v4.webp",
+    "bbqpers-plus-en-v3.webp": "cleaned -> bbqpers-plus-en-v4.webp",
+    "bbqpers-plus-es-v3.webp": "cleaned -> bbqpers-plus-es-v4.webp",
+    "bbqpers-plus-pt-v3.webp": "cleaned -> bbqpers-plus-pt-v4.webp",
+    "bbqpers-pt-v3.webp": "cleaned -> bbqpers-pt-v4.webp",
+    "bbqpri-en-v3.webp": "cleaned -> bbqpri-en-v4.webp",
+    "bbqpri-es-v3.webp": "cleaned -> bbqpri-es-v4.webp",
+    "bbqpri-plus-en-v3.webp": "cleaned -> bbqpri-plus-en-v4.webp",
+    "bbqpri-plus-pt-v3.webp": "cleaned -> bbqpri-plus-pt-v4.webp",
+    "bbqsel-plus-pt-v3.webp": "cleaned -> bbqsel-plus-pt-v4.webp",
+    "bbqsel-pt-v3.webp": "cleaned -> bbqsel-pt-v4.webp",
+    "bbqtrad-es-v3.webp": "cleaned -> bbqtrad-es-v4.webp",
+    "bbqtrad-plus-en-v3.webp": "cleaned -> bbqtrad-plus-en-v4.webp",
+    "bbqtrad-plus-pt-v3.webp": "cleaned -> bbqtrad-plus-pt-v4.webp"
+  },
+  "kept_v3": {
+    "bbqcho-plus-es-v3.webp": "charcoal background — wood fill read as a brown patch",
+    "bbqcho-plus-pt-v3.webp": "already clean; food label sits in the award strip",
+    "bbqcho-pt-v3.webp": "red-only pass did not clear the leftover plate",
+    "bbqpri-plus-es-v3.webp": "award strip overlaps original POLLO + chicken art",
+    "bbqpri-pt-v3.webp": "charcoal background — wood fill read as a blotch",
+    "bbqsel-en-v3.webp": "award hole blocked by menu type",
+    "bbqsel-es-v3.webp": "red animal icons sit in the award strip",
+    "bbqsel-plus-en-v3.webp": "cow icon + charcoal background",
+    "bbqsel-plus-es-v3.webp": "charcoal background — wood fill read as a brown patch",
+    "bbqtrad-en-v3.webp": "charcoal/grunge background — wood fill read as a rectangle",
+    "bbqtrad-plus-es-v3.webp": "pig icon + visible wood rectangle",
+    "bbqtrad-pt-v3.webp": "charcoal background — wood fill read as a rectangle"
+  }
+}

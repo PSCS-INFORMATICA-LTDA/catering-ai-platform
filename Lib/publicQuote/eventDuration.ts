@@ -1,4 +1,7 @@
-import { SERVICE_DURATION_HOURS } from '@/Lib/cdlCommercialRules'
+import {
+  CREW_SETUP_LEAD_MINUTES,
+  SERVICE_DURATION_HOURS,
+} from '@/Lib/cdlCommercialRules'
 
 const MINUTES_PER_DAY = 24 * 60
 const MIN_SERVICE_MINUTES = 30
@@ -54,6 +57,49 @@ export function deriveEventEndTime(
     startTime,
     resolveServiceDurationMinutes(durationMinutes),
   )
+}
+
+export function defaultCrewSetupLeadMinutes(): number {
+  return CREW_SETUP_LEAD_MINUTES
+}
+
+export function resolveCrewSetupLeadMinutes(
+  configuredMinutes?: number | null,
+): number {
+  if (
+    typeof configuredMinutes === 'number' &&
+    Number.isFinite(configuredMinutes) &&
+    configuredMinutes >= 0 &&
+    configuredMinutes <= MINUTES_PER_DAY
+  ) {
+    return Math.round(configuredMinutes)
+  }
+  return defaultCrewSetupLeadMinutes()
+}
+
+/** Informational arrival time. Does not change customer service start/end. */
+export function deriveCrewSetupArrivalTime(
+  startTime: string,
+  leadMinutes?: number | null,
+): string {
+  if (!startTime.trim()) return ''
+  return addMinutesToTime(
+    startTime,
+    -resolveCrewSetupLeadMinutes(leadMinutes),
+  )
+}
+
+export function serviceDurationMinutesFromHours(
+  hours?: number | null,
+): number {
+  if (
+    typeof hours === 'number' &&
+    Number.isFinite(hours) &&
+    hours > 0
+  ) {
+    return resolveServiceDurationMinutes(hours * 60)
+  }
+  return defaultServiceDurationMinutes()
 }
 
 export function isValidEventTimeWindow(startTime: string, endTime: string) {

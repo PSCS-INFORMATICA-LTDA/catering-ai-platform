@@ -47,8 +47,8 @@ check('T03 expanded category reveals localized item names and prices', () => {
 check('T04 categories start collapsed and expand below their header', () => {
   assert.match(wizardSrc, /useState<\s*Set<string>\s*>\(\(\) => new Set\(\)\)/)
   assert.doesNotMatch(wizardSrc, /new Set\(\[additionalCategoryKeys\[0\]/)
-  assert.match(categorySrc, /aria-expanded=\{expanded\}/)
-  assert.match(categorySrc, /\{expanded \? \(/)
+  assert.match(categorySrc, /aria-expanded=\{isExpanded\}/)
+  assert.match(categorySrc, /\{isExpanded \? \(/)
   assert.match(categorySrc, /IntersectionObserver/)
   assert.match(categorySrc, /data-additional-category-sentinel/)
 })
@@ -67,6 +67,15 @@ check('T04b nothing expands without an explicit customer action', () => {
   assert.doesNotMatch(categorySrc, /onEnterReadingZone/)
   assert.doesNotMatch(wizardSrc, /handleAdditionalCategoryReadingZone/)
   assert.match(categorySrc, /onClick=\{onToggle\}/)
+})
+
+check('T04c suggested extras stay open and cannot collapse', () => {
+  assert.match(categorySrc, /const lockExpanded = featured/)
+  assert.match(categorySrc, /data-suggested-extras-locked="true"/)
+  assert.match(
+    wizardSrc,
+    /if \(category === SUGGESTED_EXTRAS_DISPLAY_KEY\) return/,
+  )
 })
 
 check('T05 expanded category renders lazy item images', () => {
@@ -110,7 +119,7 @@ check('T10 Next stays enabled with selected extras', () => {
   assert.match(wizardSrc, /resolveNextWizardStep/)
   assert.match(
     advanceSrc,
-    /case 3:\s*return canAdvanceFromAdditionalsStep/,
+    /case 4:\s*return canAdvanceFromAdditionalsStep/,
   )
 })
 

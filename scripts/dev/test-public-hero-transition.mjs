@@ -39,7 +39,7 @@ function report(name, ok, detail = '') {
 const hero = read('components/quotes/PublicQuoteHeroMedia.tsx')
 const css = read('app/globals.css')
 const heroCssStart = css.indexOf('.public-hero-slide {')
-const heroCssEnd = css.indexOf('.cdl-success-emblem-halo')
+const heroCssEnd = css.indexOf('.public-success {')
 const heroCss = heroCssStart >= 0 ? css.slice(heroCssStart, heroCssEnd > heroCssStart ? heroCssEnd : undefined) : ''
 const reducedCss = css.slice(css.lastIndexOf('@media (prefers-reduced-motion: reduce)'))
 const constants = read('Lib/publicQuote/companyPublicHeroMedia.ts')

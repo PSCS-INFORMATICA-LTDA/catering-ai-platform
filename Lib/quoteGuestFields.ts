@@ -8,6 +8,17 @@ function toNumber(value: number | null | undefined) {
   return Math.max(0, Number(value ?? 0))
 }
 
+/**
+ * Public Event children must be answered explicitly.
+ * 0 is a real answer. Empty / null / undefined is not.
+ */
+export function isExplicitNonNegativeInteger(value: unknown): boolean {
+  if (value === null || value === undefined || value === '') return false
+  if (typeof value === 'string' && value.trim() === '') return false
+  const parsed = typeof value === 'number' ? value : Number(value)
+  return Number.isInteger(parsed) && parsed >= 0
+}
+
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100
 }

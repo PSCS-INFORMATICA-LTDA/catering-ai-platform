@@ -48,11 +48,11 @@ function buildPrefillState(
     adultCount: parseNonNegInt(get('adults'), base.adultCount),
     childrenUnder3Count: parseNonNegInt(
       get('children_under_3'),
-      base.childrenUnder3Count,
+      base.childrenUnder3Count ?? 0,
     ),
     children4To12Count: parseNonNegInt(
       get('children_4_to_12'),
-      base.children4To12Count,
+      base.children4To12Count ?? 0,
     ),
   }
 

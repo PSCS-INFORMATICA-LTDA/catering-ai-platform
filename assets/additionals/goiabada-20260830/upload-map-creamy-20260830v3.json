@@ -1,0 +1,22 @@
+{
+  "project_ref": "yasprgtlqclwsjcshtls",
+  "item_key": "ITEM_061",
+  "id": "4db4c548-2b19-43ed-9ea3-e2a4a599aa4a",
+  "label_pt": "GOIABADA",
+  "label_en": "GUAVA PASTE",
+  "price_before": 1,
+  "category_key": "ACOMPANHAMENTOS",
+  "pricing_type": "PER_PERSON",
+  "charge_type": "PERSON",
+  "old_image_object": "65fd576f-8d97-49ba-bf38-61bc1e94e94a/ITEM_061_clean_v2_20260830.webp",
+  "local_file": "assets/additionals/goiabada-20260830/ITEM_061_clean_v3_creamy_20260830v3.webp",
+  "local_bytes": 132846,
+  "new_object_path": "65fd576f-8d97-49ba-bf38-61bc1e94e94a/ITEM_061_clean_v3_creamy_20260830v3.webp",
+  "status": "ASSOCIATED",
+  "image_status": "ready",
+  "image_notes": "Brazilian goiabada cremosa / guava paste in a bowl, language-neutral CDL catalog photo v3 20260830",
+  "price_after": 1,
+  "label_after": "GOIABADA",
+  "price_changed": false,
+  "label_changed": false
+}

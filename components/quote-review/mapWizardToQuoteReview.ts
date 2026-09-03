@@ -1,8 +1,7 @@
 import type { QuoteTotals } from '@/Lib/calculateQuoteTotals'
 import {
-  formatPackageItemsText,
+  formatDisplayableFixedPackageItemsText,
   formatPackageSideItemsText,
-  getPackageItemsForPackage,
   getPackageSideItemsForPackage,
   type PackageItem,
   type PackageSideItem,
@@ -13,7 +12,6 @@ import {
   buildPackageSelectionLabels,
   getPackageOptionGroupsForPackage,
   isCustomPackage,
-  resolvePackageItemsWithSelections,
   type PackageOptionGroupItem,
   type PackageOptionGroupRecord,
 } from '@/Lib/packageOptionGroups'
@@ -24,6 +22,7 @@ import type {
   PricingBreakdownLine,
 } from '@/Lib/pricing/pricingBreakdownTypes'
 import { getGrillPhotoStatusLabel } from '@/Lib/grillPhotoStatus'
+import { displayPublicPhone } from '@/Lib/publicQuote/phone'
 import { tw } from '@/Lib/quoteTranslations'
 import {
   buildQuoteReviewPackageSummary,
@@ -63,6 +62,7 @@ export type MapWizardToQuoteReviewInput = {
   commercialRules: CommercialRulesSnapshot
   /** Idioma da UI do operador (perfil). Itens e chrome da revisão seguem este locale. */
   displayLanguage?: WizardState['language']
+  grillDefaultImageUrl?: string | null
 }
 
 export function mapWizardToQuoteReview(
@@ -112,31 +112,30 @@ export function mapWizardToQuoteReview(
     language: lang,
   })
 
-  const configuredItems =
-    state.packageId && input.packageItems
-      ? getPackageItemsForPackage(state.packageId, input.packageItems)
-      : []
   const configuredSides =
     state.packageId && input.packageSideItems
       ? getPackageSideItemsForPackage(state.packageId, input.packageSideItems)
       : []
 
-  const baseItemsText =
-    configuredItems.length > 0
-      ? formatPackageItemsText(configuredItems, lang)
-      : getPackageItemsDescription(input.selectedPackage, lang)
+  const configuredPackageId = state.packageId?.trim() || ''
+  const hasConfiguredPackageItems = Boolean(
+    configuredPackageId && (input.packageItems?.length ?? 0) > 0,
+  )
+  const displayableFixedItemsText = hasConfiguredPackageItems
+    ? formatDisplayableFixedPackageItemsText(
+        configuredPackageId,
+        input.packageItems ?? [],
+        lang,
+        {
+          optionGroups: input.packageOptionGroups,
+          optionGroupItems: input.packageOptionGroupItems,
+        },
+      )
+    : ''
 
-  const resolvedItemsDescription =
-    input.selectedPackage && baseItemsText
-      ? packageSelectionLabels.length > 0
-        ? resolvePackageItemsWithSelections(
-            baseItemsText,
-            state.packageSelections,
-            packageGroups,
-            lang,
-          )
-        : baseItemsText
-      : null
+  const resolvedItemsDescription = hasConfiguredPackageItems
+    ? displayableFixedItemsText || null
+    : getPackageItemsDescription(input.selectedPackage, lang) || null
 
   const resolvedGarnishDescription =
     configuredSides.length > 0
@@ -146,9 +145,10 @@ export function mapWizardToQuoteReview(
   const packageSummary = packageSummaryBase
     ? {
         ...packageSummaryBase,
-        packageItemsDescription:
-          resolvedItemsDescription ??
-          packageSummaryBase.packageItemsDescription,
+        packageItemsDescription: hasConfiguredPackageItems
+          ? displayableFixedItemsText || null
+          : resolvedItemsDescription ??
+            packageSummaryBase.packageItemsDescription,
         garnishDescription:
           resolvedGarnishDescription ??
           packageSummaryBase.garnishDescription,
@@ -167,7 +167,10 @@ export function mapWizardToQuoteReview(
   return {
     preview: true,
     customerName: input.customerName,
-    customerPhone: state.customerDraftPhone.trim() || null,
+    customerPhone:
+      displayPublicPhone(state.customerDraftPhone) ||
+      state.customerDraftPhone.trim() ||
+      null,
     customerEmail: state.customerDraftEmail.trim() || null,
     eventName: state.eventName.trim() || input.customerName,
     eventDate: state.eventDate || null,
@@ -183,12 +186,13 @@ export function mapWizardToQuoteReview(
     packageImageUrl,
     packageUnitPrice: input.packageUnitPrice,
     packageTotal: quoteTotals.packageTotal,
+    includedSidesTotal: quoteTotals.includedSidesTotal,
     packageSummary,
     packageSelections: packageSelectionLabels,
     guestCounts: {
       adultCount: state.adultCount,
-      childrenUnder3Count: state.childrenUnder3Count,
-      children4To12Count: state.children4To12Count,
+      childrenUnder3Count: state.childrenUnder3Count ?? 0,
+      children4To12Count: state.children4To12Count ?? 0,
     },
     billableGuestCount: quoteTotals.billableGuestCount,
     physicalGuestCount: quoteTotals.physicalGuestCount,
@@ -198,6 +202,7 @@ export function mapWizardToQuoteReview(
       ? getGrillPhotoStatusLabel(state.grillPhotoStatus, lang)
       : tw(lang, 'notApplicable'),
     grillPhotoUrl: state.grillPhotoUrl,
+    grillDefaultImageUrl: input.grillDefaultImageUrl ?? null,
     grillRentalRequired: state.grillRentalRequired,
     grillRentalQty: state.grillRentalRequired ? state.grillRentalQty : null,
     grillRentalTotal: quoteTotals.grillRentalTotal,
@@ -295,7 +300,10 @@ export function mapWizardBreakdownToQuoteReview(
     halfPriceChildren: 0,
     billableGuestCount: guestCounts.billable_guest_count,
     physicalGuestCount: guestCounts.physical_guest_count,
-    packageTotal: Number(packageLine?.amount ?? 0),
+    packageTotal:
+      Number(packageLine?.amount ?? 0) +
+      breakdownLineTotal(breakdown, 'package_sides'),
+    includedSidesTotal: breakdownLineTotal(breakdown, 'package_sides'),
     additionalTotal: breakdownLineTotal(breakdown, 'additional_item'),
     mileageFee: Number(mileageLine?.amount ?? 0),
     grillRentalTotal: Number(grillRentalLine?.amount ?? 0),

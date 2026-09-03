@@ -177,6 +177,14 @@ if (expectedArg === 'prod' && localTarget !== 'PROD') {
   process.exit(1)
 }
 
+if (process.env.PSCS_ONE_SSO_ENABLED === 'true') {
+  const ssoTarget = processEnv?.target || localTarget
+  if (ssoTarget === 'PROD') {
+    console.error('FAIL: PSCS One SSO cannot run against Catering PROD.')
+    process.exit(1)
+  }
+}
+
 if (!expectedArg && localTarget === 'PROD') {
   console.error('WARNING: local .env.local points to PROD.')
   process.exit(1)

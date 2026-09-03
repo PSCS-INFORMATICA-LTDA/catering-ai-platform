@@ -32,6 +32,8 @@ import {
   formatEventAddressLines,
   isSameEventDestination,
 } from '@/Lib/formatEventAddress'
+import { mileageDestinationAddress } from '@/Lib/publicQuote/mileageDestination'
+import { resolvePublicGrillSummaryImageUrl } from '@/Lib/publicQuote/ownGrillDisplay'
 import PricingBreakdownView from './PricingBreakdownView'
 import type {
   PricingBreakdown,
@@ -164,7 +166,7 @@ function getChargedMiles(
   freeLimit: number | null,
 ): number | null {
   if (distance == null || freeLimit == null) return null
-  return Math.max(0, distance - freeLimit)
+  return distance > freeLimit ? distance : 0
 }
 
 function findBreakdownLine(
@@ -186,6 +188,7 @@ function ConfirmationProposalBody({
   eventTimeLabel,
   groupedAdditionals,
   mileageEditor,
+  publicReviewFooter = false,
 }: {
   data: QuoteReviewData
   breakdown: PricingBreakdown
@@ -197,6 +200,7 @@ function ConfirmationProposalBody({
     items: QuoteReviewAdditional[]
   }>
   mileageEditor?: ReactNode
+  publicReviewFooter?: boolean
 }) {
   const lang = data.language ?? 'pt'
   const t = getQuoteStrings(lang)
@@ -208,6 +212,19 @@ function ConfirmationProposalBody({
     grillRentalLine != null &&
     grillRentalLine.amount > 0
   const mileageMetadata = mileageLine?.metadata
+  const grillSummaryImage = resolvePublicGrillSummaryImageUrl({
+    hasOwnGrill: data.hasGrill === true,
+    customerPhotoUrl: data.grillPhotoUrl,
+    rentalImageUrl: data.grillDefaultImageUrl,
+  })
+  const ownGrillNoPhoto =
+    data.hasGrill === true && grillSummaryImage.kind === 'none'
+  const ownGrillObservation =
+    ownGrillNoPhoto
+      ? data.grillNotes?.trim() || w.grillNoPhotoReviewNote
+      : null
+  const showGrillPhotoSection =
+    grillSummaryImage.kind === 'customer' || grillSummaryImage.kind === 'rental'
 
   return (
     <>
@@ -292,7 +309,10 @@ function ConfirmationProposalBody({
         </ProposalSection>
       </div>
 
-      <ProposalSection title={t.review.additionalsSection}>
+      <ProposalSection
+        sectionKey="additionals"
+        title={t.review.additionalsSection}
+      >
         {groupedAdditionals.length === 0 ? (
           <p className="quote-proposal-muted">{t.review.noAdditionals}</p>
         ) : (
@@ -304,6 +324,7 @@ function ConfirmationProposalBody({
                   {items.map((item) => (
                     <article
                       key={item.id}
+                      data-review-additional-id={item.id}
                       className="quote-print-additional-card quote-proposal-additional-card"
                     >
                       <CatalogImageFrame
@@ -397,25 +418,33 @@ function ConfirmationProposalBody({
                 : '—'}
             </p>
           </div>
-          {data.grillNotes ? (
-            <div className="quote-proposal-info-cell quote-proposal-info-cell--wide">
+          {ownGrillObservation ? (
+            <div
+              className="quote-proposal-info-cell quote-proposal-info-cell--wide"
+              data-review-grill-observation
+            >
               <span className="quote-proposal-label">{w.notes}</span>
-              <p className="quote-proposal-value">{data.grillNotes}</p>
+              <p className="quote-proposal-value">{ownGrillObservation}</p>
             </div>
           ) : null}
         </div>
-        <div className="quote-proposal-grill-photo-row">
-          <span className="quote-proposal-label">
-            {tQuotesOrders(lang, 'docGrillPhoto')}
-          </span>
-          <QuoteGrillPhotoFrame
-            src={
-              data.hasGrill && data.grillPhotoUrl ? data.grillPhotoUrl : null
+        {showGrillPhotoSection && grillSummaryImage.url ? (
+          <div
+            className="quote-proposal-grill-photo-row"
+            data-grill-summary-image={
+              grillSummaryImage.kind === 'customer' ? 'uploaded' : 'rental'
             }
-            alt={tQuotesOrders(lang, 'docGrillPhoto')}
-            emptyLabel=""
-          />
-        </div>
+          >
+            <span className="quote-proposal-label">
+              {tQuotesOrders(lang, 'docGrillPhoto')}
+            </span>
+            <QuoteGrillPhotoFrame
+              src={grillSummaryImage.url}
+              alt={tQuotesOrders(lang, 'docGrillPhoto')}
+              emptyLabel=""
+            />
+          </div>
+        ) : null}
       </ProposalSection>
 
       <ProposalSection
@@ -444,12 +473,9 @@ function ConfirmationProposalBody({
                 <p
                   className="quote-proposal-value"
                   data-mileage-destination
+                  data-mileage-destination-source="event-address"
                 >
-                  {mileageDestinationCopy(
-                    lang,
-                    eventAddressText,
-                    eventAddressText,
-                  )}
+                  {mileageDestinationAddress(eventAddressText)}
                 </p>
               </div>
             </div>
@@ -544,24 +570,47 @@ function ConfirmationProposalBody({
         balanceAmount={breakdown.balance}
         reservationPercentage={breakdown.rules_applied.reservationPercentage}
         ruleHint={tw(lang, 'reservationRuleHint')}
+        // The amount labels already carry the percentages, and the rules panel
+        // right below states the policy again.
+        showPercentSplit={false}
       />
 
-      <CdlImportantRulesPanel
+      <CdlImportantRulesPanel variant="summary" language={lang} />
+
+      <CdlCancellationPolicySection
         variant="summary"
-        showReservationText
         language={lang}
+        eventDate={data.eventDate}
+        defaultOpenAll
       />
 
-      <CdlCancellationPolicySection variant="summary" language={lang} />
-
-      <footer className="quote-proposal-signature">
+      <footer
+        className={`quote-proposal-signature${
+          publicReviewFooter ? ' quote-proposal-signature--public' : ''
+        }`}
+        data-public-review-footer={publicReviewFooter ? 'true' : undefined}
+      >
+        {publicReviewFooter ? (
+          <div
+            data-public-review-cdl-logo
+            className="quote-proposal-public-cdl-logo-wrap"
+          >
+            <CdlBrandLogo
+              size="sm"
+              variant="review"
+              className="quote-proposal-public-cdl-logo"
+            />
+          </div>
+        ) : null}
         <p className="quote-proposal-footer-brand">BBQ AT HOME</p>
         <p className="quote-proposal-footer-tagline">Orlando, Florida</p>
-        <img
-          src="/brand/pscs-one.png"
-          alt="PSCS One"
-          className="quote-proposal-pscs-mark bg-transparent"
-        />
+        {!publicReviewFooter ? (
+          <img
+            src="/brand/pscs-one.png"
+            alt="PSCS One"
+            className="quote-proposal-pscs-mark bg-transparent"
+          />
+        ) : null}
       </footer>
     </>
   )
@@ -700,7 +749,10 @@ function DefaultProposalBody({
         </ProposalSection>
       </div>
 
-      <ProposalSection title={t.review.additionalsSection}>
+      <ProposalSection
+        sectionKey="additionals"
+        title={t.review.additionalsSection}
+      >
         {groupedAdditionals.length === 0 ? (
           <p className="quote-proposal-muted">{t.review.noAdditionals}</p>
         ) : (
@@ -712,6 +764,7 @@ function DefaultProposalBody({
                   {items.map((item) => (
                     <article
                       key={item.id}
+                      data-review-additional-id={item.id}
                       className="quote-print-additional-card quote-proposal-additional-card"
                     >
                       <CatalogImageFrame
@@ -975,13 +1028,13 @@ function DefaultProposalBody({
 
       <CdlImportantRulesPanel
         variant={rulesVariant === 'pdf' ? 'pdf' : 'summary'}
-        showReservationText
         language={lang}
       />
 
       <CdlCancellationPolicySection
         variant={rulesVariant === 'pdf' ? 'pdf' : 'summary'}
         language={lang}
+        eventDate={data.eventDate}
       />
     </>
   )
@@ -996,6 +1049,7 @@ export default function QuoteReviewLayout({
   variant = 'default',
   breakdown = null,
   mileageEditor,
+  publicReviewFooter = false,
 }: {
   data: QuoteReviewData
   rulesVariant?: 'summary' | 'pdf'
@@ -1005,6 +1059,7 @@ export default function QuoteReviewLayout({
   variant?: 'default' | 'confirmation'
   breakdown?: PricingBreakdown | null
   mileageEditor?: ReactNode
+  publicReviewFooter?: boolean
 }) {
   const lang = data.language ?? 'pt'
   const t = getQuoteStrings(lang)
@@ -1032,12 +1087,25 @@ export default function QuoteReviewLayout({
   const minimumAdjustment = Number(data.minimumOrderAdjustment ?? 0)
   const grillRentalTotal = Number(data.grillRentalTotal ?? 0)
   const grillRentalQty = Number(data.grillRentalQty ?? 0)
+  const includedSidesTotal = Number(data.includedSidesTotal ?? 0)
+  const packageDisplay = Math.max(
+    0,
+    Number(data.packageTotal ?? 0) - includedSidesTotal,
+  )
 
   const pricingLines = [
     {
       label: tQuotesOrders(lang, 'packageLabel'),
-      value: formatMoneyOrDash(data.packageTotal),
+      value: formatMoneyOrDash(packageDisplay),
     },
+    ...(includedSidesTotal > 0
+      ? [
+          {
+            label: tQuotesOrders(lang, 'docSidesLine'),
+            value: formatMoneyOrDash(includedSidesTotal),
+          },
+        ]
+      : []),
     {
       label: tQuotesOrders(lang, 'additionalsLabel'),
       value: formatMoneyOrDash(data.additionalTotal),
@@ -1045,9 +1113,8 @@ export default function QuoteReviewLayout({
     {
       label:
         (chargedMiles ?? 0) > 0
-          ? tQuotesOrders(lang, 'docMileageChargedSummaryLine', {
+          ? tQuotesOrders(lang, 'docMileageFullTripLine', {
               charged: formatMileageQuantity(chargedMiles ?? 0),
-              free: formatMileageQuantity(Number(data.mileageFreeLimit ?? 20)),
             })
           : tQuotesOrders(lang, 'mileageLabel'),
       value: formatMoneyOrDash(data.mileageFee),
@@ -1145,12 +1212,28 @@ export default function QuoteReviewLayout({
     >
       <header className="quote-proposal-hero quote-print-header">
         <div className="quote-proposal-hero-inner">
-          <div className="quote-proposal-hero-brand">
-            <div className="quote-print-logo">
+          <div
+            className={`quote-proposal-hero-brand${
+              variant === 'confirmation'
+                ? ' quote-proposal-hero-brand--review'
+                : ''
+            }`}
+          >
+            <div
+              className={
+                variant === 'confirmation'
+                  ? 'quote-review-cover-logo'
+                  : 'quote-print-logo'
+              }
+            >
               <CdlBrandLogo
                 size="lg"
-                variant="cover"
-                className="quote-print-logo-mark"
+                variant={variant === 'confirmation' ? 'review' : 'cover'}
+                className={
+                  variant === 'confirmation'
+                    ? 'cdl-review-logo'
+                    : 'quote-print-logo-mark'
+                }
               />
             </div>
             <div className="quote-proposal-hero-copy">
@@ -1189,6 +1272,7 @@ export default function QuoteReviewLayout({
             eventTimeLabel={eventTimeLabel}
             groupedAdditionals={groupedAdditionals}
             mileageEditor={mileageEditor}
+            publicReviewFooter={publicReviewFooter}
           />
         ) : (
           <DefaultProposalBody

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import AdditionalItemCard from '@/components/quotes/additionals/AdditionalItemCard'
 import {
   ADDITIONAL_CATEGORY_EXPOSE_FALLBACK_BOTTOM_PX,
@@ -15,16 +15,19 @@ import {
   getLocalizedAdditionalLabel,
   type QuoteAdditionalItem,
 } from '@/Lib/quoteAdditionalDisplay'
+import type { ExtraAvailabilityStatus } from '@/Lib/publicQuote/extrasEligibility'
 import { getQuoteStrings } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 function CategoryHeaderCopy({
+  kicker,
   categoryLabel,
   itemCountLabel,
   selectedCount,
   selectedCountLabel,
   expanded,
 }: {
+  kicker: string
   categoryLabel: string
   itemCountLabel: string
   selectedCount: number
@@ -34,8 +37,9 @@ function CategoryHeaderCopy({
   return (
     <div className="flex min-w-0 items-start gap-3">
       <div className="min-w-0 flex-1">
+        <p className="public-additional-kicker">{kicker}</p>
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="text-base font-extrabold uppercase tracking-wide text-cdl-title sm:text-lg">
+          <span className="text-base font-black uppercase tracking-wide text-[#111] sm:text-lg">
             {categoryLabel}
           </span>
           <span className="text-sm font-medium text-cdl-muted">
@@ -60,6 +64,97 @@ function CategoryHeaderCopy({
   )
 }
 
+const EXTRAS_BODY_MARKS: Record<QuoteLanguage, string[]> = {
+  pt: ['cortes e extras premium', 'personalizar seu evento'],
+  en: ['premium cuts', 'personalize your event'],
+  es: ['cortes premium', 'personalizar tu evento'],
+}
+
+const EXTRAS_CLOSE_MARKS: Record<QuoteLanguage, string[]> = {
+  pt: ['favoritos'],
+  en: ['favorites'],
+  es: ['favoritos'],
+}
+
+function highlightMarks(text: string, marks: string[]): ReactNode[] {
+  const nodes: ReactNode[] = []
+  let remaining = text
+  let key = 0
+  for (const mark of marks) {
+    const index = remaining.toLowerCase().indexOf(mark.toLowerCase())
+    if (index < 0) continue
+    if (index > 0) {
+      nodes.push(<span key={key++}>{remaining.slice(0, index)}</span>)
+    }
+    nodes.push(
+      <em key={key++} className="public-suggested-extras-mark">
+        {remaining.slice(index, index + mark.length)}
+      </em>,
+    )
+    remaining = remaining.slice(index + mark.length)
+  }
+  if (remaining) nodes.push(<span key={key++}>{remaining}</span>)
+  return nodes
+}
+
+function FeaturedCategoryHeaderCopy({
+  title,
+  lead,
+  body,
+  close,
+  itemCountLabel,
+  selectedCount,
+  selectedCountLabel,
+  language,
+}: {
+  title: string
+  lead: string
+  body: string
+  close: string
+  itemCountLabel: string
+  selectedCount: number
+  selectedCountLabel: string
+  language: QuoteLanguage
+}) {
+  return (
+    <div className="public-suggested-extras-head">
+      <div
+        className="public-suggested-extras-title-band"
+        data-suggested-extras-title-band
+      >
+        <p className="public-suggested-extras-title">
+          <span
+            className="public-suggested-extras-title-mark"
+            data-suggested-extras-title-tag
+          >
+            {title}
+          </span>
+        </p>
+        <span className="public-suggested-extras-chevron" aria-hidden>
+          ▲
+        </span>
+      </div>
+      <div className="public-suggested-extras-copy">
+        <p className="public-suggested-extras-lead">{lead}</p>
+        <p className="public-suggested-extras-body">
+          {highlightMarks(body, EXTRAS_BODY_MARKS[language])}
+        </p>
+        <p className="public-suggested-extras-close">
+          {highlightMarks(close, EXTRAS_CLOSE_MARKS[language])}
+        </p>
+        <p className="public-suggested-extras-count">{itemCountLabel}</p>
+        {selectedCount > 0 ? (
+          <div className="mt-2">
+            <span className="public-suggested-extras-selected">
+              {selectedCountLabel}
+            </span>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
 export default function AdditionalCategorySection({
   categoryKey,
   categoryLabel,
@@ -68,7 +163,9 @@ export default function AdditionalCategorySection({
   selectedCount,
   visited,
   emphasize = false,
+  featured = false,
   quantities,
+  extraAvailabilityByItemId = {},
   billableGuestCount,
   language,
   exposeEpoch = 0,
@@ -84,7 +181,9 @@ export default function AdditionalCategorySection({
   selectedCount: number
   visited: boolean
   emphasize?: boolean
+  featured?: boolean
   quantities: Record<string, number>
+  extraAvailabilityByItemId?: Record<string, ExtraAvailabilityStatus>
   billableGuestCount: number
   language: QuoteLanguage
   exposeEpoch?: number
@@ -131,10 +230,24 @@ export default function AdditionalCategorySection({
     return () => exposeObserver.disconnect()
   }, [categoryKey, exposeEpoch, ctaReservePx])
 
+  const lockExpanded = featured
+  const isExpanded = lockExpanded || expanded
   const contentId = `additional-category-content-${categoryKey}`
   const summaryId = `additional-category-summary-${categoryKey}`
-  const headerCopy = (
+  const headerCopy = featured ? (
+    <FeaturedCategoryHeaderCopy
+      title={t.wizard.suggestedExtrasTitle}
+      lead={t.wizard.suggestedExtrasLead}
+      body={t.wizard.suggestedExtrasBody}
+      close={t.wizard.suggestedExtrasClose}
+      itemCountLabel={t.itemsCount(items.length)}
+      selectedCount={selectedCount}
+      selectedCountLabel={t.selectedCount(selectedCount)}
+      language={language}
+    />
+  ) : (
     <CategoryHeaderCopy
+      kicker={t.wizard.publicAdditionalsKicker}
       categoryLabel={categoryLabel}
       itemCountLabel={t.itemsCount(items.length)}
       selectedCount={selectedCount}
@@ -147,32 +260,81 @@ export default function AdditionalCategorySection({
     <ul
       id={summaryId}
       data-additional-category-summary
-      className="border-t border-cdl-border-subtle px-4 py-3 sm:px-5"
+      className={
+        featured
+          ? 'public-suggested-extras-summary border-t px-4 py-3 sm:px-5'
+          : 'border-t border-cdl-border-subtle px-4 py-3 sm:px-5'
+      }
     >
       {items.map((item) => {
         const quantity = quantities[item.id] ?? 0
+        const availability = extraAvailabilityByItemId[item.id] ?? 'AVAILABLE'
+        const locked = availability !== 'AVAILABLE'
+        const summaryBadge =
+          availability === 'SELECTED_IN_PACKAGE'
+            ? t.wizard.extraSelectedShort
+            : t.wizard.extraIncludedShort
         return (
           <li
             key={item.id}
             data-additional-summary-item
-            className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1 text-sm leading-snug"
+            data-extra-availability={availability}
+            className={`flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1 text-sm leading-snug${
+              featured ? ' is-featured-summary-item' : ''
+            }${locked ? ' is-package-locked-summary' : ''}`}
           >
             <span
-              className="shrink-0 text-[var(--brand-primary)]"
+              className={
+                featured
+                  ? 'public-suggested-extras-bullet shrink-0'
+                  : 'shrink-0 text-[var(--brand-primary)]'
+              }
               aria-hidden
             >
               •
             </span>
-            <span className="min-w-0 flex-1 break-words text-cdl-text">
+            <span
+              className={
+                featured
+                  ? 'public-suggested-extras-item-name min-w-0 flex-1 break-words'
+                  : 'min-w-0 flex-1 break-words text-cdl-text'
+              }
+            >
               {getLocalizedAdditionalLabel(item, language)}
-              {quantity > 0 ? (
-                <span className="ml-2 font-bold text-[var(--brand-primary)]">
+              {!locked && quantity > 0 ? (
+                <span
+                  className={
+                    featured
+                      ? 'public-suggested-extras-qty ml-2 font-bold'
+                      : 'ml-2 font-bold text-[var(--brand-primary)]'
+                  }
+                >
                   ×{quantity}
                 </span>
               ) : null}
+              {locked ? (
+                <span
+                  className="public-additional-summary-lock-badge"
+                  data-extra-summary-badge
+                >
+                  {summaryBadge}
+                </span>
+              ) : null}
             </span>
-            <span className="min-w-0 shrink-0 break-words text-right text-cdl-muted">
-              <span className="font-semibold text-cdl-title">
+            <span
+              className={
+                featured
+                  ? 'public-suggested-extras-item-price min-w-0 shrink-0 break-words text-right'
+                  : 'min-w-0 shrink-0 break-words text-right text-cdl-muted'
+              }
+            >
+              <span
+                className={
+                  featured
+                    ? 'font-semibold'
+                    : 'font-semibold text-cdl-title'
+                }
+              >
                 {getAdditionalPriceLabel(item, language)}
               </span>{' '}
               {getAdditionalChargeUnitLabel(item, language)}
@@ -183,36 +345,68 @@ export default function AdditionalCategorySection({
     </ul>
   )
 
+  const sectionClass = featured
+    ? `public-additional-category is-featured is-expanded overflow-hidden rounded-2xl border shadow-cdl transition`
+    : `overflow-hidden rounded-2xl border bg-cdl-surface shadow-cdl transition ${
+        emphasize
+          ? 'border-[var(--brand-primary)] ring-2 ring-[color-mix(in_srgb,var(--brand-primary)_35%,transparent)]'
+          : 'border-cdl-border'
+      }`
+  const headerButtonClass =
+    'w-full cursor-pointer p-4 text-left transition-colors hover:bg-cdl-hover active:bg-cdl-hover sm:p-5'
+  const headerStaticClass =
+    'public-suggested-extras-header w-full cursor-default text-left'
+  const collapsedWrapClass = 'group relative hover:bg-cdl-hover active:bg-cdl-hover'
+
   return (
     <section
       id={`additional-category-${categoryKey}`}
       data-category-key={categoryKey}
       data-category-reviewed={visited ? 'true' : 'false'}
-      className={`overflow-hidden rounded-2xl border bg-cdl-surface shadow-cdl transition ${
-        emphasize
-          ? 'border-[var(--brand-primary)] ring-2 ring-[color-mix(in_srgb,var(--brand-primary)_35%,transparent)]'
-          : 'border-cdl-border'
-      }`}
+      data-suggested-extras={featured ? 'true' : undefined}
+      className={sectionClass}
       style={{ scrollMarginBottom: ctaReservePx }}
     >
-      {expanded ? (
+      {isExpanded ? (
         <>
-          <button
-            type="button"
-            data-additional-category-header
-            onClick={onToggle}
-            aria-expanded={expanded}
-            aria-controls={contentId}
-            className="w-full cursor-pointer p-4 text-left transition-colors hover:bg-cdl-hover active:bg-cdl-hover sm:p-5"
-          >
-            {headerCopy}
-          </button>
+          {lockExpanded ? (
+            <div
+              data-additional-category-header
+              data-suggested-extras-locked="true"
+              className={headerStaticClass}
+            >
+              {headerCopy}
+            </div>
+          ) : (
+            <button
+              type="button"
+              data-additional-category-header
+              onClick={onToggle}
+              aria-expanded={isExpanded}
+              aria-controls={contentId}
+              className={headerButtonClass}
+            >
+              {headerCopy}
+            </button>
+          )}
           <div
             id={contentId}
             role="region"
             aria-label={categoryLabel}
-            className="border-t border-cdl-border-subtle p-3 sm:p-4"
+            className="border-t border-cdl-border-subtle bg-cdl-surface p-3 sm:p-4"
           >
+            <p
+              className="public-additional-photo-enlarge-hint"
+              data-photo-enlarge-hint
+            >
+              <span className="public-additional-photo-enlarge-icon" aria-hidden>
+                <svg viewBox="0 0 16 16" width="11" height="11" fill="none">
+                  <circle cx="6.5" cy="6.5" r="4.2" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M9.6 9.6 14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </span>
+              {t.wizard.photoEnlargeHint}
+            </p>
             <div
               data-additional-items-grid
               className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"
@@ -224,6 +418,7 @@ export default function AdditionalCategorySection({
                   quantity={quantities[item.id] ?? 0}
                   billableGuestCount={billableGuestCount}
                   language={language}
+                  availability={extraAvailabilityByItemId[item.id] ?? 'AVAILABLE'}
                   onChangeQty={(qty) => onChangeQty(item.id, qty)}
                 />
               ))}
@@ -232,7 +427,7 @@ export default function AdditionalCategorySection({
         </>
       ) : (
         <div
-          className="group relative hover:bg-cdl-hover active:bg-cdl-hover"
+          className={collapsedWrapClass}
           data-additional-category-header
         >
           <button
@@ -256,5 +451,22 @@ export default function AdditionalCategorySection({
         className="block h-px w-full"
       />
     </section>
+  )
+}
+
+export function PostSuggestedCategoryHint({
+  title,
+  body,
+}: {
+  title: string
+  body: string
+}) {
+  return (
+    <div className="public-post-suggested-category-hint" data-post-suggested-category-hint>
+      <p className="public-post-suggested-category-hint-title">
+        <span aria-hidden="true">↓</span> {title}
+      </p>
+      <p className="public-post-suggested-category-hint-body">{body}</p>
+    </div>
   )
 }

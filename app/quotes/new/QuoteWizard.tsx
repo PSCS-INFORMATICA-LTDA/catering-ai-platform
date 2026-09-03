@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import AdminCompactMenu from '../../../components/quotes/AdminCompactMenu'
 import { useTenant } from '../../../components/tenant/TenantProvider'
 import CatalogImageFrame from '../../../components/CatalogImageFrame'
@@ -11,17 +12,26 @@ import QuoteStepper from '../../../components/quotes/QuoteStepper'
 import QuotePackageStepExplorer from '../../../components/quotes/QuotePackageStepExplorer'
 import PublicPackageCatalog from '../../../components/quotes/PublicPackageCatalog'
 import PublicPhoneField from '../../../components/quotes/PublicPhoneField'
+import PublicRequiredMark from '../../../components/quotes/PublicRequiredMark'
 import QuoteWizardStepNav from '../../../components/quotes/QuoteWizardStepNav'
-import AdditionalCategorySection from '../../../components/quotes/additionals/AdditionalCategorySection'
+import AdditionalCategorySection, {
+  PostSuggestedCategoryHint,
+} from '../../../components/quotes/additionals/AdditionalCategorySection'
 import { useAutoEventDistance } from '@/Lib/hooks/useAutoEventDistance'
 import {
   calcAdditionalLineTotalForItem,
   getAdditionalUnitPrice,
   getLocalizedAdditionalLabel,
-  groupAdditionalItemsByCategory,
+  getAdditionalImage,
   isPerPersonAdditional,
   normalizeAdditionalQuantity,
 } from '../../../Lib/quoteAdditionalDisplay'
+import {
+  appendServiceSupplyGroup,
+  buildPublicAdditionalDisplayGroups,
+  getReviewAdditionalCategoryLabel,
+  SUGGESTED_EXTRAS_DISPLAY_KEY,
+} from '@/Lib/publicQuote/suggestedExtras'
 import { getAdditionalItemCategoryKey } from '@/Lib/additionalItemFieldAccess'
 import {
   buildAdditionalCategoryDisplayLabels,
@@ -30,6 +40,7 @@ import {
   pruneVisitedAdditionalCategories,
 } from '@/Lib/wizardAdditionalCategories'
 import { resolveNextWizardStep, WIZARD_STEP_COUNT } from '@/Lib/wizardStepAdvance'
+import { revealFloatingPanelWhenReady } from '@/Lib/revealFloatingPanel'
 import {
   ADDITIONAL_CATEGORY_EXPOSE_FALLBACK_BOTTOM_PX,
   isExtrasExposeScrollJump,
@@ -53,6 +64,12 @@ import {
 } from '../../../Lib/packageFieldAccess'
 import QuoteWizardConfirmationStep from '../../../components/quote-review/QuoteWizardConfirmationStep'
 import PublicQuoteConfirmationStep from '../../../components/quote-review/PublicQuoteConfirmationStep'
+import SpecialEventDateNotice from '../../../components/quotes/SpecialEventDateNotice'
+import { CDL_CANCEL_POLICY_VERSION } from '@/Lib/cdlCancellationPolicy'
+import { isSpecialCdlEventDate } from '@/Lib/cdlSeasonalRules'
+import { normalizeGrillRentalQty } from '@/Lib/grillRental'
+import { resolveApplicableMinimum } from '@/Lib/quotes/applyCommercialMinimums'
+import { parseEventDateParts } from '@/Lib/usHolidays'
 import {
   getPublicPackageSidesGroup,
   resolvePackageCatalogImageUrl,
@@ -73,8 +90,8 @@ import {
   CUSTOMER_DISPLAY_NAME_EMPTY,
   getCustomerDisplayName,
 } from '../../../Lib/getCustomerDisplayName'
-import { getCatalogItemImageUrl } from '../../../Lib/catalogItemVisual'
 import { isUsablePostalCode } from '../../../Lib/cep'
+import { isExplicitNonNegativeInteger } from '../../../Lib/quoteGuestFields'
 import { isUsablePhone, normalizePhone } from '../../../Lib/normalizePhone'
 import {
   deriveEventEndTime,
@@ -110,9 +127,24 @@ import type {
   PackageSideItem,
 } from '../../../Lib/packageConfiguration'
 import {
+  buildExtraAvailabilityByItemId,
+  canSetPublicAdditionalQuantity,
+  filterPublicExtraItemsForPackage,
+  getNonChargeableExtraIds,
+  getSelectedInPackageCatalogIds,
+  getUniversalIncludedCatalogIds,
   getVisiblePublicExtraItems,
+  isDisposableKitItem,
+  isWaiterServiceItem,
   pruneBlockedAdditionalSelections,
+  sanitizePublicAdditionalQuantity,
+  SERVICES_SUPPLIES_CATEGORY_KEY,
 } from '../../../Lib/publicQuote/extrasEligibility.ts'
+import { getCatalogItemImageUrl } from '../../../Lib/catalogItemVisual'
+import { isGrillRentalAdditional } from '../../../Lib/publicQuote/grillRentalDisplay'
+import { resolvePublicGrillSystemNotes } from '../../../Lib/publicQuote/ownGrillDisplay'
+import QuoteBbqWaiterPanel from '../../../components/quotes/QuoteBbqWaiterPanel'
+import NoSidesDisposableKitOffer from '../../../components/quotes/NoSidesDisposableKitOffer'
 import {
   flattenPackageOptionGroupItems,
   getBlockedCatalogItemIds,
@@ -195,6 +227,7 @@ export type PublicQuoteWizardContext = {
   companySlug: string
   branchId?: string | null
   allowedCountries: string[]
+  branchCountry?: string | null
   consentVersion: string
   consentLabel: string
   privacyUrl?: string | null
@@ -305,8 +338,16 @@ function buildPublicIntakeDraft(
       hasGrill: state.hasGrill,
       photoReference: state.grillPhotoReference,
       rentalRequired: state.grillRentalRequired,
-      rentalQty: state.grillRentalQty,
-      notes: state.grillNotes.trim() || null,
+      rentalQty: normalizeGrillRentalQty(state.grillRentalRequired),
+      notes: resolvePublicGrillSystemNotes(state, state.language) || null,
+    },
+    consents: {
+      cancellation: {
+        accepted: state.cancellationPolicyAccepted,
+        version: CDL_CANCEL_POLICY_VERSION,
+        locale: state.language,
+        acceptedAt: state.cancellationPolicyAcceptedAt,
+      },
     },
   }
 }
@@ -357,9 +398,42 @@ function toDateValue(date: Date) {
 
 type FieldCompletion = 'filled' | 'empty'
 
+function focusWizardField(node: HTMLElement | null) {
+  if (!node) return
+  // Focus synchronously so iOS can open the keyboard from this gesture.
+  node.focus({ preventScroll: true })
+  if (node instanceof HTMLInputElement) {
+    const end = node.value.length
+    try {
+      node.setSelectionRange(end, end)
+    } catch {
+      /* some input types reject selection */
+    }
+  }
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  requestAnimationFrame(() => {
+    node.scrollIntoView({
+      behavior: reduced ? 'auto' : 'smooth',
+      block: 'center',
+    })
+  })
+}
+
+function shouldAdvanceFromFieldBlur(related: EventTarget | null) {
+  if (!(related instanceof HTMLElement)) return true
+  if (related.closest('[data-guest-field]')) return false
+  if (related.closest('[data-field-advance-check]')) return false
+  if (related.matches('input, textarea, select, button, [href]')) return false
+  return true
+}
+
 function getFieldCompletion(value: string | number): FieldCompletion {
   if (typeof value === 'number') return value > 0 ? 'filled' : 'empty'
   return value.trim().length > 0 ? 'filled' : 'empty'
+}
+
+function getExplicitCountCompletion(value: number | null): FieldCompletion {
+  return isExplicitNonNegativeInteger(value) ? 'filled' : 'empty'
 }
 
 function fieldCompletionClass(completion?: FieldCompletion) {
@@ -368,14 +442,106 @@ function fieldCompletionClass(completion?: FieldCompletion) {
   return 'border-cdl-border bg-cdl-inset'
 }
 
-function FieldCheck({ show }: { show: boolean }) {
+function FieldCheck({
+  show,
+  onAdvance,
+  advanceLabel,
+  advanceKey,
+  nativeTargetId,
+}: {
+  show: boolean
+  onAdvance?: () => void
+  advanceLabel?: string
+  advanceKey?: string
+  nativeTargetId?: string
+}) {
+  const advancedByPointerRef = useRef(false)
   if (!show) return null
+  if (nativeTargetId) {
+    // Previous pointerdown/pointerup approaches
+    // successfully changed document.activeElement
+    // but did not reopen the iOS software keyboard.
+    //
+    // For the guest check flow we intentionally
+    // delegate target activation to native HTML
+    // <label for> behavior instead of calling focus().
+    // Zero JS on this label: any handler here (even commit)
+    // re-renders during the tap and ends the iOS keyboard session.
+    return (
+      <label
+        htmlFor={nativeTargetId}
+        data-field-advance-check={advanceKey || ''}
+        data-field-advance-mode="native-label"
+        data-field-advance-sync="native-label"
+        aria-label={advanceLabel || 'Next'}
+        className="absolute right-0.5 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-sm font-bold text-cdl-success"
+      >
+        ✓
+      </label>
+    )
+  }
+  if (!onAdvance) {
+    return (
+      <span
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-cdl-success"
+        aria-hidden
+      >
+        ✓
+      </span>
+    )
+  }
+  const advance = onAdvance
+
   return (
-    <span
-      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-cdl-success"
-      aria-hidden
+    <button
+      type="button"
+      data-field-advance-check={advanceKey || ''}
+      data-field-advance-sync="pointerup"
+      aria-label={advanceLabel || 'Next'}
+      onPointerDown={(event) => {
+        if (event.pointerType === 'mouse' && event.button !== 0) return
+        // Keep the current input focused while the finger is still down.
+        event.preventDefault()
+      }}
+      onPointerUp={(event) => {
+        if (event.pointerType === 'mouse' && event.button !== 0) return
+        event.preventDefault()
+        event.stopPropagation()
+        advancedByPointerRef.current = true
+        advance()
+      }}
+      onPointerCancel={() => {
+        advancedByPointerRef.current = false
+      }}
+      onClick={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        if (advancedByPointerRef.current) {
+          advancedByPointerRef.current = false
+          return
+        }
+        advance()
+      }}
+      className="absolute right-0.5 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-sm font-bold text-cdl-success"
     >
       ✓
+    </button>
+  )
+}
+
+function WizardFieldLabel({
+  children,
+  required,
+  requiredLabel,
+}: {
+  children: string
+  required?: boolean
+  requiredLabel?: string
+}) {
+  return (
+    <span className="cdl-eyebrow">
+      {children}
+      {required ? <PublicRequiredMark label={requiredLabel || ''} /> : null}
     </span>
   )
 }
@@ -418,6 +584,9 @@ function DatePickerField({
   completion,
   language = 'pt',
   minDate,
+  required,
+  requiredLabel,
+  onCommit,
 }: {
   label: string
   value: string
@@ -426,12 +595,22 @@ function DatePickerField({
   completion?: FieldCompletion
   language?: QuoteLanguage | string | null
   minDate?: string
+  required?: boolean
+  requiredLabel?: string
+  onCommit?: (value: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [viewDate, setViewDate] = useState(() => parseDateValue(value) ?? new Date())
   const containerRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   const selectedDate = parseDateValue(value)
+
+  // The calendar opens below the trigger and often lands past the fold.
+  useEffect(() => {
+    if (!open) return
+    return revealFloatingPanelWhenReady(() => panelRef.current)
+  }, [open])
 
   useEffect(() => {
     const parsed = parseDateValue(value)
@@ -465,8 +644,10 @@ function DatePickerField({
   }, [viewDate])
 
   function selectDay(day: number) {
-    onChange(toDateValue(new Date(calendarDays.year, calendarDays.month, day)))
+    const next = toDateValue(new Date(calendarDays.year, calendarDays.month, day))
+    onChange(next)
     setOpen(false)
+    onCommit?.(next)
   }
 
   function shiftMonth(offset: number) {
@@ -484,7 +665,9 @@ function DatePickerField({
 
   return (
     <div ref={containerRef} className={`relative flex flex-col gap-2 ${className}`}>
-      <span className="cdl-eyebrow">{label}</span>
+      <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
+        {label}
+      </WizardFieldLabel>
       <div className="relative">
         <button
           type="button"
@@ -503,6 +686,8 @@ function DatePickerField({
 
       {open && (
         <div
+          ref={panelRef}
+          data-wizard-datepicker-panel
           role="dialog"
           aria-label={tw(language, 'calendarOf', { label })}
           className="absolute left-0 top-full z-30 mt-2 w-full min-w-[300px] rounded-2xl border border-cdl-border bg-cdl-surface p-4 shadow-cdl-popup sm:w-[320px]"
@@ -612,6 +797,12 @@ function TimePickerField({
   completion,
   language = 'pt',
   readOnly = false,
+  required,
+  requiredLabel,
+  open: openProp,
+  onOpenChange,
+  emptyDefaultHour = 18,
+  onCommit,
 }: {
   label: string
   value: string
@@ -620,20 +811,45 @@ function TimePickerField({
   completion?: FieldCompletion
   language?: QuoteLanguage | string | null
   readOnly?: boolean
+  required?: boolean
+  requiredLabel?: string
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  emptyDefaultHour?: number
+  onCommit?: (value: string) => void
 }) {
-  const [open, setOpen] = useState(false)
+  // Always starts closed, including the end time: it only opens on an explicit
+  // tap, never on step entry, date change or start-time change.
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isControlled = openProp !== undefined
+  const open = isControlled ? Boolean(openProp) : uncontrolledOpen
+  const setOpen = (next: boolean) => {
+    if (!isControlled) setUncontrolledOpen(next)
+    onOpenChange?.(next)
+  }
   const containerRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
   const selected = parseTimeParts(value)
-  const [draftHour, setDraftHour] = useState(selected?.hours ?? 18)
+  const [draftHour, setDraftHour] = useState(selected?.hours ?? emptyDefaultHour)
   const [draftMinute, setDraftMinute] = useState(selected?.minutes ?? 0)
+
+  useEffect(() => {
+    if (!open || readOnly) return
+    return revealFloatingPanelWhenReady(() => panelRef.current)
+  }, [open, readOnly])
 
   useEffect(() => {
     const parsed = parseTimeParts(value)
     if (parsed) {
       setDraftHour(parsed.hours)
       setDraftMinute(parsed.minutes)
+      return
     }
-  }, [value])
+    if (open) {
+      setDraftHour(emptyDefaultHour)
+      setDraftMinute(0)
+    }
+  }, [open, value, emptyDefaultHour])
 
   useEffect(() => {
     if (!open) return
@@ -655,19 +871,23 @@ function TimePickerField({
 
   function selectMinute(minute: number) {
     setDraftMinute(minute)
-    onChange(toTimeValue(draftHour, minute))
+    const next = toTimeValue(draftHour, minute)
+    onChange(next)
     setOpen(false)
+    onCommit?.(next)
   }
 
   return (
     <div ref={containerRef} className={`relative flex flex-col gap-2 ${className}`}>
-      <span className="cdl-eyebrow">{label}</span>
+      <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
+        {label}
+      </WizardFieldLabel>
       <div className="relative">
         <button
           type="button"
           onClick={() => {
             if (readOnly) return
-            setOpen((current) => !current)
+            setOpen(!open)
           }}
           disabled={readOnly}
           className={`flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3.5 pr-10 text-left text-base outline-none transition-colors ${
@@ -689,6 +909,8 @@ function TimePickerField({
 
       {open && !readOnly && (
         <div
+          ref={panelRef}
+          data-wizard-timepicker-panel
           role="dialog"
           aria-label={tw(language, 'timePickerOf', { label })}
           className="absolute left-0 top-full z-30 mt-2 w-full min-w-[300px] rounded-2xl border border-cdl-border bg-cdl-surface p-4 shadow-cdl-popup sm:w-[320px]"
@@ -830,7 +1052,12 @@ function InputField({
   completion,
   inputRef,
   onFocus,
+  onBlur,
+  onKeyDown,
   autoComplete,
+  enterKeyHint,
+  required,
+  requiredLabel,
 }: {
   label: string
   type?: string
@@ -844,11 +1071,18 @@ function InputField({
   completion?: FieldCompletion
   inputRef?: React.RefObject<HTMLInputElement | null>
   onFocus?: () => void
+  onBlur?: React.FocusEventHandler<HTMLInputElement>
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>
   autoComplete?: string
+  enterKeyHint?: React.HTMLAttributes<HTMLInputElement>['enterKeyHint']
+  required?: boolean
+  requiredLabel?: string
 }) {
   return (
     <label className={`flex flex-col gap-2 ${className}`}>
-      <span className="cdl-eyebrow">{label}</span>
+      <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
+        {label}
+      </WizardFieldLabel>
       <div className="relative">
         <input
           ref={inputRef}
@@ -859,7 +1093,10 @@ function InputField({
           min={min}
           max={max}
           onFocus={onFocus}
+          onBlur={onBlur}
+          onKeyDown={onKeyDown}
           autoComplete={autoComplete}
+          enterKeyHint={enterKeyHint}
           onChange={(e) => onChange(e.target.value)}
           className={`w-full rounded-xl border px-4 py-3.5 pr-10 text-base text-cdl-fg shadow-cdl outline-none transition-colors placeholder:text-cdl-faint focus:border-cdl-accent-border ${fieldCompletionClass(completion)}`}
         />
@@ -874,59 +1111,172 @@ function QuantityField({
   value,
   onChange,
   className = '',
-  placeholder = '0',
+  placeholder = '',
   min = 0,
   disabled = false,
   completion,
+  blankZero = false,
+  allowEmpty = false,
+  required,
+  requiredLabel,
+  inputRef,
+  onCommit,
+  enterKeyHint,
+  guestField,
+  advanceOnCheck = false,
+  advanceLabel,
+  advanceKey,
+  inputId,
+  nativeAdvanceTargetId,
 }: {
   label: string
-  value: number
-  onChange: (value: number) => void
+  value: number | null
+  onChange: (value: number | null) => void
   className?: string
   placeholder?: string
   min?: number
   disabled?: boolean
   completion?: FieldCompletion
+  blankZero?: boolean
+  allowEmpty?: boolean
+  required?: boolean
+  requiredLabel?: string
+  inputRef?: React.RefObject<HTMLInputElement | null>
+  onCommit?: (value: number | null) => void
+  enterKeyHint?: React.HTMLAttributes<HTMLInputElement>['enterKeyHint']
+  guestField?: boolean
+  advanceOnCheck?: boolean
+  advanceLabel?: string
+  advanceKey?: string
+  inputId?: string
+  nativeAdvanceTargetId?: string
 }) {
-  const [draft, setDraft] = useState(String(value))
+  const displayValue = (next: number | null) => {
+    if (next === null) return ''
+    if (blankZero && next === 0) return ''
+    return String(next)
+  }
+  const [draft, setDraft] = useState(() => displayValue(value))
   const [focused, setFocused] = useState(false)
+  const [seenValue, setSeenValue] = useState(value)
+  const [seenBlankZero, setSeenBlankZero] = useState(blankZero)
+  if (!focused && (seenValue !== value || seenBlankZero !== blankZero)) {
+    setSeenValue(value)
+    setSeenBlankZero(blankZero)
+    setDraft(displayValue(value))
+  }
 
-  useEffect(() => {
-    if (!focused) setDraft(String(value))
-  }, [value, focused])
+  function commitDraft(): number | null {
+    if (draft === '') {
+      if (allowEmpty) {
+        onChange(null)
+        setDraft('')
+        return null
+      }
+      onChange(min)
+      setDraft(displayValue(min))
+      return min
+    }
+    const parsed = Number.parseInt(draft, 10)
+    const next = Number.isFinite(parsed) ? Math.max(min, parsed) : min
+    onChange(next)
+    setDraft(displayValue(next))
+    return next
+  }
+
+  function commitOnly() {
+    let next: number | null = null
+    flushSync(() => {
+      next = commitDraft()
+    })
+    return next
+  }
+
+  function commitAndAdvance() {
+    const next = commitOnly()
+    onCommit?.(next)
+  }
 
   return (
-    <label className={`flex flex-col gap-2 ${className}`}>
-      <span className="cdl-eyebrow">{label}</span>
+    <div className={`flex flex-col gap-2 ${className}`}>
+      <WizardFieldLabel required={required} requiredLabel={requiredLabel}>
+        {label}
+      </WizardFieldLabel>
       <div className="relative">
         <input
+          id={inputId}
+          ref={inputRef}
           type="text"
           inputMode="numeric"
+          pattern="[0-9]*"
+          enterKeyHint={enterKeyHint}
+          data-guest-field={guestField ? '' : undefined}
+          data-guest-input={advanceKey || undefined}
           value={draft}
           placeholder={placeholder}
           disabled={disabled}
           onFocus={() => setFocused(true)}
-          onBlur={() => {
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter') return
+            event.preventDefault()
+            event.stopPropagation()
+            if (nativeAdvanceTargetId && completion === 'filled') {
+              const nextInput = document.getElementById(nativeAdvanceTargetId)
+              if (nextInput instanceof HTMLInputElement) {
+                // Focus first, still inside this trusted keydown.
+                // Blur of the current field then commits without focusWizardField.
+                nextInput.focus({ preventScroll: true })
+                requestAnimationFrame(() => {
+                  const reduced = window.matchMedia?.(
+                    '(prefers-reduced-motion: reduce)',
+                  ).matches
+                  nextInput.scrollIntoView({
+                    behavior: reduced ? 'auto' : 'smooth',
+                    block: 'center',
+                  })
+                })
+                return
+              }
+            }
+            commitAndAdvance()
+          }}
+          onBlur={(event) => {
             setFocused(false)
-            const next =
-              draft === ''
-                ? min
-                : Math.max(min, Number.parseInt(draft, 10) || min)
-            onChange(next)
-            setDraft(String(next))
+            const next = commitDraft()
+            // Native-label checks must not call onCommit: that path
+            // uses focusWizardField and kills the iOS keyboard session.
+            if (nativeAdvanceTargetId) return
+            if (shouldAdvanceFromFieldBlur(event.relatedTarget)) {
+              onCommit?.(next)
+            }
           }}
           onChange={(e) => {
             const raw = e.target.value.replace(/\D/g, '')
             setDraft(raw)
-            if (raw !== '') {
-              onChange(Math.max(min, Number.parseInt(raw, 10) || min))
+            if (raw === '') {
+              if (allowEmpty) onChange(null)
+              return
             }
+            const parsed = Number.parseInt(raw, 10)
+            onChange(Number.isFinite(parsed) ? Math.max(min, parsed) : min)
           }}
           className={`w-full rounded-xl border px-4 py-3.5 pr-10 text-base text-cdl-fg shadow-cdl outline-none transition-colors placeholder:text-cdl-faint focus:border-cdl-accent-border disabled:cursor-not-allowed disabled:opacity-40 ${fieldCompletionClass(completion)}`}
         />
-        <FieldCheck show={completion === 'filled'} />
+        <FieldCheck
+          show={completion === 'filled'}
+          nativeTargetId={nativeAdvanceTargetId}
+          onAdvance={
+            !nativeAdvanceTargetId &&
+            advanceOnCheck &&
+            completion === 'filled'
+              ? commitAndAdvance
+              : undefined
+          }
+          advanceLabel={advanceLabel}
+          advanceKey={advanceKey}
+        />
       </div>
-    </label>
+    </div>
   )
 }
 
@@ -1108,6 +1458,18 @@ export default function QuoteWizardCore({
   )
   visitedAdditionalCategoriesRef.current = visitedAdditionalCategories
   const grillPhotoInputRef = useRef<HTMLInputElement>(null)
+  const firstNameInputRef = useRef<HTMLInputElement>(null)
+  const lastNameInputRef = useRef<HTMLInputElement>(null)
+  const phoneInputRef = useRef<HTMLInputElement>(null)
+  const emailInputRef = useRef<HTMLInputElement>(null)
+  const adultsInputRef = useRef<HTMLInputElement>(null)
+  const childrenUnder3InputRef = useRef<HTMLInputElement>(null)
+  const children4To12InputRef = useRef<HTMLInputElement>(null)
+  const guestAddressTransitionRef = useRef<HTMLDivElement>(null)
+  const addressEntryRef = useRef<HTMLDivElement>(null)
+  const streetNumberInputRef = useRef<HTMLInputElement>(null)
+  const addressSearchInputRef = useRef<HTMLInputElement>(null)
+  const [startTimePickerOpen, setStartTimePickerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveErrorInfo, setSaveErrorInfo] = useState<SaveQuoteErrorInfo | null>(
     null,
@@ -1157,6 +1519,7 @@ export default function QuoteWizardCore({
   )
   const wizardSteps = quoteStrings.wizardSteps
   const w = quoteStrings.wizard
+  const requiredLabel = tCommon(uiLocale, 'required')
 
   const debugCompanyId =
     publicContext?.companyId?.trim() ||
@@ -1442,11 +1805,9 @@ export default function QuoteWizardCore({
     [packages],
   )
 
-  const fromWithSidesSection = useMemo(
-    () =>
-      packagesWithSides.some((pkg) => pkg.id === state.packageId),
-    [packagesWithSides, state.packageId],
-  )
+  const fromWithSidesSection = selectedPackage
+    ? getPublicPackageSidesGroup(selectedPackage) === 'with_sides'
+    : false
 
   const optionGroupsForPackage = useMemo(() => {
     const cache = new Map<string, PackageOptionGroup[]>()
@@ -1503,14 +1864,103 @@ export default function QuoteWizardCore({
     selectedPackage,
   ])
 
+  const blockedCatalogItemIdsWithoutSelections = useMemo(() => {
+    if (!state.packageId || !selectedPackage) return []
+    return getBlockedCatalogItemIds(
+      state.packageId,
+      flatOptionGroups,
+      isCustomPackage(selectedPackage),
+      {
+        packageItems,
+        packageSideItems,
+        groupItems: flatOptionGroupItems,
+        selectedPackageOptions: {},
+      },
+    )
+  }, [
+    state.packageId,
+    flatOptionGroups,
+    flatOptionGroupItems,
+    packageItems,
+    packageSideItems,
+    selectedPackage,
+  ])
+
+  const nonChargeableExtraIds = useMemo(
+    () =>
+      getNonChargeableExtraIds(
+        blockedCatalogItemIds,
+        getUniversalIncludedCatalogIds(itemCatalog, selectedPackage),
+      ),
+    [blockedCatalogItemIds, itemCatalog, selectedPackage],
+  )
+
   const visibleAdditionalItems = useMemo(
-    () => getVisiblePublicExtraItems(itemCatalog, blockedCatalogItemIds),
-    [itemCatalog, blockedCatalogItemIds],
+    () =>
+      filterPublicExtraItemsForPackage(
+        getVisiblePublicExtraItems(itemCatalog, []),
+        selectedPackage,
+      ),
+    [itemCatalog, selectedPackage],
+  )
+
+  const extraAvailabilityByItemId = useMemo(
+    () =>
+      buildExtraAvailabilityByItemId(
+        visibleAdditionalItems.map((item) => item.id),
+        nonChargeableExtraIds,
+        getSelectedInPackageCatalogIds(
+          blockedCatalogItemIds,
+          blockedCatalogItemIdsWithoutSelections,
+        ),
+      ),
+    [
+      visibleAdditionalItems,
+      nonChargeableExtraIds,
+      blockedCatalogItemIds,
+      blockedCatalogItemIdsWithoutSelections,
+    ],
+  )
+
+  const waiterItem = useMemo(
+    () => itemCatalog.find((item) => isWaiterServiceItem(item)) ?? null,
+    [itemCatalog],
+  )
+  const disposableKitItem = useMemo(
+    () => itemCatalog.find((item) => isDisposableKitItem(item)) ?? null,
+    [itemCatalog],
+  )
+  const grillCatalogItem = useMemo(
+    () => itemCatalog.find((item) => isGrillRentalAdditional(item)) ?? null,
+    [itemCatalog],
+  )
+  const waiterUnitPrice = waiterItem
+    ? getAdditionalUnitPrice(waiterItem)
+    : 250
+  const grillUnitPrice = grillCatalogItem
+    ? getAdditionalUnitPrice(grillCatalogItem)
+    : 100
+  const grillRentalDisplayUrl = grillCatalogItem
+    ? getCatalogItemImageUrl(grillCatalogItem)
+    : null
+
+  const serviceSupplyItems = useMemo(
+    () => [
+      ...(waiterItem ? [waiterItem] : []),
+      ...(disposableKitItem && !fromWithSidesSection ? [disposableKitItem] : []),
+    ],
+    [waiterItem, disposableKitItem, fromWithSidesSection],
   )
 
   const additionalItemsByCategory = useMemo(
-    () => groupAdditionalItemsByCategory(visibleAdditionalItems, uiLocale),
-    [visibleAdditionalItems, uiLocale],
+    () =>
+      appendServiceSupplyGroup(
+        buildPublicAdditionalDisplayGroups(visibleAdditionalItems, uiLocale),
+        serviceSupplyItems,
+        uiLocale,
+        SERVICES_SUPPLIES_CATEGORY_KEY,
+      ),
+    [visibleAdditionalItems, serviceSupplyItems, uiLocale],
   )
 
   const selectedCountByCategory = useMemo(() => {
@@ -1525,16 +1975,42 @@ export default function QuoteWizardCore({
   }, [additionalItemsByCategory, state.additionals])
 
   useEffect(() => {
-    if (blockedCatalogItemIds.length === 0) return
+    if (nonChargeableExtraIds.length === 0) return
     setState((prev) => {
       const { additionals, removedIds } = pruneBlockedAdditionalSelections(
         prev.additionals,
-        blockedCatalogItemIds,
+        nonChargeableExtraIds,
       )
       if (removedIds.length === 0) return prev
       return { ...prev, additionals }
     })
-  }, [blockedCatalogItemIds])
+  }, [nonChargeableExtraIds])
+
+  useEffect(() => {
+    setState((prev) => {
+      const next = { ...prev.additionals }
+      let changed = false
+      if (grillCatalogItem?.id && next[grillCatalogItem.id]) {
+        delete next[grillCatalogItem.id]
+        changed = true
+      }
+      if (
+        disposableKitItem?.id &&
+        fromWithSidesSection &&
+        next[disposableKitItem.id]
+      ) {
+        delete next[disposableKitItem.id]
+        changed = true
+      }
+      if (!changed) return prev
+      return { ...prev, additionals: next }
+    })
+  }, [
+    waiterItem?.id,
+    disposableKitItem?.id,
+    grillCatalogItem?.id,
+    fromWithSidesSection,
+  ])
 
   function markAdditionalCategoryVisited(categoryKey: string) {
     if (!categoryKey) return
@@ -1547,6 +2023,7 @@ export default function QuoteWizardCore({
   }
 
   function toggleAdditionalCategory(category: string) {
+    if (category === SUGGESTED_EXTRAS_DISPLAY_KEY) return
     setOpenAdditionalCategories((prev) => {
       const next = new Set(prev)
       if (next.has(category)) {
@@ -1632,12 +2109,12 @@ export default function QuoteWizardCore({
     packageId: state.packageId,
     additionals: previewAdditionals,
     adultCount: state.adultCount,
-    childrenUnder3Count: state.childrenUnder3Count,
-    children4To12Count: state.children4To12Count,
+    childrenUnder3Count: state.childrenUnder3Count ?? 0,
+    children4To12Count: state.children4To12Count ?? 0,
     eventDate: state.eventDate,
     mileageDistance: isPublicMode ? 0 : state.distance,
     grillRentalRequired: state.grillRentalRequired,
-    grillRentalQty: state.grillRentalQty,
+    grillRentalQty: normalizeGrillRentalQty(state.grillRentalRequired),
     reservationPercentage: isPublicMode ? null : state.reservationPercentage,
     language: state.language,
     enabled:
@@ -1699,15 +2176,15 @@ export default function QuoteWizardCore({
 
   const reviewAdditionals = useMemo(
     () =>
-      selectedAdditionalsByCategory.flatMap(({ categoryLabel, items }) =>
+      selectedAdditionalsByCategory.flatMap(({ items }) =>
         items.map(({ item, quantity, unitPrice, perPerson, totalPrice }) => ({
           id: item.id,
           label: getLocalizedAdditionalLabel(item, uiLocale),
-          category: categoryLabel,
+          category: getReviewAdditionalCategoryLabel(item, uiLocale),
           quantity,
           unitPrice,
           totalPrice,
-          imageUrl: getCatalogItemImageUrl(item),
+          imageUrl: getAdditionalImage(item),
           itemType: item.item_type,
           categoryPt: item.category_pt,
           perPerson,
@@ -1768,10 +2245,17 @@ export default function QuoteWizardCore({
   }
 
   useEffect(() => {
-    if (step !== 3) {
+    if (step !== 4) {
       setOpenAdditionalCategories(new Set())
       setAdditionalsReviewPrompt(false)
+      return
     }
+    setVisitedAdditionalCategories((prev) => {
+      if (prev.has(SUGGESTED_EXTRAS_DISPLAY_KEY)) return prev
+      const next = new Set(prev)
+      next.add(SUGGESTED_EXTRAS_DISPLAY_KEY)
+      return next
+    })
   }, [step])
 
   useEffect(() => {
@@ -1780,6 +2264,10 @@ export default function QuoteWizardCore({
     if (!isPublicMode || typeof window === 'undefined') return
     window.scrollTo({ top: 0, behavior: 'auto' })
   }, [isPublicMode, step])
+
+  useEffect(() => {
+    if (step !== 1) setStartTimePickerOpen(false)
+  }, [step])
 
   useEffect(() => {
     if (!isPublicMode) return
@@ -1798,7 +2286,7 @@ export default function QuoteWizardCore({
   }, [isPublicMode, step])
 
   useEffect(() => {
-    if (!isPublicMode || step !== 3) return
+    if (!isPublicMode || step !== 4) return
     let lastY = window.scrollY
     let lastT = performance.now()
     let settleTimer = 0
@@ -1830,7 +2318,7 @@ export default function QuoteWizardCore({
   }, [isPublicMode, step])
 
   useEffect(() => {
-    if (step !== 3) return
+    if (step !== 4) return
     setVisitedAdditionalCategories((prev) =>
       pruneVisitedAdditionalCategories(prev, additionalCategoryKeys),
     )
@@ -1984,6 +2472,10 @@ export default function QuoteWizardCore({
   }
 
   function updateState(patch: Partial<WizardState>) {
+    const changed = (Object.keys(patch) as Array<keyof WizardState>).some(
+      (key) => !Object.is(state[key], patch[key]),
+    )
+    if (!changed) return
     setNavigationIssues([])
     setState((prev) => ({ ...prev, ...patch }))
   }
@@ -2148,10 +2640,12 @@ export default function QuoteWizardCore({
   }, [step])
 
   function setAdditionalQty(itemId: string, quantity: number) {
+    if (!canSetPublicAdditionalQuantity(itemId, nonChargeableExtraIds)) return
     const item = itemCatalog.find((row) => row.id === itemId)
+    const sanitized = sanitizePublicAdditionalQuantity(quantity)
     const normalizedQty = item
-      ? normalizeAdditionalQuantity(item, quantity)
-      : Math.max(0, quantity)
+      ? normalizeAdditionalQuantity(item, sanitized)
+      : sanitized
 
     if (item) {
       markAdditionalCategoryVisited(getAdditionalItemCategoryKey(item))
@@ -2204,23 +2698,62 @@ export default function QuoteWizardCore({
     updateState({ packageId: found?.id ?? packageId, packageSelections: prunedSelections })
   }
 
+  function revealGuestChildrenAfterAdults() {
+    focusWizardField(childrenUnder3InputRef.current)
+  }
+
+  function revealAddressAfterChildren() {
+    focusWizardField(streetNumberInputRef.current)
+  }
+
+  function focusFirstPublicEventIssue() {
+    if (!(state.adultCount > 0)) {
+      focusWizardField(adultsInputRef.current)
+      return
+    }
+    if (!isExplicitNonNegativeInteger(state.childrenUnder3Count)) {
+      guestAddressTransitionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+      childrenUnder3InputRef.current?.focus({ preventScroll: true })
+      return
+    }
+    if (!isExplicitNonNegativeInteger(state.children4To12Count)) {
+      guestAddressTransitionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+      children4To12InputRef.current?.focus({ preventScroll: true })
+      return
+    }
+    if (!state.addressNumber.trim()) {
+      revealAddressAfterChildren()
+      return
+    }
+    focusWizardField(addressSearchInputRef.current)
+  }
+
   function goNext() {
     const categoryKeys = additionalCategoryKeysRef.current
     const visitedCategories = visitedAdditionalCategoriesRef.current
 
-    if (step === 0 || step === 1 || step === 4) {
+    if (step === 0 || step === 1 || step === 2) {
       const issues = getStepIssues(step, stepStatusCtx)
       if (issues.length > 0) {
         setNavigationIssues(issues)
+        if (step === 1 && isPublicMode) {
+          focusFirstPublicEventIssue()
+        }
         return
       }
     }
 
-    if (step === 2 && !state.packageId) {
+    if (step === 3 && !state.packageId) {
       setPackageStepMessage(w.selectPackageToContinue)
       return
     }
-    if (step === 2 && state.packageId && selectedPackage) {
+    if (step === 3 && state.packageId && selectedPackage) {
       if (!isCustomPackage(selectedPackage)) {
         const issues = validatePackageSelections(
           selectableActivePackageOptionGroups,
@@ -2290,7 +2823,7 @@ export default function QuoteWizardCore({
   )
 
   useEffect(() => {
-    if (step !== 2 || process.env.NODE_ENV === 'production') return
+    if (step !== 3 || process.env.NODE_ENV === 'production') return
     console.log('[Etapa Pacote] packages', packages)
     console.log('[Etapa Pacote] packageOptionGroups', flatOptionGroups)
     console.log('[Etapa Pacote] packageOptionGroupItems', allOptionGroupItems)
@@ -2347,29 +2880,21 @@ export default function QuoteWizardCore({
 
   const grillStepPendingIssues = useMemo(() => {
     const issues: string[] = []
-    if (isGrillPhotoRequiredAndMissing(state)) {
-      issues.push(tw(uiLocale, 'grillPendingPhoto'))
-    }
     if (state.grillRentalRequired && state.grillRentalQty <= 0) {
       issues.push(tw(uiLocale, 'grillPendingRentalQty'))
     }
     return issues
-  }, [
-    state.hasGrill,
-    state.grillPhotoStatus,
-    state.grillPhotoUrl,
-    state.grillPhotoReference,
-    state.grillRentalRequired,
-    state.grillRentalQty,
-    uiLocale,
-  ])
+  }, [state.grillRentalRequired, state.grillRentalQty, uiLocale])
+  const grillPhotoGuidanceVisible =
+    state.grillSetupAnswered &&
+    state.hasGrill &&
+    isGrillPhotoRequiredAndMissing(state)
 
   useEffect(() => {
     const previousStep = previousStepRef.current
     previousStepRef.current = step
-    if (step === 2 && previousStep === 1 && !isEditMode) {
-      updateState({ packageId: null, packageSelections: {} })
-    }
+    void previousStep
+    // Keep package/grill/extras selections when moving between BBQ and package.
   }, [step, isEditMode])
 
   const mandatoryPendingSteps = useMemo(
@@ -2429,9 +2954,18 @@ export default function QuoteWizardCore({
     }
 
     if (isPublicMode) {
-      if (!state.publicConsentAccepted || !publicContext?.consentVersion) {
+      if (!state.cancellationPolicyAccepted || !state.publicConsentAccepted || !publicContext?.consentVersion) {
         setSaveErrorInfo(
-          buildSaveQuoteError('validation', new Error(w.consentRequired)),
+          buildSaveQuoteError(
+            'validation',
+            new Error(
+              !state.cancellationPolicyAccepted && !state.publicConsentAccepted
+                ? w.bothConsentsRequired
+                : !state.cancellationPolicyAccepted
+                  ? w.cancellationPolicyRequired
+                  : w.consentRequired,
+            ),
+          ),
         )
         return
       }
@@ -2465,6 +2999,13 @@ export default function QuoteWizardCore({
             consent: {
               accepted: true,
               version: publicContext.consentVersion,
+            },
+            cancellationConsent: {
+              accepted: true,
+              version: CDL_CANCEL_POLICY_VERSION,
+              locale: state.language,
+              acceptedAt:
+                state.cancellationPolicyAcceptedAt || new Date().toISOString(),
             },
             website: '',
           }),
@@ -2528,8 +3069,8 @@ export default function QuoteWizardCore({
       startTime: state.startTime,
       endTime: state.endTime,
       adultCount: state.adultCount,
-      childrenUnder3Count: state.childrenUnder3Count,
-      children4To12Count: state.children4To12Count,
+      childrenUnder3Count: state.childrenUnder3Count ?? 0,
+      children4To12Count: state.children4To12Count ?? 0,
       address: state.address,
       addressNumber: state.addressNumber,
       city: state.city,
@@ -2539,7 +3080,9 @@ export default function QuoteWizardCore({
       grillPhotoRequired: state.grillPhotoRequired,
       grillRentalRequired: state.grillRentalRequired,
       grillRentalQty: state.grillRentalQty,
-      grillNotes: state.grillNotes,
+      grillNotes: isPublicMode
+        ? resolvePublicGrillSystemNotes(state, state.language)
+        : state.grillNotes,
       baseLocation: state.baseLocation,
       distance: state.distance,
       pricing: commercialRules,
@@ -2812,8 +3355,22 @@ export default function QuoteWizardCore({
                 onChange={(value) =>
                   updateContactIdentity('customerFirstName', value)
                 }
+                inputRef={firstNameInputRef}
                 autoComplete="given-name"
+                enterKeyHint={isPublicMode ? 'next' : undefined}
+                onKeyDown={
+                  isPublicMode
+                    ? (event) => {
+                        if (event.key !== 'Enter') return
+                        event.preventDefault()
+                        event.stopPropagation()
+                        focusWizardField(lastNameInputRef.current)
+                      }
+                    : undefined
+                }
                 completion={getFieldCompletion(state.customerFirstName)}
+                required={isPublicMode}
+                requiredLabel={requiredLabel}
               />
               <InputField
                 label={w.lastName}
@@ -2821,13 +3378,46 @@ export default function QuoteWizardCore({
                 onChange={(value) =>
                   updateContactIdentity('customerLastName', value)
                 }
+                inputRef={lastNameInputRef}
                 autoComplete="family-name"
+                enterKeyHint={isPublicMode ? 'next' : undefined}
+                onKeyDown={
+                  isPublicMode
+                    ? (event) => {
+                        if (event.key !== 'Enter') return
+                        event.preventDefault()
+                        event.stopPropagation()
+                        focusWizardField(phoneInputRef.current)
+                      }
+                    : undefined
+                }
+                onBlur={
+                  isPublicMode
+                    ? (event) => {
+                        if (!state.customerLastName.trim()) return
+                        if (!shouldAdvanceFromFieldBlur(event.relatedTarget)) {
+                          return
+                        }
+                        focusWizardField(phoneInputRef.current)
+                      }
+                    : undefined
+                }
                 completion={getFieldCompletion(state.customerLastName)}
+                required={isPublicMode}
+                requiredLabel={requiredLabel}
               />
               {isPublicMode ? (
                 <PublicPhoneField
                   value={state.customerDraftPhone}
                   language={uiLocale}
+                  required
+                  requiredLabel={requiredLabel}
+                  inputRef={phoneInputRef}
+                  allowedCountries={publicContext?.allowedCountries}
+                  branchCountry={publicContext?.branchCountry}
+                  onValidAdvance={() =>
+                    focusWizardField(emailInputRef.current)
+                  }
                   onChange={(value) =>
                     updateState({
                       customerDraftPhone: value,
@@ -2865,6 +3455,18 @@ export default function QuoteWizardCore({
                 })`}
                 value={state.customerDraftEmail}
                 type="email"
+                inputRef={emailInputRef}
+                enterKeyHint={isPublicMode ? 'next' : undefined}
+                onKeyDown={
+                  isPublicMode
+                    ? (event) => {
+                        if (event.key !== 'Enter') return
+                        event.preventDefault()
+                        event.stopPropagation()
+                        goNext()
+                      }
+                    : undefined
+                }
                 onChange={(value) =>
                   updateState({ customerDraftEmail: value })
                 }
@@ -2919,7 +3521,26 @@ export default function QuoteWizardCore({
                   minDate={
                     isPublicMode ? calendarDateInTimeZone() : undefined
                   }
+                  required={isPublicMode}
+                  requiredLabel={requiredLabel}
+                  onCommit={
+                    isPublicMode
+                      ? () => {
+                          requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                              setStartTimePickerOpen(true)
+                            })
+                          })
+                        }
+                      : undefined
+                  }
                 />
+                {isPublicMode ? (
+                  <SpecialEventDateNotice
+                    eventDate={state.eventDate}
+                    language={uiLocale}
+                  />
+                ) : null}
                 <TimePickerField
                   label={w.startTime}
                   language={uiLocale}
@@ -2935,6 +3556,20 @@ export default function QuoteWizardCore({
                     }))
                   }
                   completion={getFieldCompletion(state.startTime)}
+                  required={isPublicMode}
+                  requiredLabel={requiredLabel}
+                  open={isPublicMode ? startTimePickerOpen : undefined}
+                  onOpenChange={
+                    isPublicMode ? setStartTimePickerOpen : undefined
+                  }
+                  emptyDefaultHour={isPublicMode ? 11 : 18}
+                  onCommit={
+                    isPublicMode
+                      ? () => {
+                          focusWizardField(adultsInputRef.current)
+                        }
+                      : undefined
+                  }
                 />
                 <div>
                   <TimePickerField
@@ -2954,25 +3589,150 @@ export default function QuoteWizardCore({
                   </p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              {isPublicMode ? (
+                <p
+                  data-service-timing-hint-public
+                  className="max-w-full text-pretty text-xs leading-relaxed text-cdl-subtle"
+                >
+                  {w.serviceTimingHintPublic}
+                </p>
+              ) : null}
+              <div
+                ref={guestAddressTransitionRef}
+                data-guest-address-transition
+                className="guest-address-transition guest-counts-and-address"
+              >
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
                 <QuantityField
                   label={w.adults}
                   value={state.adultCount}
-                  onChange={(v) => updateState({ adultCount: v })}
+                  onChange={(v) => updateState({ adultCount: v ?? 0 })}
                   completion={getFieldCompletion(state.adultCount)}
+                  blankZero={isPublicMode}
+                  placeholder={isPublicMode ? w.publicAdultsPlaceholder : ''}
+                  required={isPublicMode}
+                  requiredLabel={requiredLabel}
+                  inputRef={adultsInputRef}
+                  inputId="public-event-adults"
+                  guestField
+                  enterKeyHint={isPublicMode ? 'next' : undefined}
+                  advanceOnCheck={isPublicMode}
+                  advanceLabel={tCommon(uiLocale, 'next')}
+                  advanceKey="adults"
+                  nativeAdvanceTargetId={
+                    isPublicMode ? 'public-event-child-under-3' : undefined
+                  }
+                  onCommit={
+                    isPublicMode
+                      ? (value) => {
+                          if (value == null || value <= 0) return
+                          revealGuestChildrenAfterAdults()
+                        }
+                      : undefined
+                  }
                 />
-                <QuantityField
-                  label={w.childrenUnder3}
-                  value={state.childrenUnder3Count}
-                  onChange={(v) => updateState({ childrenUnder3Count: v })}
-                />
-                <QuantityField
-                  label={w.children4to12}
-                  value={state.children4To12Count}
-                  onChange={(v) => updateState({ children4To12Count: v })}
-                />
+                <div data-guest-children-under-3>
+                  <QuantityField
+                    label={w.childrenUnder3}
+                    value={state.childrenUnder3Count}
+                    onChange={(v) => updateState({ childrenUnder3Count: v })}
+                    completion={getExplicitCountCompletion(
+                      state.childrenUnder3Count,
+                    )}
+                    blankZero={false}
+                    allowEmpty={isPublicMode}
+                    placeholder={isPublicMode ? w.publicChildrenPlaceholder : ''}
+                    required={isPublicMode}
+                    requiredLabel={requiredLabel}
+                    inputRef={childrenUnder3InputRef}
+                    inputId="public-event-child-under-3"
+                    guestField
+                    enterKeyHint={isPublicMode ? 'next' : undefined}
+                    advanceOnCheck={isPublicMode}
+                    advanceLabel={tCommon(uiLocale, 'next')}
+                    advanceKey="children-under-3"
+                    nativeAdvanceTargetId={
+                      isPublicMode ? 'public-event-child-4-12' : undefined
+                    }
+                    onCommit={
+                      isPublicMode
+                        ? (value) => {
+                            if (!isExplicitNonNegativeInteger(value)) return
+                            focusWizardField(children4To12InputRef.current)
+                          }
+                        : undefined
+                    }
+                  />
+                </div>
+                <div data-guest-children-4-12>
+                  <QuantityField
+                    label={w.children4to12}
+                    value={state.children4To12Count}
+                    onChange={(v) => updateState({ children4To12Count: v })}
+                    completion={getExplicitCountCompletion(
+                      state.children4To12Count,
+                    )}
+                    blankZero={false}
+                    allowEmpty={isPublicMode}
+                    placeholder={isPublicMode ? w.publicChildrenPlaceholder : ''}
+                    required={isPublicMode}
+                    requiredLabel={requiredLabel}
+                    inputRef={children4To12InputRef}
+                    inputId="public-event-child-4-12"
+                    guestField
+                    enterKeyHint={isPublicMode ? 'next' : undefined}
+                    advanceOnCheck={isPublicMode}
+                    advanceLabel={tCommon(uiLocale, 'next')}
+                    advanceKey="children-4-12"
+                    nativeAdvanceTargetId={
+                      isPublicMode ? 'public-event-street-number' : undefined
+                    }
+                    onCommit={
+                      isPublicMode
+                        ? (value) => {
+                            if (!isExplicitNonNegativeInteger(value)) return
+                            revealAddressAfterChildren()
+                          }
+                        : undefined
+                    }
+                  />
+                </div>
               </div>
+              </div>
+              <div
+                ref={addressEntryRef}
+                data-event-address-entry
+                className="space-y-4"
+              >
+              {/* Without this the address reads as more guest fields. */}
+              <p
+                data-event-address-section
+                className="wizard-section-label"
+              >
+                {w.eventAddressSection}
+              </p>
               <AddressAutocompleteFields
+                stackPrimaryFields={isPublicMode}
+                searchInputRef={addressSearchInputRef}
+                numberInputRef={streetNumberInputRef}
+                numberInputId="public-event-street-number"
+                showNumberAdvanceCheck={isPublicMode}
+                onNumberCommit={
+                  isPublicMode
+                    ? (value) => {
+                        if (!value.trim()) return
+                        focusWizardField(addressSearchInputRef.current)
+                      }
+                    : undefined
+                }
+                onPlaceSelected={
+                  isPublicMode
+                    ? ({ addressNumber }) => {
+                        if (addressNumber.trim()) return
+                        focusWizardField(streetNumberInputRef.current)
+                      }
+                    : undefined
+                }
                 values={{
                   address: state.address,
                   addressNumber: state.addressNumber,
@@ -2999,13 +3759,33 @@ export default function QuoteWizardCore({
                 locationBias={
                   isPublicMode ? publicContext?.locationBias ?? null : null
                 }
+                markRequired={isPublicMode}
+                requiredLabel={requiredLabel}
+                placeholders={
+                  isPublicMode
+                    ? {
+                        search: w.publicAddressPlaceholder,
+                        number: w.publicAddressNumberPlaceholder,
+                        city: w.publicCityPlaceholder,
+                        state: w.publicStatePlaceholder,
+                        postal: w.publicPostalPlaceholder,
+                      }
+                    : undefined
+                }
               />
+              </div>
             </div>
           </SectionCard>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <div className="space-y-4">
+            {isPublicMode ? (
+              <SpecialEventDateNotice
+                eventDate={state.eventDate}
+                language={uiLocale}
+              />
+            ) : null}
             {packages.length === 0 ? (
               <div className="rounded-2xl border border-red-500/40 bg-cdl-surface p-6 text-sm text-red-300">
                 {fetchErrors.some((e) => /pacote|package/i.test(e))
@@ -3026,6 +3806,36 @@ export default function QuoteWizardCore({
                 onSelectionChange={handlePackageSelectionChange}
                 pendingSelectionGroupIds={pendingSelectionGroupIds}
                 onSelect={handlePackageSelect}
+                eventDate={state.eventDate}
+                specialDatePricing={{
+                  active: isSpecialCdlEventDate(state.eventDate),
+                  surchargePercent: commercialRules.holidaySurchargePercent,
+                  minimumOrderAmount: resolveApplicableMinimum(
+                    parseEventDateParts(state.eventDate),
+                    commercialRules,
+                  ).amount,
+                }}
+                disposableKitOffer={
+                  !fromWithSidesSection && disposableKitItem ? (
+                    <NoSidesDisposableKitOffer
+                      selected={
+                        (state.additionals[disposableKitItem.id] ?? 0) > 0
+                      }
+                      language={uiLocale}
+                      priceLabel={tw(uiLocale, 'disposableKitPrice', {
+                        price: `US$${Math.round(
+                          getAdditionalUnitPrice(disposableKitItem) || 3,
+                        )}`,
+                      })}
+                      onToggle={(selected) =>
+                        setAdditionalQty(
+                          disposableKitItem.id,
+                          selected ? 1 : 0,
+                        )
+                      }
+                    />
+                  ) : null
+                }
               />
             ) : (
               <QuotePackageStepExplorer
@@ -3056,6 +3866,24 @@ export default function QuoteWizardCore({
               />
             )}
 
+            {!isPublicMode &&
+            state.packageId &&
+            !fromWithSidesSection &&
+            disposableKitItem ? (
+              <NoSidesDisposableKitOffer
+                selected={(state.additionals[disposableKitItem.id] ?? 0) > 0}
+                language={uiLocale}
+                priceLabel={tw(uiLocale, 'disposableKitPrice', {
+                  price: `US$${Math.round(
+                    getAdditionalUnitPrice(disposableKitItem) || 3,
+                  )}`,
+                })}
+                onToggle={(selected) =>
+                  setAdditionalQty(disposableKitItem.id, selected ? 1 : 0)
+                }
+              />
+            ) : null}
+
             {!isPublicMode && process.env.NODE_ENV !== 'production' ? (
               <PackageOptionsDebugPanel
                 companyId={debugCompanyId}
@@ -3071,7 +3899,7 @@ export default function QuoteWizardCore({
           </div>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <div className="min-w-0 space-y-6">
             <p className="text-sm text-cdl-muted">
               {quoteStrings.additionalsStepHint}
@@ -3084,19 +3912,24 @@ export default function QuoteWizardCore({
               <div className="space-y-4">
                 {additionalItemsByCategory.map(
                   ({ categoryKey, categoryLabel, items }) => (
+                  <Fragment key={categoryKey}>
                   <AdditionalCategorySection
-                    key={categoryKey}
                     categoryKey={categoryKey}
                     categoryLabel={
                       additionalCategoryDisplayLabels.get(categoryKey) ??
                       categoryLabel
                     }
                     items={items}
-                    expanded={openAdditionalCategories.has(categoryKey)}
+                    expanded={
+                      categoryKey === SUGGESTED_EXTRAS_DISPLAY_KEY ||
+                      openAdditionalCategories.has(categoryKey)
+                    }
                     selectedCount={selectedCountByCategory[categoryKey] ?? 0}
                     visited={visitedAdditionalCategories.has(categoryKey)}
                     emphasize={emphasizedAdditionalCategory === categoryKey}
+                    featured={categoryKey === SUGGESTED_EXTRAS_DISPLAY_KEY}
                     quantities={state.additionals}
+                    extraAvailabilityByItemId={extraAvailabilityByItemId}
                     billableGuestCount={billableGuestCount}
                     language={uiLocale}
                     onToggle={() => toggleAdditionalCategory(categoryKey)}
@@ -3105,6 +3938,13 @@ export default function QuoteWizardCore({
                     onExpose={() => handleAdditionalCategoryExpose(categoryKey)}
                     onChangeQty={setAdditionalQty}
                   />
+                  {categoryKey === SUGGESTED_EXTRAS_DISPLAY_KEY ? (
+                    <PostSuggestedCategoryHint
+                      title={w.postSuggestedCategoryHintTitle}
+                      body={w.postSuggestedCategoryHintBody}
+                    />
+                  ) : null}
+                  </Fragment>
                 ),
                 )}
               </div>
@@ -3112,7 +3952,7 @@ export default function QuoteWizardCore({
           </div>
         )}
 
-        {step === 4 && (
+        {step === 2 && (
           <div className="space-y-6">
             {grillStepPendingIssues.length > 0 ? (
               <section className="rounded-2xl border border-cdl-action/40 bg-cdl-red-soft p-5 shadow-cdl sm:p-6">
@@ -3184,6 +4024,8 @@ export default function QuoteWizardCore({
                                   grillPhotoAnswered: true,
                                   grillPhotoUrl: null,
                                   grillPhotoReference: null,
+                                  grillRentalRequired: true,
+                                  grillRentalQty: 1,
                                 },
                           )
                         }
@@ -3199,6 +4041,17 @@ export default function QuoteWizardCore({
                   })}
                 </div>
               </fieldset>
+
+              {waiterItem ? (
+                <div className="sm:col-span-2" data-bbq-waiter-slot>
+                  <QuoteBbqWaiterPanel
+                    quantity={state.additionals[waiterItem.id] ?? 0}
+                    unitPrice={waiterUnitPrice}
+                    language={uiLocale}
+                    onChangeQty={(qty) => setAdditionalQty(waiterItem.id, qty)}
+                  />
+                </div>
+              ) : null}
 
               {isEditMode ? (
                 <div className="sm:col-span-2">
@@ -3245,9 +4098,22 @@ export default function QuoteWizardCore({
                     className="mt-3 max-h-48 rounded-xl border border-cdl-border object-cover"
                   />
                 ) : null}
-                <p className="mt-3 rounded-xl border border-cdl-border-subtle bg-cdl-inset px-4 py-3 text-sm leading-relaxed text-cdl-text-secondary">
-                  {w.grillPhotoHint}
-                </p>
+                {grillPhotoGuidanceVisible ? (
+                  <div
+                    data-grill-photo-guidance
+                    className="mt-3 space-y-2"
+                  >
+                    <p className="text-sm leading-relaxed text-cdl-fg">
+                      {w.grillPhotoGuidancePrimary}
+                    </p>
+                    <p
+                      data-grill-photo-guidance-continue
+                      className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-sm leading-relaxed text-amber-950"
+                    >
+                      {w.grillPhotoGuidanceContinue}
+                    </p>
+                  </div>
+                ) : null}
                 {publicUploadError ? (
                   <p className="mt-3 text-sm text-cdl-action" role="alert">
                     {publicUploadError}
@@ -3257,37 +4123,29 @@ export default function QuoteWizardCore({
               ) : null}
 
               {state.grillSetupAnswered && !state.hasGrill ? (
-                <>
-                  <div className="sm:col-span-1">
-                    <CheckboxField
-                      label={w.grillRentalRequired}
-                      checked={state.grillRentalRequired}
-                      onChange={(value) =>
-                        updateState({
-                          grillRentalRequired: value,
-                          grillRentalQty: value
-                            ? Math.max(1, state.grillRentalQty)
-                            : 0,
-                        })
-                      }
+                <div
+                  className="sm:col-span-2 rounded-2xl border border-cdl-border bg-cdl-inset p-5"
+                  data-grill-rental
+                  data-grill-rental-mandatory="true"
+                >
+                  <p className="cdl-eyebrow">{w.grillRentalMandatory}</p>
+                  <p className="mt-2 text-sm font-semibold text-cdl-title">
+                    {w.grillRentalFixedQty}
+                  </p>
+                  <p className="mt-1 text-lg font-black text-[var(--brand-primary)]">
+                    {`US$${grillUnitPrice.toFixed(0)}`}
+                  </p>
+                  {grillRentalDisplayUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={grillRentalDisplayUrl}
+                      alt=""
+                      className="mt-3 max-h-48 w-full rounded-xl border border-cdl-border object-cover"
                     />
-                  </div>
-                  <QuantityField
-                    label={w.grillRentalQty}
-                    value={state.grillRentalQty}
-                    min={state.grillRentalRequired ? 1 : 0}
-                    disabled={!state.grillRentalRequired}
-                    placeholder={state.grillRentalRequired ? '1' : '0'}
-                    onChange={(value) =>
-                      updateState({
-                        grillRentalQty: state.grillRentalRequired
-                          ? Math.max(1, value)
-                          : 0,
-                      })
-                    }
-                  />
-                </>
+                  ) : null}
+                </div>
               ) : null}
+              {!isPublicMode ? (
               <div className="sm:col-span-2">
                 <label className="flex flex-col gap-2">
                   <span className="cdl-eyebrow">
@@ -3302,6 +4160,7 @@ export default function QuoteWizardCore({
                   />
                 </label>
               </div>
+              ) : null}
             </div>
           </SectionCard>
           </div>
@@ -3341,8 +4200,11 @@ export default function QuoteWizardCore({
                 'USD'
               }
               language={uiLocale}
+              grillDefaultImageUrl={grillRentalDisplayUrl}
               consentLabel={publicContext?.consentLabel || ''}
               privacyUrl={publicContext?.privacyUrl}
+              cancellationPolicyAccepted={state.cancellationPolicyAccepted}
+              cancellationPolicyLabel={w.cancellationPolicyAccept}
               mileageReviewRequired={
                 pricingPreview.data?.mileage?.status === 'pending_review'
               }
@@ -3360,6 +4222,17 @@ export default function QuoteWizardCore({
                   publicConsentAccepted: accepted,
                   publicConsentVersion:
                     publicContext?.consentVersion ?? null,
+                })
+              }
+              onCancellationPolicyChange={(accepted) =>
+                updateState({
+                  cancellationPolicyAccepted: accepted,
+                  cancellationPolicyVersion: accepted
+                    ? CDL_CANCEL_POLICY_VERSION
+                    : null,
+                  cancellationPolicyAcceptedAt: accepted
+                    ? new Date().toISOString()
+                    : null,
                 })
               }
               onGoToStep={(nextStep) => {

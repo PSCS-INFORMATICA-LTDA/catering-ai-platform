@@ -5,6 +5,7 @@ import {
   type PackageSideItem,
 } from '@/Lib/packageConfiguration'
 import { resolveCatalogItemDisplayLabel } from '@/Lib/cdlPackageItemI18n'
+import { resolveSausageDisplayLabel } from '@/Lib/publicQuote/sausageOptions'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 import { tw } from '@/Lib/quoteTranslations'
 
@@ -65,6 +66,7 @@ export function getOptionItemLabel(
   language: QuoteLanguage = 'pt',
 ): string {
   return (
+    resolveSausageDisplayLabel(item, language) ||
     resolveCatalogItemDisplayLabel(
       {
         pt: item.label_pt,
@@ -73,7 +75,8 @@ export function getOptionItemLabel(
         fallback: item.option_item_key,
       },
       language,
-    ) || '—'
+    ) ||
+    '—'
   )
 }
 
@@ -107,6 +110,17 @@ export function isCustomPackage(
 
 export function isRequiredOptionGroup(group: PackageOptionGroup): boolean {
   return group.required === true
+}
+
+export function areRequiredPackageOptionsComplete(
+  groups: ReadonlyArray<PackageOptionGroup>,
+  selections: Record<string, string>,
+): boolean {
+  const required = groups.filter(
+    (group) => isRequiredOptionGroup(group) && (group.items?.length ?? 0) > 0,
+  )
+  if (required.length === 0) return false
+  return required.every((group) => Boolean(selections[group.id]?.trim()))
 }
 
 export function hasPackageIncludedChoices(
