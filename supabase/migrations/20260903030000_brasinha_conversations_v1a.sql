@@ -1,6 +1,8 @@
 -- Brasinha V1A conversation persistence.
 -- Additive only. DEV target: yasprgtlqclwsjcshtls
 -- No DROP. No destructive rename. Does not touch quotes, invoices, or payments.
+-- Composite (conversation_id, company_id) FK keeps message.company_id
+-- equal to the parent conversation.company_id in the database.
 
 CREATE TABLE IF NOT EXISTS public.brasinha_conversations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -13,12 +15,13 @@ CREATE TABLE IF NOT EXISTS public.brasinha_conversations (
     CHECK (handoff_status IN ('AI_ACTIVE', 'HUMAN_REVIEW_REQUIRED', 'HUMAN_ACTIVE', 'CLOSED')),
   handoff_reason text,
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT brasinha_conversations_id_company_key UNIQUE (id, company_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.brasinha_messages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  conversation_id uuid NOT NULL REFERENCES public.brasinha_conversations(id),
+  conversation_id uuid NOT NULL,
   company_id uuid NOT NULL REFERENCES public.companies(id),
   channel text NOT NULL,
   direction text NOT NULL CHECK (direction IN ('inbound', 'outbound')),
@@ -26,7 +29,10 @@ CREATE TABLE IF NOT EXISTS public.brasinha_messages (
   language text NOT NULL CHECK (language IN ('pt', 'en', 'es')),
   content text NOT NULL,
   traces jsonb NOT NULL DEFAULT '[]'::jsonb,
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT brasinha_messages_conversation_company_fkey
+    FOREIGN KEY (conversation_id, company_id)
+    REFERENCES public.brasinha_conversations (id, company_id)
 );
 
 CREATE INDEX IF NOT EXISTS brasinha_conversations_company_idx

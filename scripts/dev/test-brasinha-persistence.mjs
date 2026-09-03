@@ -106,6 +106,15 @@ await test('SOURCE_PERSISTENCE_ARCHITECTURE', () => {
   assert.doesNotMatch(reset, /\.delete\(/)
   assert.doesNotMatch(migration, /DROP\s+(TABLE|POLICY|INDEX|COLUMN|FUNCTION)/i)
   assert.match(migration, /private\.is_company_member\(company_id\)/)
+  assert.match(migration, /CONSTRAINT brasinha_conversations_id_company_key UNIQUE \(id, company_id\)/)
+  assert.match(
+    migration,
+    /FOREIGN KEY \(conversation_id, company_id\)\s+REFERENCES public\.brasinha_conversations \(id, company_id\)/,
+  )
+  assert.doesNotMatch(
+    migration,
+    /conversation_id uuid NOT NULL REFERENCES public\.brasinha_conversations\(id\)/,
+  )
   assert.match(simulator, /Nova conversa/)
   assert.match(simulator, /conversation id/)
   assert.doesNotMatch(simulator, /<img[^>]+brasinha/i)
@@ -358,6 +367,58 @@ await test('RLS_COMPANY_ISOLATION_AND_ANON', async () => {
     .eq('id', cdl.id)
     .maybeSingle()
   assert.ok(!anonRead.data)
+})
+
+await test('CROSS_COMPANY_MESSAGE_PARENT_MISMATCH_BLOCKED', async () => {
+  const email = process.env.CATERING_DEV_LOGIN_EMAIL?.trim()
+  const password = process.env.CATERING_DEV_LOGIN_PASSWORD?.trim()
+  assert.ok(email, 'CATERING_DEV_LOGIN_EMAIL required')
+  assert.ok(password, 'CATERING_DEV_LOGIN_PASSWORD required')
+
+  const store = createSupabaseConversationStore(admin)
+  const iso = await store.getOrCreate({
+    companyId: ISO,
+    channel: 'dev_simulator',
+    language: 'pt',
+    externalContactRef: 'brasinha-v1a1-parent-mismatch',
+  })
+  created.conversationIds.push(iso.id)
+
+  const mismatch = {
+    conversation_id: iso.id,
+    company_id: CDL,
+    channel: 'dev_simulator',
+    direction: 'inbound',
+    role: 'customer',
+    language: 'pt',
+    content: 'parent-mismatch-attack',
+    traces: [],
+  }
+
+  const adminInsert = await admin.from('brasinha_messages').insert(mismatch)
+  assert.ok(adminInsert.error, 'service role mismatch insert must be blocked by the database')
+  assert.equal(adminInsert.error.code, '23503')
+
+  const user = createClient(env.url, env.anon, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  const signed = await user.auth.signInWithPassword({ email, password })
+  assert.equal(signed.error, null, signed.error?.message)
+  assert.ok(signed.data.session)
+
+  const userInsert = await user.from('brasinha_messages').insert(mismatch)
+  assert.ok(userInsert.error, 'company A JWT mismatch insert must be blocked by the database')
+  assert.match(
+    `${userInsert.error.code} ${userInsert.error.message}`,
+    /23503|foreign key|brasinha_messages_conversation_company_fkey/i,
+  )
+
+  const leaked = await admin
+    .from('brasinha_messages')
+    .select('id')
+    .eq('conversation_id', iso.id)
+    .eq('content', 'parent-mismatch-attack')
+  assert.equal((leaked.data ?? []).length, 0)
 })
 
 await test('SPOOFED_COMPANY_BLOCKED_IN_DEV_ROUTES', () => {
