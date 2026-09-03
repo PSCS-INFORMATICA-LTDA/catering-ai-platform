@@ -1,0 +1,50 @@
+import { NextResponse } from 'next/server'
+import {
+  rejectSpoofedCompanyId,
+  requireApiAuth,
+  resolveAuthorizedCompanyId,
+} from '@/Lib/auth/requireApi'
+import { assertBrasinhaDevRuntime } from '@/Lib/brasinha/env'
+import { createSupabaseConversationStore } from '@/Lib/brasinha/store/supabaseConversationStore'
+import { getSupabaseServerClient } from '@/Lib/supabaseServer'
+
+export const dynamic = 'force-dynamic'
+
+export async function GET(request: Request) {
+  try {
+    assertBrasinhaDevRuntime()
+  } catch {
+    return NextResponse.json({ error: 'not_found' }, { status: 404 })
+  }
+
+  const auth = await requireApiAuth()
+  if (!auth.ok) return auth.response
+
+  const url = new URL(request.url)
+  const spoof = rejectSpoofedCompanyId(
+    auth.session,
+    url.searchParams.get('companyId'),
+  )
+  if (spoof) return spoof
+
+  const companyId = resolveAuthorizedCompanyId(auth.session)
+  const conversationId = url.searchParams.get('id')?.trim() || ''
+  if (!conversationId) {
+    return NextResponse.json({ error: 'conversation_id_required' }, { status: 400 })
+  }
+
+  const store = createSupabaseConversationStore(getSupabaseServerClient())
+  const conversation = await store.get(companyId, conversationId)
+  if (!conversation) {
+    return NextResponse.json({ error: 'not_found' }, { status: 404 })
+  }
+  const messages = await store.listMessages(companyId, conversationId)
+  return NextResponse.json({
+    conversationId: conversation.id,
+    companyId: conversation.companyId,
+    language: conversation.language,
+    handoffStatus: conversation.handoffStatus,
+    handoffReason: conversation.handoffReason,
+    messages,
+  })
+}

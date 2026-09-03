@@ -1,37 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import type {
-  BrasinhaChannelId,
   BrasinhaConversation,
-  BrasinhaHandoffStatus,
-  BrasinhaLanguage,
   BrasinhaStoredMessage,
-} from '../types'
+} from '../types.ts'
+import {
+  COMPANY_SCOPE_VIOLATION,
+  type ConversationStore,
+} from './types.ts'
 
-export type ConversationStore = {
-  getOrCreate(input: {
-    companyId: string
-    conversationId?: string | null
-    channel: BrasinhaChannelId
-    language: BrasinhaLanguage
-    externalContactRef?: string | null
-  }): BrasinhaConversation
-  get(companyId: string, conversationId: string): BrasinhaConversation | null
-  listMessages(companyId: string, conversationId: string): BrasinhaStoredMessage[]
-  appendMessage(
-    companyId: string,
-    message: Omit<BrasinhaStoredMessage, 'id' | 'createdAt'> & {
-      id?: string
-      createdAt?: string
-    },
-  ): BrasinhaStoredMessage
-  setHandoff(
-    companyId: string,
-    conversationId: string,
-    status: BrasinhaHandoffStatus,
-    reason: string | null,
-  ): BrasinhaConversation | null
-  reset(companyId: string, conversationId: string): void
-}
+export type { ConversationStore } from './types.ts'
 
 function nowIso() {
   return new Date().toISOString()
@@ -46,11 +23,16 @@ export function createMemoryConversationStore(): ConversationStore {
   const messages = new Map<string, BrasinhaStoredMessage[]>()
 
   return {
-    getOrCreate(input) {
+    async getOrCreate(input) {
       const id = input.conversationId?.trim() || randomUUID()
       const key = scopedKey(input.companyId, id)
       const existing = conversations.get(key)
       if (existing) return existing
+      for (const conversation of conversations.values()) {
+        if (conversation.id === id && conversation.companyId !== input.companyId) {
+          throw new Error(COMPANY_SCOPE_VIOLATION)
+        }
+      }
       const created: BrasinhaConversation = {
         id,
         companyId: input.companyId,
@@ -67,16 +49,16 @@ export function createMemoryConversationStore(): ConversationStore {
       messages.set(key, [])
       return created
     },
-    get(companyId, conversationId) {
+    async get(companyId, conversationId) {
       return conversations.get(scopedKey(companyId, conversationId)) ?? null
     },
-    listMessages(companyId, conversationId) {
+    async listMessages(companyId, conversationId) {
       return [...(messages.get(scopedKey(companyId, conversationId)) ?? [])]
     },
-    appendMessage(companyId, message) {
+    async appendMessage(companyId, message) {
       const key = scopedKey(companyId, message.conversationId)
       if (message.companyId !== companyId) {
-        throw new Error('company_scope_violation')
+        throw new Error(COMPANY_SCOPE_VIOLATION)
       }
       const stored: BrasinhaStoredMessage = {
         ...message,
@@ -91,7 +73,7 @@ export function createMemoryConversationStore(): ConversationStore {
       if (conversation) conversation.updatedAt = stored.createdAt
       return stored
     },
-    setHandoff(companyId, conversationId, status, reason) {
+    async setHandoff(companyId, conversationId, status, reason) {
       const key = scopedKey(companyId, conversationId)
       const conversation = conversations.get(key)
       if (!conversation) return null
@@ -99,11 +81,6 @@ export function createMemoryConversationStore(): ConversationStore {
       conversation.handoffReason = reason
       conversation.updatedAt = nowIso()
       return conversation
-    },
-    reset(companyId, conversationId) {
-      const key = scopedKey(companyId, conversationId)
-      conversations.delete(key)
-      messages.delete(key)
     },
   }
 }

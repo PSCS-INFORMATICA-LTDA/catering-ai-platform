@@ -5,6 +5,8 @@ export type BrasinhaIntent =
   | 'waiter'
   | 'catalog_search'
   | 'public_rules'
+  | 'service_timing'
+  | 'extra_service_hour'
   | 'quote_intent'
   | 'quote_status'
   | 'unknown'
@@ -22,10 +24,16 @@ const QUOTE_INTENT =
 const QUOTE_STATUS = /\b(q-\d{4}-\d+|proposta|proposal token|status da cota[cç][aã]o)\b/i
 const RULES = /\b(regras|rules|m[ií]nimo|minimum order|mileage|milhas)\b/i
 const SEARCH = /\b(picanha|farofa|lingui[cç]a|salm[aã]o|costela|adicional|extra)\b/i
+const EXTRA_HOUR =
+  /\b(mais uma hora|hora extra|horas extras|extra hour|another hour|more hours?|additional hour|hora adicional|m[aá]s (una )?hora|tiempo adicional|tempo adicional)\b/i
+const SERVICE_TIMING =
+  /\b(quanto tempo dura|quantas horas|dura(o|ção|cion)?|how long|cu[aá]nto dura|equipe chega|crew arrive|chega(m)? antes|arrive(s)? before|montagem|setup|prepara[cç][aã]o|horario de (in[ií]cio|servicio)|start time|when does the crew|a qu[eé] hora llega)\b/i
 
 export function detectBrasinhaIntent(text: string): BrasinhaIntent {
   const value = text.trim()
   if (QUOTE_STATUS.test(value)) return 'quote_status'
+  if (EXTRA_HOUR.test(value)) return 'extra_service_hour'
+  if (SERVICE_TIMING.test(value)) return 'service_timing'
   if (GRILL.test(value)) return 'grill_rental'
   if (WAITER.test(value)) return 'waiter'
   if (LIST_PACKAGES.test(value)) return 'list_packages'

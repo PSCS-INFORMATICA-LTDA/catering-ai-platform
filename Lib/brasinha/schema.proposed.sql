@@ -1,5 +1,6 @@
--- PROPOSED only. Not applied in Brasinha V0.
--- Additive, multi-company, RLS. Apply later after Product Owner review.
+-- Design note only. The real additive migration is:
+--   supabase/migrations/20260903030000_brasinha_conversations_v1a.sql
+-- Do not apply this file blindly. Prefer the versioned migration.
 
 create table if not exists public.brasinha_conversations (
   id uuid primary key default gen_random_uuid(),
@@ -17,7 +18,7 @@ create table if not exists public.brasinha_conversations (
 
 create table if not exists public.brasinha_messages (
   id uuid primary key default gen_random_uuid(),
-  conversation_id uuid not null references public.brasinha_conversations(id) on delete cascade,
+  conversation_id uuid not null references public.brasinha_conversations(id),
   company_id uuid not null references public.companies(id),
   channel text not null,
   direction text not null check (direction in ('inbound', 'outbound')),
@@ -27,25 +28,3 @@ create table if not exists public.brasinha_messages (
   traces jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now()
 );
-
-create index if not exists brasinha_conversations_company_idx
-  on public.brasinha_conversations (company_id, updated_at desc);
-create index if not exists brasinha_messages_company_idx
-  on public.brasinha_messages (company_id, conversation_id, created_at);
-
-alter table public.brasinha_conversations enable row level security;
-alter table public.brasinha_messages enable row level security;
-
-drop policy if exists brasinha_conversations_company_member on public.brasinha_conversations;
-create policy brasinha_conversations_company_member
-  on public.brasinha_conversations
-  for all
-  using (private.is_company_member(company_id))
-  with check (private.is_company_member(company_id));
-
-drop policy if exists brasinha_messages_company_member on public.brasinha_messages;
-create policy brasinha_messages_company_member
-  on public.brasinha_messages
-  for all
-  using (private.is_company_member(company_id))
-  with check (private.is_company_member(company_id));

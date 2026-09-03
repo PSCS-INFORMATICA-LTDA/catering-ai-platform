@@ -2,6 +2,7 @@ export type NavChild = {
   href: string
   label: string
   soon?: boolean
+  devOnly?: boolean
 }
 
 export type NavGroupId =
@@ -29,6 +30,7 @@ export const CATERING_NAV: NavGroup[] = [
       { href: '/quotes/new', label: 'Nova cotação' },
       { href: '/orders', label: 'Ordens de Serviço' },
       { href: '/estoque', label: 'Estoque' },
+      { href: '/dev/brasinha', label: 'Brasinha (DEV)', devOnly: true },
     ],
   },
   {

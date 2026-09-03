@@ -1,11 +1,11 @@
 import type { BrasinhaLanguage } from './types'
 
 const ES_MARKERS =
-  /\b(qué|que|paquetes|paquete|cotizaci[oó]n|quiero|tienen|cu[aá]nto|parrilla|mozo|descuento)\b/i
+  /\b(qué|que|paquetes|paquete|cotizaci[oó]n|quiero|tienen|cu[aá]nto|parrilla|mozo|descuento|dura|equipo|llega|servicio|hora|horas|adicional)\b/i
 const EN_MARKERS =
-  /\b(what|which|packages?|offer|need|quote|how much|grill|waiter|discount|price)\b/i
+  /\b(what|which|packages?|offer|need|quote|how much|how long|grill|waiter|discount|price|crew|arrive|service|hours?|extra hour)\b/i
 const PT_MARKERS =
-  /\b(quais|pacotes?|quanto|custa|churrasco|churrasqueira|gar[cç]om|desconto|quero|tem)\b/i
+  /\b(quais|pacotes?|quanto|custa|churrasco|churrasqueira|gar[cç]om|desconto|quero|tem|dura|equipe|chega|horas?|adicional)\b/i
 
 export function detectBrasinhaLanguage(
   text: string,

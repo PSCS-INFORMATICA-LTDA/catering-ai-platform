@@ -90,6 +90,48 @@ export function waiterReply(
   return `Sim, temos garçom. O preço atual do catálogo/regra é ${price}.`
 }
 
+function hourLabel(language: BrasinhaLanguage, hours: number) {
+  if (language === 'en') return hours === 1 ? '1 hour' : `${hours} hours`
+  return hours === 1 ? '1 hora' : `${hours} horas`
+}
+
+function leadLabel(language: BrasinhaLanguage, minutes: number) {
+  if (minutes === 60) {
+    return language === 'en' ? '1 hour' : '1 hora'
+  }
+  if (language === 'en') {
+    return `${minutes} minutes`
+  }
+  return `${minutes} minutos`
+}
+
+export function serviceTimingReply(
+  language: BrasinhaLanguage,
+  rules: Pick<PublicRulesSnapshot, 'serviceDurationHours' | 'crewSetupLeadMinutes'>,
+): string {
+  const hours = Number(rules.serviceDurationHours)
+  const lead = Number(rules.crewSetupLeadMinutes)
+  const duration = hourLabel(language, hours)
+  const setup = leadLabel(language, lead)
+  if (language === 'en') {
+    return `Service lasts up to ${duration}. The CDL team arrives approximately ${setup} before the start time for setup and preparation.`
+  }
+  if (language === 'es') {
+    return `El servicio tiene una duración estándar de hasta ${duration}. El equipo CDL llega aproximadamente ${setup} antes del horario de inicio para el montaje y la preparación.`
+  }
+  return `O serviço tem duração padrão de até ${duration}. A equipe CDL chega aproximadamente ${setup} antes do horário de início para montagem e preparação.`
+}
+
+export function extraHourHandoffReply(language: BrasinhaLanguage): string {
+  if (language === 'en') {
+    return 'I can ask the CDL team to confirm availability and conditions for additional time.'
+  }
+  if (language === 'es') {
+    return 'Puedo pedir al equipo CDL que confirme disponibilidad y condiciones para tiempo adicional.'
+  }
+  return 'Posso pedir para a equipe CDL confirmar disponibilidade e condições para tempo adicional.'
+}
+
 export function rulesReply(language: BrasinhaLanguage, rules: PublicRulesSnapshot): string {
   const sides = money(rules.sidesPricePerPerson, 'USD')
   if (language === 'en') {

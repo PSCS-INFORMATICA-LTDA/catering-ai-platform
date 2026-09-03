@@ -8,7 +8,11 @@ import BrasinhaDevSimulator from './BrasinhaDevSimulator'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-export default async function BrasinhaDevPage() {
+export default async function BrasinhaDevPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   if (!isBrasinhaDevRuntimeAllowed()) {
     redirect('/')
   }
@@ -18,12 +22,16 @@ export default async function BrasinhaDevPage() {
   }
   const companyId = resolveAuthorizedCompanyId(session)
   const persona = getCompanyPersona(companyId)
+  const params = await searchParams
+  const raw = params.c
+  const initialConversationId = Array.isArray(raw) ? raw[0] : raw ?? null
 
   return (
     <BrasinhaDevSimulator
       companyId={companyId}
       personaName={persona.name}
       personaRole={persona.role}
+      initialConversationId={initialConversationId}
     />
   )
 }

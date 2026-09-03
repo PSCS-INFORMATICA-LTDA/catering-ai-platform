@@ -6,8 +6,10 @@ import {
 } from '@/Lib/auth/requireApi'
 import { assertBrasinhaDevRuntime } from '@/Lib/brasinha/env'
 import { runBrasinhaTurn } from '@/Lib/brasinha/core/runTurn'
-import { brasinhaMemoryStore } from '@/Lib/brasinha/store/memoryConversationStore'
+import { createSupabaseConversationStore } from '@/Lib/brasinha/store/supabaseConversationStore'
+import { COMPANY_SCOPE_VIOLATION } from '@/Lib/brasinha/store/types'
 import { createCanonicalCatalogPort } from '@/Lib/brasinha/tools/canonicalPort'
+import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,28 +33,40 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'text_required' }, { status: 400 })
   }
 
-  const result = await runBrasinhaTurn({
-    inbound: {
-      channel: 'dev_simulator',
-      companyId,
-      conversationId:
-        typeof body?.conversationId === 'string' ? body.conversationId : null,
-      externalContactRef: auth.session.email ?? 'dev-user',
-      text,
-    },
-    store: brasinhaMemoryStore,
-    catalog: createCanonicalCatalogPort(),
-  })
-
-  return NextResponse.json({
-    conversationId: result.conversation.id,
-    companyId: result.conversation.companyId,
-    language: result.detectedLanguage,
-    handoffStatus: result.conversation.handoffStatus,
-    handoffReason: result.conversation.handoffReason,
-    toolsCalled: result.toolsCalled,
-    traces: result.traces,
-    reply: result.reply.text,
-    messages: brasinhaMemoryStore.listMessages(companyId, result.conversation.id),
-  })
+  const store = createSupabaseConversationStore(getSupabaseServerClient())
+  try {
+    const result = await runBrasinhaTurn({
+      inbound: {
+        channel: 'dev_simulator',
+        companyId,
+        conversationId:
+          typeof body?.conversationId === 'string' ? body.conversationId : null,
+        externalContactRef: auth.session.email ?? 'dev-user',
+        text,
+      },
+      store,
+      catalog: createCanonicalCatalogPort(),
+    })
+    const messages = await store.listMessages(companyId, result.conversation.id)
+    return NextResponse.json({
+      conversationId: result.conversation.id,
+      companyId: result.conversation.companyId,
+      language: result.detectedLanguage,
+      handoffStatus: result.conversation.handoffStatus,
+      handoffReason: result.conversation.handoffReason,
+      toolsCalled: result.toolsCalled,
+      traces: result.traces,
+      reply: result.reply.text,
+      messages,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'turn_failed'
+    if (message === COMPANY_SCOPE_VIOLATION) {
+      return NextResponse.json({ error: COMPANY_SCOPE_VIOLATION }, { status: 403 })
+    }
+    if (/brasinha_conversations|brasinha_messages|schema cache/i.test(message)) {
+      return NextResponse.json({ error: 'persistence_not_migrated' }, { status: 503 })
+    }
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
 }

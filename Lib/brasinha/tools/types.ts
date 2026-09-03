@@ -26,6 +26,8 @@ export type PublicRulesSnapshot = {
   minOrderWeekday: number
   minOrderWeekend: number
   reservationPercentage: number
+  serviceDurationHours: number
+  crewSetupLeadMinutes: number
   source: string
 }
 
@@ -83,4 +85,9 @@ export const BLOCKED_WRITE_TOOLS = [
   'mark_payment_paid',
   'alter_price',
   'alter_invoice',
+  'alter_inventory',
+  'alter_supplier',
+  'reserve_date',
+  'approve_quote',
+  'alter_commercial_rules',
 ] as const

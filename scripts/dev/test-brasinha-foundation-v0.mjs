@@ -11,7 +11,13 @@ import { detectBrasinhaLanguage } from '../../Lib/brasinha/language.ts'
 import { evaluateBrasinhaPolicy } from '../../Lib/brasinha/policy.ts'
 import { createMemoryConversationStore } from '../../Lib/brasinha/store/memoryConversationStore.ts'
 import { runBrasinhaTurn } from '../../Lib/brasinha/core/runTurn.ts'
-import { isWhatsAppChannelEnabled } from '../../Lib/brasinha/env.ts'
+import {
+  isBrasinhaDevNavVisible,
+  isBrasinhaDevRuntimeAllowed,
+  isWhatsAppChannelEnabled,
+} from '../../Lib/brasinha/env.ts'
+import { detectBrasinhaIntent } from '../../Lib/brasinha/core/intent.ts'
+import { extraHourHandoffReply, serviceTimingReply } from '../../Lib/brasinha/core/copy.ts'
 import { createWhatsAppChannel, whatsappExternalCalls } from '../../Lib/brasinha/channels/whatsapp.ts'
 import { assertDevUrl, loadDevEnv } from './loadDevEnv.mjs'
 
@@ -109,13 +115,16 @@ await test('ARCHITECTURE_SOURCE_ISOLATED', () => {
   const chat = source('app/api/dev/brasinha/chat/route.ts')
   const whatsappSend = source('app/api/whatsapp/meta/send/route.ts')
   const core = source('Lib/brasinha/core/runTurn.ts')
+  const reasoner = source('Lib/brasinha/core/reasoner.ts')
   assert.match(chat, /rejectSpoofedCompanyId/)
   assert.match(chat, /resolveAuthorizedCompanyId/)
+  assert.match(chat, /createSupabaseConversationStore/)
   assert.doesNotMatch(chat, /body\?\.companyId \|\|/)
   assert.match(whatsappSend, /whatsapp_disabled/)
   assert.doesNotMatch(whatsappSend, /graph\.facebook|wa\.me|fetch\(/)
-  assert.match(core, /create_quote_draft/)
-  assert.match(core, /write_not_implemented/)
+  assert.match(reasoner, /create_quote_draft/)
+  assert.match(reasoner, /write_not_implemented/)
+  assert.match(core, /createDeterministicReasoner/)
   assert.doesNotMatch(landing, /Fale com Brasinha|Speak with Brasinha/)
   assert.ok(wizard.includes('export default function QuoteWizard') || wizard.length > 100)
   assert.match(pricing, /export async function computeQuotePricing/)
@@ -152,10 +161,10 @@ await test('PROMPT_INJECTION_AND_DENIED_ACTIONS', () => {
   assert.equal(evaluateBrasinhaPolicy('Quero 50% de desconto.').capability, 'approve_discount')
 })
 
-await test('COMPANY_STORE_ISOLATION', () => {
+await test('COMPANY_STORE_ISOLATION', async () => {
   const store = createMemoryConversationStore()
-  const a = store.getOrCreate({ companyId: CDL, channel: 'dev_simulator', language: 'pt' })
-  store.appendMessage(CDL, {
+  const a = await store.getOrCreate({ companyId: CDL, channel: 'dev_simulator', language: 'pt' })
+  await store.appendMessage(CDL, {
     conversationId: a.id,
     companyId: CDL,
     channel: 'dev_simulator',
@@ -165,9 +174,18 @@ await test('COMPANY_STORE_ISOLATION', () => {
     content: 'secret-a',
     traces: [],
   })
-  assert.equal(store.get(OTHER, a.id), null)
-  assert.deepEqual(store.listMessages(OTHER, a.id), [])
-  assert.equal(store.listMessages(CDL, a.id)[0].content, 'secret-a')
+  assert.equal(await store.get(OTHER, a.id), null)
+  assert.deepEqual(await store.listMessages(OTHER, a.id), [])
+  assert.equal((await store.listMessages(CDL, a.id))[0].content, 'secret-a')
+  await assert.rejects(
+    () => store.getOrCreate({
+      companyId: OTHER,
+      conversationId: a.id,
+      channel: 'dev_simulator',
+      language: 'pt',
+    }),
+    /company_scope_violation/,
+  )
 })
 
 const packages = [
@@ -206,6 +224,8 @@ const rules = {
   minOrderWeekday: 800,
   minOrderWeekend: 1000,
   reservationPercentage: 30,
+  serviceDurationHours: 4,
+  crewSetupLeadMinutes: 60,
   source: 'test',
 }
 
@@ -349,6 +369,8 @@ await test('PRICE_SOURCE_MATCH_LIVE_DEV', async () => {
     minOrderWeekday: 800,
     minOrderWeekend: 1000,
     reservationPercentage: 30,
+    serviceDurationHours: 4,
+    crewSetupLeadMinutes: 60,
     source: 'supabase-live',
   }
   const store = createMemoryConversationStore()
@@ -378,9 +400,136 @@ await test('PRICE_SOURCE_MATCH_LIVE_DEV', async () => {
 })
 
 await test('QUOTE_DRAFT_NOT_IMPLEMENTED', () => {
-  const core = source('Lib/brasinha/core/runTurn.ts')
-  assert.match(core, /blocked:canonical_submit_not_reused/)
+  const reasoner = source('Lib/brasinha/core/reasoner.ts')
+  assert.match(reasoner, /blocked:canonical_submit_not_reused/)
   assert.doesNotMatch(source('Lib/brasinha/tools/canonicalPort.ts'), /insert\(|finalize_public_quote/)
+})
+
+await test('SERVICE_TIMING_CANONICAL_PT_EN_ES', async () => {
+  assert.equal(detectBrasinhaIntent('Quanto tempo dura o churrasco?'), 'service_timing')
+  assert.equal(detectBrasinhaIntent('Por quantas horas vocês ficam?'), 'service_timing')
+  assert.equal(detectBrasinhaIntent('Que horas a equipe chega?'), 'service_timing')
+  assert.equal(detectBrasinhaIntent('Vocês chegam antes?'), 'service_timing')
+  assert.equal(detectBrasinhaIntent('How long is the service?'), 'service_timing')
+  assert.equal(detectBrasinhaIntent('When does the crew arrive?'), 'service_timing')
+  assert.equal(detectBrasinhaIntent('¿Cuánto dura el servicio?'), 'service_timing')
+  assert.equal(detectBrasinhaIntent('¿A qué hora llega el equipo?'), 'service_timing')
+
+  const store = createMemoryConversationStore()
+  const catalog = fakePort(packages, items, rules)
+  const ask = (text) =>
+    runBrasinhaTurn({
+      inbound: { channel: 'dev_simulator', companyId: CDL, text },
+      store,
+      catalog,
+    })
+
+  const pt = await ask('Quanto tempo dura o churrasco?')
+  assert.equal(pt.detectedLanguage, 'pt')
+  assert.ok(pt.toolsCalled.includes('get_public_business_rules'))
+  assert.equal(
+    pt.reply.text,
+    'O serviço tem duração padrão de até 4 horas. A equipe CDL chega aproximadamente 1 hora antes do horário de início para montagem e preparação.',
+  )
+
+  const en = await ask('How long is the service?')
+  assert.equal(en.detectedLanguage, 'en')
+  assert.match(en.reply.text, /up to 4 hours/)
+  assert.match(en.reply.text, /1 hour before/)
+
+  const es = await ask('¿Cuánto dura el servicio?')
+  assert.equal(es.detectedLanguage, 'es')
+  assert.match(es.reply.text, /hasta 4 horas/)
+  assert.match(es.reply.text, /1 hora antes/)
+
+  const shifted = fakePort(packages, items, {
+    ...rules,
+    serviceDurationHours: 7,
+    crewSetupLeadMinutes: 45,
+  })
+  const custom = await runBrasinhaTurn({
+    inbound: {
+      channel: 'dev_simulator',
+      companyId: CDL,
+      text: 'Quanto tempo dura o churrasco?',
+    },
+    store: createMemoryConversationStore(),
+    catalog: shifted,
+  })
+  assert.match(custom.reply.text, /7 horas/)
+  assert.match(custom.reply.text, /45 minutos/)
+  assert.doesNotMatch(custom.reply.text, /até 4 horas/)
+  assert.equal(
+    serviceTimingReply('pt', { serviceDurationHours: 4, crewSetupLeadMinutes: 60 }),
+    pt.reply.text,
+  )
+})
+
+await test('EXTRA_HOUR_INACTIVE_HANDOFF', async () => {
+  assert.equal(detectBrasinhaIntent('Posso contratar mais uma hora?'), 'extra_service_hour')
+  assert.equal(detectBrasinhaIntent('Can I book an extra hour?'), 'extra_service_hour')
+  assert.equal(detectBrasinhaIntent('¿Puedo contratar una hora adicional?'), 'extra_service_hour')
+
+  const store = createMemoryConversationStore()
+  const catalog = fakePort(packages, items, {
+    ...rules,
+    extraServiceHourPercentage: 25,
+  })
+  const pt = await runBrasinhaTurn({
+    inbound: {
+      channel: 'dev_simulator',
+      companyId: CDL,
+      text: 'Posso contratar mais uma hora?',
+    },
+    store,
+    catalog,
+  })
+  assert.equal(pt.conversation.handoffStatus, 'HUMAN_REVIEW_REQUIRED')
+  assert.equal(pt.reply.text, extraHourHandoffReply('pt'))
+  assert.doesNotMatch(pt.reply.text, /25/)
+  assert.doesNotMatch(pt.reply.text, /hora extra custa/)
+  assert.equal(pt.toolsCalled.includes('get_public_business_rules'), false)
+
+  const en = await runBrasinhaTurn({
+    inbound: {
+      channel: 'dev_simulator',
+      companyId: CDL,
+      text: 'Can I book an extra hour?',
+    },
+    store,
+    catalog,
+  })
+  assert.equal(en.detectedLanguage, 'en')
+  assert.doesNotMatch(en.reply.text, /25/)
+
+  const port = source('Lib/brasinha/tools/canonicalPort.ts')
+  const types = source('Lib/brasinha/tools/types.ts')
+  const reasoner = source('Lib/brasinha/core/reasoner.ts')
+  assert.doesNotMatch(port, /extraServiceHourPercentage/)
+  assert.doesNotMatch(types, /extraServiceHourPercentage/)
+  assert.doesNotMatch(reasoner, /25%|extra_service_hour_percentage/)
+})
+
+await test('PROD_RUNTIME_AND_PUBLIC_CTA_BLOCKED', () => {
+  assert.equal(
+    isBrasinhaDevRuntimeAllowed({
+      NEXT_PUBLIC_SUPABASE_URL: 'https://eapwtirhevxrqinytans.supabase.co',
+      VERCEL_ENV: 'production',
+    }),
+    false,
+  )
+  assert.equal(
+    isBrasinhaDevNavVisible({
+      NEXT_PUBLIC_SUPABASE_URL: 'https://eapwtirhevxrqinytans.supabase.co',
+    }),
+    false,
+  )
+  assert.match(source('components/layout/navConfig.ts'), /devOnly: true/)
+  assert.match(source('components/layout/CateringSidebar.tsx'), /isBrasinhaDevNavVisible/)
+  assert.doesNotMatch(
+    source('components/quotes/PublicLandingCinematic.tsx'),
+    /\/dev\/brasinha/,
+  )
 })
 
 console.log('')

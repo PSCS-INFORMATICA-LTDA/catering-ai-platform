@@ -276,6 +276,8 @@ export function createCanonicalCatalogPort(): BrasinhaCatalogPort {
         minOrderWeekday: rules.minOrderWeekday,
         minOrderWeekend: rules.minOrderWeekend,
         reservationPercentage: rules.reservationPercentage,
+        serviceDurationHours: rules.serviceDurationHours,
+        crewSetupLeadMinutes: rules.crewSetupLeadMinutes,
         source: rules.source,
       }
       return {
@@ -288,6 +290,8 @@ export function createCanonicalCatalogPort(): BrasinhaCatalogPort {
             sidesPricePerPerson: data.sidesPricePerPerson,
             waiterServiceFee: data.waiterServiceFee,
             grillRentalFee: data.grillRentalFee,
+            serviceDurationHours: data.serviceDurationHours,
+            crewSetupLeadMinutes: data.crewSetupLeadMinutes,
           },
         ),
       }

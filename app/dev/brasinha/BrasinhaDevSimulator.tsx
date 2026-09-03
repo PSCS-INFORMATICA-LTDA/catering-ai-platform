@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+
+const STORAGE_KEY = 'brasinha-dev-conversation-id'
 
 type Trace = {
   tool: string
@@ -11,28 +13,131 @@ type Trace = {
 }
 
 type ChatRow = {
-  role: 'customer' | 'assistant'
+  role: 'customer' | 'assistant' | 'human' | 'system'
   content: string
+  traces?: Trace[]
+}
+
+type ConversationPayload = {
+  error?: string
+  conversationId?: string
+  companyId?: string
+  language?: string
+  handoffStatus?: string
+  handoffReason?: string | null
+  toolsCalled?: string[]
+  traces?: Trace[]
+  reply?: string
+  messages?: Array<{
+    role?: ChatRow['role']
+    content?: string
+    traces?: Trace[]
+  }>
+}
+
+function rowsFromMessages(messages: ConversationPayload['messages']): ChatRow[] {
+  return (messages ?? [])
+    .filter((row) => row.role === 'customer' || row.role === 'assistant')
+    .map((row) => ({
+      role: row.role === 'assistant' ? 'assistant' : 'customer',
+      content: row.content ?? '',
+      traces: Array.isArray(row.traces) ? row.traces : [],
+    }))
+}
+
+function persistPointer(conversationId: string | null) {
+  try {
+    if (conversationId) {
+      window.localStorage.setItem(STORAGE_KEY, conversationId)
+    } else {
+      window.localStorage.removeItem(STORAGE_KEY)
+    }
+  } catch {
+    /* ignore */
+  }
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  if (conversationId) url.searchParams.set('c', conversationId)
+  else url.searchParams.delete('c')
+  window.history.replaceState(null, '', `${url.pathname}${url.search}`)
 }
 
 export default function BrasinhaDevSimulator({
   companyId,
   personaName,
   personaRole,
+  initialConversationId,
 }: {
   companyId: string
   personaName: string
   personaRole: string
+  initialConversationId?: string | null
 }) {
-  const [conversationId, setConversationId] = useState<string | null>(null)
+  const [conversationId, setConversationId] = useState<string | null>(
+    initialConversationId ?? null,
+  )
   const [input, setInput] = useState('')
   const [rows, setRows] = useState<ChatRow[]>([])
   const [language, setLanguage] = useState('pt')
   const [handoff, setHandoff] = useState('AI_ACTIVE')
+  const [handoffReason, setHandoffReason] = useState<string | null>(null)
   const [tools, setTools] = useState<string[]>([])
   const [traces, setTraces] = useState<Trace[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    async function hydrate() {
+      let pointer = initialConversationId?.trim() || ''
+      if (!pointer) {
+        try {
+          pointer = window.localStorage.getItem(STORAGE_KEY)?.trim() || ''
+        } catch {
+          pointer = ''
+        }
+      }
+      if (!pointer) {
+        setReady(true)
+        return
+      }
+      try {
+        const response = await fetch(
+          `/api/dev/brasinha/conversation?id=${encodeURIComponent(pointer)}`,
+        )
+        const payload = (await response.json()) as ConversationPayload
+        if (cancelled) return
+        if (!response.ok || !payload.conversationId) {
+          persistPointer(null)
+          setConversationId(null)
+          setReady(true)
+          return
+        }
+        setConversationId(payload.conversationId)
+        setLanguage(payload.language ?? 'pt')
+        setHandoff(payload.handoffStatus ?? 'AI_ACTIVE')
+        setHandoffReason(payload.handoffReason ?? null)
+        setRows(rowsFromMessages(payload.messages))
+        const lastAssistant = [...(payload.messages ?? [])]
+          .reverse()
+          .find((row) => row.role === 'assistant')
+        setTraces(lastAssistant?.traces ?? [])
+        setTools((lastAssistant?.traces ?? []).map((trace) => trace.tool))
+        persistPointer(payload.conversationId)
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'hydrate_failed')
+        }
+      } finally {
+        if (!cancelled) setReady(true)
+      }
+    }
+    void hydrate()
+    return () => {
+      cancelled = true
+    }
+  }, [initialConversationId])
 
   async function send() {
     const text = input.trim()
@@ -47,26 +152,26 @@ export default function BrasinhaDevSimulator({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, conversationId }),
       })
-      const payload = (await response.json()) as {
-        error?: string
-        conversationId?: string
-        language?: string
-        handoffStatus?: string
-        toolsCalled?: string[]
-        traces?: Trace[]
-        reply?: string
-      }
+      const payload = (await response.json()) as ConversationPayload
       if (!response.ok) {
         setError(payload.error || `http_${response.status}`)
         return
       }
-      setConversationId(payload.conversationId ?? null)
+      const nextId = payload.conversationId ?? null
+      setConversationId(nextId)
+      persistPointer(nextId)
       setLanguage(payload.language ?? 'pt')
       setHandoff(payload.handoffStatus ?? 'AI_ACTIVE')
+      setHandoffReason(payload.handoffReason ?? null)
       setTools(payload.toolsCalled ?? [])
       setTraces(payload.traces ?? [])
-      if (payload.reply) {
-        setRows((current) => [...current, { role: 'assistant', content: payload.reply ?? '' }])
+      if (payload.messages?.length) {
+        setRows(rowsFromMessages(payload.messages))
+      } else if (payload.reply) {
+        setRows((current) => [
+          ...current,
+          { role: 'assistant', content: payload.reply ?? '' },
+        ])
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'send_failed')
@@ -75,22 +180,24 @@ export default function BrasinhaDevSimulator({
     }
   }
 
-  async function reset() {
+  async function newConversation() {
     setBusy(true)
     try {
       await fetch('/api/dev/brasinha/reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId }),
+        body: JSON.stringify({}),
       })
     } catch {
-      /* bench reset is best-effort */
+      /* pointer reset is local; history stays in Supabase */
     }
+    persistPointer(null)
     setConversationId(null)
     setRows([])
     setTools([])
     setTraces([])
     setHandoff('AI_ACTIVE')
+    setHandoffReason(null)
     setError(null)
     setBusy(false)
   }
@@ -98,15 +205,24 @@ export default function BrasinhaDevSimulator({
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
       <header>
-        <p className="text-xs uppercase tracking-wide text-cdl-muted">DEV simulator</p>
-        <h1 className="text-2xl font-semibold">{personaName}</h1>
+        <p className="text-xs uppercase tracking-wide text-cdl-muted">
+          DEV simulator
+        </p>
+        <h1 className="text-2xl font-semibold">
+          {personaName} 🔥
+        </h1>
         <p className="text-sm text-cdl-muted">{personaRole}</p>
-        <p className="mt-1 font-mono text-xs text-cdl-muted">company {companyId}</p>
       </header>
 
       <section className="grid gap-2 rounded-xl border border-white/10 bg-black/30 p-3 text-xs sm:grid-cols-2">
+        <p>company: <span className="font-mono">{companyId}</span></p>
         <p>language: {language}</p>
+        <p className="sm:col-span-2">
+          conversation id:{' '}
+          <span className="font-mono">{conversationId || '—'}</span>
+        </p>
         <p>handoff: {handoff}</p>
+        <p>handoff reason: {handoffReason || '—'}</p>
         <p className="sm:col-span-2">tools: {tools.join(', ') || '—'}</p>
         <ul className="sm:col-span-2 space-y-1">
           {traces.map((trace, index) => (
@@ -119,8 +235,13 @@ export default function BrasinhaDevSimulator({
       </section>
 
       <div className="min-h-72 space-y-3 rounded-xl border border-white/10 bg-[#111] p-4">
-        {rows.length === 0 ? (
-          <p className="text-sm text-cdl-muted">Send a message to test the canonical brain.</p>
+        {!ready ? (
+          <p className="text-sm text-cdl-muted">Loading saved conversation…</p>
+        ) : rows.length === 0 ? (
+          <p className="text-sm text-cdl-muted">
+            Send a message to test the canonical brain. Saved conversations
+            survive reload.
+          </p>
         ) : (
           rows.map((row, index) => (
             <div
@@ -160,10 +281,11 @@ export default function BrasinhaDevSimulator({
         </button>
         <button
           type="button"
-          onClick={() => void reset()}
-          className="rounded-lg border border-white/20 px-4 py-2 text-sm"
+          onClick={() => void newConversation()}
+          disabled={busy}
+          className="rounded-lg border border-white/20 px-4 py-2 text-sm disabled:opacity-50"
         >
-          Reset
+          Nova conversa
         </button>
       </form>
     </div>

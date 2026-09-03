@@ -36,6 +36,16 @@ export function isWhatsAppChannelEnabled(
   return false && source.WHATSAPP_ENABLED === 'true'
 }
 
+/** Sidebar / DEV entry. Hidden when the runtime is PROD or not Catering DEV. */
+export function isBrasinhaDevNavVisible(
+  source: Record<string, string | undefined> = process.env,
+): boolean {
+  return isBrasinhaDevRuntimeAllowed({
+    ...source,
+    VERCEL_ENV: source.VERCEL_ENV || source.NEXT_PUBLIC_VERCEL_ENV,
+  })
+}
+
 export function assertBrasinhaDevRuntime(
   source: Record<string, string | undefined> = process.env,
 ): void {

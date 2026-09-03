@@ -5,10 +5,10 @@ import {
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
 import { assertBrasinhaDevRuntime } from '@/Lib/brasinha/env'
-import { brasinhaMemoryStore } from '@/Lib/brasinha/store/memoryConversationStore'
 
 export const dynamic = 'force-dynamic'
 
+/** Starts a new conversation pointer. Does not delete persisted history. */
 export async function POST(request: Request) {
   try {
     assertBrasinhaDevRuntime()
@@ -24,10 +24,10 @@ export async function POST(request: Request) {
   if (spoof) return spoof
 
   const companyId = resolveAuthorizedCompanyId(auth.session)
-  const conversationId =
-    typeof body.conversationId === 'string' ? body.conversationId : ''
-  if (conversationId) {
-    brasinhaMemoryStore.reset(companyId, conversationId)
-  }
-  return NextResponse.json({ ok: true, companyId })
+  return NextResponse.json({
+    ok: true,
+    companyId,
+    deleted: false,
+    conversationId: null,
+  })
 }
