@@ -9,7 +9,11 @@ import {
   serializeToolResult,
 } from './aiTools.ts'
 import { historyToAiMessages } from './history.ts'
-import { collectCanonicalAmounts, replyInventedPrice } from './priceGuard.ts'
+import {
+  collectCanonicalAmounts,
+  replyInventedPrice,
+  unapprovedMentionedAmounts,
+} from './priceGuard.ts'
 import { buildBrasinhaSystemPrompt } from './prompt.ts'
 import { classifyProviderError } from './providerError.ts'
 import {
@@ -33,6 +37,7 @@ function auditTrace(
   model: string,
   reason?: string,
   classified?: { status: string | null; code: string; type: string | null },
+  extras?: Record<string, string | number | null>,
 ): BrasinhaToolTrace {
   return {
     tool: 'ai_reasoner',
@@ -44,6 +49,7 @@ function auditTrace(
       provider_error_status: classified?.status ?? null,
       provider_error_code: classified?.code ?? null,
       provider_error_type: classified?.type ?? null,
+      ...extras,
     },
     timestamp: new Date().toISOString(),
     denied: Boolean(reason),
@@ -133,20 +139,32 @@ async function answerWithOpenAI(
     break
   }
 
-  traces.push(auditTrace(input.companyId, model))
-
-  if (!text || hasUnreliableCommercialData(executions) || replyInventedPrice(text, allowedAmounts)) {
+  const invented = Boolean(text) && replyInventedPrice(text, allowedAmounts)
+  const unreliable = hasUnreliableCommercialData(executions)
+  if (!text || unreliable || invented) {
+    const unapproved = text ? unapprovedMentionedAmounts(text, allowedAmounts) : []
+    traces.push(
+      auditTrace(
+        input.companyId,
+        model,
+        invented ? 'price_not_canonical' : 'unknown_rule',
+        undefined,
+        {
+          unapproved_amounts: unapproved.length ? unapproved.join(',') : null,
+        },
+      ),
+    )
     return {
       text: handoffReply(input.language),
       traces,
       toolsCalled,
-      handoff: text && replyInventedPrice(text, allowedAmounts)
-        ? 'price_not_canonical'
-        : 'unknown_rule',
+      handoff: invented ? 'price_not_canonical' : 'unknown_rule',
       provider: 'openai',
       model,
     }
   }
+
+  traces.push(auditTrace(input.companyId, model))
 
   return {
     text,

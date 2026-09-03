@@ -14,6 +14,10 @@ import { createOpenAIReasoner } from '../../Lib/brasinha/core/openaiReasoner.ts'
 import { BRASINHA_PROMPT_VERSION, buildBrasinhaSystemPrompt } from '../../Lib/brasinha/core/prompt.ts'
 import { resolveBrasinhaReasoner } from '../../Lib/brasinha/core/registry.ts'
 import { runBrasinhaTurn } from '../../Lib/brasinha/core/runTurn.ts'
+import {
+  extractMentionedMoney,
+  replyInventedPrice,
+} from '../../Lib/brasinha/core/priceGuard.ts'
 import { classifyProviderError } from '../../Lib/brasinha/core/providerError.ts'
 import { createConversationalScriptedClient, createScriptedAiClient } from '../../Lib/brasinha/core/scriptedAiClient.ts'
 import {
@@ -356,6 +360,60 @@ await test('PACKAGE_COMPARE_CONTEXT', async () => {
   const messages = await store.listMessages(CDL, first.result.conversation.id)
   assert.ok(messages.length >= 6)
   assert.equal(messages.some((row) => row.role === 'customer' && /diferença/i.test(row.content)), true)
+})
+
+await test('CANONICAL_MONEY_NOT_DATE_OR_THOUSANDS_FALSE_POSITIVE', () => {
+  const allowed = [65, 75, 13, 250, 100, 800, 1000, 30, 4, 60]
+  assert.deepEqual(extractMentionedMoney('pedido mínimo de $1.000 no fim de semana'), [1000])
+  assert.deepEqual(extractMentionedMoney('weekend minimum US$ 1,000'), [1000])
+  assert.deepEqual(extractMentionedMoney('mínimo de $1.000,00'), [1000])
+  assert.deepEqual(extractMentionedMoney('O Choice custa US$ 65 por pessoa'), [65])
+  assert.deepEqual(extractMentionedMoney('O Choice custa $65,00'), [65])
+  assert.deepEqual(extractMentionedMoney('sábado 05.09.2026'), [])
+  assert.equal(replyInventedPrice('pedido mínimo de $1.000. Chegamos no sábado 06.09.2026.', allowed), false)
+  assert.equal(replyInventedPrice('O Choice custa $10 por pessoa.', allowed), true)
+})
+
+await test('WEEKEND_EVENT_CANONICAL_RULES_STAY_ACTIVE', async () => {
+  const client = createScriptedAiClient((input) => {
+    if (!input.toolResults?.length) {
+      return {
+        responseId: 'event-tools',
+        text: null,
+        toolCalls: [
+          {
+            callId: 'profile',
+            name: 'get_company_public_profile',
+            arguments: { language: 'pt' },
+          },
+          {
+            callId: 'rules',
+            name: 'get_public_business_rules',
+            arguments: { language: 'pt' },
+          },
+          {
+            callId: 'packages',
+            name: 'get_packages',
+            arguments: { language: 'pt' },
+          },
+        ],
+      }
+    }
+    return {
+      responseId: 'event-ok',
+      text: 'Para o próximo fim de semana o pedido mínimo é $1.000. Qual a data, o local e quantos adultos?',
+      toolCalls: [],
+    }
+  })
+  const { result } = await ask(
+    'Queria um churrasco pro próximo final de semana. Como funciona?',
+    { reasoner: aiReasoner(client) },
+  )
+  assert.equal(result.conversation.handoffStatus, 'AI_ACTIVE')
+  assert.match(result.reply.text, /\$1\.000|\$1,000|1000/)
+  assert.match(result.reply.text, /data|adultos|local/i)
+  assert.ok(result.toolsCalled.includes('get_public_business_rules'))
+  assert.ok(result.toolsCalled.includes('get_packages'))
 })
 
 await test('PRICE_CANNOT_BE_MODEL_INVENTED', async () => {
