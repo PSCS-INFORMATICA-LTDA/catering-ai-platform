@@ -528,8 +528,10 @@ await test('PROD_RUNTIME_AND_PUBLIC_CTA_BLOCKED', () => {
   assert.match(source('components/layout/CateringSidebar.tsx'), /isBrasinhaDevNavVisible/)
   assert.doesNotMatch(
     source('components/quotes/PublicLandingCinematic.tsx'),
-    /\/dev\/brasinha/,
+    /\/dev\/brasinha|\/brasinha/,
   )
+  assert.match(source('components/layout/navConfig.ts'), /href: '\/brasinha'/)
+  assert.match(source('app/dev/brasinha/page.tsx'), /redirect\('\/brasinha'\)/)
 })
 
 console.log('')

@@ -14,6 +14,7 @@ import { createOpenAIReasoner } from '../../Lib/brasinha/core/openaiReasoner.ts'
 import { BRASINHA_PROMPT_VERSION, buildBrasinhaSystemPrompt } from '../../Lib/brasinha/core/prompt.ts'
 import { resolveBrasinhaReasoner } from '../../Lib/brasinha/core/registry.ts'
 import { runBrasinhaTurn } from '../../Lib/brasinha/core/runTurn.ts'
+import { classifyProviderError } from '../../Lib/brasinha/core/providerError.ts'
 import { createConversationalScriptedClient, createScriptedAiClient } from '../../Lib/brasinha/core/scriptedAiClient.ts'
 import {
   hasOpenAiApiKey,
@@ -23,6 +24,7 @@ import {
 } from '../../Lib/brasinha/env.ts'
 import { evaluateBrasinhaPolicy } from '../../Lib/brasinha/policy.ts'
 import { createMemoryConversationStore } from '../../Lib/brasinha/store/memoryConversationStore.ts'
+import { resolveHeaderCompanyDisplayName } from '../../Lib/tenant/companyDisplayName.ts'
 import { BLOCKED_WRITE_TOOLS } from '../../Lib/brasinha/tools/types.ts'
 import { createWhatsAppChannel, whatsappExternalCalls } from '../../Lib/brasinha/channels/whatsapp.ts'
 
@@ -196,17 +198,24 @@ await test('SOURCE_AI_ARCHITECTURE', () => {
   const openai = source('Lib/brasinha/core/openaiReasoner.ts')
   const client = source('Lib/brasinha/core/aiClient.ts')
   const chat = source('app/api/dev/brasinha/chat/route.ts')
-  const page = source('app/dev/brasinha/page.tsx')
+  const page = source('app/brasinha/page.tsx')
+  const legacy = source('app/dev/brasinha/page.tsx')
   const simulator = source('app/dev/brasinha/BrasinhaDevSimulator.tsx')
   const envExample = source('.env.example')
   assert.match(chat, /resolveBrasinhaReasoner/)
   assert.match(chat, /rejectSpoofedCompanyId/)
   assert.doesNotMatch(chat, /OPENAI_API_KEY/)
   assert.match(page, /getCompanyPublicProfile/)
+  assert.match(legacy, /redirect\('\/brasinha'\)/)
   assert.match(simulator, /EMPRESA DO BRASINHA/)
   assert.match(simulator, /Diagnóstico DEV/)
+  assert.match(simulator, /provider error status/)
+  assert.match(simulator, /provider error code/)
   assert.match(simulator, /conversation id/)
   assert.match(simulator, /Nova conversa/)
+  assert.match(source('components/layout/navConfig.ts'), /href: '\/brasinha'/)
+  assert.doesNotMatch(source('app/brasinha/page.tsx'), /CDL Services BBQ At Home/)
+  assert.doesNotMatch(source('components/layout/AppHeader.tsx'), /CDL Services BBQ At Home/)
   assert.doesNotMatch(simulator, /<img[^>]+brasinha/i)
   assert.match(envExample, /BRASINHA_AI_ENABLED/)
   assert.match(envExample, /BRASINHA_OPENAI_MODEL=gpt-5.6-luna/)
@@ -233,6 +242,52 @@ await test('SOURCE_AI_ARCHITECTURE', () => {
     'deterministic',
   )
   assert.equal(BRASINHA_PROMPT_VERSION.startsWith('v1b'), true)
+})
+
+await test('PROVIDER_ERROR_CLASSIFICATION_SANITIZED', () => {
+  assert.equal(classifyProviderError(new Error('openai_api_key_missing')).code, 'openai_api_key_missing')
+  assert.equal(classifyProviderError({ status: 401, code: 'invalid_api_key' }).code, 'invalid_api_key')
+  assert.equal(classifyProviderError({ status: 401, code: 'invalid_api_key' }).status, '401')
+  assert.equal(classifyProviderError({ status: 429, code: 'insufficient_quota' }).code, 'insufficient_quota')
+  assert.equal(
+    classifyProviderError({ status: 429, error: { code: 'credit_balance_exhausted' } }).code,
+    'credit_balance_exhausted',
+  )
+  assert.equal(
+    classifyProviderError({ status: 404, message: 'The model `gpt-5.6-terra` does not exist' }).code,
+    'model_not_found',
+  )
+  assert.equal(classifyProviderError(new Error('openai_timeout')).code, 'timeout')
+  const leaked = classifyProviderError(new Error('401 invalid_api_key sk-secret-should-not-leak'))
+  assert.equal(leaked.code, 'invalid_api_key')
+  assert.equal(JSON.stringify(leaked).includes('sk-secret'), false)
+})
+
+await test('BRASINHA_HEADER_COMPANY_RESOLVED', () => {
+  const named = resolveHeaderCompanyDisplayName({
+    company: {
+      id: CDL,
+      trade_name: 'CDL Services BBQ At Home DEV',
+      company_name: 'CDL Services BBQ At Home',
+    },
+    companyId: CDL,
+    memberships: [],
+  })
+  assert.equal(named, 'CDL Services BBQ At Home DEV')
+  const fromMembership = resolveHeaderCompanyDisplayName({
+    company: null,
+    companyId: CDL,
+    memberships: [{ companyId: CDL, companyName: 'CDL Services BBQ At Home DEV' }],
+  })
+  assert.equal(fromMembership, 'CDL Services BBQ At Home DEV')
+  const other = resolveHeaderCompanyDisplayName({
+    company: null,
+    companyId: CDL,
+    memberships: [{ companyId: OTHER, companyName: 'Outra Empresa' }],
+  })
+  assert.equal(other, null)
+  assert.match(source('components/layout/AppHeader.tsx'), /resolveHeaderCompanyDisplayName/)
+  assert.doesNotMatch(source('components/layout/AppHeader.tsx'), /65fd576f-8d97-49ba-bf38-61bc1e94e94a/)
 })
 
 await test('GREETING_CONVERSATIONAL', async () => {
@@ -379,8 +434,9 @@ await test('PROVIDER_FAILURE_SAFE_FALLBACK', async () => {
   })
   const { result } = await ask('Quais pacotes vocês têm?', { reasoner: aiReasoner(failing) })
   assert.equal(result.providerFailure, true)
+  assert.equal(result.providerErrorCode, 'timeout')
   assert.equal(
-    result.traces.some((row) => row.reason === 'provider_failure'),
+    result.traces.some((row) => row.reason === 'provider_failure' && row.ids?.provider_error_code === 'timeout'),
     true,
   )
   assert.match(result.reply.text, /Traditional|Choice|\$65|\$85|equipe CDL/i)

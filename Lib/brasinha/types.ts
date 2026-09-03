@@ -75,4 +75,7 @@ export type BrasinhaTurnResult = {
   reasonerKind: BrasinhaReasonerKind
   reasonerModel: string | null
   providerFailure: boolean
+  providerErrorStatus: string | null
+  providerErrorCode: string | null
+  providerErrorType: string | null
 }

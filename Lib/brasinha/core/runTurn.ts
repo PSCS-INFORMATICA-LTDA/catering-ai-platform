@@ -79,6 +79,9 @@ export async function runBrasinhaTurn(input: {
   const reasoner = input.reasoner ?? createDeterministicReasoner()
   let reasonerModel: string | null = null
   let providerFailure = false
+  let providerErrorStatus: string | null = null
+  let providerErrorCode: string | null = null
+  let providerErrorType: string | null = null
 
   if (policy.action === 'deny') {
     traces.push(blockedToolTrace('approve_discount', companyId, policy.reason))
@@ -125,6 +128,9 @@ export async function runBrasinhaTurn(input: {
     toolsCalled = answer.toolsCalled
     reasonerModel = answer.model ?? null
     providerFailure = Boolean(answer.providerFailure)
+    providerErrorStatus = answer.providerErrorStatus ?? null
+    providerErrorCode = answer.providerErrorCode ?? null
+    providerErrorType = answer.providerErrorType ?? null
     if (answer.handoff) {
       await input.store.setHandoff(
         companyId,
@@ -168,5 +174,8 @@ export async function runBrasinhaTurn(input: {
     reasonerKind: reasoner.kind,
     reasonerModel,
     providerFailure,
+    providerErrorStatus,
+    providerErrorCode,
+    providerErrorType,
   }
 }

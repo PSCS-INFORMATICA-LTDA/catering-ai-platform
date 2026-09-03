@@ -62,6 +62,9 @@ export async function POST(request: Request) {
       reasonerKind: result.reasonerKind,
       reasonerModel: result.reasonerModel,
       providerFailure: result.providerFailure,
+      providerErrorStatus: result.providerErrorStatus,
+      providerErrorCode: result.providerErrorCode,
+      providerErrorType: result.providerErrorType,
       messages,
     })
   } catch (error) {

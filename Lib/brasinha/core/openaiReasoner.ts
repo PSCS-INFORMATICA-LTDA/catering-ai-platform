@@ -11,6 +11,7 @@ import {
 import { historyToAiMessages } from './history.ts'
 import { collectCanonicalAmounts, replyInventedPrice } from './priceGuard.ts'
 import { buildBrasinhaSystemPrompt } from './prompt.ts'
+import { classifyProviderError } from './providerError.ts'
 import {
   createDeterministicReasoner,
   type BrasinhaReasoner,
@@ -31,12 +32,19 @@ function auditTrace(
   companyId: string,
   model: string,
   reason?: string,
+  classified?: { status: string | null; code: string; type: string | null },
 ): BrasinhaToolTrace {
   return {
     tool: 'ai_reasoner',
     source: 'Lib/brasinha/core/openaiReasoner',
     companyId,
-    ids: { provider: 'openai', model },
+    ids: {
+      provider: 'openai',
+      model,
+      provider_error_status: classified?.status ?? null,
+      provider_error_code: classified?.code ?? null,
+      provider_error_type: classified?.type ?? null,
+    },
     timestamp: new Date().toISOString(),
     denied: Boolean(reason),
     reason,
@@ -164,18 +172,22 @@ export function createOpenAIReasoner(
       try {
         const resolved = client ?? createOpenAISdkClient(env)
         return await answerWithOpenAI(input, resolved, model)
-      } catch {
+      } catch (error) {
+        const classified = classifyProviderError(error)
         const recovered = await fallback.answer(input)
         return {
           ...recovered,
           traces: [
-            auditTrace(input.companyId, model, 'provider_failure'),
+            auditTrace(input.companyId, model, 'provider_failure', classified),
             ...recovered.traces,
           ],
           toolsCalled: recovered.toolsCalled,
           provider: recovered.provider ?? 'deterministic',
           model: recovered.model ?? model,
           providerFailure: true,
+          providerErrorStatus: classified.status,
+          providerErrorCode: classified.code,
+          providerErrorType: classified.type,
         }
       }
     },

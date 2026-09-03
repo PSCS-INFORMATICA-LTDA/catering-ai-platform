@@ -11,6 +11,7 @@ type Trace = {
   companyId: string
   denied?: boolean
   reason?: string
+  ids?: Record<string, string | number | null>
 }
 
 type ChatRow = {
@@ -32,6 +33,9 @@ type ConversationPayload = {
   reasonerKind?: string
   reasonerModel?: string | null
   providerFailure?: boolean
+  providerErrorStatus?: string | null
+  providerErrorCode?: string | null
+  providerErrorType?: string | null
   messages?: Array<{
     role?: ChatRow['role']
     content?: string
@@ -47,6 +51,16 @@ function rowsFromMessages(messages: ConversationPayload['messages']): ChatRow[] 
       content: row.content ?? '',
       traces: Array.isArray(row.traces) ? row.traces : [],
     }))
+}
+
+function sanitizedProviderError(traces: Trace[] | undefined) {
+  const row = (traces ?? []).find((trace) => trace.reason === 'provider_failure')
+  const status = row?.ids?.provider_error_status
+  const code = row?.ids?.provider_error_code
+  return {
+    status: status == null ? null : String(status),
+    code: code == null ? null : String(code),
+  }
 }
 
 function persistPointer(conversationId: string | null) {
@@ -92,6 +106,8 @@ export default function BrasinhaDevSimulator({
   const [reasonerKind, setReasonerKind] = useState<string>('deterministic')
   const [reasonerModel, setReasonerModel] = useState<string | null>(null)
   const [providerFailure, setProviderFailure] = useState(false)
+  const [providerErrorStatus, setProviderErrorStatus] = useState<string | null>(null)
+  const [providerErrorCode, setProviderErrorCode] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
@@ -134,6 +150,10 @@ export default function BrasinhaDevSimulator({
           .find((row) => row.role === 'assistant')
         setTraces(lastAssistant?.traces ?? [])
         setTools((lastAssistant?.traces ?? []).map((trace) => trace.tool))
+        const recovered = sanitizedProviderError(lastAssistant?.traces)
+        setProviderFailure(Boolean(recovered.code))
+        setProviderErrorStatus(recovered.status)
+        setProviderErrorCode(recovered.code)
         persistPointer(payload.conversationId)
       } catch (err) {
         if (!cancelled) {
@@ -178,6 +198,8 @@ export default function BrasinhaDevSimulator({
       setReasonerKind(payload.reasonerKind ?? 'deterministic')
       setReasonerModel(payload.reasonerModel ?? null)
       setProviderFailure(Boolean(payload.providerFailure))
+      setProviderErrorStatus(payload.providerErrorStatus ?? null)
+      setProviderErrorCode(payload.providerErrorCode ?? null)
       if (payload.messages?.length) {
         setRows(rowsFromMessages(payload.messages))
       } else if (payload.reply) {
@@ -214,6 +236,8 @@ export default function BrasinhaDevSimulator({
     setReasonerKind('deterministic')
     setReasonerModel(null)
     setProviderFailure(false)
+    setProviderErrorStatus(null)
+    setProviderErrorCode(null)
     setError(null)
     setBusy(false)
   }
@@ -238,6 +262,8 @@ export default function BrasinhaDevSimulator({
           <p>model: {reasonerModel || '—'}</p>
           <p>language: {language}</p>
           <p>provider failure: {providerFailure ? 'yes' : 'no'}</p>
+          <p>provider error status: {providerErrorStatus || '—'}</p>
+          <p>provider error code: {providerErrorCode || '—'}</p>
           <p className="sm:col-span-2">
             conversation id:{' '}
             <span className="font-mono">{conversationId || '—'}</span>

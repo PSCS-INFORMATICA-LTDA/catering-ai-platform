@@ -43,6 +43,9 @@ export type BrasinhaReasonerResult = {
   provider?: BrasinhaReasonerKind
   model?: string | null
   providerFailure?: boolean
+  providerErrorStatus?: string | null
+  providerErrorCode?: string | null
+  providerErrorType?: string | null
 }
 
 export type BrasinhaReasoner = {

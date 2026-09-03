@@ -30,7 +30,7 @@ export const CATERING_NAV: NavGroup[] = [
       { href: '/quotes/new', label: 'Nova cotação' },
       { href: '/orders', label: 'Ordens de Serviço' },
       { href: '/estoque', label: 'Estoque' },
-      { href: '/dev/brasinha', label: 'Brasinha (DEV)', devOnly: true },
+      { href: '/brasinha', label: '🔥 Brasinha', devOnly: true },
     ],
   },
   {
@@ -98,6 +98,9 @@ export function isNavHrefActive(pathname: string, href: string): boolean {
   }
   if (href === '/estoque') {
     return pathname === '/estoque' || pathname.startsWith('/estoque/')
+  }
+  if (href === '/brasinha') {
+    return pathname === '/brasinha' || pathname.startsWith('/brasinha/') || pathname === '/dev/brasinha'
   }
   return pathname === href || pathname.startsWith(`${href}/`)
 }
