@@ -74,6 +74,15 @@ const packages = [
     description: 'Prime BBQ',
     custom: false,
   },
+  {
+    id: 'pkg-trad',
+    packageKey: 'BBQTRAD',
+    label: 'Traditional',
+    pricePerPerson: 45,
+    currency: 'USD',
+    description: 'Traditional BBQ',
+    custom: false,
+  },
 ]
 const items = [
   {
@@ -167,6 +176,18 @@ function fakePort(seen = []) {
       seen.push({ tool: 'get_quote_by_public_reference', companyId })
       return { data: null, trace: emptyTrace('get_quote_by_public_reference', companyId) }
     },
+    async getPackageConfiguration(companyId, query) {
+      seen.push({ tool: 'get_package_configuration', companyId, query })
+      return { data: null, trace: emptyTrace('get_package_configuration', companyId, { query }) }
+    },
+    async getAvailableAdditionalsForPackage(companyId, query) {
+      seen.push({ tool: 'get_available_additionals_for_package', companyId, query })
+      return { data: null, trace: emptyTrace('get_available_additionals_for_package', companyId, { query }) }
+    },
+    async getPublicServiceOptions(companyId, query) {
+      seen.push({ tool: 'get_public_service_options', companyId, query })
+      return { data: null, trace: emptyTrace('get_public_service_options', companyId, { query }) }
+    },
   }
 }
 
@@ -245,7 +266,7 @@ await test('SOURCE_AI_ARCHITECTURE', () => {
     }).kind,
     'deterministic',
   )
-  assert.equal(BRASINHA_PROMPT_VERSION.startsWith('v1b'), true)
+  assert.equal(BRASINHA_PROMPT_VERSION.startsWith('v1c'), true)
 })
 
 await test('PROVIDER_ERROR_CLASSIFICATION_SANITIZED', () => {

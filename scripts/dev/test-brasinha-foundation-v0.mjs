@@ -106,6 +106,15 @@ function fakePort(packages, items, rules) {
     async getQuoteByPublicReference(companyId) {
       return { data: null, trace: emptyTrace('get_quote_by_public_reference', companyId) }
     },
+    async getPackageConfiguration(companyId, query) {
+      return { data: null, trace: emptyTrace('get_package_configuration', companyId, { query }) }
+    },
+    async getAvailableAdditionalsForPackage(companyId, query) {
+      return { data: null, trace: emptyTrace('get_available_additionals_for_package', companyId, { query }) }
+    },
+    async getPublicServiceOptions(companyId, query) {
+      return { data: null, trace: emptyTrace('get_public_service_options', companyId, { query }) }
+    },
   }
 }
 

@@ -83,6 +83,15 @@ function fakePort() {
     async getQuoteByPublicReference(companyId) {
       return { data: null, trace: emptyTrace('get_quote_by_public_reference', companyId) }
     },
+    async getPackageConfiguration(companyId, query) {
+      return { data: null, trace: emptyTrace('get_package_configuration', companyId, { query }) }
+    },
+    async getAvailableAdditionalsForPackage(companyId, query) {
+      return { data: null, trace: emptyTrace('get_available_additionals_for_package', companyId, { query }) }
+    },
+    async getPublicServiceOptions(companyId, query) {
+      return { data: null, trace: emptyTrace('get_public_service_options', companyId, { query }) }
+    },
   }
 }
 
@@ -93,6 +102,7 @@ await test('SOURCE_PERSISTENCE_ARCHITECTURE', () => {
   const store = source('Lib/brasinha/store/supabaseConversationStore.ts')
   const types = source('Lib/brasinha/store/types.ts')
   const migration = source('supabase/migrations/20260903030000_brasinha_conversations_v1a.sql')
+  const intakeMigration = source('supabase/migrations/20260904010000_brasinha_intake_draft_v1c.sql')
   const simulator = source('app/dev/brasinha/BrasinhaDevSimulator.tsx')
   assert.match(types, /export type ConversationStore/)
   assert.match(store, /from\('brasinha_conversations'\)/)
@@ -105,6 +115,11 @@ await test('SOURCE_PERSISTENCE_ARCHITECTURE', () => {
   assert.match(reset, /deleted: false/)
   assert.doesNotMatch(reset, /\.delete\(/)
   assert.doesNotMatch(migration, /DROP\s+(TABLE|POLICY|INDEX|COLUMN|FUNCTION)/i)
+  assert.doesNotMatch(intakeMigration, /DROP\s+(TABLE|POLICY|INDEX|COLUMN|FUNCTION)/i)
+  assert.match(intakeMigration, /intake_draft jsonb/)
+  assert.match(store, /intake_draft/)
+  assert.match(types, /getIntakeDraft/)
+  assert.match(types, /saveIntakeDraft/)
   assert.match(migration, /private\.is_company_member\(company_id\)/)
   assert.match(migration, /CONSTRAINT brasinha_conversations_id_company_key UNIQUE \(id, company_id\)/)
   assert.match(
@@ -118,6 +133,24 @@ await test('SOURCE_PERSISTENCE_ARCHITECTURE', () => {
   assert.match(simulator, /Nova conversa/)
   assert.match(simulator, /conversation id/)
   assert.doesNotMatch(simulator, /<img[^>]+brasinha/i)
+})
+
+await test('MEMORY_INTAKE_DRAFT_PERSISTS_ACROSS_TURNS', async () => {
+  const store = createMemoryConversationStore()
+  const first = await store.getOrCreate({
+    companyId: CDL,
+    channel: 'dev_simulator',
+    language: 'pt',
+  })
+  const seed = await store.getIntakeDraft(CDL, first.id)
+  seed.contact.firstName = 'Philippe'
+  seed.event.eventDate = '2026-09-07'
+  const saved = await store.saveIntakeDraft(CDL, first.id, seed)
+  const recovered = await store.getIntakeDraft(CDL, first.id)
+  assert.equal(recovered.contact.firstName, 'Philippe')
+  assert.equal(recovered.event.eventDate, '2026-09-07')
+  assert.equal(saved.conversation.currentStage, recovered.conversation.currentStage)
+  await assert.rejects(() => store.getIntakeDraft(ISO, first.id), /company_scope_violation/)
 })
 
 await test('MEMORY_RECOVER_AND_CROSS_COMPANY_BLOCK', async () => {
@@ -242,7 +275,9 @@ await test('SUPABASE_CONVERSATION_AND_MESSAGE_PERSIST', async () => {
   assert.equal(recovered.companyId, CDL)
   assert.ok(messages.length >= 2, 'messages must persist')
   assert.equal(messages[0].content, 'Quanto tempo dura o churrasco?')
-  assert.match(messages[1].content, /4 horas/)
+  const assistant = messages.find((row) => row.role === 'assistant')
+  assert.ok(assistant, 'assistant reply must persist')
+  assert.match(assistant.content, /4 horas/)
   assert.equal(await storeB.get(ISO, turn.conversation.id), null)
 })
 
