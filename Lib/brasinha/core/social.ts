@@ -6,7 +6,7 @@ const THANKS = /^(obrigad[oa]s?|valeu|thanks|thank you|gracias)[\s!.,😊]*$/i
 const ACK =
   /^(beleza|ok|okay|blz|certo|show|perfeito|legal|ta|t[aá]|yes|yeah|si|s[ií])[\s!.,]*$/i
 const GREETING =
-  /^(boa (noite|tarde|dia)|oi+|ol[aá]|hey|hi+|hello|e a[ií]|tudo bem|tudo bom)\b/i
+  /^(boa (noite|tarde|dia)|bom dia|oi+|ol[aá]|hey|hi+|hello|e a[ií]|tudo bem|tudo bom)\b/i
 const COMMERCIAL =
   /\b(quanto|pacote|pre[cç]o|choice|prime|desconto|cotac|quote|package|price)\b/i
 

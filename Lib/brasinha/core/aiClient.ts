@@ -62,7 +62,7 @@ export function createOpenAISdkClient(
         name: tool.name,
         description: tool.description,
         parameters: tool.parameters,
-        strict: true,
+        strict: false,
       }))
       const items: Array<Record<string, unknown>> = input.messages.map((message) => ({
         role: message.role,

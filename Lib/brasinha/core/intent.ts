@@ -20,7 +20,7 @@ const GRILL =
   /\b(churrasqueira|alugam? churrasqueira|grill rental|rent(al)? (a )?grill|parrilla)\b/i
 const WAITER = /\b(gar[cç]om|waiter|mozo|garcon)\b/i
 const QUOTE_INTENT =
-  /\b(quero churrasco|need bbq|bbq for \d+|cotiza|cotiza[cç][aã]o|quote for \d+|para \d+ pessoas|para \d+ personas|for \d+ people)\b/i
+  /\b(quero churrasco|queria (marcar )?(um )?churrasco|marcar um churrasco|need bbq|bbq for \d+|cotiza|cotiza[cç][aã]o|quote for \d+|para \d+ pessoas|para \d+ personas|for \d+ people)\b/i
 const QUOTE_STATUS = /\b(q-\d{4}-\d+|proposta|proposal token|status da cota[cç][aã]o)\b/i
 const RULES = /\b(regras|rules|m[ií]nimo|minimum order|mileage|milhas)\b/i
 const SEARCH = /\b(picanha|farofa|lingui[cç]a|salm[aã]o|costela|adicional|extra)\b/i

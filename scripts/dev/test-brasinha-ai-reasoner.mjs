@@ -323,6 +323,10 @@ await test('GREETING_CONVERSATIONAL', async () => {
   assert.doesNotMatch(result.reply.text, /equipe CDL/)
   assert.equal(result.toolsCalled.includes('get_package_details'), false)
   assert.equal(result.toolsCalled.includes('get_packages'), false)
+  const morning = await ask('Bom dia tudo bem?')
+  assert.equal(morning.result.conversation.handoffStatus, 'AI_ACTIVE')
+  assert.match(morning.result.reply.text, /Tudo ótimo|Olá|Bom dia/i)
+  assert.doesNotMatch(morning.result.reply.text, /equipe CDL/)
 })
 
 await test('PACKAGE_CHOICE_NATURAL_LANGUAGE_TOOL_CALL', async () => {
