@@ -46,6 +46,57 @@ export type QuotePublicLookup = {
   total: number | null
 }
 
+export type PackageConfigurationView = {
+  packageId: string
+  packageKey: string | null
+  packageName: string
+  includedItems: Array<{ id: string | null; label: string; itemKey: string | null }>
+  requiredOptionGroups: Array<{
+    id: string
+    label: string
+    required: boolean
+    minChoices: number | null
+    maxChoices: number | null
+    selectedItemId: string | null
+    choices: Array<{ id: string; label: string; catalogItemId: string | null }>
+  }>
+}
+
+export type ExtraAvailabilityView = {
+  available: Array<{
+    id: string
+    itemKey: string | null
+    label: string
+    price: number | null
+    currency: string
+    category: string | null
+    status: 'AVAILABLE'
+  }>
+  includedInPackage: Array<{ id: string; itemKey: string | null; label: string; status: 'INCLUDED_IN_PACKAGE' }>
+  selectedInPackage: Array<{ id: string; itemKey: string | null; label: string; status: 'SELECTED_IN_PACKAGE' }>
+}
+
+export type PublicServiceOptionsView = {
+  waiter: { id: string | null; itemKey: string; label: string; price: number | null; currency: string } | null
+  disposableKit: {
+    id: string | null
+    itemKey: string
+    label: string
+    price: number | null
+    currency: string
+    included: boolean
+    offerable: boolean
+  } | null
+  grillRental: {
+    id: string | null
+    itemKey: string
+    label: string
+    price: number | null
+    currency: string
+    qtyWhenRequired: 1
+  }
+}
+
 export type BrasinhaCatalogPort = {
   getCompanyPublicProfile(
     companyId: string,
@@ -77,6 +128,23 @@ export type BrasinhaCatalogPort = {
     companyId: string,
     reference: string,
   ): Promise<{ data: QuotePublicLookup | null; trace: BrasinhaToolTrace }>
+  getPackageConfiguration(
+    companyId: string,
+    query: string,
+    language: BrasinhaLanguage,
+    selections?: Record<string, string>,
+  ): Promise<{ data: PackageConfigurationView | null; trace: BrasinhaToolTrace }>
+  getAvailableAdditionalsForPackage(
+    companyId: string,
+    query: string,
+    language: BrasinhaLanguage,
+    selections?: Record<string, string>,
+  ): Promise<{ data: ExtraAvailabilityView | null; trace: BrasinhaToolTrace }>
+  getPublicServiceOptions(
+    companyId: string,
+    query: string,
+    language: BrasinhaLanguage,
+  ): Promise<{ data: PublicServiceOptionsView | null; trace: BrasinhaToolTrace }>
 }
 
 export const BLOCKED_WRITE_TOOLS = [

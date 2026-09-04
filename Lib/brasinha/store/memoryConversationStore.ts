@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { createEmptyQuoteDraft, parseQuoteDraft, type BrasinhaQuoteDraft } from '../intake/draft.ts'
 import type {
   BrasinhaConversation,
   BrasinhaStoredMessage,
@@ -21,6 +22,7 @@ function scopedKey(companyId: string, conversationId: string) {
 export function createMemoryConversationStore(): ConversationStore {
   const conversations = new Map<string, BrasinhaConversation>()
   const messages = new Map<string, BrasinhaStoredMessage[]>()
+  const drafts = new Map<string, BrasinhaQuoteDraft>()
 
   return {
     async getOrCreate(input) {
@@ -47,6 +49,7 @@ export function createMemoryConversationStore(): ConversationStore {
       }
       conversations.set(key, created)
       messages.set(key, [])
+      drafts.set(key, createEmptyQuoteDraft())
       return created
     },
     async get(companyId, conversationId) {
@@ -81,6 +84,18 @@ export function createMemoryConversationStore(): ConversationStore {
       conversation.handoffReason = reason
       conversation.updatedAt = nowIso()
       return conversation
+    },
+    async getIntakeDraft(companyId, conversationId) {
+      const key = scopedKey(companyId, conversationId)
+      if (!conversations.get(key)) throw new Error(COMPANY_SCOPE_VIOLATION)
+      return parseQuoteDraft(drafts.get(key) ?? createEmptyQuoteDraft())
+    },
+    async saveIntakeDraft(companyId, conversationId, draft) {
+      const key = scopedKey(companyId, conversationId)
+      if (!conversations.get(key)) throw new Error(COMPANY_SCOPE_VIOLATION)
+      const next = parseQuoteDraft(draft)
+      drafts.set(key, next)
+      return next
     },
   }
 }

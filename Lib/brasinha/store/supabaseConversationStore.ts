@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { randomUUID } from 'node:crypto'
+import { createEmptyQuoteDraft, parseQuoteDraft, type BrasinhaQuoteDraft } from '../intake/draft.ts'
 import type {
   BrasinhaChannelId,
   BrasinhaConversation,
@@ -68,6 +69,23 @@ function mapMessage(row: MessageRow): BrasinhaStoredMessage {
     content: row.content,
     traces: Array.isArray(row.traces) ? (row.traces as BrasinhaToolTrace[]) : [],
     createdAt: row.created_at,
+  }
+}
+
+const INTAKE_DRAFT_MARKER = 'BRASINHA_INTAKE_DRAFT_V1:'
+
+function draftFromSystemMessages(messages: BrasinhaStoredMessage[]): BrasinhaQuoteDraft {
+  const latest = [...messages]
+    .reverse()
+    .find(
+      (row) =>
+        row.role === 'system' && row.content.startsWith(INTAKE_DRAFT_MARKER),
+    )
+  if (!latest) return createEmptyQuoteDraft()
+  try {
+    return parseQuoteDraft(JSON.parse(latest.content.slice(INTAKE_DRAFT_MARKER.length)))
+  } catch {
+    return createEmptyQuoteDraft()
   }
 }
 
@@ -179,6 +197,55 @@ export function createSupabaseConversationStore(
         .eq('id', message.conversationId)
         .eq('company_id', companyId)
       return mapMessage(data as MessageRow)
+    },
+    async getIntakeDraft(companyId, conversationId) {
+      const conversation = await this.get(companyId, conversationId)
+      if (!conversation) throw new Error(COMPANY_SCOPE_VIOLATION)
+      const { data, error } = await client
+        .from('brasinha_conversations')
+        .select('intake_draft')
+        .eq('id', conversationId)
+        .eq('company_id', companyId)
+        .maybeSingle()
+      if (error) {
+        if (/intake_draft|schema cache|column/i.test(error.message)) {
+          return draftFromSystemMessages(await this.listMessages(companyId, conversationId))
+        }
+        throw new Error(error.message)
+      }
+      const stored = (data as { intake_draft?: unknown } | null)?.intake_draft
+      if (stored && typeof stored === 'object' && Object.keys(stored as object).length) {
+        return parseQuoteDraft(stored)
+      }
+      return draftFromSystemMessages(await this.listMessages(companyId, conversationId))
+    },
+    async saveIntakeDraft(companyId, conversationId, draft) {
+      const conversation = await this.get(companyId, conversationId)
+      if (!conversation) throw new Error(COMPANY_SCOPE_VIOLATION)
+      const next = parseQuoteDraft(draft)
+      const { error } = await client
+        .from('brasinha_conversations')
+        .update({
+          intake_draft: next,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', conversationId)
+        .eq('company_id', companyId)
+      if (!error) return next
+      if (!/intake_draft|schema cache|column/i.test(error.message)) {
+        throw new Error(error.message)
+      }
+      await this.appendMessage(companyId, {
+        conversationId,
+        companyId,
+        channel: conversation.channel,
+        direction: 'outbound',
+        role: 'system',
+        language: conversation.language,
+        content: `${INTAKE_DRAFT_MARKER}${JSON.stringify(next)}`,
+        traces: [],
+      })
+      return next
     },
     async setHandoff(companyId, conversationId, status, reason) {
       const now = new Date().toISOString()

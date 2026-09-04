@@ -1,3 +1,4 @@
+import type { BrasinhaQuoteDraft } from '../intake/draft.ts'
 import type {
   BrasinhaChannelId,
   BrasinhaConversation,
@@ -32,6 +33,12 @@ export type ConversationStore = {
     status: BrasinhaHandoffStatus,
     reason: string | null,
   ): Promise<BrasinhaConversation | null>
+  getIntakeDraft(companyId: string, conversationId: string): Promise<BrasinhaQuoteDraft>
+  saveIntakeDraft(
+    companyId: string,
+    conversationId: string,
+    draft: BrasinhaQuoteDraft,
+  ): Promise<BrasinhaQuoteDraft>
 }
 
 export const COMPANY_SCOPE_VIOLATION = 'company_scope_violation'
