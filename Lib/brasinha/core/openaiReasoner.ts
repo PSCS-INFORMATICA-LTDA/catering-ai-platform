@@ -20,6 +20,8 @@ import {
   nextIntakePrompt,
   readyToCreateQuoteReply,
 } from '../intake/review.ts'
+import { detectSocialTurn, extractCustomerName } from './social.ts'
+import { socialReply } from './copy.ts'
 import { buildBrasinhaSystemPrompt } from './prompt.ts'
 import { classifyProviderError } from './providerError.ts'
 import {
@@ -61,16 +63,6 @@ function auditTrace(
     denied: Boolean(reason),
     reason,
   }
-}
-
-function hasUnreliableCommercialData(executions: Array<{ name: string; data: unknown }>) {
-  return executions.some(
-    (row) =>
-      (row.name === 'get_package_details' ||
-        row.name === 'get_catalog_item' ||
-        row.name === 'get_quote_by_public_reference') &&
-      row.data == null,
-  )
 }
 
 async function answerWithOpenAI(
@@ -155,13 +147,8 @@ async function answerWithOpenAI(
   }
 
   const invented = Boolean(text) && replyInventedPrice(text, allowedAmounts)
-  const unreliable = hasUnreliableCommercialData(executions)
-  const intakeProgressed = executions.some(
-    (row) =>
-      row.name === 'apply_quote_intake_patch' ||
-      row.name === 'resolve_pending_intake_action',
-  )
   const pending = intake.draft.conversation.pendingAction
+  const social = detectSocialTurn(input.text)
   if (invented) {
     const unapproved = unapprovedMentionedAmounts(text, allowedAmounts)
     traces.push(
@@ -179,23 +166,17 @@ async function answerWithOpenAI(
       draft: intake.draft,
     }
   }
-  if ((!text || unreliable) && !intakeProgressed && !pending) {
-    traces.push(auditTrace(input.companyId, model, 'unknown_rule'))
-    return {
-      text: handoffReply(input.language),
-      traces,
-      toolsCalled,
-      handoff: 'unknown_rule',
-      provider: 'openai',
-      model,
-      draft: intake.draft,
-    }
+  if (!text) {
+    text =
+      social && !pending
+        ? socialReply(input.language, social, extractCustomerName(input.text), input.text)
+        : intakeFallbackReply(intake.draft, input.language)
   }
 
   traces.push(auditTrace(input.companyId, model))
 
   return {
-    text: text || intakeFallbackReply(intake.draft, input.language),
+    text,
     traces,
     toolsCalled,
     handoff: null,

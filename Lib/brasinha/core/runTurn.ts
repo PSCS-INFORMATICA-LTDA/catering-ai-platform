@@ -152,6 +152,8 @@ export async function runBrasinhaTurn(input: {
         'HUMAN_REVIEW_REQUIRED',
         answer.handoff,
       )
+    } else {
+      await input.store.setHandoff(companyId, conversation.id, 'AI_ACTIVE', null)
     }
   }
 
