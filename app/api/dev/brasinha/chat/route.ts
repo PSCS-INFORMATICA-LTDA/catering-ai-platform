@@ -49,7 +49,9 @@ export async function POST(request: Request) {
       catalog: createCanonicalCatalogPort(),
       reasoner: resolveBrasinhaReasoner(),
     })
-    const messages = await store.listMessages(companyId, result.conversation.id)
+    const messages = (await store.listMessages(companyId, result.conversation.id)).filter(
+      (row) => row.role === 'customer' || row.role === 'assistant',
+    )
     return NextResponse.json({
       conversationId: result.conversation.id,
       companyId: result.conversation.companyId,
@@ -65,6 +67,13 @@ export async function POST(request: Request) {
       providerErrorStatus: result.providerErrorStatus,
       providerErrorCode: result.providerErrorCode,
       providerErrorType: result.providerErrorType,
+      intakeStage: result.intake.currentStage,
+      missingFields: result.intake.missingFields,
+      pendingActionType: result.intake.pendingActionType,
+      readyForReview: result.intake.readyForReview,
+      readyToCreateQuote: result.intake.readyToCreateQuote,
+      packageKey: result.intake.packageKey,
+      packageName: result.intake.packageName,
       messages,
     })
   } catch (error) {

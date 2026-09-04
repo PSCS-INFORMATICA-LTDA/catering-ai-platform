@@ -135,6 +135,16 @@ function formatFromTools(
     return packagesReply(language, packages)
   }
   if (catalog.length) return catalogReply(language, catalog)
+  const intake = payloads.find(
+    (row) =>
+      row.tool === 'apply_quote_intake_patch' ||
+      row.tool === 'resolve_pending_intake_action',
+  )
+  if (intake) {
+    return language === 'en'
+      ? 'Got it. We can continue with the next quote detail.'
+      : 'Perfeito. Podemos seguir com o próximo detalhe da cotação.'
+  }
   return handoffReply(language)
 }
 

@@ -66,6 +66,16 @@ export type BrasinhaStoredMessage = {
 
 export type BrasinhaReasonerKind = 'deterministic' | 'openai'
 
+export type BrasinhaIntakeSnapshot = {
+  currentStage: string
+  missingFields: string[]
+  pendingActionType: string | null
+  readyForReview: boolean
+  readyToCreateQuote: boolean
+  packageKey: string | null
+  packageName: string | null
+}
+
 export type BrasinhaTurnResult = {
   conversation: BrasinhaConversation
   reply: OutboundMessage
@@ -78,4 +88,5 @@ export type BrasinhaTurnResult = {
   providerErrorStatus: string | null
   providerErrorCode: string | null
   providerErrorType: string | null
+  intake: BrasinhaIntakeSnapshot
 }

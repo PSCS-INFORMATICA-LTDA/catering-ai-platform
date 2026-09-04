@@ -1,3 +1,4 @@
+import { createEmptyQuoteDraft, publicIntakeSnapshot } from '../intake/draft.ts'
 import { detectBrasinhaLanguage } from '../language.ts'
 import {
   deniedReply,
@@ -61,6 +62,14 @@ export async function runBrasinhaTurn(input: {
   })
   conversation.language = language
 
+  let draft = createEmptyQuoteDraft()
+  try {
+    draft = await input.store.getIntakeDraft(companyId, conversation.id)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    if (!/intake_draft|schema cache|column/i.test(message)) throw error
+  }
+
   await input.store.appendMessage(companyId, {
     conversationId: conversation.id,
     companyId,
@@ -122,6 +131,10 @@ export async function runBrasinhaTurn(input: {
       text: input.inbound.text,
       catalog: input.catalog,
       history: selectConversationHistory(stored, { excludeLastInbound: true }),
+      draft,
+      onDraft(next) {
+        draft = next
+      },
     })
     text = answer.text
     traces.push(...answer.traces)
@@ -131,6 +144,7 @@ export async function runBrasinhaTurn(input: {
     providerErrorStatus = answer.providerErrorStatus ?? null
     providerErrorCode = answer.providerErrorCode ?? null
     providerErrorType = answer.providerErrorType ?? null
+    if (answer.draft) draft = answer.draft
     if (answer.handoff) {
       await input.store.setHandoff(
         companyId,
@@ -139,6 +153,13 @@ export async function runBrasinhaTurn(input: {
         answer.handoff,
       )
     }
+  }
+
+  try {
+    draft = await input.store.saveIntakeDraft(companyId, conversation.id, draft)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    if (!/intake_draft|schema cache|column/i.test(message)) throw error
   }
 
   const updated = (await input.store.get(companyId, conversation.id)) ?? conversation
@@ -177,5 +198,6 @@ export async function runBrasinhaTurn(input: {
     providerErrorStatus,
     providerErrorCode,
     providerErrorType,
+    intake: publicIntakeSnapshot(draft),
   }
 }

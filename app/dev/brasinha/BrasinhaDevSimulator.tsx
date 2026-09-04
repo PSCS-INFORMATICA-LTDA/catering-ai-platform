@@ -36,6 +36,13 @@ type ConversationPayload = {
   providerErrorStatus?: string | null
   providerErrorCode?: string | null
   providerErrorType?: string | null
+  intakeStage?: string | null
+  missingFields?: string[]
+  pendingActionType?: string | null
+  readyForReview?: boolean
+  readyToCreateQuote?: boolean
+  packageKey?: string | null
+  packageName?: string | null
   messages?: Array<{
     role?: ChatRow['role']
     content?: string
@@ -60,6 +67,18 @@ function sanitizedProviderError(traces: Trace[] | undefined) {
   return {
     status: status == null ? null : String(status),
     code: code == null ? null : String(code),
+  }
+}
+
+function intakeFromPayload(payload: ConversationPayload) {
+  return {
+    intakeStage: payload.intakeStage ?? null,
+    missingFields: payload.missingFields ?? [],
+    pendingActionType: payload.pendingActionType ?? null,
+    readyForReview: Boolean(payload.readyForReview),
+    readyToCreateQuote: Boolean(payload.readyToCreateQuote),
+    packageKey: payload.packageKey ?? null,
+    packageName: payload.packageName ?? null,
   }
 }
 
@@ -108,6 +127,13 @@ export default function BrasinhaDevSimulator({
   const [providerFailure, setProviderFailure] = useState(false)
   const [providerErrorStatus, setProviderErrorStatus] = useState<string | null>(null)
   const [providerErrorCode, setProviderErrorCode] = useState<string | null>(null)
+  const [intakeStage, setIntakeStage] = useState<string | null>(null)
+  const [missingFields, setMissingFields] = useState<string[]>([])
+  const [pendingActionType, setPendingActionType] = useState<string | null>(null)
+  const [readyForReview, setReadyForReview] = useState(false)
+  const [readyToCreateQuote, setReadyToCreateQuote] = useState(false)
+  const [packageKey, setPackageKey] = useState<string | null>(null)
+  const [packageName, setPackageName] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
@@ -154,6 +180,14 @@ export default function BrasinhaDevSimulator({
         setProviderFailure(Boolean(recovered.code))
         setProviderErrorStatus(recovered.status)
         setProviderErrorCode(recovered.code)
+        const intake = intakeFromPayload(payload)
+        setIntakeStage(intake.intakeStage)
+        setMissingFields(intake.missingFields)
+        setPendingActionType(intake.pendingActionType)
+        setReadyForReview(intake.readyForReview)
+        setReadyToCreateQuote(intake.readyToCreateQuote)
+        setPackageKey(intake.packageKey)
+        setPackageName(intake.packageName)
         persistPointer(payload.conversationId)
       } catch (err) {
         if (!cancelled) {
@@ -200,6 +234,14 @@ export default function BrasinhaDevSimulator({
       setProviderFailure(Boolean(payload.providerFailure))
       setProviderErrorStatus(payload.providerErrorStatus ?? null)
       setProviderErrorCode(payload.providerErrorCode ?? null)
+      const intake = intakeFromPayload(payload)
+      setIntakeStage(intake.intakeStage)
+      setMissingFields(intake.missingFields)
+      setPendingActionType(intake.pendingActionType)
+      setReadyForReview(intake.readyForReview)
+      setReadyToCreateQuote(intake.readyToCreateQuote)
+      setPackageKey(intake.packageKey)
+      setPackageName(intake.packageName)
       if (payload.messages?.length) {
         setRows(rowsFromMessages(payload.messages))
       } else if (payload.reply) {
@@ -238,6 +280,13 @@ export default function BrasinhaDevSimulator({
     setProviderFailure(false)
     setProviderErrorStatus(null)
     setProviderErrorCode(null)
+    setIntakeStage(null)
+    setMissingFields([])
+    setPendingActionType(null)
+    setReadyForReview(false)
+    setReadyToCreateQuote(false)
+    setPackageKey(null)
+    setPackageName(null)
     setError(null)
     setBusy(false)
   }
@@ -270,6 +319,16 @@ export default function BrasinhaDevSimulator({
           </p>
           <p>handoff: {handoff}</p>
           <p>handoff reason: {handoffReason || '—'}</p>
+          <p>intake stage: {intakeStage || '—'}</p>
+          <p>pending action: {pendingActionType || '—'}</p>
+          <p>ready for review: {readyForReview ? 'yes' : 'no'}</p>
+          <p>ready to create quote: {readyToCreateQuote ? 'yes' : 'no'}</p>
+          <p className="sm:col-span-2">
+            package: {packageName || '—'} {packageKey ? `(${packageKey})` : ''}
+          </p>
+          <p className="sm:col-span-2">
+            missing: {missingFields.join(', ') || '—'}
+          </p>
           <p className="sm:col-span-2">tools: {tools.join(', ') || '—'}</p>
           <ul className="sm:col-span-2 space-y-1">
             {traces.map((trace, index) => (

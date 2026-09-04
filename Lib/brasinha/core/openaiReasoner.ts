@@ -14,6 +14,12 @@ import {
   replyInventedPrice,
   unapprovedMentionedAmounts,
 } from './priceGuard.ts'
+import { createEmptyQuoteDraft, type BrasinhaQuoteDraft } from '../intake/draft.ts'
+import {
+  formatReviewReply,
+  nextIntakePrompt,
+  readyToCreateQuoteReply,
+} from '../intake/review.ts'
 import { buildBrasinhaSystemPrompt } from './prompt.ts'
 import { classifyProviderError } from './providerError.ts'
 import {
@@ -23,7 +29,7 @@ import {
   type BrasinhaReasonerResult,
 } from './reasoner.ts'
 
-const MAX_TOOL_ROUNDS = 3
+const MAX_TOOL_ROUNDS = 6
 
 export type OpenAIReasonerOptions = {
   client?: BrasinhaAiClient
@@ -76,6 +82,13 @@ async function answerWithOpenAI(
   const toolsCalled: string[] = []
   const executions: Array<{ name: string; data: unknown }> = []
   const allowedAmounts: number[] = []
+  const intake = {
+    draft: input.draft ?? createEmptyQuoteDraft(),
+    onDraft(next: BrasinhaQuoteDraft) {
+      intake.draft = next
+      input.onDraft?.(next)
+    },
+  }
 
   const profile = await input.catalog.getCompanyPublicProfile(
     input.companyId,
@@ -86,10 +99,6 @@ async function answerWithOpenAI(
     reason: 'prompt_company_context',
   })
 
-  const instructions = buildBrasinhaSystemPrompt({
-    companyName: profile.data?.name ?? null,
-    language: input.language,
-  })
   const messages = [
     ...historyToAiMessages(input.history ?? []),
     { role: 'user' as const, content: input.text },
@@ -100,6 +109,11 @@ async function answerWithOpenAI(
   let text = ''
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
+    const instructions = buildBrasinhaSystemPrompt({
+      companyName: profile.data?.name ?? null,
+      language: input.language,
+      draft: intake.draft,
+    })
     const completion = await client.complete({
       model,
       instructions,
@@ -119,6 +133,7 @@ async function answerWithOpenAI(
           companyId: input.companyId,
           language: input.language,
           catalog: input.catalog,
+          intake,
         })
         traces.push(executed.trace)
         if ((ALLOWED_AI_TOOLS as readonly string[]).includes(executed.name)) {
@@ -141,39 +156,61 @@ async function answerWithOpenAI(
 
   const invented = Boolean(text) && replyInventedPrice(text, allowedAmounts)
   const unreliable = hasUnreliableCommercialData(executions)
-  if (!text || unreliable || invented) {
-    const unapproved = text ? unapprovedMentionedAmounts(text, allowedAmounts) : []
+  const intakeProgressed = executions.some(
+    (row) =>
+      row.name === 'apply_quote_intake_patch' ||
+      row.name === 'resolve_pending_intake_action',
+  )
+  const pending = intake.draft.conversation.pendingAction
+  if (invented) {
+    const unapproved = unapprovedMentionedAmounts(text, allowedAmounts)
     traces.push(
-      auditTrace(
-        input.companyId,
-        model,
-        invented ? 'price_not_canonical' : 'unknown_rule',
-        undefined,
-        {
-          unapproved_amounts: unapproved.length ? unapproved.join(',') : null,
-        },
-      ),
+      auditTrace(input.companyId, model, 'price_not_canonical', undefined, {
+        unapproved_amounts: unapproved.length ? unapproved.join(',') : null,
+      }),
     )
     return {
       text: handoffReply(input.language),
       traces,
       toolsCalled,
-      handoff: invented ? 'price_not_canonical' : 'unknown_rule',
+      handoff: 'price_not_canonical',
       provider: 'openai',
       model,
+      draft: intake.draft,
+    }
+  }
+  if ((!text || unreliable) && !intakeProgressed && !pending) {
+    traces.push(auditTrace(input.companyId, model, 'unknown_rule'))
+    return {
+      text: handoffReply(input.language),
+      traces,
+      toolsCalled,
+      handoff: 'unknown_rule',
+      provider: 'openai',
+      model,
+      draft: intake.draft,
     }
   }
 
   traces.push(auditTrace(input.companyId, model))
 
   return {
-    text,
+    text: text || intakeFallbackReply(intake.draft, input.language),
     traces,
     toolsCalled,
     handoff: null,
     provider: 'openai',
     model,
+    draft: intake.draft,
   }
+}
+
+function intakeFallbackReply(draft: BrasinhaQuoteDraft, language: BrasinhaReasonerInput['language']) {
+  if (draft.conversation.readyToCreateQuote) return readyToCreateQuoteReply(language)
+  if (draft.conversation.readyForReview || draft.conversation.currentStage === 'REVIEW') {
+    return formatReviewReply(draft, language, null)
+  }
+  return nextIntakePrompt(draft, language)
 }
 
 export function createOpenAIReasoner(

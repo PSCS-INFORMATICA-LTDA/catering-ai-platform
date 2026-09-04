@@ -1,3 +1,5 @@
+import type { BrasinhaQuoteDraft } from '../intake/draft.ts'
+import { nextIntakePrompt } from '../intake/review.ts'
 import { getCompanyPersona, personaIntro } from '../persona.ts'
 import { handoffReply } from '../policy.ts'
 import type { BrasinhaCatalogPort } from '../tools/types.ts'
@@ -33,6 +35,8 @@ export type BrasinhaReasonerInput = {
   text: string
   catalog: BrasinhaCatalogPort
   history?: BrasinhaStoredMessage[]
+  draft?: BrasinhaQuoteDraft
+  onDraft?: (draft: BrasinhaQuoteDraft) => void
 }
 
 export type BrasinhaReasonerResult = {
@@ -40,6 +44,7 @@ export type BrasinhaReasonerResult = {
   traces: BrasinhaToolTrace[]
   toolsCalled: string[]
   handoff: string | null
+  draft?: BrasinhaQuoteDraft
   provider?: BrasinhaReasonerKind
   model?: string | null
   providerFailure?: boolean
@@ -57,8 +62,9 @@ export async function answerDeterministicIntent(
   input: BrasinhaReasonerInput,
 ): Promise<BrasinhaReasonerResult> {
   const persona = getCompanyPersona(input.companyId)
+  const pending = input.draft?.conversation.pendingAction
   const social = detectSocialTurn(input.text)
-  if (social) {
+  if (social && !pending) {
     return {
       text: socialReply(
         input.language,
@@ -70,6 +76,7 @@ export async function answerDeterministicIntent(
       toolsCalled: [],
       handoff: null,
       provider: 'deterministic',
+      draft: input.draft,
     }
   }
   const intent = detectBrasinhaIntent(input.text)
@@ -240,11 +247,23 @@ export async function answerDeterministicIntent(
     }
   }
 
+  if (pending && input.draft) {
+    return {
+      text: nextIntakePrompt(input.draft, input.language),
+      traces,
+      toolsCalled,
+      handoff: null,
+      provider: 'deterministic',
+      draft: input.draft,
+    }
+  }
+
   return {
     text: handoffReply(input.language),
     traces,
     toolsCalled,
     handoff: 'unknown_rule',
+    draft: input.draft,
   }
 }
 
