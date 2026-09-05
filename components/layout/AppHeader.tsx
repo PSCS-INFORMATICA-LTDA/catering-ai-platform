@@ -8,12 +8,12 @@ import { glassBtn } from '@/Lib/liquidGlass'
 import { createClient } from '@/Lib/supabase/client'
 import { resolveAuthLocale, tAuth } from '@/Lib/i18n/authUsers'
 import { tChrome } from '@/Lib/i18n/chrome'
-import { resolveTenantCompanyDisplayName } from '@/Lib/tenant/companyDisplayName'
+import { resolveHeaderCompanyDisplayName } from '@/Lib/tenant/companyDisplayName'
 
 export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
   const router = useRouter()
   const { session } = useAppSession()
-  const { company, loading } = useTenant()
+  const { company, companyId, loading } = useTenant()
   const [loggingOut, setLoggingOut] = useState(false)
 
   async function logout() {
@@ -31,7 +31,11 @@ export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
   }
 
   const locale = resolveAuthLocale(session?.locale)
-  const resolvedCompanyName = resolveTenantCompanyDisplayName(company)
+  const resolvedCompanyName = resolveHeaderCompanyDisplayName({
+    company,
+    companyId,
+    memberships: session?.memberships,
+  })
   const companyLabel = loading
     ? '…'
     : resolvedCompanyName ?? tChrome(locale, 'headerCompanyUnidentified')
