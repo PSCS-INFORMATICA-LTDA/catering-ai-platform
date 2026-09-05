@@ -9,7 +9,10 @@ import {
 } from '@/Lib/readQuoteSnapshot'
 import { displayValue, formatCurrency } from '@/app/quotes/[id]/quoteDetailTypes'
 import type { PackageSelectionLabel } from '@/Lib/packageOptionGroups'
-import type { QuoteReviewPackageSummary } from './quoteReviewPackageSummary'
+import {
+  shouldShowInlinePriceBreakdown,
+  type QuoteReviewPackageSummary,
+} from './quoteReviewPackageSummary'
 import { tw } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
@@ -24,6 +27,45 @@ function PackageDetailLine({
     <p className="quote-proposal-package-detail">
       <span className="quote-proposal-package-detail-label font-bold">{label}</span>{' '}
       {value}
+    </p>
+  )
+}
+
+function InlinePriceBreakdown({
+  loc,
+  label,
+  unitPrice,
+  people,
+  totalPrice,
+  kind,
+}: {
+  loc: QuoteLanguage
+  label: string
+  unitPrice: number
+  people: number
+  totalPrice: number
+  kind: 'package' | 'garnish'
+}) {
+  return (
+    <p
+      className="quote-proposal-inline-price"
+      data-review-inline-price={kind}
+      data-inline-unit={unitPrice}
+      data-inline-people={people}
+      data-inline-total={totalPrice}
+    >
+      <span className="quote-proposal-inline-price-label">{label}</span>
+      <span className="quote-proposal-inline-price-calc">
+        <span className="quote-proposal-inline-price-formula">
+          {formatCurrency(unitPrice)} × {people} {tw(loc, 'inlineBilledPeople')}
+        </span>
+        <span className="quote-proposal-inline-price-eq">
+          {'= '}
+          <strong className="quote-proposal-inline-price-total">
+            {formatCurrency(totalPrice)}
+          </strong>
+        </span>
+      </span>
     </p>
   )
 }
@@ -196,6 +238,19 @@ export default function QuoteReviewPackageCdlSection({
 }) {
   const loc: QuoteLanguage =
     language === 'en' || language === 'es' ? language : 'pt'
+  const chargedPeople = packageSummary?.chargedPeople ?? billableGuestCount
+  const showPackageInline = shouldShowInlinePriceBreakdown({
+    unitPrice: packageSummary?.packageUnitPrice,
+    people: chargedPeople,
+    totalPrice: packageSummary?.packageTotalPrice,
+  })
+  const showGarnishInline =
+    packageSummary?.hasGarnish === true &&
+    shouldShowInlinePriceBreakdown({
+      unitPrice: packageSummary?.garnishUnitPrice,
+      people: chargedPeople,
+      totalPrice: packageSummary?.garnishTotalPrice,
+    })
   const itemsText = packageSummary?.packageItemsDescription?.trim() || '—'
   const garnishText =
     packageSummary?.garnishDescription?.trim() || tw(loc, 'notIncluded')
@@ -227,9 +282,29 @@ export default function QuoteReviewPackageCdlSection({
       ) : null}
       <div data-review-package-items>
         <PackageDetailLine label={tw(loc, 'packageItems')} value={itemsText} />
+        {showPackageInline && packageSummary ? (
+          <InlinePriceBreakdown
+            loc={loc}
+            label={tw(loc, 'packageValue')}
+            unitPrice={packageSummary.packageUnitPrice}
+            people={Number(chargedPeople)}
+            totalPrice={packageSummary.packageTotalPrice}
+            kind="package"
+          />
+        ) : null}
       </div>
       <div data-review-garnish>
         <PackageDetailLine label={tw(loc, 'garnish')} value={garnishText} />
+        {showGarnishInline && packageSummary ? (
+          <InlinePriceBreakdown
+            loc={loc}
+            label={tw(loc, 'inlineGarnishValue')}
+            unitPrice={packageSummary.garnishUnitPrice}
+            people={Number(chargedPeople)}
+            totalPrice={packageSummary.garnishTotalPrice}
+            kind="garnish"
+          />
+        ) : null}
       </div>
       {packageSelections.length > 0 ? (
         <div className="space-y-1" data-review-included-choices>

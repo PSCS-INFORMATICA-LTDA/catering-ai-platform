@@ -432,6 +432,25 @@ export function hasGarnish(input: {
   )
 }
 
+/** Display gate only. Does not compute or replace a commercial total. */
+export function shouldShowInlinePriceBreakdown(input: {
+  unitPrice: number | null | undefined
+  people: number | null | undefined
+  totalPrice: number | null | undefined
+}): boolean {
+  const unit = Number(input.unitPrice)
+  const people = Number(input.people)
+  const total = Number(input.totalPrice)
+  return (
+    Number.isFinite(unit) &&
+    unit > 0 &&
+    Number.isFinite(people) &&
+    people > 0 &&
+    Number.isFinite(total) &&
+    total > 0
+  )
+}
+
 export function buildQuoteReviewPackageSummary(
   input: QuoteReviewPackageSummaryInput,
 ): QuoteReviewPackageSummary | null {
