@@ -52,6 +52,12 @@ const dict = {
     page: 'Página',
     allRoles: 'Todos os papéis',
     allStatuses: 'Todos os status',
+    resendInvite: 'Reenviar convite',
+    resendInviteFailed: 'Falha ao reenviar convite',
+    alreadyMember: 'Usuário já é membro',
+    invited: 'Convidado',
+    inviteExpired: 'Convite expirado',
+    inviteResent: 'Convite reenviado',
   },
   en: {
     loginTitle: 'Sign in',
@@ -104,6 +110,12 @@ const dict = {
     page: 'Page',
     allRoles: 'All roles',
     allStatuses: 'All statuses',
+    resendInvite: 'Resend invite',
+    resendInviteFailed: 'Failed to resend invite',
+    alreadyMember: 'User is already a member',
+    invited: 'Invited',
+    inviteExpired: 'Invite expired',
+    inviteResent: 'Invite resent',
   },
   es: {
     loginTitle: 'Iniciar sesión',
@@ -156,6 +168,12 @@ const dict = {
     page: 'Página',
     allRoles: 'Todos los roles',
     allStatuses: 'Todos los estados',
+    resendInvite: 'Reenviar invitación',
+    resendInviteFailed: 'Error al reenviar la invitación',
+    alreadyMember: 'El usuario ya es miembro',
+    invited: 'Invitado',
+    inviteExpired: 'Invitación vencida',
+    inviteResent: 'Invitación reenviada',
   },
 } as const
 

@@ -7,12 +7,15 @@ import { useAuthLocale } from '@/Lib/i18n/useAuthLocale'
 
 type Row = {
   id: string
+  kind?: 'membership' | 'invite'
   userId: string
+  inviteId?: string | null
   role: string
   status: string
   email: string | null
   name: string | null
   isPlatformAdmin?: boolean
+  canResend?: boolean
 }
 
 function UsersPageInner() {
@@ -29,6 +32,8 @@ function UsersPageInner() {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('operator')
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [resendingId, setResendingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [supportCompanyId, setSupportCompanyId] = useState('')
   const [supportReason, setSupportReason] = useState('')
@@ -180,6 +185,33 @@ function UsersPageInner() {
       return
     }
     await load()
+  }
+
+  async function resendInvite(row: Row) {
+    const inviteId = row.inviteId || row.id
+    setError(null)
+    setNotice(null)
+    setResendingId(inviteId)
+    try {
+      const res = await fetch('/api/users/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inviteId }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setError(
+          json.error === 'already_member'
+            ? tAuth(locale, 'alreadyMember')
+            : json.error || tAuth(locale, 'resendInviteFailed'),
+        )
+        return
+      }
+      setNotice(tAuth(locale, 'inviteResent'))
+      await load()
+    } finally {
+      setResendingId(null)
+    }
   }
 
   async function removeRow(id: string) {
@@ -335,6 +367,8 @@ function UsersPageInner() {
             <option value="active">{tAuth(locale, 'active')}</option>
             <option value="inactive">{tAuth(locale, 'inactive')}</option>
             <option value="suspended">{tAuth(locale, 'suspended')}</option>
+            <option value="invited">{tAuth(locale, 'invited')}</option>
+            <option value="invite_expired">{tAuth(locale, 'inviteExpired')}</option>
           </select>
         </label>
         <button
@@ -347,6 +381,7 @@ function UsersPageInner() {
       </section>
 
       {error ? <p className="mt-3 text-sm text-red-500">{error}</p> : null}
+      {notice ? <p className="mt-3 text-sm text-cdl-muted">{notice}</p> : null}
       {loading ? <p className="mt-3 text-sm text-cdl-muted">…</p> : null}
 
       <div className="mt-4 overflow-x-auto rounded-2xl border border-cdl-border">
@@ -357,25 +392,32 @@ function UsersPageInner() {
               <th className="px-3 py-2">{tAuth(locale, 'email')}</th>
               <th className="px-3 py-2">{tAuth(locale, 'role')}</th>
               <th className="px-3 py-2">{tAuth(locale, 'status')}</th>
-              {canManage ? <th className="px-3 py-2">Ações</th> : null}
+              {canManage || canInvite ? <th className="px-3 py-2">Ações</th> : null}
             </tr>
           </thead>
           <tbody>
             {!loading && rows.length === 0 ? (
               <tr>
-                <td className="px-3 py-4 text-cdl-muted" colSpan={canManage ? 5 : 4}>
+                <td className="px-3 py-4 text-cdl-muted" colSpan={canManage || canInvite ? 5 : 4}>
                   {tAuth(locale, 'emptyUsers')}
                 </td>
               </tr>
             ) : null}
             {rows.map((row) => {
-              const isSelf = Boolean(myUserId && row.userId === myUserId)
+              const isInvite = row.kind === 'invite'
+              const isSelf = Boolean(myUserId && row.userId && row.userId === myUserId)
+              const statusLabel =
+                row.status === 'invited'
+                  ? tAuth(locale, 'invited')
+                  : row.status === 'invite_expired'
+                    ? tAuth(locale, 'inviteExpired')
+                    : row.status
               return (
                 <tr key={row.id} className="border-t border-cdl-border">
                   <td className="px-3 py-2">{row.name || '—'}</td>
                   <td className="px-3 py-2">{row.email || '—'}</td>
                   <td className="px-3 py-2">
-                    {canManage && !isSelf ? (
+                    {canManage && !isSelf && !isInvite ? (
                       <select
                         value={row.role}
                         onChange={(e) => void updateRow(row.id, { role: e.target.value })}
@@ -401,7 +443,7 @@ function UsersPageInner() {
                     )}
                   </td>
                   <td className="px-3 py-2">
-                    {canManage && !isSelf ? (
+                    {canManage && !isSelf && !isInvite ? (
                       <select
                         value={row.status}
                         onChange={(e) => void updateRow(row.id, { status: e.target.value })}
@@ -412,22 +454,33 @@ function UsersPageInner() {
                         <option value="suspended">{tAuth(locale, 'suspended')}</option>
                       </select>
                     ) : (
-                      row.status
+                      statusLabel
                     )}
                   </td>
-                  {canManage ? (
+                  {canManage || canInvite ? (
                     <td className="px-3 py-2">
-                      {!isSelf ? (
-                        <button
-                          type="button"
-                          className="underline"
-                          onClick={() => void removeRow(row.id)}
-                        >
-                          {tAuth(locale, 'removeMembership')}
-                        </button>
-                      ) : (
-                        '—'
-                      )}
+                      <div className="flex flex-wrap gap-3">
+                        {row.canResend && canInvite ? (
+                          <button
+                            type="button"
+                            className="underline"
+                            disabled={resendingId === (row.inviteId || row.id)}
+                            onClick={() => void resendInvite(row)}
+                          >
+                            {tAuth(locale, 'resendInvite')}
+                          </button>
+                        ) : null}
+                        {canManage && !isSelf && !isInvite ? (
+                          <button
+                            type="button"
+                            className="underline"
+                            onClick={() => void removeRow(row.id)}
+                          >
+                            {tAuth(locale, 'removeMembership')}
+                          </button>
+                        ) : null}
+                        {!row.canResend && (isInvite || isSelf) ? '—' : null}
+                      </div>
                     </td>
                   ) : null}
                 </tr>
