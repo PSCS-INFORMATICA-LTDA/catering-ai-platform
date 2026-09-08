@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 import {
   buildInviteDirectoryRows,
   canShowResendAction,
+  countActionablePendingInvites,
   expectedActiveInviteCountAfterResend,
   planResendInvite,
   reconcileActivePendingInvites,
@@ -240,6 +241,22 @@ describe('reconcile and revoke', () => {
     assert.equal(result.keepId, 'keep')
     assert.deepEqual(result.revokeIds, ['drop'])
     assert.equal(expectedActiveInviteCountAfterResend(), 1)
+    assert.equal(
+      countActionablePendingInvites(
+        [
+          invite({
+            id: 'keep',
+            expires_at: '2026-09-20T12:00:00.000Z',
+          }),
+          invite({
+            id: 'drop',
+            expires_at: '2026-09-18T12:00:00.000Z',
+          }),
+        ],
+        NOW,
+      ),
+      2,
+    )
   })
 
   it('revokes leftover pending rows except the reusable one', () => {

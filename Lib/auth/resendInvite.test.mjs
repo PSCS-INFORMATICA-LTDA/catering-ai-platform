@@ -28,27 +28,51 @@ function createMemory(seed = {}) {
         ? { id: 'auth-caio', email: 'caioh381@gmail.com', emailConfirmedAt: null }
         : seed.authUser,
     authError: seed.authError ?? null,
+    revokeErrorOnCall: seed.revokeErrorOnCall ?? 0,
+    loadError: seed.loadError ?? null,
+    injectSiblingAfterInsert: seed.injectSiblingAfterInsert ?? false,
     audits: [],
     authCalls: [],
+    revokeCalls: 0,
     nextId: 1,
   }
 
   const deps = {
     async loadInviteById(id) {
+      if (state.loadError === 'byId') throw new Error('loadInviteById failed')
       return state.invites.find((row) => row.id === id) ?? null
     },
     async loadInvitesForCompanyEmail(companyId, email) {
-      return state.invites.filter(
+      if (state.loadError === 'companyEmail') throw new Error('loadInvitesForCompanyEmail failed')
+      const rows = state.invites.filter(
         (row) => row.company_id === companyId && row.email === email,
       )
+      if (
+        state.injectSiblingAfterInsert &&
+        rows.some((row) => row.id.startsWith('new-') && row.status === 'pending')
+      ) {
+        return [
+          ...rows,
+          invite({
+            id: 'sibling-valid',
+            expires_at: '2026-09-16T12:00:00.000Z',
+          }),
+        ]
+      }
+      return rows
     },
     async loadActiveMembership() {
+      if (state.loadError === 'membership') throw new Error('loadActiveMembership failed')
       return state.membership
     },
     async findAuthUserByEmail() {
       return state.authUser
     },
     async revokeInvites(ids, nowIso) {
+      state.revokeCalls += 1
+      if (state.revokeErrorOnCall === state.revokeCalls) {
+        throw new Error('revoke failed')
+      }
       state.invites = state.invites.map((row) =>
         ids.includes(row.id)
           ? { ...row, status: 'revoked', revoked_at: nowIso }
@@ -155,6 +179,162 @@ describe('executeResendInvite', () => {
     )
     assert.equal(state.audits.at(-1)?.metadata.result, 'auth_failed')
     assert.equal(state.audits.at(-1)?.metadata.inviteRevoked, true)
+    assert.equal(result.inviteStatus, 'revoked')
+    assert.equal(result.inviteRevoked, true)
+  })
+
+  it('reused valid invite + send failure reports pending, not revoked', async () => {
+    const { state, deps } = createMemory({
+      invites: [
+        invite({
+          id: 'fresh-1',
+          expires_at: '2026-09-15T12:00:00.000Z',
+        }),
+      ],
+      authError: 'smtp unavailable',
+    })
+    const result = await executeResendInvite(
+      { ...command, inviteId: 'fresh-1' },
+      deps,
+    )
+    assert.equal(result.status, 'auth_failed')
+    assert.equal(result.inviteStatus, 'pending')
+    assert.equal(result.inviteRevoked, false)
+    assert.equal(state.invites.find((row) => row.id === 'fresh-1')?.status, 'pending')
+    assert.equal(state.audits.some((event) => event.metadata.result === 'resent'), false)
+  })
+
+  it('A: revoke DB error before auth/email send fails closed', async () => {
+    const { state, deps } = createMemory({
+      invites: [
+        invite({
+          id: 'keep-valid',
+          expires_at: '2026-09-20T12:00:00.000Z',
+        }),
+        invite({
+          id: 'extra-valid',
+          expires_at: '2026-09-18T12:00:00.000Z',
+        }),
+      ],
+      revokeErrorOnCall: 1,
+    })
+    const result = await executeResendInvite(
+      { ...command, inviteId: 'keep-valid' },
+      deps,
+    )
+    assert.equal(result.status, 'db_failed')
+    assert.equal(result.httpStatus, 500)
+    assert.equal(state.authCalls.length, 0)
+    assert.equal(state.audits.some((event) => event.metadata.result === 'resent'), false)
+  })
+
+  it('B/C/D: revoke DB error after insert does not send or audit success', async () => {
+    const { state, deps } = createMemory({
+      injectSiblingAfterInsert: true,
+      revokeErrorOnCall: 1,
+    })
+    const result = await executeResendInvite(command, deps)
+    assert.equal(result.status, 'db_failed')
+    assert.equal(state.invites.some((row) => row.id.startsWith('new-')), true)
+    assert.equal(state.authCalls.length, 0)
+    assert.equal(state.audits.some((event) => event.metadata.result === 'resent'), false)
+  })
+
+  it('read DB error propagates as 500 and does not send', async () => {
+    const { state, deps } = createMemory({ loadError: 'companyEmail' })
+    const result = await executeResendInvite(command, deps)
+    assert.equal(result.status, 'db_failed')
+    assert.equal(state.authCalls.length, 0)
+    assert.equal(state.audits.some((event) => event.metadata.result === 'resent'), false)
+  })
+
+  it('auth-fail revoke error surfaces instead of claiming revoked', async () => {
+    const { state, deps } = createMemory({
+      authError: 'smtp unavailable',
+      revokeErrorOnCall: 1,
+    })
+    const result = await executeResendInvite(command, deps)
+    assert.equal(result.status, 'db_failed')
+    assert.equal(state.authCalls.length, 1)
+    assert.equal(state.invites.find((row) => row.id.startsWith('new-'))?.status, 'pending')
+    assert.equal(state.audits.some((event) => event.metadata.result === 'resent'), false)
+    assert.notEqual(result.inviteStatus, 'revoked')
+  })
+
+  it('concurrent double-insert reconciles to one actionable pending', async () => {
+    const shared = {
+      invites: [invite(), invite({ id: 'exp-2' })],
+      nextId: 1,
+      insertWaiters: [],
+      inserts: 0,
+      authCalls: 0,
+    }
+    function sharedDeps() {
+      return {
+        async loadInviteById(id) {
+          return shared.invites.find((row) => row.id === id) ?? shared.invites.at(-1) ?? null
+        },
+        async loadInvitesForCompanyEmail() {
+          return [...shared.invites]
+        },
+        async loadActiveMembership() {
+          return null
+        },
+        async findAuthUserByEmail() {
+          return {
+            id: 'auth-caio',
+            email: 'caioh381@gmail.com',
+            emailConfirmedAt: null,
+          }
+        },
+        async revokeInvites(ids, nowIso) {
+          for (const row of shared.invites) {
+            if (ids.includes(row.id)) {
+              row.status = 'revoked'
+              row.revoked_at = nowIso
+            }
+          }
+        },
+        async insertInvite(input) {
+          shared.inserts += 1
+          const row = invite({
+            id: `race-${shared.inserts}`,
+            role: input.role,
+            expires_at:
+              shared.inserts === 1
+                ? '2026-09-15T12:00:00.000Z'
+                : '2026-09-16T12:00:00.000Z',
+          })
+          shared.invites.push(row)
+          if (shared.inserts < 2) {
+            await new Promise((resolve) => shared.insertWaiters.push(resolve))
+          } else {
+            for (const resolve of shared.insertWaiters) resolve()
+          }
+          return row
+        },
+        async reissueAuthAccess() {
+          shared.authCalls += 1
+          return { error: null, reused: true, deleted: false }
+        },
+        async writeAudit() {},
+      }
+    }
+    const [first, second] = await Promise.all([
+      executeResendInvite(command, sharedDeps()),
+      executeResendInvite(command, sharedDeps()),
+    ])
+    assert.equal(first.status, 'resent')
+    assert.equal(second.status, 'resent')
+    const actionable = shared.invites.filter(
+      (row) =>
+        row.status === 'pending' &&
+        !row.revoked_at &&
+        new Date(row.expires_at) > NOW,
+    )
+    assert.equal(actionable.length, 1)
+    assert.equal(actionable[0].id, 'race-2')
+    assert.equal(shared.inserts, 2)
   })
 
   it('G: already_member does not send or insert', async () => {

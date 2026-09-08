@@ -3,22 +3,39 @@ import { canInviteUsers, canManageUsers } from '@/Lib/auth/permissions'
 import { rejectSpoofedCompanyId, resolveAuthorizedCompanyId } from '@/Lib/auth/requireApi'
 import { executeResendInvite, type ResendInviteDeps } from '@/Lib/auth/resendInvite'
 import { normalizeInviteEmail, type UserInviteRow } from '@/Lib/auth/acceptInviteCore'
-import { revokePendingInviteFields } from '@/Lib/auth/resendInviteCore'
+import { ResendDbError, revokePendingInviteFields } from '@/Lib/auth/resendInviteCore'
 import { getAuthSession, writeAdminAudit } from '@/Lib/auth/session'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
 
+/** Auth admin listUsers has no getUserByEmail in this SDK. Cap: 10 * 200 = 2000. */
+const AUTH_USER_LOOKUP_PER_PAGE = 200
+const AUTH_USER_LOOKUP_MAX_PAGES = 10
+export const AUTH_USER_LOOKUP_CAP =
+  AUTH_USER_LOOKUP_PER_PAGE * AUTH_USER_LOOKUP_MAX_PAGES
+
 function inviteSelect() {
   return 'id, company_id, email, role, status, expires_at, revoked_at, accepted_by'
+}
+
+function requireDb<T>(
+  result: { data: T; error: { message: string } | null },
+  action: string,
+): T {
+  if (result.error) throw new ResendDbError(`${action}: ${result.error.message}`)
+  return result.data
 }
 
 async function findAuthUserByEmail(email: string) {
   const admin = getSupabaseServerClient()
   const normalized = normalizeInviteEmail(email)
-  for (let page = 1; page <= 10; page += 1) {
-    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 })
-    if (error) throw new Error(error.message)
+  for (let page = 1; page <= AUTH_USER_LOOKUP_MAX_PAGES; page += 1) {
+    const { data, error } = await admin.auth.admin.listUsers({
+      page,
+      perPage: AUTH_USER_LOOKUP_PER_PAGE,
+    })
+    if (error) throw new ResendDbError(`listUsers: ${error.message}`)
     const found = (data.users ?? []).find(
       (user) => normalizeInviteEmail(user.email ?? '') === normalized,
     )
@@ -29,7 +46,7 @@ async function findAuthUserByEmail(email: string) {
         emailConfirmedAt: found.email_confirmed_at ?? null,
       }
     }
-    if ((data.users ?? []).length < 200) break
+    if ((data.users ?? []).length < AUTH_USER_LOOKUP_PER_PAGE) break
   }
   return null
 }
@@ -38,39 +55,45 @@ function createResendDeps(): ResendInviteDeps {
   const admin = getSupabaseServerClient()
   return {
     async loadInviteById(id) {
-      const { data } = await admin
+      const result = await admin
         .from('user_invites')
         .select(inviteSelect())
         .eq('id', id)
         .maybeSingle()
+      const data = requireDb(result, 'loadInviteById')
       return (data as UserInviteRow | null) ?? null
     },
     async loadInvitesForCompanyEmail(companyId, email) {
-      const { data } = await admin
+      const normalized = normalizeInviteEmail(email)
+      const result = await admin
         .from('user_invites')
         .select(inviteSelect())
         .eq('company_id', companyId)
-        .ilike('email', email)
         .in('status', ['pending', 'expired'])
-      return ((data ?? []) as unknown as UserInviteRow[])
+      const rows = requireDb(result, 'loadInvitesForCompanyEmail')
+      return ((rows ?? []) as unknown as UserInviteRow[]).filter(
+        (invite) => normalizeInviteEmail(invite.email) === normalized,
+      )
     },
     async loadActiveMembership(companyId, email, authUserId) {
       let userId = authUserId
       if (!userId) {
-        const { data: profile } = await admin
+        const profileResult = await admin
           .from('app_users')
           .select('auth_user_id')
-          .ilike('email', email)
+          .eq('email', normalizeInviteEmail(email))
           .maybeSingle()
+        const profile = requireDb(profileResult, 'loadActiveMembership.profile')
         userId = (profile?.auth_user_id as string | undefined) ?? null
       }
       if (!userId) return null
-      const { data } = await admin
+      const result = await admin
         .from('company_memberships')
         .select('id, role, status, active')
         .eq('company_id', companyId)
         .eq('user_id', userId)
         .maybeSingle()
+      const data = requireDb(result, 'loadActiveMembership')
       return data
         ? {
             id: data.id as string,
@@ -83,14 +106,31 @@ function createResendDeps(): ResendInviteDeps {
     findAuthUserByEmail,
     async revokeInvites(ids, nowIso) {
       if (ids.length === 0) return
-      await admin
+      const result = await admin
         .from('user_invites')
         .update(revokePendingInviteFields(nowIso))
         .in('id', ids)
         .eq('status', 'pending')
+        .select('id, status, revoked_at')
+      const updated = requireDb(result, 'revokeInvites')
+      const confirmed = new Set((updated ?? []).map((row) => row.id as string))
+      const missing = ids.filter((id) => !confirmed.has(id))
+      if (missing.length === 0) return
+
+      const leftoverResult = await admin
+        .from('user_invites')
+        .select('id, status, revoked_at')
+        .in('id', missing)
+      const leftover = requireDb(leftoverResult, 'revokeInvites.confirm')
+      const stillPending = (leftover ?? []).filter(
+        (row) => row.status === 'pending' && !row.revoked_at,
+      )
+      if (stillPending.length > 0) {
+        throw new ResendDbError('revokeInvites did not confirm pending rows as revoked')
+      }
     },
     async insertInvite(input) {
-      const { data, error } = await admin
+      const result = await admin
         .from('user_invites')
         .insert({
           company_id: input.companyId,
@@ -101,7 +141,8 @@ function createResendDeps(): ResendInviteDeps {
         })
         .select(inviteSelect())
         .single()
-      if (error || !data) throw new Error(error?.message ?? 'failed to insert invite')
+      const data = requireDb(result, 'insertInvite')
+      if (!data) throw new ResendDbError('insertInvite returned no row')
       return data as unknown as UserInviteRow
     },
     async reissueAuthAccess(input) {
@@ -244,12 +285,22 @@ export async function POST(request: Request) {
   if (outcome.status === 'not_found') {
     return Response.json({ error: 'Convite não encontrado' }, { status: 404 })
   }
+  if (outcome.status === 'db_failed') {
+    return Response.json(
+      {
+        error: outcome.message,
+        inviteId: outcome.inviteId ?? null,
+        inviteStatus: outcome.inviteStatus ?? 'unknown',
+      },
+      { status: outcome.httpStatus },
+    )
+  }
 
   return Response.json(
     {
       error: 'auth invite delivery failed',
       inviteId: outcome.inviteId,
-      inviteStatus: 'revoked',
+      inviteStatus: outcome.inviteStatus,
     },
     { status: outcome.httpStatus },
   )

@@ -129,11 +129,13 @@ export async function GET(request: Request) {
     }
   })
 
-  const { data: inviteRows } = await admin
+  const { data: inviteRows, error: inviteError } = await admin
     .from('user_invites')
     .select('id, company_id, email, role, status, expires_at, revoked_at, created_at')
     .eq('company_id', companyId)
     .in('status', ['pending', 'expired'])
+
+  if (inviteError) return Response.json({ error: inviteError.message }, { status: 500 })
 
   rows = [
     ...rows,

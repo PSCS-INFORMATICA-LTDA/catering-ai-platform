@@ -16,6 +16,7 @@ import { executeResendInvite } from '../Lib/auth/resendInviteCore.ts'
 const NOW = new Date('2026-09-08T12:00:00.000Z')
 const COMPANY = '65fd576f-8d97-49ba-bf38-61bc1e94e94a'
 const route = readFileSync(new URL('../app/api/users/resend/route.ts', import.meta.url), 'utf8')
+const usersRoute = readFileSync(new URL('../app/api/users/route.ts', import.meta.url), 'utf8')
 const usersUi = readFileSync(new URL('../app/users/page.tsx', import.meta.url), 'utf8')
 
 function invite(overrides = {}) {
@@ -259,6 +260,7 @@ describe('resend invite matrix', () => {
       },
     )
     assert.equal(result.status, 'auth_failed')
+    assert.equal(result.inviteStatus, 'revoked')
     assert.equal(invites.find((row) => row.id === 'new-1')?.status, 'revoked')
     assert.equal(invites.find((row) => row.id === 'exp-1')?.status, 'pending')
     assert.equal(
@@ -289,6 +291,10 @@ describe('resend invite matrix', () => {
     assert.match(route, /void body\.role/)
     assert.match(route, /void body\.auth_user_id/)
     assert.match(route, /inviteId/)
+    assert.match(route, /inviteStatus: outcome\.inviteStatus/)
+    assert.match(usersRoute, /inviteError/)
+    assert.match(route, /AUTH_USER_LOOKUP_CAP/)
+    assert.doesNotMatch(route, /\.ilike\('email'/)
   })
 
   it('M: invite directory never duplicates an active membership email', () => {

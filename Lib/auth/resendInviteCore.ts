@@ -288,6 +288,29 @@ export function expectedActiveInviteCountAfterResend(): 1 {
   return 1
 }
 
+export function countActionablePendingInvites(
+  invites: UserInviteRow[],
+  now: Date,
+): number {
+  return invites.filter((invite) => isInviteStillValid(invite, now)).length
+}
+
+export function selectActionablePendingInvites(
+  invites: UserInviteRow[],
+  now: Date,
+): UserInviteRow[] {
+  return sortInvites(invites.filter((invite) => isInviteStillValid(invite, now)))
+}
+
+export class ResendDbError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ResendDbError'
+  }
+}
+
+export type InvitePersistedStatus = 'revoked' | 'pending'
+
 export type ResendInviteCommand = {
   inviteId: string
   actorUserId: string
@@ -326,6 +349,15 @@ export type ResendInviteOutcome =
       email: string
       role: CompanyRole
       message: string
+      inviteStatus: InvitePersistedStatus
+      inviteRevoked: boolean
+    }
+  | {
+      status: 'db_failed'
+      httpStatus: 500
+      message: string
+      inviteId?: string
+      inviteStatus?: InvitePersistedStatus | 'unknown'
     }
 
 export type ResendInviteDeps = {
@@ -365,6 +397,18 @@ export type ResendInviteDeps = {
 }
 
 export async function executeResendInvite(
+  command: ResendInviteCommand,
+  deps: ResendInviteDeps,
+): Promise<ResendInviteOutcome> {
+  try {
+    return await executeResendInviteGuarded(command, deps)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'database error'
+    return { status: 'db_failed', httpStatus: 500, message }
+  }
+}
+
+async function executeResendInviteGuarded(
   command: ResendInviteCommand,
   deps: ResendInviteDeps,
 ): Promise<ResendInviteOutcome> {
@@ -432,8 +476,7 @@ export async function executeResendInvite(
     await deps.revokeInvites(extraValidIds, nowIso)
   }
 
-  let currentInviteId = plan.keepInviteId
-  let createdNewInvite = false
+  let createdInviteId: string | null = null
   if (plan.createNewInvite) {
     const created = await deps.insertInvite({
       companyId: plan.companyId,
@@ -441,25 +484,43 @@ export async function executeResendInvite(
       role: plan.role,
       invitedBy: command.actorUserId,
     })
-    currentInviteId = created.id
-    createdNewInvite = true
-    companyInvites.push(created)
+    createdInviteId = created.id
   }
 
-  const afterExtraRevoke = companyInvites.map((invite) =>
-    extraValidIds.includes(invite.id)
-      ? { ...invite, status: 'revoked', revoked_at: nowIso }
-      : invite,
-  )
-  const reconcile = reconcileActivePendingInvites(afterExtraRevoke, now)
+  const persisted = await deps.loadInvitesForCompanyEmail(plan.companyId, plan.email)
+  const reconcile = reconcileActivePendingInvites(persisted, now)
   if (reconcile.revokeIds.length > 0) {
     await deps.revokeInvites(reconcile.revokeIds, nowIso)
   }
-  if (reconcile.keepId) currentInviteId = reconcile.keepId
 
-  if (!currentInviteId) {
-    return { status: 'not_found', httpStatus: 404 }
+  const verified = await deps.loadInvitesForCompanyEmail(plan.companyId, plan.email)
+  const actionable = selectActionablePendingInvites(verified, now)
+  if (actionable.length !== expectedActiveInviteCountAfterResend() || !actionable[0]) {
+    await deps.writeAudit({
+      companyId: plan.companyId,
+      actorUserId: command.actorUserId,
+      action: 'users.invite.resend',
+      entityType: 'user_invites',
+      entityId: createdInviteId ?? command.inviteId,
+      metadata: sanitizeResendAuditMetadata({
+        result: 'invariant_failed',
+        email: plan.email,
+        role: plan.role,
+        actionablePendingCount: actionable.length,
+        authUserDeleted: false,
+      }),
+    })
+    return {
+      status: 'db_failed',
+      httpStatus: 500,
+      message: 'expected exactly one actionable pending invite before auth send',
+      inviteId: createdInviteId ?? reconcile.keepId ?? undefined,
+      inviteStatus: 'unknown',
+    }
   }
+
+  const currentInviteId = actionable[0].id
+  const createdNewInvite = createdInviteId === currentInviteId
 
   const auth = await deps.reissueAuthAccess({
     email: plan.email,
@@ -470,8 +531,12 @@ export async function executeResendInvite(
   })
 
   if (auth.error) {
-    if (createdNewInvite) {
-      await deps.revokeInvites([currentInviteId], nowIso)
+    let inviteStatus: InvitePersistedStatus = 'pending'
+    let inviteRevoked = false
+    if (createdInviteId) {
+      await deps.revokeInvites([createdInviteId], nowIso)
+      inviteRevoked = true
+      inviteStatus = createdInviteId === currentInviteId ? 'revoked' : 'pending'
     }
     await deps.writeAudit({
       companyId: plan.companyId,
@@ -488,9 +553,10 @@ export async function executeResendInvite(
         authStrategy: plan.authStrategy,
         previousInviteIds: plan.previousInvites.map((invite) => invite.id),
         previousStatuses: plan.previousInvites.map((invite) => invite.status),
-        newInviteId: createdNewInvite ? currentInviteId : null,
+        newInviteId: createdInviteId,
         inviteError: auth.error,
-        inviteRevoked: createdNewInvite,
+        inviteRevoked,
+        inviteStatus,
         authUserDeleted: false,
         expectedActiveInviteCount: expectedActiveInviteCountAfterResend(),
       }),
@@ -502,12 +568,14 @@ export async function executeResendInvite(
       email: plan.email,
       role: plan.role,
       message: auth.error,
+      inviteStatus,
+      inviteRevoked,
     }
   }
 
-  const revokedOnSuccess = [...new Set([...staleInviteIds, ...reconcile.revokeIds])]
-  if (revokedOnSuccess.length > 0) {
-    await deps.revokeInvites(revokedOnSuccess, nowIso)
+  const leftoverStale = staleInviteIds.filter((id) => id !== currentInviteId)
+  if (leftoverStale.length > 0) {
+    await deps.revokeInvites(leftoverStale, nowIso)
   }
 
   await deps.writeAudit({
@@ -525,9 +593,9 @@ export async function executeResendInvite(
       authStrategy: plan.authStrategy,
       previousInviteIds: plan.previousInvites.map((invite) => invite.id),
       previousStatuses: plan.previousInvites.map((invite) => invite.status),
-      newInviteId: createdNewInvite ? currentInviteId : null,
-      reusedInviteId: createdNewInvite ? null : currentInviteId,
-      revokedInviteIds: [...extraValidIds, ...revokedOnSuccess],
+      newInviteId: createdInviteId,
+      reusedInviteId: createdInviteId ? null : currentInviteId,
+      revokedInviteIds: [...extraValidIds, ...reconcile.revokeIds, ...leftoverStale],
       authUserDeleted: false,
       expectedActiveInviteCount: expectedActiveInviteCountAfterResend(),
     }),
@@ -543,7 +611,7 @@ export async function executeResendInvite(
     authUserReused: plan.authUserReused,
     authUserDeleted: false,
     createdNewInvite,
-    revokedInviteIds: [...extraValidIds, ...revokedOnSuccess],
+    revokedInviteIds: [...extraValidIds, ...reconcile.revokeIds, ...leftoverStale],
     strategy: plan.authStrategy,
   }
 }
