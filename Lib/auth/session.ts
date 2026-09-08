@@ -1,5 +1,6 @@
 import { cache } from 'react'
 import { cookies } from 'next/headers'
+import { recoverPendingInviteIfNeeded } from '@/Lib/auth/acceptInvite'
 import { createClient } from '@/Lib/supabase/server'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { fallbackPermissionsForRole } from '@/Lib/auth/permissions'
@@ -31,6 +32,29 @@ function asRole(value: string | null | undefined): CompanyRole {
 const APP_USER_COLUMNS =
   'id, auth_user_id, email, full_name, display_name, preferred_language, is_pscs_master, active, company_id'
 
+const MEMBERSHIP_COLUMNS =
+  'id, company_id, branch_id, user_id, role, active, status, companies(company_name)'
+
+function mapMembershipRows(rows: unknown[] | null): AuthMembership[] {
+  return (rows ?? []).map((row) => {
+    const record = row as Record<string, unknown>
+    const companies = record.companies as { company_name?: string } | null
+    const status =
+      (record.status as MembershipStatus | null) ??
+      (record.active ? 'active' : 'inactive')
+    return {
+      id: String(record.id),
+      company_id: String(record.company_id),
+      branch_id: (record.branch_id as string | null) ?? null,
+      user_id: String(record.user_id),
+      role: asRole(record.role as string),
+      active: Boolean(record.active),
+      status,
+      company_name: companies?.company_name ?? null,
+    }
+  })
+}
+
 async function loadAuthSessionUncached(): Promise<AuthSessionContext | null> {
   const supabase = await createClient()
   const { identity } = await resolveAuthIdentity(supabase)
@@ -47,7 +71,7 @@ async function loadAuthSessionUncached(): Promise<AuthSessionContext | null> {
       .maybeSingle(),
     admin
       .from('company_memberships')
-      .select('id, company_id, branch_id, user_id, role, active, status, companies(company_name)')
+      .select(MEMBERSHIP_COLUMNS)
       .eq('user_id', identity.id),
   ])
 
@@ -71,26 +95,36 @@ async function loadAuthSessionUncached(): Promise<AuthSessionContext | null> {
     appUserRow = created
   }
 
-  const appUser = (appUserRow as AuthAppUser | null) ?? null
+  let appUser = (appUserRow as AuthAppUser | null) ?? null
   const isPlatformAdmin = Boolean(appUser?.is_pscs_master && appUser.active !== false)
 
-  const memberships: AuthMembership[] = (membershipsRes.data ?? []).map((row) => {
-    const record = row as Record<string, unknown>
-    const companies = record.companies as { company_name?: string } | null
-    const status =
-      (record.status as MembershipStatus | null) ??
-      (record.active ? 'active' : 'inactive')
-    return {
-      id: String(record.id),
-      company_id: String(record.company_id),
-      branch_id: (record.branch_id as string | null) ?? null,
-      user_id: String(record.user_id),
-      role: asRole(record.role as string),
-      active: Boolean(record.active),
-      status,
-      company_name: companies?.company_name ?? null,
+  let memberships = mapMembershipRows(membershipsRes.data as unknown[] | null)
+
+  if (identity.email) {
+    const recovered = await recoverPendingInviteIfNeeded({
+      authUserId: identity.id,
+      email: identity.email,
+      displayName: identity.fullName,
+      membershipsCount: memberships.length,
+    })
+    if (recovered?.status === 'accepted') {
+      const [refreshedAppUser, refreshedMemberships] = await Promise.all([
+        admin
+          .from('app_users')
+          .select(APP_USER_COLUMNS)
+          .eq('auth_user_id', identity.id)
+          .maybeSingle(),
+        admin
+          .from('company_memberships')
+          .select(MEMBERSHIP_COLUMNS)
+          .eq('user_id', identity.id),
+      ])
+      if (refreshedAppUser.data) {
+        appUser = refreshedAppUser.data as AuthAppUser
+      }
+      memberships = mapMembershipRows(refreshedMemberships.data as unknown[] | null)
     }
-  })
+  }
 
   const cookieStore = await cookies()
   const mappedCompanyId = cookieStore.get(PSCS_ONE_MAPPED_COMPANY_COOKIE)?.value?.trim()

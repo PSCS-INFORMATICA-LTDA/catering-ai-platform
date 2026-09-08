@@ -11,6 +11,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test Lib/auth/acceptInviteCore.test.mjs Lib/auth/appOrigin.test.mjs Lib/auth/inviteSendCore.test.mjs Lib/auth/resendInviteCore.test.mjs Lib/auth/resendInvite.test.mjs Lib/auth/usersDirectoryView.test.mjs scripts/test-invite-acceptance-matrix.mjs scripts/test-resend-invite-matrix.mjs",
     "env:check": "node scripts/env-check.mjs",
     "env:dev:check": "node scripts/env-check.mjs --expected dev",
     "env:prod:check": "node scripts/env-check.mjs --expected prod",

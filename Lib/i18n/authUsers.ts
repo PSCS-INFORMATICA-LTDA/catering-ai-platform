@@ -57,6 +57,12 @@ const dict = {
     profileSaved: 'Perfil salvo',
     inviteFailed: 'Falha ao convidar',
     supportError: 'Erro suporte',
+    resendInvite: 'Reenviar convite',
+    resendInviteFailed: 'Falha ao reenviar convite',
+    alreadyMember: 'Usuário já é membro',
+    invited: 'Convidado',
+    inviteExpired: 'Convite expirado',
+    inviteResent: 'Convite reenviado',
   },
   en: {
     loginTitle: 'Sign in',
@@ -114,6 +120,12 @@ const dict = {
     profileSaved: 'Profile saved',
     inviteFailed: 'Failed to invite',
     supportError: 'Support error',
+    resendInvite: 'Resend invite',
+    resendInviteFailed: 'Failed to resend invite',
+    alreadyMember: 'User is already a member',
+    invited: 'Invited',
+    inviteExpired: 'Invite expired',
+    inviteResent: 'Invite resent',
   },
   es: {
     loginTitle: 'Iniciar sesión',
@@ -171,6 +183,12 @@ const dict = {
     profileSaved: 'Perfil guardado',
     inviteFailed: 'Error al invitar',
     supportError: 'Error de soporte',
+    resendInvite: 'Reenviar invitación',
+    resendInviteFailed: 'Error al reenviar la invitación',
+    alreadyMember: 'El usuario ya es miembro',
+    invited: 'Invitado',
+    inviteExpired: 'Invitación vencida',
+    inviteResent: 'Invitación reenviada',
   },
 } as const
 
