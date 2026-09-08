@@ -1,8 +1,13 @@
 import { AppOriginConfigError, inviteAuthCallbackUrl } from '@/Lib/auth/appOrigin'
+import type { UserInviteRow } from '@/Lib/auth/acceptInviteCore'
 import {
   AUTH_INVITE_FAILURE_HTTP_STATUS,
   pendingInviteAuthFailureRevokeFields,
 } from '@/Lib/auth/inviteSendCore'
+import {
+  buildInviteDirectoryRows,
+  type DirectoryInviteRow,
+} from '@/Lib/auth/resendInviteCore'
 import { canInviteUsers, canManageUsers } from '@/Lib/auth/permissions'
 import {
   rejectSpoofedCompanyId,
@@ -58,7 +63,12 @@ export async function GET(request: Request) {
   if (roleFilter && !ROLES.includes(roleFilter as CompanyRole)) {
     return Response.json({ error: 'role inválido' }, { status: 400 })
   }
-  if (statusFilter && !['active', 'inactive', 'suspended'].includes(statusFilter)) {
+  if (
+    statusFilter &&
+    !['active', 'inactive', 'suspended', 'invited', 'invite_expired'].includes(
+      statusFilter,
+    )
+  ) {
     return Response.json({ error: 'status inválido' }, { status: 400 })
   }
 
@@ -84,21 +94,58 @@ export async function GET(request: Request) {
     (profiles ?? []).map((p) => [p.auth_user_id as string, p]),
   )
 
-  let rows = (data ?? []).map((m) => {
+  type MembershipDirectoryRow = {
+    id: string
+    kind: 'membership'
+    userId: string
+    inviteId: string | null
+    role: string
+    status: string
+    active: boolean
+    email: string | null
+    name: string | null
+    isPlatformAdmin: boolean
+    canResend: false
+    createdAt: string
+  }
+  type UserDirectoryRow = MembershipDirectoryRow | DirectoryInviteRow
+
+  let rows: UserDirectoryRow[] = (data ?? []).map((m) => {
     const p = byAuth.get(m.user_id as string)
     const status = (m.status as string) ?? (m.active ? 'active' : 'inactive')
     return {
       id: m.id as string,
+      kind: 'membership' as const,
       userId: m.user_id as string,
+      inviteId: null,
       role: m.role as string,
       status,
       active: Boolean(m.active),
       email: (p?.email as string | null) ?? null,
       name: ((p?.display_name || p?.full_name) as string | null) ?? null,
       isPlatformAdmin: Boolean(p?.is_pscs_master),
+      canResend: false,
       createdAt: m.created_at as string,
     }
   })
+
+  const { data: inviteRows, error: inviteError } = await admin
+    .from('user_invites')
+    .select('id, company_id, email, role, status, expires_at, revoked_at, created_at')
+    .eq('company_id', companyId)
+    .in('status', ['pending', 'expired'])
+
+  if (inviteError) return Response.json({ error: inviteError.message }, { status: 500 })
+
+  rows = [
+    ...rows,
+    ...buildInviteDirectoryRows({
+      membershipEmails: rows
+        .map((row) => row.email)
+        .filter((email): email is string => Boolean(email)),
+      invites: (inviteRows ?? []) as UserInviteRow[],
+    }),
+  ]
 
   if (roleFilter) rows = rows.filter((r) => r.role === roleFilter)
   if (statusFilter) rows = rows.filter((r) => r.status === statusFilter)
