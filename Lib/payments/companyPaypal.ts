@@ -3,6 +3,7 @@ import 'server-only'
 import { randomBytes } from 'node:crypto'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { readPaypalRuntimeConfig } from './paypal/config'
+import { isPaypalCredentialManager } from './paypalCredentialManager'
 import type {
   CompanyPaypalMetadata,
   CompanyPaypalPublicSettings,
@@ -110,6 +111,7 @@ export async function loadCompanyPaypalCredentials(
 
 export async function toPublicPaypalSettings(
   companyId: string,
+  actorUserId?: string | null,
 ): Promise<CompanyPaypalPublicSettings> {
   const runtime = readPaypalRuntimeConfig()
   const row = await loadCompanyPaypalRow(companyId)
@@ -136,6 +138,7 @@ export async function toPublicPaypalSettings(
     publicCheckout: false,
     liveBlocked: true,
     platformEnabled: runtime.enabled,
+    canManageCredentials: isPaypalCredentialManager(metadata, actorUserId),
   }
 }
 
