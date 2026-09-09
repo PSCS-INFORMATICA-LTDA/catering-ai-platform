@@ -6,18 +6,48 @@ import {
 } from './helpers/authFlow'
 import { loadState, mergeReport, saveState, gate } from './helpers/report'
 
+function skipForEmailGate(user: 'qa1' | 'qa2', reason: string) {
+  mergeReport(
+    user === 'qa1'
+      ? {
+          passwordResetQa1: 'SKIP',
+          oldPasswordRejectedQa1: 'SKIP',
+          newPasswordLoginQa1: 'SKIP',
+          resetEmailQa1: 'SKIP',
+          emailHumanGateRequired: 'YES',
+          humanGateRequired: 'YES',
+          emailGateResumable: 'YES',
+        }
+      : {
+          passwordResetQa2: 'SKIP',
+          oldPasswordRejectedQa2: 'SKIP',
+          newPasswordLoginQa2: 'SKIP',
+          resetEmailQa2: 'SKIP',
+          emailHumanGateRequired: 'YES',
+          humanGateRequired: 'YES',
+          emailGateResumable: 'YES',
+        },
+  )
+  test.skip(true, `${reason}. Supply the real reset link and rerun with QA_E2E_RESUME=1.`)
+}
+
+function recordEvent(state: ReturnType<typeof loadState>, event: NonNullable<Awaited<ReturnType<typeof completePasswordResetFromEmail>>['emailEvent']>) {
+  state.emailEvents.push({
+    recipient: event.recipient,
+    purpose: event.purpose,
+    sentAt: event.sentAt,
+    subject: event.subject,
+    linkHost: event.linkHost,
+    callbackPath: event.callbackPath,
+    deliveryEvidence: event.deliveryEvidence,
+  })
+  saveState(state)
+}
+
 test.describe.serial('reset-password', () => {
   test('QA_USER_1 reset via email and password assertion', async ({ page }) => {
     const state = loadState()
-    if (!state.mailboxAvailable) {
-      mergeReport({
-        passwordResetQa1: 'FAIL',
-        oldPasswordRejectedQa1: 'FAIL',
-        newPasswordLoginQa1: 'FAIL',
-        resetEmailQa1: 'FAIL',
-      })
-      test.skip(true, 'email gate')
-    }
+    if (!state.mailboxAvailable) skipForEmailGate('qa1', state.mailboxReason)
 
     const since = new Date(state.qaUser1!.resetSince ?? Date.now() - 300_000)
     const newPassword = state.qaUser1!.newPassword!
@@ -28,30 +58,24 @@ test.describe.serial('reset-password', () => {
       since,
     )
 
-    if (result.emailEvent) {
-      state.emailEvents.push({
-        recipient: result.emailEvent.recipient,
-        purpose: result.emailEvent.purpose,
-        sentAt: result.emailEvent.sentAt,
-        subject: result.emailEvent.subject,
-        linkHost: result.emailEvent.linkHost,
-        callbackPath: result.emailEvent.callbackPath,
-        deliveryEvidence: result.emailEvent.deliveryEvidence,
-      })
-      saveState(state)
-    }
+    if (result.emailEvent) recordEvent(state, result.emailEvent)
 
-    const oldRejected = !(await tryPasswordLogin(state.qaUser1!.email, state.qaUser1!.password))
-    const newWorks = await tryPasswordLogin(state.qaUser1!.email, newPassword)
+    const oldRejected = result.ok
+      ? !(await tryPasswordLogin(state.qaUser1!.email, state.qaUser1!.password))
+      : false
+    const newWorks = result.ok
+      ? await tryPasswordLogin(state.qaUser1!.email, newPassword)
+      : false
 
     mergeReport({
       resetEmailQa1: gate(Boolean(result.emailEvent)),
       passwordResetQa1: gate(result.ok),
       oldPasswordRejectedQa1: gate(oldRejected),
       newPasswordLoginQa1: gate(newWorks),
+      emailHumanGateRequired: result.ok ? 'NO' : 'YES',
     })
 
-    expect(result.ok).toBeTruthy()
+    expect(result.ok, result.error).toBeTruthy()
     expect(oldRejected).toBeTruthy()
     expect(newWorks).toBeTruthy()
 
@@ -62,15 +86,7 @@ test.describe.serial('reset-password', () => {
 
   test('QA_USER_2 reset via email and password assertion', async ({ page }) => {
     const state = loadState()
-    if (!state.mailboxAvailable) {
-      mergeReport({
-        passwordResetQa2: 'FAIL',
-        oldPasswordRejectedQa2: 'FAIL',
-        newPasswordLoginQa2: 'FAIL',
-        resetEmailQa2: 'FAIL',
-      })
-      test.skip(true, 'email gate')
-    }
+    if (!state.mailboxAvailable) skipForEmailGate('qa2', state.mailboxReason)
 
     const since = new Date(state.qaUser2!.resetSince ?? Date.now() - 300_000)
     const newPassword = state.qaUser2!.newPassword!
@@ -81,30 +97,24 @@ test.describe.serial('reset-password', () => {
       since,
     )
 
-    if (result.emailEvent) {
-      state.emailEvents.push({
-        recipient: result.emailEvent.recipient,
-        purpose: result.emailEvent.purpose,
-        sentAt: result.emailEvent.sentAt,
-        subject: result.emailEvent.subject,
-        linkHost: result.emailEvent.linkHost,
-        callbackPath: result.emailEvent.callbackPath,
-        deliveryEvidence: result.emailEvent.deliveryEvidence,
-      })
-      saveState(state)
-    }
+    if (result.emailEvent) recordEvent(state, result.emailEvent)
 
-    const oldRejected = !(await tryPasswordLogin(state.qaUser2!.email, state.qaUser2!.password))
-    const newWorks = await tryPasswordLogin(state.qaUser2!.email, newPassword)
+    const oldRejected = result.ok
+      ? !(await tryPasswordLogin(state.qaUser2!.email, state.qaUser2!.password))
+      : false
+    const newWorks = result.ok
+      ? await tryPasswordLogin(state.qaUser2!.email, newPassword)
+      : false
 
     mergeReport({
       resetEmailQa2: gate(Boolean(result.emailEvent)),
       passwordResetQa2: gate(result.ok),
       oldPasswordRejectedQa2: gate(oldRejected),
       newPasswordLoginQa2: gate(newWorks),
+      emailHumanGateRequired: result.ok ? 'NO' : 'YES',
     })
 
-    expect(result.ok).toBeTruthy()
+    expect(result.ok, result.error).toBeTruthy()
     expect(oldRejected).toBeTruthy()
     expect(newWorks).toBeTruthy()
   })
