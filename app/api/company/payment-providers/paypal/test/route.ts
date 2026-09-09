@@ -4,6 +4,7 @@ import {
   loadCompanyPaypalRow,
   PAYMENT_SETTINGS_PERMISSION,
 } from '@/Lib/payments/companyPaypal'
+import { isPaypalCredentialManager } from '@/Lib/payments/paypalCredentialManager'
 import { getPaypalSandboxAccessToken } from '@/Lib/payments/paypal/adapter'
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
@@ -15,6 +16,12 @@ export async function POST() {
   if (!auth.ok) return auth.response
   const company = requireSessionCompanyId(auth.session)
   if (!company.ok) return company.response
+
+  const existing = await loadCompanyPaypalRow(company.companyId)
+  if (!isPaypalCredentialManager(existing?.metadata, auth.session.userId)) {
+    return Response.json({ error: 'paypal_credentials_forbidden' }, { status: 403 })
+  }
+
   const creds = await loadCompanyPaypalCredentials(company.companyId)
   if (!creds.clientId || !creds.clientSecret) {
     return Response.json({ error: 'paypal_not_configured' }, { status: 409 })
@@ -25,7 +32,6 @@ export async function POST() {
     clientSecret: creds.clientSecret,
   })
   const ok = Boolean(token)
-  const existing = await loadCompanyPaypalRow(company.companyId)
   const metadata = {
     ...((existing?.metadata as Record<string, unknown>) || {}),
     connection_status: ok ? 'validated' : 'error',
@@ -45,7 +51,7 @@ export async function POST() {
     entityType: 'company_payment_provider',
     entityId: company.companyId,
     action: 'paypal_connection_tested',
-    newData: { ok, environment: 'sandbox' },
+    newData: { ok, environment: 'sandbox', credentialManagerOnly: true },
   })
 
   if (!ok) {
