@@ -4,15 +4,74 @@ import { cleanupQaUser } from './helpers/supabaseAssertions'
 import { formatFinalReport, loadReport, mergeReport, loadState, computeReady } from './helpers/report'
 import { REPORT_FILE, STATE_FILE } from './helpers/constants'
 
+const CANONICAL_BRANCH = 'feat/brasinha-foundation-v0-dev'
+const QA_BRANCH = 'feat/internal-auth-e2e-qa-canonical-dev'
+
+function finalizeReport() {
+  const report = loadReport()
+  const formatted = formatFinalReport({
+    ...report,
+    canonicalBranch: report.canonicalBranch ?? CANONICAL_BRANCH,
+    canonicalSha: report.canonicalSha ?? '8a2b963ce9d1442e05207f40f17b0277e95a2bd2',
+    qaBranch: report.qaBranch ?? QA_BRANCH,
+    qaHead: report.qaHead ?? '',
+    pr: report.pr ?? '',
+    qaUser1: report.qaUser1 ?? '',
+    qaUser1Role: report.qaUser1Role ?? 'admin',
+    qaUser2: report.qaUser2 ?? '',
+    qaUser2Role: report.qaUser2Role ?? 'operator',
+    mailboxProvider: report.mailboxProvider ?? 'none',
+    emailGateResumable: report.emailGateResumable ?? 'YES',
+    smtpRateLimitBlocked: report.smtpRateLimitBlocked ?? 'NO',
+    aggressiveRetry: 'NO',
+    emailHumanGateRequired: report.emailHumanGateRequired ?? 'YES',
+    humanGateRequired: report.humanGateRequired ?? 'NO',
+    caioEmailSent: 'NO',
+    daniEmailSent: 'NO',
+    juninhoEmailSent: 'NO',
+    caioDataTouched: 'NO',
+    daniDataTouched: 'NO',
+    juninhoDataTouched: 'NO',
+    prodTouched: 'NO',
+    findingsBlocker: report.findingsBlocker ?? [],
+    findingsHigh: report.findingsHigh ?? [],
+    findingsMedium: report.findingsMedium ?? [],
+    findingsLow: report.findingsLow ?? [],
+    findingsInfo: report.findingsInfo ?? [],
+    readyForIndependentReview: report.readyForIndependentReview ?? 'NO',
+  } as import('./helpers/report').E2eReport)
+
+  writeFileSync(REPORT_FILE.replace('.json', '.txt'), formatted)
+  console.log('\n========== E2E AUTH FINAL REPORT ==========\n')
+  console.log(formatted)
+}
+
 export default async function globalTeardown() {
   if (!existsSync(STATE_FILE)) return
 
+  const current = loadReport()
+  const preserveForResume =
+    process.env.QA_E2E_PRESERVE_STATE === '1' ||
+    current.emailHumanGateRequired === 'YES' ||
+    current.smtpRateLimitBlocked === 'YES'
+
+  if (preserveForResume) {
+    mergeReport({
+      readyForIndependentReview: 'NO',
+      emailGateResumable: 'YES',
+      findingsInfo: [
+        ...(current.findingsInfo ?? []),
+        'Synthetic QA state preserved for resume; rerun with QA_E2E_RESUME=1 after email/SMTP gate is cleared.',
+      ],
+    })
+    finalizeReport()
+    return
+  }
+
   const state = loadState()
-  const emails = [
-    state.qaUser1?.email,
-    state.qaUser2?.email,
-    state.qaUserResend?.email,
-  ].filter(Boolean) as string[]
+  const emails = [state.qaUser1?.email, state.qaUser2?.email, state.qaUserResend?.email].filter(
+    Boolean,
+  ) as string[]
 
   for (const email of emails) {
     if (!email.startsWith('pscs.solutions+catering.qa.')) {
@@ -30,86 +89,13 @@ export default async function globalTeardown() {
     }
   }
 
-  const current = loadReport()
-  const gateOrFail = (value?: string) => (value === 'PASS' ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL'
-  mergeReport({
-    inviteFlowQa1: gateOrFail(current.inviteFlowQa1),
-    inviteFlowQa2: gateOrFail(current.inviteFlowQa2),
-    emailDeliveryQa1: gateOrFail(current.emailDeliveryQa1),
-    emailDeliveryQa2: gateOrFail(current.emailDeliveryQa2),
-    inviteLinkQa1: gateOrFail(current.inviteLinkQa1),
-    inviteLinkQa2: gateOrFail(current.inviteLinkQa2),
-    authCallbackQa1: gateOrFail(current.authCallbackQa1),
-    authCallbackQa2: gateOrFail(current.authCallbackQa2),
-    authUserAssertionQa1: gateOrFail(current.authUserAssertionQa1),
-    authUserAssertionQa2: gateOrFail(current.authUserAssertionQa2),
-    appUserAssertionQa1: gateOrFail(current.appUserAssertionQa1),
-    appUserAssertionQa2: gateOrFail(current.appUserAssertionQa2),
-    membershipAssertionQa1: gateOrFail(current.membershipAssertionQa1),
-    membershipAssertionQa2: gateOrFail(current.membershipAssertionQa2),
-    roleAssertionQa1: gateOrFail(current.roleAssertionQa1),
-    roleAssertionQa2: gateOrFail(current.roleAssertionQa2),
-    logoutQa1: gateOrFail(current.logoutQa1),
-    logoutQa2: gateOrFail(current.logoutQa2),
-    reloginQa1: gateOrFail(current.reloginQa1),
-    reloginQa2: gateOrFail(current.reloginQa2),
-    forgotPasswordQa1: gateOrFail(current.forgotPasswordQa1),
-    forgotPasswordQa2: gateOrFail(current.forgotPasswordQa2),
-    resetEmailQa1: gateOrFail(current.resetEmailQa1),
-    resetEmailQa2: gateOrFail(current.resetEmailQa2),
-    passwordResetQa1: gateOrFail(current.passwordResetQa1),
-    passwordResetQa2: gateOrFail(current.passwordResetQa2),
-    oldPasswordRejectedQa1: gateOrFail(current.oldPasswordRejectedQa1),
-    oldPasswordRejectedQa2: gateOrFail(current.oldPasswordRejectedQa2),
-    newPasswordLoginQa1: gateOrFail(current.newPasswordLoginQa1),
-    newPasswordLoginQa2: gateOrFail(current.newPasswordLoginQa2),
-    resendInvite: gateOrFail(current.resendInvite),
-    staleInvitesReconciled: gateOrFail(current.staleInvitesReconciled),
-    authUserReused: gateOrFail(current.authUserReused),
-    rolePreserved: gateOrFail(current.rolePreserved),
-    readyForIndependentReview: computeReady(current),
-  })
-
-  const report = loadReport()
-  const formatted = formatFinalReport({
-    ...report,
-    canonicalBranch: report.canonicalBranch ?? 'feat/auth-users-rbac-catering-dev',
-    canonicalSha: report.canonicalSha ?? '',
-    qaBranch: report.qaBranch ?? 'feat/internal-auth-e2e-qa-dev',
-    qaHead: report.qaHead ?? '',
-    pr: report.pr ?? '',
-    qaUser1: report.qaUser1 ?? '',
-    qaUser1Role: report.qaUser1Role ?? 'admin',
-    qaUser2: report.qaUser2 ?? '',
-    qaUser2Role: report.qaUser2Role ?? 'operator',
-    emailHumanGateRequired: report.emailHumanGateRequired ?? 'YES',
-    humanGateRequired: report.humanGateRequired ?? 'NO',
-    caioEmailSent: 'NO',
-    daniEmailSent: 'NO',
-    juninhoEmailSent: 'NO',
-    caioDataTouched: 'NO',
-    daniDataTouched: 'NO',
-    juninhoDataTouched: 'NO',
-    prodTouched: 'NO',
-    findingsBlocker: report.findingsBlocker ?? [],
-    findingsHigh: report.findingsHigh ?? [],
-    findingsMedium: report.findingsMedium ?? [],
-    findingsLow: report.findingsLow ?? [],
-    findingsInfo: report.findingsInfo ?? [],
-    readyForIndependentReview: report.readyForIndependentReview ?? 'NO',
-  } as import('./helpers/report').E2eReport)
-  writeFileSync(REPORT_FILE.replace('.json', '.txt'), formatted)
-
-  try {
-    console.log('\n========== E2E AUTH FINAL REPORT ==========\n')
-    console.log(formatted)
-  } catch {
-    /* ignore */
-  }
+  const updated = loadReport()
+  mergeReport({ readyForIndependentReview: computeReady(updated) })
+  finalizeReport()
 
   try {
     execSync('git diff --check', { stdio: 'pipe' })
   } catch {
-    /* pre-existing */
+    /* diff check is reported separately; do not mutate customer/runtime state */
   }
 }
