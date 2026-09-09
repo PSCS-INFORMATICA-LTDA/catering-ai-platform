@@ -2,7 +2,7 @@
  * Reset de senha E2E (DEV) — sem imprimir tokens/senhas.
  */
 import { createClient } from '@supabase/supabase-js'
-import { readFileSync, unlinkSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { resolve } from 'path'
 
 const DEV = 'yasprgtlqclwsjcshtls'
@@ -10,8 +10,9 @@ const EMAIL = 'qa.auth.reset@example.test'
 const MAIN = '65fd576f-8d97-49ba-bf38-61bc1e94e94a'
 const TMP = resolve('scripts/dev/.tmp-reset-fixture-meta.json')
 
-const envText = readFileSync('.env.local', 'utf8')
-const get = (k) => ((envText.match(new RegExp(`^${k}=(.*)$`, 'm')) || [])[1] || '').trim()
+const envText = existsSync('.env.local') ? readFileSync('.env.local', 'utf8') : ''
+const get = (k) =>
+  (process.env[k] ?? (envText.match(new RegExp(`^${k}=(.*)$`, 'm')) || [])[1] ?? '').trim()
 const url = get('NEXT_PUBLIC_SUPABASE_URL')
 const anon = get('NEXT_PUBLIC_SUPABASE_ANON_KEY')
 const service = get('SUPABASE_SERVICE_ROLE_KEY')
