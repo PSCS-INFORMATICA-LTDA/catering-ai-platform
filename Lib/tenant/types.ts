@@ -7,6 +7,7 @@ export type CompanyRole =
   | 'kitchen'
   | 'finance'
   | 'viewer'
+  | 'media_manager'
 
 export type FranchiseGroup = {
   id: string
