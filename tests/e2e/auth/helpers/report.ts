@@ -61,6 +61,10 @@ export type E2eReport = {
   authUserReused: GateResult
   rolePreserved: GateResult
 
+  mailboxProvider: 'external' | 'imap' | 'none'
+  emailGateResumable: 'YES' | 'NO'
+  smtpRateLimitBlocked: 'YES' | 'NO'
+  aggressiveRetry: 'NO'
   emailHumanGateRequired: 'YES' | 'NO'
   humanGateRequired: 'YES' | 'NO'
 
@@ -91,6 +95,7 @@ export type RuntimeState = {
   }
   mailboxAvailable: boolean
   mailboxReason: string
+  mailboxProvider?: 'external' | 'imap' | 'none'
   qaUser1?: {
     email: string
     role: string
@@ -128,9 +133,7 @@ export type RuntimeState = {
 }
 
 export function loadState(): RuntimeState {
-  if (!existsSync(STATE_FILE)) {
-    throw new Error(`Runtime state missing: ${STATE_FILE}`)
-  }
+  if (!existsSync(STATE_FILE)) throw new Error(`Runtime state missing: ${STATE_FILE}`)
   return JSON.parse(readFileSync(STATE_FILE, 'utf8')) as RuntimeState
 }
 
@@ -148,8 +151,7 @@ export function saveReport(report: Partial<E2eReport>): void {
 }
 
 export function mergeReport(patch: Partial<E2eReport>): E2eReport {
-  const current = loadReport()
-  const merged = { ...current, ...patch } as E2eReport
+  const merged = { ...loadReport(), ...patch } as E2eReport
   saveReport(merged)
   return merged
 }
@@ -159,7 +161,7 @@ export function gate(pass: boolean): GateResult {
 }
 
 export function formatFinalReport(report: E2eReport): string {
-  const lines = [
+  return [
     `CANONICAL_BRANCH=${report.canonicalBranch}`,
     `CANONICAL_SHA=${report.canonicalSha}`,
     '',
@@ -174,46 +176,35 @@ export function formatFinalReport(report: E2eReport): string {
     '',
     `INVITE_FLOW_QA1=${report.inviteFlowQa1}`,
     `INVITE_FLOW_QA2=${report.inviteFlowQa2}`,
-    '',
     `EMAIL_DELIVERY_QA1=${report.emailDeliveryQa1}`,
     `EMAIL_DELIVERY_QA2=${report.emailDeliveryQa2}`,
-    '',
     `INVITE_LINK_QA1=${report.inviteLinkQa1}`,
     `INVITE_LINK_QA2=${report.inviteLinkQa2}`,
-    '',
     `AUTH_CALLBACK_QA1=${report.authCallbackQa1}`,
     `AUTH_CALLBACK_QA2=${report.authCallbackQa2}`,
     '',
     `AUTH_USER_ASSERTION_QA1=${report.authUserAssertionQa1}`,
     `AUTH_USER_ASSERTION_QA2=${report.authUserAssertionQa2}`,
-    '',
     `APP_USER_ASSERTION_QA1=${report.appUserAssertionQa1}`,
     `APP_USER_ASSERTION_QA2=${report.appUserAssertionQa2}`,
-    '',
     `MEMBERSHIP_ASSERTION_QA1=${report.membershipAssertionQa1}`,
     `MEMBERSHIP_ASSERTION_QA2=${report.membershipAssertionQa2}`,
-    '',
     `ROLE_ASSERTION_QA1=${report.roleAssertionQa1}`,
     `ROLE_ASSERTION_QA2=${report.roleAssertionQa2}`,
     '',
     `LOGOUT_QA1=${report.logoutQa1}`,
     `LOGOUT_QA2=${report.logoutQa2}`,
-    '',
     `RELOGIN_QA1=${report.reloginQa1}`,
     `RELOGIN_QA2=${report.reloginQa2}`,
     '',
     `FORGOT_PASSWORD_QA1=${report.forgotPasswordQa1}`,
     `FORGOT_PASSWORD_QA2=${report.forgotPasswordQa2}`,
-    '',
     `RESET_EMAIL_QA1=${report.resetEmailQa1}`,
     `RESET_EMAIL_QA2=${report.resetEmailQa2}`,
-    '',
     `PASSWORD_RESET_QA1=${report.passwordResetQa1}`,
     `PASSWORD_RESET_QA2=${report.passwordResetQa2}`,
-    '',
     `OLD_PASSWORD_REJECTED_QA1=${report.oldPasswordRejectedQa1}`,
     `OLD_PASSWORD_REJECTED_QA2=${report.oldPasswordRejectedQa2}`,
-    '',
     `NEW_PASSWORD_LOGIN_QA1=${report.newPasswordLoginQa1}`,
     `NEW_PASSWORD_LOGIN_QA2=${report.newPasswordLoginQa2}`,
     '',
@@ -223,18 +214,20 @@ export function formatFinalReport(report: E2eReport): string {
     `AUTH_USER_REUSED=${report.authUserReused}`,
     `ROLE_PRESERVED=${report.rolePreserved}`,
     '',
+    `MAILBOX_PROVIDER=${report.mailboxProvider}`,
+    `EMAIL_GATE_RESUMABLE=${report.emailGateResumable}`,
+    `SMTP_RATE_LIMIT_BLOCKED=${report.smtpRateLimitBlocked}`,
+    `AGGRESSIVE_RETRY=${report.aggressiveRetry}`,
+    `EMAIL_HUMAN_GATE_REQUIRED=${report.emailHumanGateRequired}`,
+    `HUMAN_GATE_REQUIRED=${report.humanGateRequired}`,
+    '',
     `CAIO_EMAIL_SENT=${report.caioEmailSent}`,
     `DANI_EMAIL_SENT=${report.daniEmailSent}`,
     `JUNINHO_EMAIL_SENT=${report.juninhoEmailSent}`,
-    '',
     `CAIO_DATA_TOUCHED=${report.caioDataTouched}`,
     `DANI_DATA_TOUCHED=${report.daniDataTouched}`,
     `JUNINHO_DATA_TOUCHED=${report.juninhoDataTouched}`,
-    '',
     `PROD_TOUCHED=${report.prodTouched}`,
-    '',
-    `HUMAN_GATE_REQUIRED=${report.humanGateRequired}`,
-    `EMAIL_HUMAN_GATE_REQUIRED=${report.emailHumanGateRequired}`,
     '',
     `FINDINGS_BLOCKER=${report.findingsBlocker.join('; ') || '(none)'}`,
     `FINDINGS_HIGH=${report.findingsHigh.join('; ') || '(none)'}`,
@@ -243,8 +236,7 @@ export function formatFinalReport(report: E2eReport): string {
     `FINDINGS_INFO=${report.findingsInfo.join('; ') || '(none)'}`,
     '',
     `READY_FOR_INDEPENDENT_REVIEW=${report.readyForIndependentReview}`,
-  ]
-  return lines.join('\n')
+  ].join('\n')
 }
 
 export function computeReady(report: Partial<E2eReport>): 'YES' | 'NO' {
@@ -281,5 +273,6 @@ export function computeReady(report: Partial<E2eReport>): 'YES' | 'NO' {
   ]
   if (required.some((v) => v !== 'PASS')) return 'NO'
   if (report.emailHumanGateRequired === 'YES') return 'NO'
+  if (report.smtpRateLimitBlocked === 'YES') return 'NO'
   return 'YES'
 }
