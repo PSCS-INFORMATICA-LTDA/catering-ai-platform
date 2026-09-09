@@ -6,6 +6,7 @@ import {
   PAYMENT_SETTINGS_PERMISSION,
   publicPaypalWebhookUrl,
 } from '@/Lib/payments/companyPaypal'
+import { isPaypalCredentialManager } from '@/Lib/payments/paypalCredentialManager'
 import { getPaypalSandboxAccessToken } from '@/Lib/payments/paypal/adapter'
 import { findOrCreateSandboxWebhook } from '@/Lib/payments/paypal/sandboxWebhooks'
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
@@ -18,12 +19,17 @@ export async function POST() {
   if (!auth.ok) return auth.response
   const company = requireSessionCompanyId(auth.session)
   if (!company.ok) return company.response
+
+  const existing = await loadCompanyPaypalRow(company.companyId)
+  if (!isPaypalCredentialManager(existing?.metadata, auth.session.userId)) {
+    return Response.json({ error: 'paypal_credentials_forbidden' }, { status: 403 })
+  }
+
   const creds = await loadCompanyPaypalCredentials(company.companyId)
   if (!creds.clientId || !creds.clientSecret) {
     return Response.json({ error: 'paypal_not_configured' }, { status: 409 })
   }
 
-  const existing = await loadCompanyPaypalRow(company.companyId)
   const metadata = {
     ...((existing?.metadata as Record<string, unknown>) || {}),
   }
@@ -66,7 +72,7 @@ export async function POST() {
     entityType: 'company_payment_provider',
     entityId: company.companyId,
     action: 'paypal_webhook_configured',
-    newData: { webhookConfigured: true, reused: ensured.reused },
+    newData: { webhookConfigured: true, reused: ensured.reused, credentialManagerOnly: true },
   })
 
   return Response.json({
