@@ -1,11 +1,12 @@
-import { ImapFlow } from 'imapflow'
-import { simpleParser } from 'mailparser'
+import { existsSync, readFileSync } from 'fs'
 import { CANONICAL_DEV_URL } from './constants'
 import { maskEmail, sanitizeUrl } from './guards'
 
+export type EmailPurpose = 'invite' | 'reset' | 'unknown'
+
 export type EmailEvent = {
   recipient: string
-  purpose: 'invite' | 'reset' | 'unknown'
+  purpose: EmailPurpose
   sentAt: string
   subject: string
   linkHost: string | null
@@ -14,12 +15,26 @@ export type EmailEvent = {
   sanitizedLink: string | null
 }
 
+export type EmailLookupResult = {
+  event: EmailEvent
+  rawLink: string
+}
+
+type ExternalLinkEntry = {
+  invite?: string
+  reset?: string
+}
+
+type ExternalLinkMap = Record<string, ExternalLinkEntry | string>
+
 export type MailboxConfig = {
   user: string
   password: string
   host: string
   port: number
 }
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export function getMailboxConfig(): MailboxConfig | null {
   const user =
@@ -41,33 +56,130 @@ export function getMailboxConfig(): MailboxConfig | null {
   }
 }
 
+function externalProviderConfigured(): boolean {
+  return Boolean(
+    process.env.QA_EMAIL_LINKS_FILE?.trim() ||
+      process.env.QA_EMAIL_LINKS_JSON?.trim() ||
+      process.env.QA_MAILBOX_PROVIDER?.trim().toLowerCase() === 'external',
+  )
+}
+
+function readExternalLinks(): ExternalLinkMap {
+  const inline = process.env.QA_EMAIL_LINKS_JSON?.trim()
+  const file = process.env.QA_EMAIL_LINKS_FILE?.trim()
+  let raw = inline ?? ''
+
+  if (!raw && file && existsSync(file)) {
+    raw = readFileSync(file, 'utf8')
+  }
+
+  if (!raw) return {}
+
+  try {
+    const parsed = JSON.parse(raw) as ExternalLinkMap
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function externalLinkFor(recipient: string, purpose: EmailPurpose): string | null {
+  const links = readExternalLinks()
+  const normalized = recipient.trim().toLowerCase()
+  const direct = links[normalized]
+  if (!direct) return null
+  if (typeof direct === 'string') return direct
+  if (purpose === 'invite') return direct.invite?.trim() || null
+  if (purpose === 'reset') return direct.reset?.trim() || null
+  return direct.invite?.trim() || direct.reset?.trim() || null
+}
+
+function eventFromRawLink(input: {
+  recipient: string
+  purpose: EmailPurpose
+  rawLink: string
+  deliveryEvidence: string
+  subject?: string
+  sentAt?: string
+}): EmailLookupResult | null {
+  try {
+    const parsed = new URL(input.rawLink.replace(/&amp;/g, '&'))
+    return {
+      rawLink: parsed.toString(),
+      event: {
+        recipient: input.recipient,
+        purpose: input.purpose,
+        sentAt: input.sentAt ?? new Date().toISOString(),
+        subject: input.subject ?? `Externally supplied ${input.purpose} auth link`,
+        linkHost: parsed.host,
+        callbackPath: `${parsed.pathname}${parsed.search}`,
+        deliveryEvidence: input.deliveryEvidence,
+        sanitizedLink: sanitizeUrl(parsed.toString()),
+      },
+    }
+  } catch {
+    return null
+  }
+}
+
+async function dynamicImport(specifier: string): Promise<any> {
+  // Keep IMAP as an optional provider without making the canonical app depend on
+  // imapflow/mailparser. The modules are loaded only when IMAP credentials exist.
+  const loader = Function('s', 'return import(s)') as (s: string) => Promise<any>
+  return loader(specifier)
+}
+
 export async function validateMailboxConnection(): Promise<{
   available: boolean
+  resumable: boolean
+  provider: 'external' | 'imap' | 'none'
   reason: string
 }> {
+  if (externalProviderConfigured()) {
+    return {
+      available: true,
+      resumable: true,
+      provider: 'external',
+      reason: 'External resumable mailbox provider configured',
+    }
+  }
+
   const config = getMailboxConfig()
   if (!config) {
     return {
       available: false,
-      reason: 'No QA_GMAIL_IMAP_APP_PASSWORD or QA_GMAIL_APP_PASSWORD configured',
+      resumable: true,
+      provider: 'none',
+      reason:
+        'No mailbox provider configured. Set QA_MAILBOX_PROVIDER=external with QA_EMAIL_LINKS_FILE/JSON, or optional Gmail IMAP credentials.',
     }
   }
 
-  const client = new ImapFlow({
-    host: config.host,
-    port: config.port,
-    secure: true,
-    auth: { user: config.user, pass: config.password },
-    logger: false,
-  })
-
   try {
+    const { ImapFlow } = await dynamicImport('imapflow')
+    const client = new ImapFlow({
+      host: config.host,
+      port: config.port,
+      secure: true,
+      auth: { user: config.user, pass: config.password },
+      logger: false,
+    })
     await client.connect()
     await client.logout()
-    return { available: true, reason: `IMAP connected for ${maskEmail(config.user)}` }
+    return {
+      available: true,
+      resumable: true,
+      provider: 'imap',
+      reason: `IMAP connected for ${maskEmail(config.user)}`,
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown IMAP error'
-    return { available: false, reason: `IMAP failed: ${message}` }
+    return {
+      available: false,
+      resumable: true,
+      provider: 'none',
+      reason: `Optional IMAP unavailable: ${message}`,
+    }
   }
 }
 
@@ -77,28 +189,19 @@ function extractLinksFromBody(body: string): string[] {
   const urlRegex = /https?:\/\/[^\s<>"']+/gi
 
   let match: RegExpExecArray | null
-  while ((match = hrefRegex.exec(body)) !== null) {
-    links.push(match[1])
-  }
-  for (const url of body.match(urlRegex) ?? []) {
-    links.push(url)
-  }
-
+  while ((match = hrefRegex.exec(body)) !== null) links.push(match[1])
+  for (const url of body.match(urlRegex) ?? []) links.push(url)
   return [...new Set(links)]
 }
 
-function classifyPurpose(subject: string, body: string): EmailEvent['purpose'] {
+function classifyPurpose(subject: string, body: string): EmailPurpose {
   const hay = `${subject} ${body}`.toLowerCase()
-  if (hay.includes('invite') || hay.includes('convite') || hay.includes('invited')) {
-    return 'invite'
-  }
-  if (hay.includes('reset') || hay.includes('password') || hay.includes('senha')) {
-    return 'reset'
-  }
+  if (hay.includes('invite') || hay.includes('convite') || hay.includes('invited')) return 'invite'
+  if (hay.includes('reset') || hay.includes('password') || hay.includes('senha')) return 'reset'
   return 'unknown'
 }
 
-function pickAuthLink(links: string[], purpose: EmailEvent['purpose']): string | null {
+function pickAuthLink(links: string[], purpose: EmailPurpose): string | null {
   const devHost = new URL(CANONICAL_DEV_URL).host
   const candidates = links.filter((link) => {
     try {
@@ -114,54 +217,22 @@ function pickAuthLink(links: string[], purpose: EmailEvent['purpose']): string |
   })
 
   if (purpose === 'invite') {
-    return (
-      candidates.find((l) => l.includes('type=invite') || l.includes('/auth/callback')) ??
-      candidates[0] ??
-      null
-    )
+    return candidates.find((l) => l.includes('type=invite') || l.includes('/auth/callback')) ?? candidates[0] ?? null
   }
-
   if (purpose === 'reset') {
-    return (
-      candidates.find((l) => l.includes('recovery') || l.includes('reset-password')) ??
-      candidates[0] ??
-      null
-    )
+    return candidates.find((l) => l.includes('recovery') || l.includes('reset-password')) ?? candidates[0] ?? null
   }
-
   return candidates[0] ?? null
 }
 
-export async function waitForEmail(input: {
-  recipient: string
-  purpose: EmailEvent['purpose']
-  since: Date
-  timeoutMs?: number
-  pollIntervalMs?: number
-}): Promise<EmailEvent | null> {
-  const config = getMailboxConfig()
-  if (!config) return null
-
-  const timeoutMs = input.timeoutMs ?? 120_000
-  const pollIntervalMs = input.pollIntervalMs ?? 5_000
-  const deadline = Date.now() + timeoutMs
-  const recipient = input.recipient.trim().toLowerCase()
-
-  while (Date.now() < deadline) {
-    const event = await searchMailbox(config, recipient, input.purpose, input.since)
-    if (event) return event
-    await new Promise((r) => setTimeout(r, pollIntervalMs))
-  }
-
-  return null
-}
-
-async function searchMailbox(
+async function searchImap(
   config: MailboxConfig,
   recipient: string,
-  purpose: EmailEvent['purpose'],
+  purpose: EmailPurpose,
   since: Date,
-): Promise<EmailEvent | null> {
+): Promise<EmailLookupResult | null> {
+  const { ImapFlow } = await dynamicImport('imapflow')
+  const { simpleParser } = await dynamicImport('mailparser')
   const client = new ImapFlow({
     host: config.host,
     port: config.port,
@@ -171,82 +242,36 @@ async function searchMailbox(
   })
 
   await client.connect()
-
   try {
     const lock = await client.getMailboxLock('INBOX')
     try {
-      const messages = await client.search({
-        since,
-        to: recipient,
-      })
-
-      if (!Array.isArray(messages) || messages.length === 0) {
-        // Gmail plus-alias: also search delivered-to / subject containing token
-        const allRecent = await client.search({ since })
-        if (!Array.isArray(allRecent) || allRecent.length === 0) return null
-
-        for (const uid of allRecent.slice(-30).reverse()) {
-          const msg = await client.fetchOne(uid, { source: true, envelope: true })
-          if (!msg || !('source' in msg) || !msg.source) continue
-          const parsed = await simpleParser(msg.source)
-          const toValue = Array.isArray(parsed.to) ? parsed.to : parsed.to?.value ?? []
-          const toAddrs = [
-            ...toValue.map((v: { address?: string }) => v.address?.toLowerCase()),
-            ...(parsed.headers.get('delivered-to') as string[] | undefined)?.map((v: string) =>
-              v.toLowerCase(),
-            ) ?? [],
-          ].filter(Boolean) as string[]
-
-          const body = `${parsed.text ?? ''}\n${parsed.html ?? ''}`
-          if (!toAddrs.includes(recipient) && !body.toLowerCase().includes(recipient)) {
-            continue
-          }
-
-          const detectedPurpose = classifyPurpose(parsed.subject ?? '', body)
-          if (purpose !== 'unknown' && detectedPurpose !== purpose) continue
-
-          const links = extractLinksFromBody(body)
-          const authLink = pickAuthLink(links, detectedPurpose)
-          if (!authLink) continue
-
-          const linkUrl = new URL(authLink.replace(/&amp;/g, '&'))
-          return {
-            recipient,
-            purpose: detectedPurpose,
-            sentAt: (parsed.date ?? new Date()).toISOString(),
-            subject: parsed.subject ?? '(no subject)',
-            linkHost: linkUrl.host,
-            callbackPath: linkUrl.pathname + linkUrl.search,
-            deliveryEvidence: `IMAP uid=${uid} to=${toAddrs.join(',')}`,
-            sanitizedLink: sanitizeUrl(authLink),
-          }
-        }
-        return null
-      }
-
-      for (const uid of messages.reverse()) {
+      const searched = await client.search({ since })
+      const uids: number[] = Array.isArray(searched) ? searched : []
+      for (const uid of uids.slice(-50).reverse()) {
         const msg = await client.fetchOne(uid, { source: true, envelope: true })
-        if (!msg || !('source' in msg) || !msg.source) continue
+        if (!msg?.source) continue
         const parsed = await simpleParser(msg.source)
         const body = `${parsed.text ?? ''}\n${parsed.html ?? ''}`
+        const recipientLower = recipient.toLowerCase()
+        const headers = `${parsed.headers?.get?.('delivered-to') ?? ''} ${parsed.headers?.get?.('x-original-to') ?? ''}`.toLowerCase()
+        const envelopeTo = JSON.stringify(parsed.to ?? '').toLowerCase()
+        if (!body.toLowerCase().includes(recipientLower) && !headers.includes(recipientLower) && !envelopeTo.includes(recipientLower)) {
+          continue
+        }
+
         const detectedPurpose = classifyPurpose(parsed.subject ?? '', body)
         if (purpose !== 'unknown' && detectedPurpose !== purpose) continue
+        const rawLink = pickAuthLink(extractLinksFromBody(body), detectedPurpose)
+        if (!rawLink) continue
 
-        const links = extractLinksFromBody(body)
-        const authLink = pickAuthLink(links, detectedPurpose)
-        if (!authLink) continue
-
-        const linkUrl = new URL(authLink.replace(/&amp;/g, '&'))
-        return {
+        return eventFromRawLink({
           recipient,
           purpose: detectedPurpose,
+          rawLink,
           sentAt: (parsed.date ?? new Date()).toISOString(),
           subject: parsed.subject ?? '(no subject)',
-          linkHost: linkUrl.host,
           deliveryEvidence: `IMAP uid=${uid}`,
-          callbackPath: linkUrl.pathname + linkUrl.search,
-          sanitizedLink: sanitizeUrl(authLink),
-        }
+        })
       }
     } finally {
       lock.release()
@@ -254,6 +279,54 @@ async function searchMailbox(
   } finally {
     await client.logout()
   }
+  return null
+}
+
+export async function waitForEmailLink(input: {
+  recipient: string
+  purpose: EmailPurpose
+  since: Date
+  timeoutMs?: number
+  pollIntervalMs?: number
+}): Promise<EmailLookupResult | null> {
+  const timeoutMs = input.timeoutMs ?? 120_000
+  const pollIntervalMs = input.pollIntervalMs ?? 5_000
+  const deadline = Date.now() + timeoutMs
+  const config = getMailboxConfig()
+
+  while (Date.now() < deadline) {
+    const external = externalLinkFor(input.recipient, input.purpose)
+    if (external) {
+      const result = eventFromRawLink({
+        recipient: input.recipient,
+        purpose: input.purpose,
+        rawLink: external,
+        deliveryEvidence: 'external resumable mailbox provider',
+      })
+      if (result) return result
+    }
+
+    if (config) {
+      try {
+        const result = await searchImap(config, input.recipient, input.purpose, input.since)
+        if (result) return result
+      } catch {
+        // IMAP is optional. Keep polling external injection rather than failing the run.
+      }
+    }
+
+    await sleep(pollIntervalMs)
+  }
 
   return null
+}
+
+export async function waitForEmail(input: {
+  recipient: string
+  purpose: EmailPurpose
+  since: Date
+  timeoutMs?: number
+  pollIntervalMs?: number
+}): Promise<EmailEvent | null> {
+  return (await waitForEmailLink(input))?.event ?? null
 }
