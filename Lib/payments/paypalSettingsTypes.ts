@@ -7,6 +7,7 @@ export type PaypalConnectionStatus =
 export type CompanyPaypalMetadata = {
   webhook_id?: string | null
   client_secret_vault_id?: string | null
+  credential_manager_user_id?: string | null
   connection_status?: PaypalConnectionStatus
   last_tested_at?: string | null
   last_test_status?: string | null
@@ -29,4 +30,5 @@ export type CompanyPaypalPublicSettings = {
   publicCheckout: false
   liveBlocked: true
   platformEnabled: boolean
+  canManageCredentials: boolean
 }

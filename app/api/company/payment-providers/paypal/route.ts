@@ -11,6 +11,7 @@ import {
   toPublicPaypalSettings,
   type CompanyPaypalMetadata,
 } from '@/Lib/payments/companyPaypal'
+import { isPaypalCredentialManager } from '@/Lib/payments/paypalCredentialManager'
 import {
   ensureOfflineMethods,
   loadCompanyPaymentMethods,
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
   if (spoofed) return spoofed
   await ensureOfflineMethods(company.companyId)
   await ensurePaypalWebhookRouteKey(company.companyId)
-  const data = await toPublicPaypalSettings(company.companyId)
+  const data = await toPublicPaypalSettings(company.companyId, auth.session.userId)
   const methods = await loadCompanyPaymentMethods(company.companyId)
   return Response.json({ data, methods })
 }
@@ -58,6 +59,10 @@ export async function PUT(request: Request) {
 
   const existing = await loadCompanyPaypalRow(company.companyId)
   const metadata = (existing?.metadata || {}) as CompanyPaypalMetadata
+  if (!isPaypalCredentialManager(metadata, auth.session.userId)) {
+    return Response.json({ error: 'paypal_credentials_forbidden' }, { status: 403 })
+  }
+
   const routeKey = existing?.webhook_route_key || createWebhookRouteKey()
   const clientId =
     typeof body?.clientId === 'string' ? body.clientId.trim() : existing?.public_client_id
@@ -104,8 +109,11 @@ export async function PUT(request: Request) {
       enabled: body?.enabled === true,
       clientIdConfigured: Boolean(clientId),
       secretUpdated: Boolean(secret),
+      credentialManagerOnly: true,
     },
   })
 
-  return Response.json({ data: await toPublicPaypalSettings(company.companyId) })
+  return Response.json({
+    data: await toPublicPaypalSettings(company.companyId, auth.session.userId),
+  })
 }
