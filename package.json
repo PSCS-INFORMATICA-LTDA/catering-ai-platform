@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/generate-build-info.mjs && node --experimental-strip-types scripts/guard-sso-dev-supabase.mjs",
+    "prebuild": "node scripts/generate-build-info.mjs && node --experimental-strip-types scripts/guard-sso-dev-supabase.mjs && if [ \"$VERCEL_GIT_COMMIT_REF\" = \"codex/dani-auth-e2e-verify\" ]; then node scripts/dev/test-password-reset-e2e.mjs; fi",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
