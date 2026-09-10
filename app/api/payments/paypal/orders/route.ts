@@ -7,6 +7,10 @@ import { resolvePublicPaypalCheckoutReadiness } from '@/Lib/payments/paypal/publ
 import { isPaymentPurpose } from '@/Lib/payments/paymentLinks'
 import { recordPaymentAttempt } from '@/Lib/payments/recordPayment'
 import { resolvePaymentLink } from '@/Lib/payments/resolvePaymentLink'
+import {
+  acquirePaymentScheduleHold,
+  releasePaymentScheduleHold,
+} from '@/Lib/payments/scheduleHold'
 import { createHash } from 'node:crypto'
 
 export const dynamic = 'force-dynamic'
@@ -90,6 +94,22 @@ export async function POST(request: Request) {
     return Response.json({ error: 'paypal_not_configured' }, { status: 409 })
   }
 
+  // The slot is revalidated atomically and held only when the payer actually
+  // starts checkout. Payment links themselves may exist for days and do not
+  // reserve operational capacity.
+  const hold = await acquirePaymentScheduleHold({
+    companyId,
+    invoiceId,
+    paymentLinkId: paymentLinkId === 'operator' ? null : paymentLinkId,
+    holdSeconds: 900,
+  })
+  if (!hold.ok) {
+    return Response.json(
+      { error: hold.status === 'unavailable' ? 'schedule_unavailable_for_payment' : 'schedule_hold_failed' },
+      { status: hold.status === 'unavailable' ? 409 : 503 },
+    )
+  }
+
   const requestId = paypalRequestId([
     'create',
     companyId,
@@ -103,49 +123,68 @@ export async function POST(request: Request) {
     clientId: companyPaypal.clientId,
     clientSecret: companyPaypal.clientSecret,
   })
-  const order = await adapter.createOrder({
-    companyId,
-    invoiceId,
-    invoiceNumber,
-    amount: due.amount,
-    currency,
-    purpose,
-    requestId,
-  })
 
-  const recorded = await recordPaymentAttempt({
-    companyId,
-    invoiceId,
-    provider: 'paypal',
-    purpose,
-    amount: due.amount,
-    currency,
-    status: 'created',
-    providerOrderId: order.orderId,
-    idempotencyKey: `create:${order.orderId}`,
-    metadata: {
-      requestId,
-      mock: order.mock,
-      paymentLinkId,
-      clientFingerprint: createHash('sha256')
-        .update(request.headers.get('user-agent') || 'unknown')
-        .digest('hex')
-        .slice(0, 16),
-    },
-  })
-  if (!recorded.ok) {
-    return Response.json({ error: recorded.error }, { status: recorded.status })
-  }
-
-  return Response.json({
-    data: {
-      orderId: order.orderId,
+  try {
+    const order = await adapter.createOrder({
+      companyId,
+      invoiceId,
+      invoiceNumber,
       amount: due.amount,
       currency,
       purpose,
-      duplicate: recorded.duplicate,
-      mock: order.mock,
-      publicCheckout: Boolean(body?.token),
-    },
-  })
+      requestId,
+    })
+
+    const recorded = await recordPaymentAttempt({
+      companyId,
+      invoiceId,
+      provider: 'paypal',
+      purpose,
+      amount: due.amount,
+      currency,
+      status: 'created',
+      providerOrderId: order.orderId,
+      idempotencyKey: `create:${order.orderId}`,
+      metadata: {
+        requestId,
+        mock: order.mock,
+        paymentLinkId,
+        scheduleHoldId: hold.holdId ?? null,
+        scheduleHoldExpiresAt: hold.expiresAt ?? null,
+        scheduleHoldStatus: hold.status,
+        clientFingerprint: createHash('sha256')
+          .update(request.headers.get('user-agent') || 'unknown')
+          .digest('hex')
+          .slice(0, 16),
+      },
+    })
+    if (!recorded.ok) {
+      await releasePaymentScheduleHold({
+        companyId,
+        invoiceId,
+        reason: 'payment_attempt_record_failed',
+      })
+      return Response.json({ error: recorded.error }, { status: recorded.status })
+    }
+
+    return Response.json({
+      data: {
+        orderId: order.orderId,
+        amount: due.amount,
+        currency,
+        purpose,
+        duplicate: recorded.duplicate,
+        mock: order.mock,
+        publicCheckout: Boolean(body?.token),
+        scheduleHoldExpiresAt: hold.expiresAt ?? null,
+      },
+    })
+  } catch {
+    await releasePaymentScheduleHold({
+      companyId,
+      invoiceId,
+      reason: 'paypal_order_create_failed',
+    })
+    return Response.json({ error: 'paypal_create_order_failed' }, { status: 502 })
+  }
 }
