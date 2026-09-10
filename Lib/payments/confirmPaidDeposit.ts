@@ -60,7 +60,7 @@ export async function confirmPaidDepositReservation(input: {
       actorUserId: null,
       entityType: 'quote',
       entityId: String(invoice.quote_id),
-      action: 'reservation_confirmed_by_payment',
+      action: 'reservation_confirmed',
       newData: {
         source: input.source,
         reservation_confirmed_at: confirmedAt,
