@@ -6,6 +6,10 @@ import { createPaypalAdapter } from '@/Lib/payments/paypal/adapter'
 import { resolvePublicPaypalCheckoutReadiness } from '@/Lib/payments/paypal/publicCheckout'
 import { findPaymentByProviderOrder, recordPaymentAttempt } from '@/Lib/payments/recordPayment'
 import { resolvePaymentLink } from '@/Lib/payments/resolvePaymentLink'
+import {
+  acquirePaymentScheduleHold,
+  consumePaymentScheduleHold,
+} from '@/Lib/payments/scheduleHold'
 import { createHash } from 'node:crypto'
 
 export const dynamic = 'force-dynamic'
@@ -30,6 +34,7 @@ export async function POST(request: Request) {
 
   let companyId = ''
   let invoiceId = ''
+  let paymentLinkId: string | null = null
   if (body.token) {
     const resolved = await resolvePaymentLink(body.token)
     if (!resolved.ok) {
@@ -41,6 +46,7 @@ export async function POST(request: Request) {
     }
     companyId = resolved.invoice.company_id
     invoiceId = resolved.invoice.id
+    paymentLinkId = resolved.link.id
   } else {
     const auth = await requireApiPermission('quotes.manage')
     if (!auth.ok) return auth.response
@@ -67,6 +73,9 @@ export async function POST(request: Request) {
       providerOrderId: existing.provider_order_id,
       providerCaptureId: existing.provider_capture_id,
     })
+    if (reservation.ok) {
+      await consumePaymentScheduleHold({ companyId, invoiceId })
+    }
     return Response.json({
       data: {
         duplicate: true,
@@ -75,6 +84,22 @@ export async function POST(request: Request) {
         reservation,
       },
     })
+  }
+
+  // Critical last-moment gate: approval in PayPal is not enough. Revalidate the
+  // event slot immediately before capture. If the previous hold expired, this
+  // reacquires only if the slot is still truly available.
+  const hold = await acquirePaymentScheduleHold({
+    companyId,
+    invoiceId,
+    paymentLinkId,
+    holdSeconds: 900,
+  })
+  if (!hold.ok) {
+    return Response.json(
+      { error: hold.status === 'unavailable' ? 'schedule_unavailable_before_capture' : 'schedule_hold_failed' },
+      { status: hold.status === 'unavailable' ? 409 : 503 },
+    )
   }
 
   const companyPaypal = await loadCompanyPaypalCredentials(companyId)
@@ -111,7 +136,14 @@ export async function POST(request: Request) {
     providerOrderId: captured.orderId,
     providerCaptureId: captured.captureId,
     idempotencyKey: `capture:${captured.orderId}`,
-    metadata: { mock: captured.mock, verifiedAmount: true, verifiedCurrency: true },
+    metadata: {
+      mock: captured.mock,
+      verifiedAmount: true,
+      verifiedCurrency: true,
+      scheduleHoldId: hold.holdId ?? null,
+      scheduleHoldExpiresAt: hold.expiresAt ?? null,
+      scheduleHoldStatus: hold.status,
+    },
   })
   if (!recorded.ok) {
     return Response.json({ error: recorded.error }, { status: recorded.status })
@@ -124,6 +156,9 @@ export async function POST(request: Request) {
     providerOrderId: captured.orderId,
     providerCaptureId: captured.captureId,
   })
+  if (reservation.ok) {
+    await consumePaymentScheduleHold({ companyId, invoiceId })
+  }
 
   return Response.json({
     data: {
