@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+
+const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8')
+const config = read('Lib/payments/paypal/config.ts')
+const readiness = read('Lib/payments/paypal/publicCheckout.ts')
+const orders = read('app/api/payments/paypal/orders/route.ts')
+const capture = read('app/api/payments/paypal/capture/route.ts')
+const webhook = read('Lib/payments/paypal/processWebhook.ts')
+const legacyWebhook = read('app/api/payments/paypal/webhook/route.ts')
+const publicPage = read('app/pay/[token]/page.tsx')
+const client = read('components/payments/PaypalSandboxCheckout.tsx')
+
+assert.match(config, /productionBlocked/)
+assert.match(config, /PAYPAL_PRODUCTION_BLOCKED/)
+assert.match(config, /requestedEnv === 'live'/)
+assert.match(readiness, /connection_status !== 'validated'/)
+assert.match(readiness, /paypal_webhook_required/)
+assert.match(orders, /ignoreClientAmount\(body\?\.amount\)/)
+assert.match(orders, /resolveAmountDue/)
+assert.match(orders, /paymentLinkId/)
+assert.match(capture, /paypal_capture_amount_mismatch/)
+assert.match(capture, /verifiedAmount: true/)
+assert.match(webhook, /paypal_webhook_amount_mismatch/)
+assert.match(webhook, /webhook:\$\{eventId\}/)
+assert.match(legacyWebhook, /paypal_webhook_scoped_route_required/)
+assert.match(publicPage, /resolvePublicPaypalCheckoutReadiness/)
+assert.match(client, /body: JSON\.stringify\(\{ token \}\)/)
+assert.doesNotMatch(client, /clientSecret|amount:/)
+assert.doesNotMatch(client, /invoiceId/)
+
+console.log('PAYPAL_SANDBOX_CHECKOUT_V2_SECURITY=PASS')

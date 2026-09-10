@@ -1,20 +1,9 @@
-import {
-  readPaypalWebhookHeaders,
-  verifyPaypalWebhookSignature,
-} from '@/Lib/payments/paypal/webhook'
-import { processVerifiedPaypalCapture } from '@/Lib/payments/paypal/processWebhook'
-
 export const dynamic = 'force-dynamic'
 
-export async function POST(request: Request) {
-  const rawBody = await request.text()
-  const headers = readPaypalWebhookHeaders(request.headers)
-  const verified = await verifyPaypalWebhookSignature({
-    headers,
-    rawBody,
-  })
-  if (!verified.ok) {
-    return Response.json({ error: verified.reason }, { status: 400 })
-  }
-  return processVerifiedPaypalCapture({ rawBody })
+/**
+ * Legacy unscoped webhook endpoint is intentionally closed.
+ * Company-scoped PayPal webhooks must use /api/payments/paypal/webhook/[connectionKey].
+ */
+export async function POST() {
+  return Response.json({ error: 'paypal_webhook_scoped_route_required' }, { status: 410 })
 }
