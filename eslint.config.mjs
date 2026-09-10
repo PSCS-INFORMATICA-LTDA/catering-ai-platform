@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // E2E auth harness is compiled/executed by the pinned Playwright runner,
+    // not by the Next.js application toolchain.
+    "tests/e2e/**",
+    "playwright.config.ts",
   ]),
 ]);
 
