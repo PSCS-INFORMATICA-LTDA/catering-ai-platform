@@ -4,6 +4,7 @@ import { syncReservedAgendaEventForQuote } from '@/Lib/quotes/confirmQuoteDeposi
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { isDepositSatisfied } from './invoiceStatus'
+import { consumePaymentScheduleHold } from './scheduleHold'
 
 export async function confirmPaidDepositReservation(input: {
   companyId: string
@@ -76,6 +77,13 @@ export async function confirmPaidDepositReservation(input: {
     actorUserId: null,
     requireConfirmed: true,
   })
+
+  if (agenda.ok) {
+    await consumePaymentScheduleHold({
+      companyId: input.companyId,
+      invoiceId: input.invoiceId,
+    })
+  }
 
   return {
     ok: agenda.ok,
