@@ -59,7 +59,7 @@ export default async function PaymentSettingsPage() {
 
   await ensureOfflineMethods(companyId)
   await ensurePaypalWebhookRouteKey(companyId)
-  const paypal = await toPublicPaypalSettings(companyId)
+  const paypal = await toPublicPaypalSettings(companyId, session.userId)
   const methods = await loadCompanyPaymentMethods(companyId)
 
   return (

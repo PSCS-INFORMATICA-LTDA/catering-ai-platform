@@ -13,7 +13,22 @@ import {
   PORK_SAUSAGE_OPTION_KEY,
   resolveSausageDisplayLabel,
 } from '../../Lib/publicQuote/sausageOptions.ts'
+import { getQuoteStrings } from '../../Lib/quoteTranslations.ts'
 import { assertDevUrl, loadDevEnv } from './loadDevEnv.mjs'
+
+function shouldShowInlinePriceBreakdown(input) {
+  const unit = Number(input.unitPrice)
+  const people = Number(input.people)
+  const total = Number(input.totalPrice)
+  return (
+    Number.isFinite(unit) &&
+    unit > 0 &&
+    Number.isFinite(people) &&
+    people > 0 &&
+    Number.isFinite(total) &&
+    total > 0
+  )
+}
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const COMPANY_ID = '65fd576f-8d97-49ba-bf38-61bc1e94e94a'
@@ -39,6 +54,37 @@ const helper = source('Lib/packageConfiguration.ts')
 const reviewSection = source(
   'components/quote-review/QuoteReviewPackageCdlSection.tsx',
 )
+const financialCard = source(
+  'components/quote-review/QuoteProposalOverviewCard.tsx',
+)
+const packageSummarySrc = source(
+  'components/quote-review/quoteReviewPackageSummary.ts',
+)
+const translations = source('Lib/quoteTranslations.ts')
+
+function inlineBreakdown(summary, billableGuestCount, kind) {
+  const people = summary?.chargedPeople ?? billableGuestCount
+  const unitPrice =
+    kind === 'garnish' ? summary?.garnishUnitPrice : summary?.packageUnitPrice
+  const totalPrice =
+    kind === 'garnish' ? summary?.garnishTotalPrice : summary?.packageTotalPrice
+  if (
+    kind === 'garnish' &&
+    summary?.hasGarnish !== true
+  ) {
+    return null
+  }
+  if (
+    !shouldShowInlinePriceBreakdown({
+      unitPrice,
+      people,
+      totalPrice,
+    })
+  ) {
+    return null
+  }
+  return { unit: unitPrice, people, total: totalPrice }
+}
 
 const PACKAGE_ID = 'pkg-bbqtrad'
 const packageItems = [
@@ -213,6 +259,140 @@ test('SAUSAGE_LABELS_PT_EN_ES', () => {
     resolveSausageDisplayLabel({ option_item_key: PORK_SAUSAGE_OPTION_KEY }, 'es'),
     'Salchicha Tradicional de Cerdo',
   )
+})
+
+test('INLINE_PRICE_BREAKDOWN_USES_CANONICAL_SUMMARY', () => {
+  assert.match(
+    reviewSection,
+    /const chargedPeople = packageSummary\?\.chargedPeople \?\? billableGuestCount/,
+  )
+  assert.match(reviewSection, /packageSummary\?\.packageUnitPrice/)
+  assert.match(reviewSection, /packageSummary\?\.packageTotalPrice/)
+  assert.match(reviewSection, /packageSummary\?\.garnishUnitPrice/)
+  assert.match(reviewSection, /packageSummary\?\.garnishTotalPrice/)
+  assert.match(reviewSection, /packageSummary\?\.hasGarnish === true/)
+  assert.match(reviewSection, /shouldShowInlinePriceBreakdown/)
+  assert.match(packageSummarySrc, /export function shouldShowInlinePriceBreakdown/)
+  assert.match(packageSummarySrc, /unit > 0/)
+  assert.match(packageSummarySrc, /people > 0/)
+  assert.match(packageSummarySrc, /total > 0/)
+  assert.match(reviewSection, /formatCurrency\(unitPrice\)/)
+  assert.match(reviewSection, /formatCurrency\(totalPrice\)/)
+  assert.doesNotMatch(
+    reviewSection.slice(
+      reviewSection.indexOf('function InlinePriceBreakdown'),
+      reviewSection.indexOf('function PackageValueCard'),
+    ),
+    /unitPrice\s*\*\s*people|packageUnitPrice\s*\*\s*|garnishUnitPrice\s*\*/,
+  )
+  const inlineBlock = reviewSection.slice(
+    reviewSection.indexOf('const showPackageInline'),
+    reviewSection.indexOf('const itemsText'),
+  )
+  assert.match(
+    inlineBlock,
+    /people: chargedPeople/,
+  )
+  assert.doesNotMatch(inlineBlock, /physicalGuestCount/)
+  assert.doesNotMatch(inlineBlock, /adultCount/)
+  assert.doesNotMatch(inlineBlock, /childCount/)
+})
+
+test('INLINE_PACKAGE_TOTAL_MATCHES_FINANCIAL', () => {
+  const summary = {
+    hasGarnish: true,
+    packageUnitPrice: 55,
+    packageTotalPrice: 1100,
+    garnishUnitPrice: 13,
+    garnishTotalPrice: 260,
+    chargedPeople: 20,
+  }
+  const inlinePackage = inlineBreakdown(summary, 99, 'package')
+  const inlineGarnish = inlineBreakdown(summary, 99, 'garnish')
+  assert.equal(inlinePackage.unit, summary.packageUnitPrice)
+  assert.equal(inlinePackage.people, summary.chargedPeople)
+  assert.equal(inlinePackage.total, summary.packageTotalPrice)
+  assert.equal(inlineGarnish.unit, summary.garnishUnitPrice)
+  assert.equal(inlineGarnish.people, summary.chargedPeople)
+  assert.equal(inlineGarnish.total, summary.garnishTotalPrice)
+  assert.match(financialCard, /summary\.packageTotalPrice/)
+  assert.match(financialCard, /summary\.garnishTotalPrice/)
+  assert.equal(inlinePackage.total, 1100)
+  assert.equal(inlineGarnish.total, 260)
+  assert.notEqual(inlinePackage.people, 99)
+})
+
+test('NO_GARNISH_NO_ZERO_CALC', () => {
+  const noGarnish = {
+    hasGarnish: false,
+    packageUnitPrice: 55,
+    packageTotalPrice: 1100,
+    garnishUnitPrice: 0,
+    garnishTotalPrice: 0,
+    chargedPeople: 20,
+  }
+  assert.equal(inlineBreakdown(noGarnish, 20, 'garnish'), null)
+  assert.equal(
+    shouldShowInlinePriceBreakdown({
+      unitPrice: 0,
+      people: 20,
+      totalPrice: 0,
+    }),
+    false,
+  )
+  assert.match(reviewSection, /packageSummary\?\.hasGarnish === true/)
+})
+
+test('PERSONALIZED_NO_FAKE_ZERO_CALC', () => {
+  const personalized = {
+    hasGarnish: false,
+    packageUnitPrice: 0,
+    packageTotalPrice: 0,
+    garnishUnitPrice: 0,
+    garnishTotalPrice: 0,
+    chargedPeople: 20,
+  }
+  assert.equal(inlineBreakdown(personalized, 20, 'package'), null)
+  assert.equal(inlineBreakdown(personalized, 20, 'garnish'), null)
+  assert.equal(
+    shouldShowInlinePriceBreakdown({
+      unitPrice: null,
+      people: 20,
+      totalPrice: null,
+    }),
+    false,
+  )
+})
+
+test('INLINE_PRICE_BREAKDOWN_I18N_PT_EN_ES', () => {
+  assert.equal(getQuoteStrings('pt').wizard.packageValue, 'Valor do pacote')
+  assert.equal(getQuoteStrings('en').wizard.packageValue, 'Package value')
+  assert.equal(getQuoteStrings('es').wizard.packageValue, 'Valor del paquete')
+  assert.equal(
+    getQuoteStrings('pt').wizard.inlineGarnishValue,
+    'Valor das guarnições',
+  )
+  assert.equal(getQuoteStrings('en').wizard.inlineGarnishValue, 'Sides value')
+  assert.equal(
+    getQuoteStrings('es').wizard.inlineGarnishValue,
+    'Valor de las guarniciones',
+  )
+  assert.equal(getQuoteStrings('pt').wizard.inlineBilledPeople, 'pessoas cobradas')
+  assert.equal(getQuoteStrings('en').wizard.inlineBilledPeople, 'billed people')
+  assert.equal(
+    getQuoteStrings('es').wizard.inlineBilledPeople,
+    'personas cobradas',
+  )
+  assert.match(reviewSection, /tw\(loc, 'packageValue'\)/)
+  assert.match(reviewSection, /tw\(loc, 'inlineGarnishValue'\)/)
+  assert.match(reviewSection, /tw\(loc, 'inlineBilledPeople'\)/)
+  const inlineFn = reviewSection.slice(
+    reviewSection.indexOf('function InlinePriceBreakdown'),
+    reviewSection.indexOf('function PackageValueCard'),
+  )
+  assert.doesNotMatch(inlineFn, /Package value:|Sides value:|billed people/)
+  assert.match(translations, /inlineGarnishValue: 'Valor das guarnições'/)
+  assert.match(translations, /inlineBilledPeople: 'billed people'/)
 })
 
 test('OTHER_OPTION_GROUPS_PLACEHOLDERS_HIDDEN', () => {

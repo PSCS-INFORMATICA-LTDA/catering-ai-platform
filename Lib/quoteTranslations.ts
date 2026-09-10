@@ -438,6 +438,8 @@ type QuoteStrings = {
     billedPeople: string
     basePackageValue: string
     garnishValue: string
+    inlineGarnishValue: string
+    inlineBilledPeople: string
     packageTotal: string
     extrasOnQuote: string
     minOrderAdjustment: string
@@ -945,6 +947,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       billedPeople: 'Pessoas cobradas',
       basePackageValue: 'Valor pacote base',
       garnishValue: 'Valor guarnições',
+      inlineGarnishValue: 'Valor das guarnições',
+      inlineBilledPeople: 'pessoas cobradas',
       packageTotal: 'Total pacote',
       extrasOnQuote: 'Extras na cotação',
       minOrderAdjustment: 'Ajuste para pedido mínimo',
@@ -1457,6 +1461,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       billedPeople: 'Billable guests',
       basePackageValue: 'Base package value',
       garnishValue: 'Sides value',
+      inlineGarnishValue: 'Sides value',
+      inlineBilledPeople: 'billed people',
       packageTotal: 'Package total',
       extrasOnQuote: 'Quote extras',
       minOrderAdjustment: 'Minimum-order adjustment',
@@ -1972,6 +1978,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       billedPeople: 'Personas facturables',
       basePackageValue: 'Valor del paquete base',
       garnishValue: 'Valor de guarniciones',
+      inlineGarnishValue: 'Valor de las guarniciones',
+      inlineBilledPeople: 'personas cobradas',
       packageTotal: 'Total del paquete',
       extrasOnQuote: 'Extras en la cotización',
       minOrderAdjustment: 'Ajuste por pedido mínimo',

@@ -552,6 +552,43 @@
   color: var(--proposal-dark);
 }
 
+.quote-proposal-inline-price {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.12rem;
+  margin-top: 0.35rem;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.quote-proposal-inline-price-label {
+  font-weight: 600;
+  color: var(--proposal-muted);
+}
+
+.quote-proposal-inline-price-calc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.35rem;
+  row-gap: 0.08rem;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--proposal-dark);
+}
+
+.quote-proposal-inline-price-formula {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.quote-proposal-inline-price-total {
+  font-weight: 700;
+}
+
 .quote-proposal-highlight-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1005,6 +1042,14 @@
 
 [data-theme='dark'] .quote-proposal-label {
   color: var(--cdl-muted);
+}
+
+[data-theme='dark'] .quote-proposal-inline-price-label {
+  color: var(--cdl-muted);
+}
+
+[data-theme='dark'] .quote-proposal-inline-price-calc {
+  color: var(--cdl-fg);
 }
 
 /* ── Print ── */

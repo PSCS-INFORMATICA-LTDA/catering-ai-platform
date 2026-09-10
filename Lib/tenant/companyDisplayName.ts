@@ -12,3 +12,17 @@ export function resolveTenantCompanyDisplayName(
   if (legal) return legal
   return null
 }
+
+/** Header/chrome: tenant company first, then the matching session membership name. */
+export function resolveHeaderCompanyDisplayName(input: {
+  company?: Company | null
+  companyId?: string | null
+  memberships?: Array<{ companyId: string; companyName: string | null }> | null
+}): string | null {
+  const fromTenant = resolveTenantCompanyDisplayName(input.company)
+  if (fromTenant) return fromTenant
+  const companyId = input.companyId?.trim() || input.company?.id?.trim() || ''
+  if (!companyId) return null
+  const match = (input.memberships ?? []).find((row) => row.companyId === companyId)
+  return match?.companyName?.trim() || null
+}

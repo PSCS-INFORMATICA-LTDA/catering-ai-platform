@@ -114,6 +114,14 @@ export function TenantProvider({
     setBranchIdState(resolved.branchId)
   }, [publicRoute, initialTenantContext])
 
+  const retriedMissingCompany = useRef(false)
+  useEffect(() => {
+    if (publicRoute || retriedMissingCompany.current) return
+    if (initialTenantContext?.company) return
+    retriedMissingCompany.current = true
+    void refresh()
+  }, [publicRoute, initialTenantContext, refresh])
+
   const setBranchId = useCallback((next: string | null) => {
     setBranchIdState(next)
     if (typeof window !== 'undefined') {

@@ -16,6 +16,16 @@ const { t, list } = makeI18nModule('paymentSettings', 'billing', {
     en: 'Access: company.settings (owner/admin of the active company via PSCS One). No global admin.',
     es: 'Acceso: company.settings (owner/admin de la empresa activa vía PSCS One). Sin admin global.',
   },
+  credentialManagerYes: {
+    pt: 'Você é o gestor autorizado das credenciais PayPal desta empresa.',
+    en: 'You are the authorized PayPal credential manager for this company.',
+    es: 'Usted es el gestor autorizado de las credenciales PayPal de esta empresa.',
+  },
+  credentialManagerNo: {
+    pt: 'Somente o gestor autorizado da empresa pode alterar credenciais PayPal.',
+    en: 'Only the authorized company credential manager can change PayPal credentials.',
+    es: 'Solo el gestor autorizado de la empresa puede cambiar las credenciales de PayPal.',
+  },
   providers: { pt: 'Provedores', en: 'Providers', es: 'Proveedores' },
   paypal: { pt: 'PayPal', en: 'PayPal', es: 'PayPal' },
   zelle: { pt: 'Zelle', en: 'Zelle', es: 'Zelle' },

@@ -3,11 +3,13 @@
 import { tChrome } from '@/Lib/i18n/chrome'
 import { tCommon } from '@/Lib/i18n/common'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
-import { resolveTenantCompanyDisplayName } from '@/Lib/tenant/companyDisplayName'
+import { useAppSession } from '@/components/auth/AppSessionProvider'
+import { resolveHeaderCompanyDisplayName } from '@/Lib/tenant/companyDisplayName'
 import { useTenant } from './TenantProvider'
 
 export default function TenantContextBar() {
-  const { loading, company, branches, branchId, setBranchId, role } = useTenant()
+  const { loading, company, companyId, branches, branchId, setBranchId, role } = useTenant()
+  const { session } = useAppSession()
   const locale = useAuthLocaleFromMe()
 
   if (loading) {
@@ -19,8 +21,11 @@ export default function TenantContextBar() {
   }
 
   const companyLabel =
-    resolveTenantCompanyDisplayName(company) ??
-    tChrome(locale, 'headerCompanyUnidentified')
+    resolveHeaderCompanyDisplayName({
+      company,
+      companyId,
+      memberships: session?.memberships,
+    }) ?? tChrome(locale, 'headerCompanyUnidentified')
 
   return (
     <div className="liquid-glass-panel flex flex-wrap items-center gap-2 px-3 py-2 text-xs">

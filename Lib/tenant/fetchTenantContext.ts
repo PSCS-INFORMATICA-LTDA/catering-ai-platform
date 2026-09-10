@@ -43,13 +43,10 @@ export async function fetchTenantContext(options?: {
   ])
 
   let companyRes = companyWithLogo
-  if (
-    companyRes.error &&
-    /logo_url|brand_logo_url|schema cache/i.test(companyRes.error.message)
-  ) {
+  if (companyRes.error || !companyRes.data) {
     companyRes = await supabase
       .from('companies')
-      .select(companyColumnsBase)
+      .select('id, company_name, legal_name, trade_name, slug, currency_code, active')
       .eq('id', companyId)
       .maybeSingle()
   }

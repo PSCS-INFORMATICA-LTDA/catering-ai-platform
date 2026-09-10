@@ -36,7 +36,11 @@ function friendlyError(locale: string, code: string) {
   if (code === 'paypal_webhook_create_failed') {
     return tPaymentSettings(locale, 'errorWebhookFailed')
   }
-  if (code === 'Forbidden' || code === 'company_context_required') {
+  if (
+    code === 'Forbidden' ||
+    code === 'company_context_required' ||
+    code === 'paypal_credentials_forbidden'
+  ) {
     return tPaymentSettings(locale, 'errorForbidden')
   }
   return code || tCommon(locale, 'error')
@@ -65,8 +69,9 @@ export default function PaymentSettingsDashboard({
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const canTest = Boolean(paypal.clientId && paypal.clientSecretConfigured)
-  const canWebhook = paypal.connectionStatus === 'validated'
+  const canManage = paypal.canManageCredentials
+  const canTest = canManage && Boolean(paypal.clientId && paypal.clientSecretConfigured)
+  const canWebhook = canManage && paypal.connectionStatus === 'validated'
 
   const lastTest = useMemo(() => {
     if (!paypal.lastTestedAt) return tPaymentSettings(locale, 'never')
@@ -83,6 +88,10 @@ export default function PaymentSettingsDashboard({
 
   async function onSave(event: FormEvent) {
     event.preventDefault()
+    if (!canManage) {
+      setError(tPaymentSettings(locale, 'errorForbidden'))
+      return
+    }
     setSaving(true)
     setError(null)
     setMessage(null)
@@ -114,6 +123,10 @@ export default function PaymentSettingsDashboard({
   }
 
   async function onTest() {
+    if (!canManage) {
+      setError(tPaymentSettings(locale, 'errorForbidden'))
+      return
+    }
     setTesting(true)
     setError(null)
     setMessage(null)
@@ -140,6 +153,10 @@ export default function PaymentSettingsDashboard({
   }
 
   async function onWebhook() {
+    if (!canManage) {
+      setError(tPaymentSettings(locale, 'errorForbidden'))
+      return
+    }
     setWebhookBusy(true)
     setError(null)
     setMessage(null)
@@ -176,6 +193,7 @@ export default function PaymentSettingsDashboard({
       data-paypal-public-checkout="off"
       data-payment-settings-permission="company.settings"
       data-paypal-company-scoped="true"
+      data-paypal-credential-manager={canManage ? 'yes' : 'no'}
       className="p-4 sm:p-6"
     >
       <header className="mb-6">
@@ -206,7 +224,9 @@ export default function PaymentSettingsDashboard({
           {tPaymentSettings(locale, 'canonicalNote')}
         </p>
         <p className="mt-1 text-xs text-neutral-500">
-          {tPaymentSettings(locale, 'accessNote')}
+          {canManage
+            ? tPaymentSettings(locale, 'credentialManagerYes')
+            : tPaymentSettings(locale, 'credentialManagerNo')}
         </p>
       </header>
 
@@ -226,7 +246,7 @@ export default function PaymentSettingsDashboard({
           title={tPaymentSettings(locale, 'paypal')}
           actions={
             <>
-              <BackofficeBtnPrimary type="submit" disabled={saving}>
+              <BackofficeBtnPrimary type="submit" disabled={!canManage || saving}>
                 {saving ? tCommon(locale, 'saving') : tPaymentSettings(locale, 'save')}
               </BackofficeBtnPrimary>
               <BackofficeBtnSecondary onClick={onTest} disabled={!canTest || testing}>
@@ -273,6 +293,7 @@ export default function PaymentSettingsDashboard({
               value={clientId}
               onChange={setClientId}
               placeholder="AY..."
+              disabled={!canManage}
             />
           </BackofficeField>
 
@@ -289,7 +310,7 @@ export default function PaymentSettingsDashboard({
                   ? '••••••••••••'
                   : clientSecret
               }
-              disabled={paypal.clientSecretConfigured && !replacingSecret}
+              disabled={!canManage || (paypal.clientSecretConfigured && !replacingSecret)}
               placeholder={
                 paypal.clientSecretConfigured
                   ? '••••••••••••'
@@ -304,16 +325,18 @@ export default function PaymentSettingsDashboard({
                   ? tPaymentSettings(locale, 'secretConfigured')
                   : tPaymentSettings(locale, 'secretPlaceholder')}
               </span>
-              <button
-                type="button"
-                className="font-semibold text-red-600"
-                onClick={() => {
-                  setReplacingSecret(true)
-                  setClientSecret('')
-                }}
-              >
-                {tPaymentSettings(locale, 'replaceSecret')}
-              </button>
+              {canManage ? (
+                <button
+                  type="button"
+                  className="font-semibold text-red-600"
+                  onClick={() => {
+                    setReplacingSecret(true)
+                    setClientSecret('')
+                  }}
+                >
+                  {tPaymentSettings(locale, 'replaceSecret')}
+                </button>
+              ) : null}
             </span>
           </BackofficeField>
 
@@ -360,6 +383,7 @@ export default function PaymentSettingsDashboard({
             <input
               type="checkbox"
               checked={enabled}
+              disabled={!canManage}
               onChange={(event) => setEnabled(event.target.checked)}
             />
             {tPaymentSettings(locale, 'enabled')}

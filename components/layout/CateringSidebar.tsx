@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { isBrasinhaDevNavVisible } from '@/Lib/brasinha/env'
 import { CATERING_NAV, isNavHrefActive } from '@/components/layout/navConfig'
 import {
   getChromeGroupLabel,
@@ -44,6 +45,7 @@ export function CateringSidebar({
 }: Props) {
   const pathname = usePathname() ?? ''
   const locale = useAuthLocaleFromMe()
+  const showBrasinhaDev = isBrasinhaDevNavVisible()
 
   return (
     <>
@@ -152,7 +154,9 @@ export function CateringSidebar({
                   aria-label={groupLabel}
                 >
                   <p className="catering-sidebar-group-label">{groupLabel}</p>
-                  {group.children.map((child) => {
+                  {group.children
+                    .filter((child) => !child.devOnly || showBrasinhaDev)
+                    .map((child) => {
                     const label = getChromeNavLabel(
                       locale,
                       child.href,
