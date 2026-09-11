@@ -12,5 +12,8 @@ export type OfflinePaymentSettings = {
     routingNumber: string;
     accountNumber: string;
     instructions: string;
+    wireRoutingNumber?: string;
+    paymentAddress?: string;
+    checkPayableTo?: string;
   };
 };
