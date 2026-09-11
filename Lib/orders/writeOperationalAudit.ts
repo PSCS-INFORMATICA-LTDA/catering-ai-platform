@@ -83,6 +83,7 @@ export type OperationalAuditAction =
   | 'paypal_provider_config_updated'
   | 'paypal_connection_tested'
   | 'paypal_webhook_configured'
+  | 'offline_payment_settings_updated'
 
 export async function writeOperationalAudit(input: {
   companyId: string

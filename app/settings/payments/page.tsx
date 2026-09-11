@@ -11,6 +11,7 @@ import {
 } from '@/Lib/payments/companyPaypal'
 import {
   ensureOfflineMethods,
+  loadCompanyOfflinePaymentSettings,
   loadCompanyPaymentMethods,
 } from '@/Lib/payments/companyProviders'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
@@ -61,12 +62,14 @@ export default async function PaymentSettingsPage() {
   await ensurePaypalWebhookRouteKey(companyId)
   const paypal = await toPublicPaypalSettings(companyId, session.userId)
   const methods = await loadCompanyPaymentMethods(companyId)
+  const offlineSettings = await loadCompanyOfflinePaymentSettings(companyId)
 
   return (
     <PaymentSettingsDashboard
       companyName={company?.trade_name || company?.company_name || ''}
       initialPaypal={paypal}
       initialMethods={methods}
+      initialOfflineSettings={offlineSettings}
     />
   )
 }

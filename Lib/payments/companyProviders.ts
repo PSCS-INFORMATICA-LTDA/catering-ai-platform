@@ -3,6 +3,7 @@ import 'server-only'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { readPaypalRuntimeConfig } from './paypal/config'
 import type { PaymentProvider } from './types'
+import type { OfflinePaymentSettings } from './offlinePaymentSettingsTypes'
 
 export type CompanyPaymentProvider = {
   companyId: string
@@ -10,6 +11,12 @@ export type CompanyPaymentProvider = {
   environment: 'sandbox' | 'live'
   enabled: boolean
   publicClientId: string | null
+}
+
+function metadataString(metadata: unknown, key: string) {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return ''
+  const value = (metadata as Record<string, unknown>)[key]
+  return typeof value === 'string' ? value : ''
 }
 
 export async function loadCompanyPaymentProvider(
@@ -56,6 +63,37 @@ export async function loadCompanyPaymentMethods(companyId: string) {
     bankTransfer: rows.some(
       (row) => row.provider === 'bank_transfer' && row.enabled === true,
     ),
+  }
+}
+
+export async function loadCompanyOfflinePaymentSettings(
+  companyId: string,
+): Promise<OfflinePaymentSettings> {
+  const { data } = await getSupabaseServerClient()
+    .from('company_payment_providers')
+    .select('provider, enabled, metadata')
+    .eq('company_id', companyId)
+    .in('provider', ['zelle', 'bank_transfer'])
+
+  const rows = data ?? []
+  const zelle = rows.find((row) => row.provider === 'zelle')
+  const bank = rows.find((row) => row.provider === 'bank_transfer')
+
+  return {
+    zelle: {
+      enabled: zelle?.enabled === true,
+      recipientName: metadataString(zelle?.metadata, 'recipient_name'),
+      recipientContact: metadataString(zelle?.metadata, 'recipient_contact'),
+      instructions: metadataString(zelle?.metadata, 'instructions'),
+    },
+    bankTransfer: {
+      enabled: bank?.enabled === true,
+      bankName: metadataString(bank?.metadata, 'bank_name'),
+      accountHolder: metadataString(bank?.metadata, 'account_holder'),
+      routingNumber: metadataString(bank?.metadata, 'routing_number'),
+      accountNumber: metadataString(bank?.metadata, 'account_number'),
+      instructions: metadataString(bank?.metadata, 'instructions'),
+    },
   }
 }
 

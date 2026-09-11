@@ -12,6 +12,7 @@ import { tCommon } from '@/Lib/i18n/common'
 import { tPaymentSettings } from '@/Lib/i18n/paymentSettings'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import type { CompanyPaypalPublicSettings } from '@/Lib/payments/paypalSettingsTypes'
+import type { OfflinePaymentSettings } from '@/Lib/payments/offlinePaymentSettingsTypes'
 
 type OfflineMethods = {
   zelle: boolean
@@ -50,14 +51,17 @@ export default function PaymentSettingsDashboard({
   companyName,
   initialPaypal,
   initialMethods,
+  initialOfflineSettings,
 }: {
   companyName: string
   initialPaypal: CompanyPaypalPublicSettings
   initialMethods: OfflineMethods
+  initialOfflineSettings: OfflinePaymentSettings
 }) {
   const locale = useAuthLocaleFromMe()
   const [paypal, setPaypal] = useState(initialPaypal)
   const [methods] = useState(initialMethods)
+  const [offline, setOffline] = useState(initialOfflineSettings)
   const [clientId, setClientId] = useState(initialPaypal.clientId ?? '')
   const [clientSecret, setClientSecret] = useState('')
   const [replacingSecret, setReplacingSecret] = useState(false)
@@ -65,6 +69,7 @@ export default function PaymentSettingsDashboard({
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
   const [webhookBusy, setWebhookBusy] = useState(false)
+  const [offlineSaving, setOfflineSaving] = useState(false)
   const [copied, setCopied] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -184,6 +189,31 @@ export default function PaymentSettingsDashboard({
     await navigator.clipboard.writeText(paypal.webhookUrl)
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1600)
+  }
+
+  async function onOfflineSave(event: FormEvent) {
+    event.preventDefault()
+    setOfflineSaving(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/company/payment-providers/offline', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(offline),
+      })
+      const json = (await res.json()) as {
+        error?: string
+        data?: OfflinePaymentSettings
+      }
+      if (!res.ok || !json.data) throw new Error(json.error || tCommon(locale, 'error'))
+      setOffline(json.data)
+      setMessage(tPaymentSettings(locale, 'offlineSaved'))
+    } catch (err) {
+      setError(friendlyError(locale, err instanceof Error ? err.message : ''))
+    } finally {
+      setOfflineSaving(false)
+    }
   }
 
   return (
@@ -391,30 +421,129 @@ export default function PaymentSettingsDashboard({
         </BackofficeFormCard>
       </form>
 
-      <section className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <article
-          data-zelle-preserved={methods.zelle ? 'yes' : 'no'}
-          className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm"
+      <form onSubmit={onOfflineSave} className="mt-6 space-y-5">
+        <BackofficeFormCard
+          title={tPaymentSettings(locale, 'zelle')}
+          actions={
+            <BackofficeBtnPrimary type="submit" disabled={offlineSaving}>
+              {offlineSaving ? tCommon(locale, 'saving') : tPaymentSettings(locale, 'saveOffline')}
+            </BackofficeBtnPrimary>
+          }
         >
-          <h2 className="text-lg font-bold text-neutral-900">
-            {tPaymentSettings(locale, 'zelle')}
-          </h2>
-          <p className="mt-2 text-sm text-neutral-600">
-            {tPaymentSettings(locale, 'preserved')}
-          </p>
-        </article>
-        <article
-          data-bank-transfer-preserved={methods.bankTransfer ? 'yes' : 'no'}
-          className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm"
+          <span hidden data-zelle-preserved={methods.zelle ? 'yes' : 'no'} />
+          <BackofficeField label={tPaymentSettings(locale, 'recipientName')}>
+            <BackofficeInput
+              value={offline.zelle.recipientName}
+              onChange={(value) => setOffline((current) => ({
+                ...current,
+                zelle: { ...current.zelle, recipientName: value },
+              }))}
+            />
+          </BackofficeField>
+          <BackofficeField label={tPaymentSettings(locale, 'zelleContact')}>
+            <BackofficeInput
+              value={offline.zelle.recipientContact}
+              onChange={(value) => setOffline((current) => ({
+                ...current,
+                zelle: { ...current.zelle, recipientContact: value },
+              }))}
+              placeholder={tPaymentSettings(locale, 'zelleContactHint')}
+            />
+          </BackofficeField>
+          <BackofficeField label={tPaymentSettings(locale, 'instructions')} className="sm:col-span-2 lg:col-span-3">
+            <textarea
+              value={offline.zelle.instructions}
+              onChange={(event) => setOffline((current) => ({
+                ...current,
+                zelle: { ...current.zelle, instructions: event.target.value },
+              }))}
+              className="min-h-24 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100"
+            />
+          </BackofficeField>
+          <label className="sm:col-span-2 lg:col-span-3 flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm font-semibold text-neutral-800">
+            <input
+              type="checkbox"
+              checked={offline.zelle.enabled}
+              onChange={(event) => setOffline((current) => ({
+                ...current,
+                zelle: { ...current.zelle, enabled: event.target.checked },
+              }))}
+            />
+            {tPaymentSettings(locale, 'zelleEnabled')}
+          </label>
+        </BackofficeFormCard>
+
+        <BackofficeFormCard
+          title={tPaymentSettings(locale, 'bank')}
+          actions={
+            <BackofficeBtnPrimary type="submit" disabled={offlineSaving}>
+              {offlineSaving ? tCommon(locale, 'saving') : tPaymentSettings(locale, 'saveOffline')}
+            </BackofficeBtnPrimary>
+          }
         >
-          <h2 className="text-lg font-bold text-neutral-900">
-            {tPaymentSettings(locale, 'bank')}
-          </h2>
-          <p className="mt-2 text-sm text-neutral-600">
-            {tPaymentSettings(locale, 'preserved')}
+          <span hidden data-bank-transfer-preserved={methods.bankTransfer ? 'yes' : 'no'} />
+          <BackofficeField label={tPaymentSettings(locale, 'bankName')}>
+            <BackofficeInput
+              value={offline.bankTransfer.bankName}
+              onChange={(value) => setOffline((current) => ({
+                ...current,
+                bankTransfer: { ...current.bankTransfer, bankName: value },
+              }))}
+            />
+          </BackofficeField>
+          <BackofficeField label={tPaymentSettings(locale, 'accountHolder')}>
+            <BackofficeInput
+              value={offline.bankTransfer.accountHolder}
+              onChange={(value) => setOffline((current) => ({
+                ...current,
+                bankTransfer: { ...current.bankTransfer, accountHolder: value },
+              }))}
+            />
+          </BackofficeField>
+          <BackofficeField label={tPaymentSettings(locale, 'routingNumber')}>
+            <BackofficeInput
+              value={offline.bankTransfer.routingNumber}
+              onChange={(value) => setOffline((current) => ({
+                ...current,
+                bankTransfer: { ...current.bankTransfer, routingNumber: value },
+              }))}
+            />
+          </BackofficeField>
+          <BackofficeField label={tPaymentSettings(locale, 'accountNumber')}>
+            <BackofficeInput
+              value={offline.bankTransfer.accountNumber}
+              onChange={(value) => setOffline((current) => ({
+                ...current,
+                bankTransfer: { ...current.bankTransfer, accountNumber: value },
+              }))}
+            />
+          </BackofficeField>
+          <BackofficeField label={tPaymentSettings(locale, 'instructions')} className="sm:col-span-2 lg:col-span-3">
+            <textarea
+              value={offline.bankTransfer.instructions}
+              onChange={(event) => setOffline((current) => ({
+                ...current,
+                bankTransfer: { ...current.bankTransfer, instructions: event.target.value },
+              }))}
+              className="min-h-24 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100"
+            />
+          </BackofficeField>
+          <p className="sm:col-span-2 lg:col-span-3 text-xs text-amber-800">
+            {tPaymentSettings(locale, 'offlineSecurityNote')}
           </p>
-        </article>
-      </section>
+          <label className="sm:col-span-2 lg:col-span-3 flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm font-semibold text-neutral-800">
+            <input
+              type="checkbox"
+              checked={offline.bankTransfer.enabled}
+              onChange={(event) => setOffline((current) => ({
+                ...current,
+                bankTransfer: { ...current.bankTransfer, enabled: event.target.checked },
+              }))}
+            />
+            {tPaymentSettings(locale, 'bankEnabled')}
+          </label>
+        </BackofficeFormCard>
+      </form>
     </main>
   )
 }
