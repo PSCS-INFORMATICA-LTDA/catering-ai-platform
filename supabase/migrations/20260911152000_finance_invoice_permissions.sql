@@ -1,6 +1,30 @@
 -- DEV finance hardening: invoice/payment reads require explicit finance permission.
 -- Keep owner/admin/sales/finance aligned with the existing orders.financial.view audience.
 
+insert into public.permissions (
+  permission_key,
+  label_pt,
+  label_en,
+  label_es,
+  category_key,
+  active
+)
+values (
+  'finance.invoices.view',
+  'Ver faturas financeiras',
+  'View financial invoices',
+  'Ver facturas financieras',
+  'finance',
+  true
+)
+on conflict (permission_key) do update
+set
+  label_pt = excluded.label_pt,
+  label_en = excluded.label_en,
+  label_es = excluded.label_es,
+  category_key = excluded.category_key,
+  active = excluded.active;
+
 insert into public.role_permissions (role_key, permission_key)
 values
   ('owner', 'finance.invoices.view'),
