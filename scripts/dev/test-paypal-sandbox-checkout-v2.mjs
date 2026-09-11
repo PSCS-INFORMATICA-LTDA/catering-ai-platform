@@ -12,6 +12,7 @@ const publicPage = read('app/pay/[token]/page.tsx')
 const client = read('components/payments/PaypalSandboxCheckout.tsx')
 const scheduleHold = read('Lib/payments/scheduleHold.ts')
 const holdMigration = read('supabase/migrations/20260910170000_paypal_checkout_schedule_hold.sql')
+const capacityMigration = read('supabase/migrations/20260911104500_paypal_checkout_configurable_capacity.sql')
 const paidDeposit = read('Lib/payments/confirmPaidDeposit.ts')
 
 assert.match(config, /productionBlocked/)
@@ -56,5 +57,17 @@ assert.match(holdMigration, /REVOKE ALL ON TABLE public\.payment_schedule_holds 
 assert.match(holdMigration, /GRANT ALL ON TABLE public\.payment_schedule_holds TO service_role/)
 assert.doesNotMatch(holdMigration, /CREATE POLICY/)
 
+// Capacity is tenant-configurable, serialized under the same company lock, and
+// defaults to one unless an explicit commercial rule raises the limit.
+assert.match(capacityMigration, /max_concurrent_events/)
+assert.match(capacityMigration, /v_capacity integer := 1/)
+assert.match(capacityMigration, /v_used >= v_capacity/)
+assert.match(capacityMigration, /private\.payment_schedule_policy/)
+assert.match(capacityMigration, /company_code = 'CDL'/)
+assert.match(capacityMigration, /jsonb_build_object\('max_concurrent_events', 3\)/)
+assert.match(capacityMigration, /pg_advisory_xact_lock/)
+assert.match(capacityMigration, /REVOKE ALL ON FUNCTION private\.payment_schedule_policy/)
+
 console.log('PAYPAL_SANDBOX_CHECKOUT_V2_SECURITY=PASS')
 console.log('PAYPAL_SCHEDULE_HOLD_SECURITY=PASS')
+console.log('PAYPAL_CONFIGURABLE_CAPACITY_SECURITY=PASS')
