@@ -48,9 +48,6 @@ export default async function QuoteDetailPage({
   const canConvert = Boolean(
     session?.isPlatformAdmin || hasPermission(session?.permissions, 'quotes.convert'),
   )
-  const canViewInvoice = Boolean(
-    session?.isPlatformAdmin || hasPermission(session?.permissions, 'finance.invoices.view'),
-  )
   const canManageInvoice = Boolean(
     session?.isPlatformAdmin ||
       (hasPermission(session?.permissions, 'quotes.manage') &&
@@ -61,7 +58,6 @@ export default async function QuoteDetailPage({
     <QuoteDetailView
       quote={data as QuoteDetail}
       canConvert={canConvert}
-      canViewInvoice={canViewInvoice}
       canManageInvoice={canManageInvoice}
       uiLocale={uiLocale}
     />
