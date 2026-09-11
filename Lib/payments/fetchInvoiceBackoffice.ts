@@ -36,6 +36,10 @@ export type InvoiceBackofficePayment = {
   status: PaymentAttemptStatus
   provider_order_id: string | null
   provider_capture_id: string | null
+  confirmation_reference: string | null
+  confirmation_note: string | null
+  confirmed_by: string | null
+  confirmed_at: string | null
   captured_at: string | null
   created_at: string
 }
@@ -48,6 +52,30 @@ export type InvoiceBackofficePaymentLink = {
   created_at: string
 }
 
+export type InvoiceBackofficeRefund = {
+  id: string
+  payment_id: string
+  amount: number
+  currency_code: string
+  status: 'requested' | 'processing' | 'completed' | 'failed' | 'canceled'
+  reason: string
+  provider_refund_id: string | null
+  requested_by: string | null
+  completed_by: string | null
+  requested_at: string
+  completed_at: string | null
+}
+
+export type InvoiceBackofficeCancellation = {
+  id: string
+  status: 'requested' | 'pending_refund' | 'completed' | 'rejected'
+  reason: string
+  requested_by: string | null
+  requested_at: string
+  agenda_released_at: string | null
+  completed_at: string | null
+}
+
 export type InvoiceBackofficeDetail = InvoiceBackofficeListItem & {
   locale: string
   subtotal: number
@@ -55,6 +83,8 @@ export type InvoiceBackofficeDetail = InvoiceBackofficeListItem & {
   snapshot: InvoiceSnapshot | null
   payments: InvoiceBackofficePayment[]
   payment_links: InvoiceBackofficePaymentLink[]
+  refunds: InvoiceBackofficeRefund[]
+  cancellations: InvoiceBackofficeCancellation[]
 }
 
 type InvoiceRow = Record<string, unknown> & {
@@ -149,11 +179,11 @@ export async function fetchInvoiceBackofficeDetail(
     return { data: null, error: { message: 'invoice_not_found', status: 404 } }
   }
 
-  const [paymentsResult, linksResult] = await Promise.all([
+  const [paymentsResult, linksResult, refundsResult, cancellationsResult] = await Promise.all([
     supabase
       .from('invoice_payments')
       .select(
-        'id, provider, purpose, amount, currency_code, status, provider_order_id, provider_capture_id, captured_at, created_at',
+        'id, provider, purpose, amount, currency_code, status, provider_order_id, provider_capture_id, confirmation_reference, confirmation_note, confirmed_by, confirmed_at, captured_at, created_at',
       )
       .eq('company_id', companyId)
       .eq('invoice_id', invoiceId)
@@ -164,13 +194,28 @@ export async function fetchInvoiceBackofficeDetail(
       .eq('company_id', companyId)
       .eq('invoice_id', invoiceId)
       .order('created_at', { ascending: false }),
+    supabase
+      .from('invoice_refunds')
+      .select(
+        'id, payment_id, amount, currency_code, status, reason, provider_refund_id, requested_by, completed_by, requested_at, completed_at',
+      )
+      .eq('company_id', companyId)
+      .eq('invoice_id', invoiceId)
+      .order('requested_at', { ascending: false }),
+    supabase
+      .from('invoice_cancellations')
+      .select(
+        'id, status, reason, requested_by, requested_at, agenda_released_at, completed_at',
+      )
+      .eq('company_id', companyId)
+      .eq('invoice_id', invoiceId)
+      .order('requested_at', { ascending: false }),
   ])
 
-  if (paymentsResult.error) {
-    return { data: null, error: { message: paymentsResult.error.message } }
-  }
-  if (linksResult.error) {
-    return { data: null, error: { message: linksResult.error.message } }
+  for (const result of [paymentsResult, linksResult, refundsResult, cancellationsResult]) {
+    if (result.error) {
+      return { data: null, error: { message: result.error.message } }
+    }
   }
 
   const row = invoiceResult.data as unknown as InvoiceRow
@@ -184,6 +229,10 @@ export async function fetchInvoiceBackofficeDetail(
     status: payment.status as PaymentAttemptStatus,
     provider_order_id: payment.provider_order_id ?? null,
     provider_capture_id: payment.provider_capture_id ?? null,
+    confirmation_reference: payment.confirmation_reference ?? null,
+    confirmation_note: payment.confirmation_note ?? null,
+    confirmed_by: payment.confirmed_by ?? null,
+    confirmed_at: payment.confirmed_at ?? null,
     captured_at: payment.captured_at ?? null,
     created_at: String(payment.created_at),
   }))
@@ -194,6 +243,30 @@ export async function fetchInvoiceBackofficeDetail(
     revoked_at: link.revoked_at ?? null,
     created_at: String(link.created_at),
   }))
+  const refunds: InvoiceBackofficeRefund[] = (refundsResult.data ?? []).map((refund) => ({
+    id: String(refund.id),
+    payment_id: String(refund.payment_id),
+    amount: money(refund.amount),
+    currency_code: String(refund.currency_code || base.currency_code),
+    status: refund.status as InvoiceBackofficeRefund['status'],
+    reason: String(refund.reason || ''),
+    provider_refund_id: refund.provider_refund_id ?? null,
+    requested_by: refund.requested_by ?? null,
+    completed_by: refund.completed_by ?? null,
+    requested_at: String(refund.requested_at),
+    completed_at: refund.completed_at ?? null,
+  }))
+  const cancellations: InvoiceBackofficeCancellation[] = (cancellationsResult.data ?? []).map(
+    (cancellation) => ({
+      id: String(cancellation.id),
+      status: cancellation.status as InvoiceBackofficeCancellation['status'],
+      reason: String(cancellation.reason || ''),
+      requested_by: cancellation.requested_by ?? null,
+      requested_at: String(cancellation.requested_at),
+      agenda_released_at: cancellation.agenda_released_at ?? null,
+      completed_at: cancellation.completed_at ?? null,
+    }),
+  )
 
   return {
     data: {
@@ -204,6 +277,8 @@ export async function fetchInvoiceBackofficeDetail(
       snapshot: snapshotFrom(row),
       payments,
       payment_links: paymentLinks,
+      refunds,
+      cancellations,
     },
     error: null,
   }
