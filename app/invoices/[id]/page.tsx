@@ -1,4 +1,5 @@
 import InvoiceDetailView from '@/components/payments/InvoiceDetailView'
+import FinanceControls from '@/components/payments/FinanceControls'
 import { hasPermission } from '@/Lib/auth/permissions'
 import { resolveAuthorizedCompanyId } from '@/Lib/auth/requireApi'
 import { getAuthSession } from '@/Lib/auth/session'
@@ -39,5 +40,27 @@ export default async function InvoiceDetailPage({
   }
   if (!data) notFound()
 
-  return <InvoiceDetailView invoice={data} />
+  const canReconcile =
+    session.isPlatformAdmin ||
+    hasPermission(session.permissions, 'finance.payments.reconcile')
+  const canRefund =
+    session.isPlatformAdmin ||
+    hasPermission(session.permissions, 'finance.refunds.manage')
+  const canCancel =
+    session.isPlatformAdmin ||
+    hasPermission(session.permissions, 'finance.invoices.cancel')
+
+  return (
+    <div className="space-y-5">
+      <InvoiceDetailView invoice={data} />
+      <div className="mx-auto w-full max-w-6xl">
+        <FinanceControls
+          invoice={data}
+          canReconcile={canReconcile}
+          canRefund={canRefund}
+          canCancel={canCancel}
+        />
+      </div>
+    </div>
+  )
 }
