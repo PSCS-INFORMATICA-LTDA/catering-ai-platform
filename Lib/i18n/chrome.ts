@@ -126,7 +126,7 @@ const dict = {
     sidebarMainMenu: 'Menú principal',
     sidebarExpand: 'Expandir menú',
     sidebarCollapse: 'Contraer menú',
-    sidebarClose: 'Fechar menú',
+    sidebarClose: 'Cerrar menú',
     themeDark: 'Oscuro',
     themeLight: 'Claro',
     themeActivateDark: 'Activar tema oscuro',
