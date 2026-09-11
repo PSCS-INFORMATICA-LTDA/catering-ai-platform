@@ -1,5 +1,10 @@
 import PaypalSandboxCheckout from '@/components/payments/PaypalSandboxCheckout'
-import { tPayments } from '@/Lib/i18n/payments'
+import {
+  invoiceStatusLabel,
+  paymentPurposeLabel,
+  paymentStatusLabel,
+  tPayments,
+} from '@/Lib/i18n/payments'
 import { resolveAmountDue } from '@/Lib/payments/amountDue'
 import type { InvoiceRecord, PaymentPurpose } from '@/Lib/payments/types'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
@@ -31,6 +36,10 @@ export default function PublicPaymentPage({
     paidTotal: invoice.paid_total,
     purpose,
   })
+  const invoiceOutstanding = Math.max(
+    0,
+    Math.round((Number(invoice.total || 0) - Number(invoice.paid_total || 0)) * 100) / 100,
+  )
   const paypalReady = publicCheckout && Boolean(paypalClientId) && due.amount > 0
 
   return (
@@ -77,10 +86,11 @@ export default function PublicPaymentPage({
             <div className="flex justify-between"><dt>{tPayments(lang, 'subtotal')}</dt><dd>{money(invoice.subtotal, invoice.currency_code)}</dd></div>
             <div className="flex justify-between"><dt>{tPayments(lang, 'total')}</dt><dd>{money(invoice.total, invoice.currency_code)}</dd></div>
             <div className="flex justify-between"><dt>{tPayments(lang, 'deposit')}</dt><dd>{money(invoice.deposit_amount, invoice.currency_code)}</dd></div>
-            <div className="flex justify-between"><dt>{tPayments(lang, 'balance')}</dt><dd>{money(invoice.balance_amount, invoice.currency_code)}</dd></div>
+            <div className="flex justify-between"><dt>{tPayments(lang, 'originalBalance')}</dt><dd>{money(invoice.balance_amount, invoice.currency_code)}</dd></div>
             <div className="flex justify-between"><dt>{tPayments(lang, 'paid')}</dt><dd>{money(invoice.paid_total, invoice.currency_code)}</dd></div>
-            <div className="flex justify-between font-bold"><dt>{tPayments(lang, 'amountDue')}</dt><dd data-amount-due>{money(due.amount, invoice.currency_code)}</dd></div>
-            <div className="flex justify-between text-[#6b6560]"><dt>{tPayments(lang, 'paymentStatus')}</dt><dd data-invoice-status>{invoice.status}</dd></div>
+            <div className="flex justify-between font-bold"><dt>{tPayments(lang, 'invoiceOutstanding')}</dt><dd data-invoice-outstanding>{money(invoiceOutstanding, invoice.currency_code)}</dd></div>
+            <div className="flex justify-between"><dt>{paymentPurposeLabel(purpose, lang)} — {tPayments(lang, 'amountDue')}</dt><dd data-amount-due>{money(due.amount, invoice.currency_code)}</dd></div>
+            <div className="flex justify-between text-[#6b6560]"><dt>{tPayments(lang, 'paymentStatus')}</dt><dd data-invoice-status>{invoiceStatusLabel(invoice.status, lang)}</dd></div>
           </dl>
           <p className="mt-3 text-xs text-[#6b6560]">{tPayments(lang, 'noTax')}</p>
         </section>
@@ -98,7 +108,11 @@ export default function PublicPaymentPage({
             <p data-method-zelle className="text-sm">{tPayments(lang, 'zelle')}</p>
             <p data-method-bank-transfer className="text-sm">{tPayments(lang, 'bankTransfer')}</p>
             <p data-method-paypal-off className="text-sm text-[#6b6560]">
-              {due.amount <= 0 ? tPayments(lang, 'alreadyPaid') : tPayments(lang, 'paypalUnavailable')}
+              {due.amount <= 0
+                ? invoice.status === 'paid'
+                  ? tPayments(lang, 'alreadyPaid')
+                  : `${paymentPurposeLabel(purpose, lang)}: ${paymentStatusLabel('completed', lang)}`
+                : tPayments(lang, 'paypalUnavailable')}
             </p>
           </section>
         )}
