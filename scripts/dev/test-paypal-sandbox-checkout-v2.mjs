@@ -13,6 +13,7 @@ const client = read('components/payments/PaypalSandboxCheckout.tsx')
 const scheduleHold = read('Lib/payments/scheduleHold.ts')
 const holdMigration = read('supabase/migrations/20260910170000_paypal_checkout_schedule_hold.sql')
 const capacityMigration = read('supabase/migrations/20260911104500_paypal_checkout_configurable_capacity.sql')
+const caioPolicyMigration = read('supabase/migrations/20260911113000_cdl_schedule_policy_caio.sql')
 const paidDeposit = read('Lib/payments/confirmPaidDeposit.ts')
 
 assert.match(config, /productionBlocked/)
@@ -68,6 +69,21 @@ assert.match(capacityMigration, /jsonb_build_object\('max_concurrent_events', 3\
 assert.match(capacityMigration, /pg_advisory_xact_lock/)
 assert.match(capacityMigration, /REVOKE ALL ON FUNCTION private\.payment_schedule_policy/)
 
+// Caio-confirmed CDL DEV policy: four simultaneous events, six teams, three-hour
+// turnaround, no distance/size/guest capacity limit, Caio-owned exceptions, and
+// full refund as the recorded contingency when money was already captured.
+assert.match(caioPolicyMigration, /'max_concurrent_events', 4/)
+assert.match(caioPolicyMigration, /'operational_teams', 6/)
+assert.match(caioPolicyMigration, /'min_gap_minutes', 180/)
+assert.match(caioPolicyMigration, /'distance_affects_capacity', false/)
+assert.match(caioPolicyMigration, /'event_size_affects_capacity', false/)
+assert.match(caioPolicyMigration, /'guest_limit_enabled', false/)
+assert.match(caioPolicyMigration, /'exception_approver', 'Caio'/)
+assert.match(caioPolicyMigration, /'captured_payment_resolution', 'full_refund'/)
+assert.match(caioPolicyMigration, /'full_refund_required', true/)
+assert.match(caioPolicyMigration, /capacity_unavailable_message_pt/)
+
 console.log('PAYPAL_SANDBOX_CHECKOUT_V2_SECURITY=PASS')
 console.log('PAYPAL_SCHEDULE_HOLD_SECURITY=PASS')
 console.log('PAYPAL_CONFIGURABLE_CAPACITY_SECURITY=PASS')
+console.log('CDL_CAIO_SCHEDULE_POLICY=PASS')
