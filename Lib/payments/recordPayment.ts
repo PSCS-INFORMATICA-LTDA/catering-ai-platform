@@ -80,46 +80,20 @@ async function reconcileInvoicePaidTotal(
   invoiceId: string,
 ): Promise<InvoiceRecord | null> {
   const supabase = getSupabaseServerClient()
-  const [invoiceRes, completedRes] = await Promise.all([
-    supabase
-      .from('invoices')
-      .select('*')
-      .eq('id', invoiceId)
-      .eq('company_id', companyId)
-      .maybeSingle(),
-    supabase
-      .from('invoice_payments')
-      .select('amount')
-      .eq('invoice_id', invoiceId)
-      .eq('company_id', companyId)
-      .eq('status', 'completed'),
-  ])
-
-  if (!invoiceRes.data || completedRes.error) return null
-  const current = toInvoice(invoiceRes.data)
-  const paidTotal = Math.round(
-    (completedRes.data ?? []).reduce((sum, row) => sum + Number(row.amount || 0), 0) * 100,
-  ) / 100
-  const status = deriveInvoiceStatus({
-    current: current.status,
-    total: current.total,
-    depositAmount: current.deposit_amount,
-    paidTotal,
+  const { error } = await supabase.rpc('reconcile_invoice_ledger', {
+    p_company_id: companyId,
+    p_invoice_id: invoiceId,
   })
+  if (error) return null
 
   const { data } = await supabase
     .from('invoices')
-    .update({
-      paid_total: paidTotal,
-      status,
-      updated_at: new Date().toISOString(),
-    })
+    .select('*')
     .eq('id', invoiceId)
     .eq('company_id', companyId)
-    .select('*')
     .maybeSingle()
 
-  return data ? toInvoice(data) : current
+  return data ? toInvoice(data) : null
 }
 
 export async function recordPaymentAttempt(
