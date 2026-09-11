@@ -2,6 +2,7 @@ import { requireApiPermission, resolveAuthorizedCompanyId } from '@/Lib/auth/req
 import { ignoreClientAmount, resolveAmountDue } from '@/Lib/payments/amountDue'
 import { assertCompanyPaypalEligible } from '@/Lib/payments/companyProviders'
 import { loadCompanyPaypalCredentials } from '@/Lib/payments/companyPaypal'
+import { assertInvoiceAcceptsPayment } from '@/Lib/payments/invoiceCancellation'
 import { createPaypalAdapter } from '@/Lib/payments/paypal/adapter'
 import { resolvePublicPaypalCheckoutReadiness } from '@/Lib/payments/paypal/publicCheckout'
 import { isPaymentPurpose } from '@/Lib/payments/paymentLinks'
@@ -78,6 +79,11 @@ export async function POST(request: Request) {
     paidTotal = invoice.paid_total
     const eligible = await assertCompanyPaypalEligible(companyId)
     if (!eligible.ok) return Response.json({ error: eligible.error }, { status: 403 })
+  }
+
+  const acceptsPayment = await assertInvoiceAcceptsPayment(companyId, invoiceId)
+  if (!acceptsPayment.ok) {
+    return Response.json({ error: acceptsPayment.error }, { status: 409 })
   }
 
   if (!/^[A-Z]{3}$/.test(currency)) {
