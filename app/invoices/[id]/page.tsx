@@ -26,8 +26,8 @@ export default async function InvoiceDetailPage({
   const companyId = resolveAuthorizedCompanyId(session)
   const { data, error } = await fetchInvoiceBackofficeDetail(companyId, id)
 
-  if (error?.status === 404 || !data) notFound()
   if (error) {
+    if (error.status === 404) notFound()
     return (
       <main className="min-h-screen bg-cdl-bg p-10 text-cdl-fg">
         <h1 className="text-2xl font-bold text-red-400">Erro</h1>
@@ -37,6 +37,7 @@ export default async function InvoiceDetailPage({
       </main>
     )
   }
+  if (!data) notFound()
 
   return <InvoiceDetailView invoice={data} />
 }
