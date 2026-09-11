@@ -67,6 +67,8 @@ PSCS One must acknowledge/store the source reference so retries cannot duplicate
 1. **Finance read authorization.** `finance.invoices.view` is now an explicit permission for owner/admin/sales/finance. Invoice, payment and payment-link SELECT RLS policies use that permission, and invoice APIs/PDF are protected by it.
 2. **Company consistency at the database layer.** Composite company/parent foreign keys now enforce tenant consistency across invoices, payments, payment links and schedule holds. Pre-migration mismatch checks returned zero invalid relationships.
 3. **Payment-link vs invoice balance clarity.** The public payment page now shows the actual invoice outstanding amount separately from the amount still due for the specific payment request. A completed deposit link no longer implies that a partially paid invoice is fully paid.
+4. **Capture aggregate recovery.** The payment recorder now reconciles `invoices.paid_total` and invoice status from completed payment rows whenever an optimistic aggregate update loses a race or an idempotent retry observes a completed payment. This removes the previous silent stale-aggregate path in DEV.
+5. **Financial FK indexes.** Finance foreign keys now have covering indexes in the FK column order. The Supabase performance advisor no longer reports unindexed foreign keys for the invoice/payment/hold tables introduced or hardened in this stream.
 
 ## Gaps to close before a production financial ledger integration
 
@@ -74,13 +76,13 @@ PSCS One must acknowledge/store the source reference so retries cannot duplicate
 
 1. **Refund lifecycle is not modeled yet.** The current payment status vocabulary ends at completed/failed/canceled. A captured payment later refunded needs a first-class refund record or append-only financial event; changing the original completed payment to canceled would destroy settlement history.
 2. **Cancellation after capture needs rules.** An invoice with captured money cannot be treated as a simple cancellation. Refund/credit handling and reservation release must be coordinated and auditable.
-3. **Concurrent capture reconciliation.** `invoices.paid_total` is a denormalized aggregate. The capture path is idempotent, but the optimistic aggregate update should gain a reconciliation/retry path (or transactional/RPC locking) before high-volume production use so a rare concurrent update cannot leave a completed payment ahead of the invoice aggregate.
 
 ### P1 — operational finance
 
-4. **Manual methods need reconciliation workflow.** Zelle and bank transfer need explicit evidence/confirmation, actor, timestamp and audit trail before they increase `paid_total`; provider settings alone are not payment reconciliation.
-5. **Provider fees/settlements are separate from customer amount.** `online_payment_fee` is intentionally fixed at zero in V1. Provider processing fees and net settlement should be modeled later for reconciliation/DRE without changing what the customer owed.
-6. **Due dates/installments are not represented.** Current purposes are deposit/balance/full. If CDL needs due dates, installment schedules, aging or overdue states, add a receivable schedule instead of overloading invoice status.
+3. **Manual methods need reconciliation workflow.** Zelle and bank transfer need explicit evidence/confirmation, actor, timestamp and audit trail before they increase `paid_total`; provider settings alone are not payment reconciliation.
+4. **Provider fees/settlements are separate from customer amount.** `online_payment_fee` is intentionally fixed at zero in V1. Provider processing fees and net settlement should be modeled later for reconciliation/DRE without changing what the customer owed.
+5. **Due dates/installments are not represented.** Current purposes are deposit/balance/full. If CDL needs due dates, installment schedules, aging or overdue states, add a receivable schedule instead of overloading invoice status.
+6. **Database-level monetary atomicity remains a production hardening option.** DEV now has automatic reconciliation fallback for capture races. Before high-volume production use, evaluate a transactional RPC/locking model so payment completion and invoice aggregate updates can be committed atomically rather than relying on recovery after an optimistic conflict.
 
 ### P1 — PSCS One handoff
 
@@ -93,6 +95,8 @@ PSCS One must acknowledge/store the source reference so retries cannot duplicate
 The financial tables inspected in DEV (`invoices`, `invoice_payments`, `invoice_payment_links`, `payment_schedule_holds`) have RLS enabled. Invoice, payment and payment-link reads require the explicit finance permission. Invoice and payment-link client writes remain restricted by their existing write policies; payment attempts do not expose a general authenticated client write policy. Schedule holds are RLS-enabled and are expected to be managed by controlled server logic.
 
 Authenticated Finance pages still perform application authorization because server-side service-role reads bypass RLS. The backoffice routes resolve the authorized company from the authenticated session and check the finance permission before querying. Invoice detail, invoice PDF and quote-to-invoice read APIs use the same finance boundary.
+
+The project-wide Supabase security advisor still reports pre-existing hardening items outside this Finance module, including public-schema SECURITY DEFINER exposure and `inventory_document_sequences` without RLS. These are tracked as separate platform/database hardening work and were not changed here to avoid breaking unrelated public quote/inventory flows.
 
 ## Scope of the current Finance module
 
