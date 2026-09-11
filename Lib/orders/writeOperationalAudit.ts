@@ -1,9 +1,10 @@
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 /**
- * Writer genérico de auditoria operacional para Quotes/Orders, reaproveitando
- * a tabela `audit_logs` já existente (sem novas migrations). Espelha o
- * padrão de `writeAuditLog` em `Lib/orders/convertAcceptedQuoteToServiceOrder.ts`.
+ * Writer genérico de auditoria operacional para Quotes/Orders/Finance,
+ * reaproveitando a tabela `audit_logs` já existente (sem novas migrations).
+ * Espelha o padrão de `writeAuditLog` em
+ * `Lib/orders/convertAcceptedQuoteToServiceOrder.ts`.
  *
  * Nunca lança: falhas de auditoria não podem bloquear o fluxo operacional.
  * Nunca recebe/loga tokens, JWT, senhas ou service-role — apenas ids e
@@ -27,6 +28,10 @@ export type OperationalAuditEntityType =
   | 'inventory_lot'
   | 'branch'
   | 'company_payment_provider'
+  | 'invoice'
+  | 'invoice_payment'
+  | 'invoice_refund'
+  | 'invoice_cancellation'
 
 export type OperationalAuditAction =
   | 'quote_version_created'
@@ -84,6 +89,10 @@ export type OperationalAuditAction =
   | 'paypal_connection_tested'
   | 'paypal_webhook_configured'
   | 'offline_payment_settings_updated'
+  | 'manual_payment_reconciled'
+  | 'refund_requested'
+  | 'refund_completed'
+  | 'invoice_cancellation_requested'
 
 export async function writeOperationalAudit(input: {
   companyId: string
