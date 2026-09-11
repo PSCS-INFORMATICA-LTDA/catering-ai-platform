@@ -2,6 +2,7 @@ import { requireApiPermission, resolveAuthorizedCompanyId } from '@/Lib/auth/req
 import { assertCompanyPaypalEligible } from '@/Lib/payments/companyProviders'
 import { loadCompanyPaypalCredentials } from '@/Lib/payments/companyPaypal'
 import { confirmPaidDepositReservation } from '@/Lib/payments/confirmPaidDeposit'
+import { assertInvoiceAcceptsPayment } from '@/Lib/payments/invoiceCancellation'
 import { createPaypalAdapter } from '@/Lib/payments/paypal/adapter'
 import { resolvePublicPaypalCheckoutReadiness } from '@/Lib/payments/paypal/publicCheckout'
 import { findPaymentByProviderOrder, recordPaymentAttempt } from '@/Lib/payments/recordPayment'
@@ -84,6 +85,14 @@ export async function POST(request: Request) {
         reservation,
       },
     })
+  }
+
+  // A cancellation request must close the money path before provider capture.
+  // Existing completed captures stay idempotently readable above, but a new
+  // capture is fail-closed from this point forward.
+  const acceptsPayment = await assertInvoiceAcceptsPayment(companyId, invoiceId)
+  if (!acceptsPayment.ok) {
+    return Response.json({ error: acceptsPayment.error }, { status: 409 })
   }
 
   // Critical last-moment gate: approval in PayPal is not enough. Revalidate the
