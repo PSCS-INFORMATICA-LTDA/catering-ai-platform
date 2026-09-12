@@ -5,7 +5,8 @@ import { usePathname } from 'next/navigation'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { CateringSidebar } from '@/components/layout/CateringSidebar'
 
-const COLLAPSE_KEY = 'cdl-sidebar-collapsed'
+const COLLAPSE_KEY = 'catering-sidebar-collapsed'
+const LEGACY_COLLAPSE_KEY = 'cdl-sidebar-collapsed'
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -18,7 +19,14 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      setCollapsed(window.localStorage.getItem(COLLAPSE_KEY) === '1')
+      const current = window.localStorage.getItem(COLLAPSE_KEY)
+      const legacy = current == null ? window.localStorage.getItem(LEGACY_COLLAPSE_KEY) : null
+      const value = current ?? legacy
+      setCollapsed(value === '1')
+      if (legacy != null) {
+        window.localStorage.setItem(COLLAPSE_KEY, legacy)
+        window.localStorage.removeItem(LEGACY_COLLAPSE_KEY)
+      }
     } catch {
       /* ignore */
     }
@@ -46,7 +54,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="app-shell flex h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden bg-cdl-bg print:block print:h-auto print:max-h-none print:overflow-visible">
+    <div className="app-shell flex h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden bg-background print:block print:h-auto print:max-h-none print:overflow-visible">
       <div className="print:hidden">
         <CateringSidebar
           collapsed={collapsed}
