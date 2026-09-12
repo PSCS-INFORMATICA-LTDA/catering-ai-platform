@@ -1,32 +1,33 @@
 # Catering AI Finance boundary → PSCS One
 
-Status: DEV architecture decision for the current invoice/payment foundation.
+Status: DEV architecture + implemented operational finance foundation on PR #43.
 
 ## Decision
 
-Catering AI remains the system of record for the **operational commercial lifecycle** of an event:
+Catering AI remains the system of record for the **operational commercial lifecycle** of a catering event:
 
-`Quote → acceptance → invoice snapshot → payment request/attempt → payment capture → reservation/agenda → service order`
+`Quote → acceptance → invoice snapshot → payment request/attempt → capture/reconciliation → reservation/agenda → service order → cancellation/refund when needed`
 
-The authenticated Finance module in Catering is therefore an **operational receivables view**, not a general ledger. It must continue to show the invoice and payment state needed by sales, operations and finance users even after PSCS One integration exists.
+The authenticated Finance module in Catering is therefore an **operational receivables module**, not the corporate general ledger. It must remain available even after PSCS One integration so Sales, Operations and Finance can determine what the customer owes, what was received/refunded, and whether the event may remain reserved.
 
-PSCS One should become the shared financial/accounting consolidation layer for capabilities that span products or companies, including:
+PSCS One should become the shared financial/accounting consolidation layer for cross-product or cross-company capabilities:
 
-- accounts receivable/payable consolidation;
-- bank/provider reconciliation;
+- consolidated accounts receivable/payable;
+- bank, PayPal, Zelle and settlement reconciliation;
+- provider fees and net settlement;
 - cash position and cash flow;
 - DRE/P&L and accounting classifications;
-- payment-provider fees and settlement reconciliation;
-- taxes/fiscal/accounting integrations;
-- multi-company financial reporting and shared governance.
+- tax/fiscal/accounting integrations;
+- cost centers and multi-company financial reporting;
+- shared financial governance and observability.
 
-Do **not** move the Catering quote/event snapshot into PSCS One as the only copy. The invoice snapshot is evidence of the commercial state that produced the receivable and must remain traceable inside Catering.
+Do **not** move the Catering quote/event/invoice snapshot into PSCS One as the only copy. The invoice snapshot is immutable commercial evidence of the state that generated the receivable.
 
 ## Integration contract
 
-Avoid direct cross-database foreign keys between Catering AI and PSCS One. Integrate using versioned business events/outbox records with stable source identifiers and idempotency.
+There are no direct cross-database foreign keys between Catering AI and PSCS One. DEV now contains a durable, idempotent `finance_integration_outbox` with retry/claim primitives. Network delivery is intentionally **not enabled** until PSCS One exposes and approves a receiving contract.
 
-Minimum event vocabulary for the future shared layer:
+Current event vocabulary:
 
 - `invoice.created`
 - `invoice.canceled`
@@ -35,80 +36,110 @@ Minimum event vocabulary for the future shared layer:
 - `payment.refunded`
 - `invoice.paid`
 
-Each exported event should carry at least:
+Events carry source product, company, aggregate/source IDs, currency/amounts, occurrence time, schema version and stable de-duplication key. PSCS One must persist source event/reference IDs so retries cannot duplicate accounting effects.
 
-- source product (`catering_ai`);
-- company/tenant identifier;
-- source invoice ID and invoice number;
-- source quote ID and quote number where relevant;
-- payment ID/provider reference where relevant;
-- currency and monetary amounts;
-- occurrence timestamp;
-- event schema version;
-- idempotency/event ID.
+## Current Catering financial invariants
 
-PSCS One must acknowledge/store the source reference so retries cannot duplicate accounting/financial effects.
+- Every invoice is company-scoped and linked to its source quote.
+- Financial child records use tenant-consistency foreign keys where applicable.
+- The invoice stores a frozen commercial snapshot of quote/event/customer/pricing state.
+- Payment attempts/captures remain separate append-only evidence.
+- A refund is a separate financial movement; a completed capture is never rewritten as canceled.
+- `paid_total` is the net of completed payments minus completed refunds.
+- Browser-supplied payable amounts/currency are discarded; payable amount is server-owned.
+- Payment links never expose token hashes in the backoffice.
+- Manual Zelle/bank receipts require confirmation reference, actor, timestamp and audit evidence.
+- Refund amount is reserved/validated transactionally against the original completed payment to prevent over-refund races.
+- Invoice or Service Order cancellation revokes payment links/releases holds and releases the agenda; captured money moves the financial cancellation to `pending_refund` rather than deleting history.
+- A Service Order cancellation is now the operational owner after quote conversion and coordinates the linked receivable in one database transaction.
+- PayPal Live and PROD remain outside this DEV/Sandbox stream.
 
-## Current Catering invariants
+## Implemented in this DEV iteration
 
-- An active invoice is company-scoped and linked to one quote.
-- At most one non-canceled invoice exists per company/quote.
-- The invoice stores a frozen commercial snapshot of the quote/event/customer/pricing state.
-- Payment attempts are separate records linked to the invoice.
-- `paid_total` and invoice status are derived from completed payments by the server payment flow.
-- Public/browser code must never own the payable amount or currency.
-- Payment links never expose their token hash in authenticated list/detail views.
-- Tenant/company authorization must be resolved before server reads.
-- Financial child records are protected by composite tenant-consistency constraints in DEV, so a payment/link/hold cannot reference a parent belonging to another company.
-- PROD and PayPal Live remain outside the current DEV/Sandbox scope.
+### Invoice backoffice and traceability
 
-## Resolved in this DEV iteration
+`Financeiro → Faturas` provides company-scoped invoice list/detail, source quote, customer/event snapshot, totals, received amount, real invoice outstanding amount, payment history, payment-link history, refunds, cancellations and PDF/navigation.
 
-1. **Finance read authorization.** `finance.invoices.view` is now an explicit permission for owner/admin/sales/finance. Invoice, payment and payment-link SELECT RLS policies use that permission, and invoice APIs/PDF are protected by it.
-2. **Company consistency at the database layer.** Composite company/parent foreign keys now enforce tenant consistency across invoices, payments, payment links and schedule holds. Pre-migration mismatch checks returned zero invalid relationships.
-3. **Payment-link vs invoice balance clarity.** The public payment page now shows the actual invoice outstanding amount separately from the amount still due for the specific payment request. A completed deposit link no longer implies that a partially paid invoice is fully paid.
-4. **Capture aggregate recovery.** The payment recorder now reconciles `invoices.paid_total` and invoice status from completed payment rows whenever an optimistic aggregate update loses a race or an idempotent retry observes a completed payment. This removes the previous silent stale-aggregate path in DEV.
-5. **Financial FK indexes.** Finance foreign keys now have covering indexes in the FK column order. The Supabase performance advisor no longer reports unindexed foreign keys for the invoice/payment/hold tables introduced or hardened in this stream.
+The public payment view distinguishes **invoice outstanding balance** from **amount due on the current payment link**, so a paid deposit link no longer makes a partially paid invoice appear fully paid.
 
-## Gaps to close before a production financial ledger integration
+### Authorization and tenant integrity
 
-### P0 — correctness / money movement
+Explicit capabilities exist for:
 
-1. **Refund lifecycle is not modeled yet.** The current payment status vocabulary ends at completed/failed/canceled. A captured payment later refunded needs a first-class refund record or append-only financial event; changing the original completed payment to canceled would destroy settlement history.
-2. **Cancellation after capture needs rules.** An invoice with captured money cannot be treated as a simple cancellation. Refund/credit handling and reservation release must be coordinated and auditable.
+- `finance.invoices.view`
+- `finance.payments.reconcile`
+- `finance.refunds.manage`
+- `finance.invoices.cancel`
 
-### P1 — operational finance
+Finance reads/writes are company-scoped. Sensitive finance RPCs are service-role only. Composite parent/company constraints prevent cross-tenant invoice/payment/link/hold relationships.
 
-3. **Manual methods need reconciliation workflow.** Zelle and bank transfer need explicit evidence/confirmation, actor, timestamp and audit trail before they increase `paid_total`; provider settings alone are not payment reconciliation.
-4. **Provider fees/settlements are separate from customer amount.** `online_payment_fee` is intentionally fixed at zero in V1. Provider processing fees and net settlement should be modeled later for reconciliation/DRE without changing what the customer owed.
-5. **Due dates/installments are not represented.** Current purposes are deposit/balance/full. If CDL needs due dates, installment schedules, aging or overdue states, add a receivable schedule instead of overloading invoice status.
-6. **Database-level monetary atomicity remains a production hardening option.** DEV now has automatic reconciliation fallback for capture races. Before high-volume production use, evaluate a transactional RPC/locking model so payment completion and invoice aggregate updates can be committed atomically rather than relying on recovery after an optimistic conflict.
+### Manual receipt reconciliation
 
-### P1 — PSCS One handoff
+Zelle and bank transfer can be posted only after an authorized operator confirms external receipt evidence. `record_manual_invoice_payment` owns amount calculation, idempotency, ledger update and outbox creation atomically. Deposit satisfaction then synchronizes the reservation idempotently.
 
-7. **Outbox/export state is not present yet.** Add it only when PSCS One has a receiving contract; do not create speculative cross-product tables now.
-8. **Accounting mapping is not present yet.** Account/category/cost-center mapping belongs in the shared financial layer or an explicit integration mapping, not in the Catering quote snapshot.
-9. **Reprocessing/observability is required.** Export failures must be visible and retryable without duplicating financial effects.
+### Refund lifecycle
 
-## Security review of the current DEV foundation
+`invoice_refunds` is first-class append-only financial evidence. Refund requests lock the captured payment while calculating the remaining refundable amount, preventing concurrent over-refund.
 
-The financial tables inspected in DEV (`invoices`, `invoice_payments`, `invoice_payment_links`, `payment_schedule_holds`) have RLS enabled. Invoice, payment and payment-link reads require the explicit finance permission. Invoice and payment-link client writes remain restricted by their existing write policies; payment attempts do not expose a general authenticated client write policy. Schedule holds are RLS-enabled and are expected to be managed by controlled server logic.
+Completion recalculates the invoice net ledger and can close a pending cancellation when net received reaches zero.
 
-Authenticated Finance pages still perform application authorization because server-side service-role reads bypass RLS. The backoffice routes resolve the authorized company from the authenticated session and check the finance permission before querying. Invoice detail, invoice PDF and quote-to-invoice read APIs use the same finance boundary.
+For PayPal **Sandbox only**, an authorized finance user can execute the requested refund against the original capture using `/v2/payments/captures/{capture_id}/refund`. Amount/currency are server-owned and a deterministic PayPal request id protects retries. `PENDING` is preserved as processing rather than falsely shown as completed.
 
-The project-wide Supabase security advisor still reports pre-existing hardening items outside this Finance module, including public-schema SECURITY DEFINER exposure and `inventory_document_sequences` without RLS. These are tracked as separate platform/database hardening work and were not changed here to avoid breaking unrelated public quote/inventory flows.
+Verified `PAYMENT.CAPTURE.REFUNDED` webhooks reconcile PayPal refunds, including refunds initiated externally in the Sandbox dashboard. The webhook path verifies PayPal signature before the service-role reconciliation RPC runs.
 
-## Scope of the current Finance module
+Zelle/bank refunds remain external money movement: the operator performs the return outside Catering and records the verified reference only after completion.
 
-The first Finance module is deliberately read-only:
+### Cancellation coordination
 
-- invoice list and filters;
-- invoice → source quote traceability;
-- customer/event snapshot;
-- total, deposit, paid total and actual invoice outstanding balance;
-- payment-attempt history;
-- payment-link history without token material;
-- PDF access;
-- bidirectional navigation between quote and invoice.
+Before Service Order conversion, invoice cancellation atomically:
 
-Mutating functions such as manual payment posting, refunds, write-offs, credits, reconciliation and accounting exports must be introduced as separate audited capabilities with their own permissions and production gates.
+- revokes active payment links;
+- releases checkout capacity holds;
+- releases unconverted agenda reservation;
+- creates an auditable invoice cancellation;
+- cancels immediately only when net received is zero;
+- otherwise leaves the cancellation `pending_refund`.
+
+After Service Order conversion, the OS is the operational owner. `cancel_service_order_with_finance` atomically cancels the OS and agenda and coordinates the linked invoice cancellation. It **does not automatically move money**; if net received is positive, an authorized finance user must refund/confirm the return.
+
+### PSCS One outbox
+
+`finance_integration_outbox` provides durable event state, stable de-duplication, claim with `SKIP LOCKED`, retry availability and success/failure completion primitives. This is the handoff seam to PSCS One; the delivery worker remains disabled until the receiving API/contract exists.
+
+## DEV QA evidence
+
+Rollback-only database QA has exercised the critical ledger transitions without leaving synthetic rows:
+
+- manual bank receipt → invoice aggregate + `payment.completed` outbox → rollback;
+- refund request/idempotency/completion → net ledger + `payment.refunded` outbox → rollback;
+- verified PayPal refund reconciliation → net ledger + refund outbox → rollback;
+- unpaid invoice cancellation → canceled invoice + links revoked → rollback;
+- converted Service Order cancellation with a paid deposit → OS and agenda canceled + invoice `pending_refund` + links revoked → rollback.
+
+Post-rollback checks confirmed the original DEV payment/invoice/agenda/order state and zero QA rows remained.
+
+## Database/platform hardening completed
+
+- `inventory_document_sequences` now has RLS enabled and direct client grants removed; it is intentionally internal/service-role state.
+- Sensitive internal inventory/document RPCs have explicit least-privilege execution grants.
+- public token RPCs no longer inherit PostgreSQL's implicit `PUBLIC EXECUTE`; explicit `anon/authenticated/service_role` grants exist only for intentional high-entropy token flows.
+- key public views use `security_invoker` where required.
+- finance foreign-key hot paths have covering indexes.
+- payment links now include `updated_at` so revocation/cancellation mutations have modification timestamps.
+
+## Remaining pre-PROD gates
+
+These are not reasons to duplicate the Finance module in PSCS One; they are production-readiness gates:
+
+1. **Authenticated UI E2E with CDL users.** Validate invoice detail, manual receipt, refund request, PayPal Sandbox refund, cancellation messages and permissions on desktop/mobile.
+2. **PayPal Sandbox refund E2E.** Execute one controlled refund in Sandbox and verify provider refund → verified webhook/direct response → `invoice_refunds` → invoice net ledger → audit/outbox. This is the only remaining money-provider test and still moves no real money.
+3. **Existing PayPal webhook subscription.** New webhook registrations request capture + refund events. Existing company webhooks are not silently modified; configure/update the existing CDL Sandbox webhook during QA if its subscription does not yet include refund events.
+4. **Supabase Auth leaked-password protection.** Security advisor reports it disabled. Enable it in project Auth settings before PROD; this is project configuration rather than application SQL.
+5. **Platform performance backlog.** Supabase still reports legacy unindexed FKs, duplicate indexes and multiple permissive RLS policies outside the finance-critical path. Do not mass-create/drop indexes without workload/query-plan evidence; resolve by hot path before production load.
+6. **PSCS One receiver.** Define endpoint/auth/schema-version/acknowledgement/replay policy before enabling the outbox delivery worker.
+7. **Corporate finance features.** Provider settlement/fees, AP, cash flow, DRE, accounting/fiscal mappings and consolidated reporting belong to PSCS One rather than this Catering operational ledger.
+8. **Receivable schedules if required.** Deposit/balance/full are supported. Aging, arbitrary installments and due-date schedules should be a separate receivable schedule model if CDL adopts them.
+
+## Production gate
+
+PR #43 must remain DEV/Sandbox until authenticated QA is accepted. No PayPal Live credentials, Live checkout or PROD migration is authorized by this document.
