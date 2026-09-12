@@ -63,6 +63,7 @@ export async function GET(_request: Request, { params }: Params) {
     )
     .eq('company_id', companyId)
     .eq('quote_id', id)
+    .eq('invoice_kind', 'original')
     .neq('status', 'canceled')
     .maybeSingle()
 
