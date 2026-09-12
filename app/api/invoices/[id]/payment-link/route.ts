@@ -20,17 +20,25 @@ type Params = { params: Promise<{ id: string }> }
 export async function POST(request: Request, { params }: Params) {
   const auth = await requireApiPermission('finance.invoices.view')
   if (!auth.ok) return auth.response
-  if (
-    !auth.session.isPlatformAdmin &&
-    !hasPermission(auth.session.permissions, 'quotes.manage')
-  ) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 })
-  }
 
   const { id } = await params
   const companyId = resolveAuthorizedCompanyId(auth.session)
   const invoice = await loadCompanyInvoice(companyId, id)
   if (!invoice) return Response.json({ error: 'not_found' }, { status: 404 })
+
+  const canCreateOriginalLink =
+    auth.session.isPlatformAdmin ||
+    hasPermission(auth.session.permissions, 'quotes.manage')
+  const canCreateSupplementalLink =
+    auth.session.isPlatformAdmin ||
+    hasPermission(auth.session.permissions, 'finance.adjustments.manage')
+  if (
+    (invoice.invoice_kind === 'post_event_adjustment' && !canCreateSupplementalLink) ||
+    (invoice.invoice_kind !== 'post_event_adjustment' && !canCreateOriginalLink)
+  ) {
+    return Response.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   if (invoice.status === 'canceled' || invoice.status === 'paid') {
     return Response.json({ error: 'invoice_not_payable' }, { status: 409 })
   }
@@ -39,7 +47,8 @@ export async function POST(request: Request, { params }: Params) {
     purpose?: string
     expires?: boolean
   } | null
-  const purpose = isPaymentPurpose(body?.purpose) ? body.purpose : 'deposit'
+  const defaultPurpose = invoice.deposit_amount <= 0 ? 'full' : 'deposit'
+  const purpose = isPaymentPurpose(body?.purpose) ? body.purpose : defaultPurpose
   const rawToken = createPaymentLinkToken()
   const created = await createInvoicePaymentLink({
     companyId,
