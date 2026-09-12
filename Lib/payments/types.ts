@@ -30,7 +30,13 @@ export const PAYMENT_ATTEMPT_STATUSES = [
 ] as const
 export type PaymentAttemptStatus = (typeof PAYMENT_ATTEMPT_STATUSES)[number]
 
-export const INVOICE_SNAPSHOT_VERSION = 'CDL_INVOICE_SNAP_2026_V1'
+/** Current, tenant-neutral snapshot contract. */
+export const INVOICE_SNAPSHOT_VERSION = 'CATERING_INVOICE_SNAPSHOT_2026_V1' as const
+/** Read compatibility only for snapshots issued before the multi-company cleanup. */
+export const LEGACY_INVOICE_SNAPSHOT_VERSION = 'CDL_INVOICE_SNAP_2026_V1' as const
+export type InvoiceSnapshotVersion =
+  | typeof INVOICE_SNAPSHOT_VERSION
+  | typeof LEGACY_INVOICE_SNAPSHOT_VERSION
 
 export type InvoiceSnapshotGuest = {
   adults: number
@@ -41,7 +47,7 @@ export type InvoiceSnapshotGuest = {
 }
 
 export type InvoiceSnapshot = {
-  version: typeof INVOICE_SNAPSHOT_VERSION
+  version: InvoiceSnapshotVersion
   frozenAt: string
   locale: QuoteLanguage
   quote: {
