@@ -1,3 +1,4 @@
+import EventFinancialCloseoutPanel from '@/components/orders/EventFinancialCloseoutPanel'
 import OrderDetailView from '@/components/orders/OrderDetailView'
 import { hasPermission } from '@/Lib/auth/permissions'
 import { resolveAuthorizedCompanyId } from '@/Lib/auth/requireApi'
@@ -67,16 +68,25 @@ export default async function OrderDetailPage({
   if (!data) notFound()
 
   return (
-    <OrderDetailView
-      initialOrder={data}
-      canManage={canManage}
-      canViewFinancial={canViewFinancial}
-      canManageFinancialCloseout={canManageFinancialCloseout}
-      canMaterialsView={canMaterialsView}
-      canMaterialsPrepare={canMaterialsPrepare}
-      canMaterialsCheck={canMaterialsCheck}
-      canMaterialsDispatch={canMaterialsDispatch}
-      canMaterialsReturn={canMaterialsReturn}
-    />
+    <>
+      <OrderDetailView
+        initialOrder={data}
+        canManage={canManage}
+        canViewFinancial={canViewFinancial}
+        canMaterialsView={canMaterialsView}
+        canMaterialsPrepare={canMaterialsPrepare}
+        canMaterialsCheck={canMaterialsCheck}
+        canMaterialsDispatch={canMaterialsDispatch}
+        canMaterialsReturn={canMaterialsReturn}
+      />
+      {canViewFinancial ? (
+        <div className="mx-auto w-full max-w-6xl px-4 pb-8 sm:px-8">
+          <EventFinancialCloseoutPanel
+            orderId={id}
+            canManage={canManageFinancialCloseout}
+          />
+        </div>
+      ) : null}
+    </>
   )
 }
