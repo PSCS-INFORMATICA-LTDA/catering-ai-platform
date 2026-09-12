@@ -18,6 +18,10 @@ function toInvoice(row: Record<string, unknown>): InvoiceRecord {
     quote_id: String(row.quote_id),
     invoice_number: String(row.invoice_number),
     status: row.status as InvoiceRecord['status'],
+    invoice_kind: (row.invoice_kind || 'original') as InvoiceRecord['invoice_kind'],
+    parent_invoice_id: row.parent_invoice_id ? String(row.parent_invoice_id) : null,
+    service_order_id: row.service_order_id ? String(row.service_order_id) : null,
+    closeout_id: row.closeout_id ? String(row.closeout_id) : null,
     locale: row.locale as InvoiceRecord['locale'],
     currency_code: String(row.currency_code || 'USD'),
     snapshot: row.snapshot as InvoiceSnapshot,
@@ -43,6 +47,7 @@ export async function createInvoiceFromQuote(input: {
     .select('*')
     .eq('company_id', input.companyId)
     .eq('quote_id', input.quoteId)
+    .eq('invoice_kind', 'original')
     .neq('status', 'canceled')
     .maybeSingle()
 
@@ -94,6 +99,7 @@ export async function createInvoiceFromQuote(input: {
       company_id: input.companyId,
       quote_id: input.quoteId,
       invoice_number: numbered.number,
+      invoice_kind: 'original',
       status: 'awaiting_deposit',
       locale: snapshot.locale,
       currency_code: snapshot.totals.currency,
@@ -115,6 +121,7 @@ export async function createInvoiceFromQuote(input: {
       .select('*')
       .eq('company_id', input.companyId)
       .eq('quote_id', input.quoteId)
+      .eq('invoice_kind', 'original')
       .neq('status', 'canceled')
       .maybeSingle()
     if (race.data) {
