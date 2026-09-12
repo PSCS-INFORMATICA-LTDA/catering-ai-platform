@@ -1,10 +1,13 @@
 import FinanceControls from '@/components/payments/FinanceControls'
 import InvoiceAdjustmentSummary from '@/components/payments/InvoiceAdjustmentSummary'
-import InvoiceDetailView from '@/components/payments/InvoiceDetailView'
+import InvoiceObservabilityPanels from '@/components/payments/InvoiceObservabilityPanels'
+import Link from 'next/link'
 import { hasPermission } from '@/Lib/auth/permissions'
 import { resolveAuthorizedCompanyId } from '@/Lib/auth/requireApi'
 import { getAuthSession } from '@/Lib/auth/session'
+import { tPayments } from '@/Lib/i18n/payments'
 import { fetchInvoiceBackofficeDetail } from '@/Lib/payments/fetchInvoiceBackoffice'
+import { fetchInvoiceObservability } from '@/Lib/payments/fetchInvoiceObservability'
 import { notFound, redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
@@ -26,20 +29,23 @@ export default async function InvoiceDetailPage({
   if (!canView) redirect('/quotes')
 
   const companyId = resolveAuthorizedCompanyId(session)
-  const { data, error } = await fetchInvoiceBackofficeDetail(companyId, id)
+  const [detail, observability] = await Promise.all([
+    fetchInvoiceBackofficeDetail(companyId, id),
+    fetchInvoiceObservability({ companyId, invoiceId: id }),
+  ])
 
-  if (error) {
-    if (error.status === 404) notFound()
+  if (detail.error) {
+    if (detail.error.status === 404) notFound()
     return (
       <main className="min-h-screen bg-cdl-bg p-10 text-cdl-fg">
         <h1 className="text-2xl font-bold text-red-400">Erro</h1>
         <pre className="mt-4 rounded-3xl bg-cdl-surface p-4 text-sm text-red-400">
-          {error.message}
+          {detail.error.message}
         </pre>
       </main>
     )
   }
-  if (!data) notFound()
+  if (!detail.data) notFound()
 
   const canReconcile =
     session.isPlatformAdmin ||
@@ -48,17 +54,38 @@ export default async function InvoiceDetailPage({
     session.isPlatformAdmin ||
     hasPermission(session.permissions, 'finance.refunds.manage')
   const canCancel =
-    data.invoice_kind !== 'post_event_adjustment' &&
+    detail.data.invoice_kind !== 'post_event_adjustment' &&
     (session.isPlatformAdmin ||
       hasPermission(session.permissions, 'finance.invoices.cancel'))
+  const locale = session.appUser?.preferred_language ?? 'pt'
 
   return (
     <div className="space-y-5">
-      <InvoiceDetailView invoice={data} />
-      <InvoiceAdjustmentSummary invoice={data} />
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Link
+          href="/invoices"
+          className="text-xs font-bold uppercase tracking-wider text-[var(--brand-primary-2)] hover:underline"
+        >
+          ← {tPayments(locale, 'backToInvoices')}
+        </Link>
+        <a
+          href={`/api/invoices/${detail.data.id}/pdf`}
+          className="inline-flex min-h-[40px] items-center justify-center rounded-xl bg-[var(--brand-primary-2,#1e3a5f)] px-4 py-2 text-xs font-bold uppercase tracking-wide text-white"
+        >
+          {tPayments(locale, 'downloadPdf')}
+        </a>
+      </div>
+      {observability.data ? (
+        <InvoiceObservabilityPanels data={observability.data} />
+      ) : (
+        <div className="mx-auto w-full max-w-6xl rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {observability.error?.message}
+        </div>
+      )}
+      <InvoiceAdjustmentSummary invoice={detail.data} />
       <div className="mx-auto w-full max-w-6xl">
         <FinanceControls
-          invoice={data}
+          invoice={detail.data}
           canReconcile={canReconcile}
           canRefund={canRefund}
           canCancel={canCancel}

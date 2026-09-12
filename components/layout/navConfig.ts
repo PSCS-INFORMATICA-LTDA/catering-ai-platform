@@ -3,6 +3,8 @@ export type NavChild = {
   label: string
   soon?: boolean
   devOnly?: boolean
+  requiredPermission?: string
+  requiredAnyPermission?: string[]
 }
 
 export type NavGroupId =
@@ -53,7 +55,18 @@ export const CATERING_NAV: NavGroup[] = [
   {
     id: 'financial',
     label: 'Financeiro',
-    children: [{ href: '/invoices', label: 'Faturas' }],
+    children: [
+      {
+        href: '/invoices',
+        label: 'Controle de faturas',
+        requiredAnyPermission: ['finance.invoices.view', 'orders.financial.view'],
+      },
+      {
+        href: '/payments/paypal-control',
+        label: 'PayPal Control',
+        requiredPermission: 'finance.invoices.view',
+      },
+    ],
   },
   {
     id: 'parameters',

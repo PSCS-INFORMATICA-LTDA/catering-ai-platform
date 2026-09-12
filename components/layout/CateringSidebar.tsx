@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { isBrasinhaDevNavVisible } from '@/Lib/brasinha/env'
 import { CATERING_NAV, isNavHrefActive } from '@/components/layout/navConfig'
+import { useOptionalAppSession } from '@/components/auth/AppSessionProvider'
+import { hasPermission } from '@/Lib/auth/permissions'
 import {
   getChromeGroupLabel,
   getChromeNavLabel,
@@ -45,7 +47,19 @@ export function CateringSidebar({
 }: Props) {
   const pathname = usePathname() ?? ''
   const locale = useAuthLocaleFromMe()
+  const session = useOptionalAppSession()
   const showBrasinhaDev = isBrasinhaDevNavVisible()
+
+  function canSeeNavChild(requiredPermission?: string, requiredAnyPermission?: string[]) {
+    const needed = [
+      ...(requiredPermission ? [requiredPermission] : []),
+      ...(requiredAnyPermission ?? []),
+    ]
+    if (needed.length === 0) return true
+    if (!session) return false
+    if (session.isPlatformAdmin) return true
+    return needed.some((permission) => hasPermission(session.permissions, permission))
+  }
 
   return (
     <>
@@ -156,6 +170,7 @@ export function CateringSidebar({
                   <p className="catering-sidebar-group-label">{groupLabel}</p>
                   {group.children
                     .filter((child) => !child.devOnly || showBrasinhaDev)
+                    .filter((child) => canSeeNavChild(child.requiredPermission, child.requiredAnyPermission))
                     .map((child) => {
                     const label = getChromeNavLabel(
                       locale,
