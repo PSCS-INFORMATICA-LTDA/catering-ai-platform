@@ -7,6 +7,7 @@ import { listCompanySettingsI18nEntries } from './companySettings.ts'
 import { listCustomersI18nEntries } from './customers.ts'
 import { listDictionaryUiI18nEntries } from './dictionaryUi.ts'
 import { listEventFinancialCloseoutI18nEntries } from './eventFinancialCloseout.ts'
+import { listFinanceObservabilityI18nEntries } from './financeObservability.ts'
 import { listHelpI18nEntries } from './help.ts'
 import { listInventoryUiI18nEntries } from './inventoryUi.ts'
 import { listMediaI18nEntries } from './media.ts'
@@ -50,6 +51,7 @@ export function buildTranslationRegistry(): TranslationRegistryEntry[] {
     ...listPaymentsI18nEntries(),
     ...listPaymentSettingsI18nEntries(),
     ...listEventFinancialCloseoutI18nEntries(),
+    ...listFinanceObservabilityI18nEntries(),
     ...listPublicOpsI18nEntries(),
     ...listQuotesOrdersI18nEntries(),
     ...listQuoteWizardI18nEntries(),
