@@ -12,6 +12,7 @@ import {
   acquirePaymentScheduleHold,
   releasePaymentScheduleHold,
 } from '@/Lib/payments/scheduleHold'
+import type { InvoiceKind } from '@/Lib/payments/types'
 import { createHash } from 'node:crypto'
 
 export const dynamic = 'force-dynamic'
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
 
   let companyId = ''
   let invoiceId = ''
+  let invoiceKind: InvoiceKind = 'original'
   let purpose = isPaymentPurpose(body?.purpose) ? body.purpose : 'deposit'
   let invoiceNumber = ''
   let currency = 'USD'
@@ -51,6 +53,7 @@ export async function POST(request: Request) {
     }
     companyId = resolved.invoice.company_id
     invoiceId = resolved.invoice.id
+    invoiceKind = resolved.invoice.invoice_kind
     purpose = resolved.link.purpose
     invoiceNumber = resolved.invoice.invoice_number
     currency = resolved.invoice.currency_code
@@ -72,6 +75,7 @@ export async function POST(request: Request) {
       return Response.json({ error: 'invoice_not_payable' }, { status: 409 })
     }
     invoiceId = invoice.id
+    invoiceKind = invoice.invoice_kind
     invoiceNumber = invoice.invoice_number
     currency = invoice.currency_code
     total = invoice.total
@@ -100,15 +104,17 @@ export async function POST(request: Request) {
     return Response.json({ error: 'paypal_not_configured' }, { status: 409 })
   }
 
-  // The slot is revalidated atomically and held only when the payer actually
-  // starts checkout. Payment links themselves may exist for days and do not
-  // reserve operational capacity.
-  const hold = await acquirePaymentScheduleHold({
-    companyId,
-    invoiceId,
-    paymentLinkId: paymentLinkId === 'operator' ? null : paymentLinkId,
-    holdSeconds: 900,
-  })
+  // Initial-event checkout revalidates operational capacity. A post-event
+  // supplemental invoice is purely financial and must never reserve the agenda again.
+  const postEventPayment = invoiceKind === 'post_event_adjustment'
+  const hold = postEventPayment
+    ? { ok: true as const, status: 'already_reserved' as const, holdId: null, expiresAt: null }
+    : await acquirePaymentScheduleHold({
+        companyId,
+        invoiceId,
+        paymentLinkId: paymentLinkId === 'operator' ? null : paymentLinkId,
+        holdSeconds: 900,
+      })
   if (!hold.ok) {
     return Response.json(
       { error: hold.status === 'unavailable' ? 'schedule_unavailable_for_payment' : 'schedule_hold_failed' },
@@ -155,9 +161,10 @@ export async function POST(request: Request) {
         requestId,
         mock: order.mock,
         paymentLinkId,
+        invoiceKind,
         scheduleHoldId: hold.holdId ?? null,
         scheduleHoldExpiresAt: hold.expiresAt ?? null,
-        scheduleHoldStatus: hold.status,
+        scheduleHoldStatus: postEventPayment ? 'not_required_post_event' : hold.status,
         clientFingerprint: createHash('sha256')
           .update(request.headers.get('user-agent') || 'unknown')
           .digest('hex')
@@ -165,11 +172,13 @@ export async function POST(request: Request) {
       },
     })
     if (!recorded.ok) {
-      await releasePaymentScheduleHold({
-        companyId,
-        invoiceId,
-        reason: 'payment_attempt_record_failed',
-      })
+      if (!postEventPayment) {
+        await releasePaymentScheduleHold({
+          companyId,
+          invoiceId,
+          reason: 'payment_attempt_record_failed',
+        })
+      }
       return Response.json({ error: recorded.error }, { status: recorded.status })
     }
 
@@ -183,14 +192,17 @@ export async function POST(request: Request) {
         mock: order.mock,
         publicCheckout: Boolean(body?.token),
         scheduleHoldExpiresAt: hold.expiresAt ?? null,
+        scheduleHoldRequired: !postEventPayment,
       },
     })
   } catch {
-    await releasePaymentScheduleHold({
-      companyId,
-      invoiceId,
-      reason: 'paypal_order_create_failed',
-    })
+    if (!postEventPayment) {
+      await releasePaymentScheduleHold({
+        companyId,
+        invoiceId,
+        reason: 'paypal_order_create_failed',
+      })
+    }
     return Response.json({ error: 'paypal_create_order_failed' }, { status: 502 })
   }
 }
