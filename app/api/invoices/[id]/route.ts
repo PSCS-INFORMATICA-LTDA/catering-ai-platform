@@ -10,7 +10,7 @@ export const revalidate = 0
 type Params = { params: Promise<{ id: string }> }
 
 export async function GET(_request: Request, { params }: Params) {
-  const auth = await requireApiPermission('quotes.view')
+  const auth = await requireApiPermission('finance.invoices.view')
   if (!auth.ok) return auth.response
   const { id } = await params
   const invoice = await loadCompanyInvoice(

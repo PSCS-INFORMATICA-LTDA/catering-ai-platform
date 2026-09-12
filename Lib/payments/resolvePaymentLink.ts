@@ -2,6 +2,7 @@ import 'server-only'
 
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { toInvoice } from './createInvoiceFromQuote'
+import { assertInvoiceAcceptsPayment } from './invoiceCancellation'
 import {
   hashPaymentLinkToken,
   isPaymentLinkUsable,
@@ -44,6 +45,14 @@ export async function resolvePaymentLink(token: string): Promise<
     return { ok: false, status: 410, error: 'canceled' }
   }
 
+  const acceptsPayment = await assertInvoiceAcceptsPayment(
+    String(link.company_id),
+    String(link.invoice_id),
+  )
+  if (!acceptsPayment.ok) {
+    return { ok: false, status: 410, error: acceptsPayment.error }
+  }
+
   return {
     ok: true,
     invoice: toInvoice(invoice),
@@ -69,6 +78,9 @@ export async function createInvoicePaymentLink(input: {
   expiresAt: string | null
   actorUserId?: string | null
 }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const acceptsPayment = await assertInvoiceAcceptsPayment(input.companyId, input.invoiceId)
+  if (!acceptsPayment.ok) return acceptsPayment
+
   const { data, error } = await getSupabaseServerClient()
     .from('invoice_payment_links')
     .insert({

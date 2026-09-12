@@ -1,6 +1,6 @@
 import PublicPaymentPage from '@/components/payments/PublicPaymentPage'
 import { tPayments } from '@/Lib/i18n/payments'
-import { readPaypalRuntimeConfig } from '@/Lib/payments/paypal/config'
+import { resolvePublicPaypalCheckoutReadiness } from '@/Lib/payments/paypal/publicCheckout'
 import { resolvePaymentLink } from '@/Lib/payments/resolvePaymentLink'
 
 export const dynamic = 'force-dynamic'
@@ -23,17 +23,19 @@ export default async function PublicPayPage({
     )
   }
 
-  const runtime = readPaypalRuntimeConfig()
+  const readiness = await resolvePublicPaypalCheckoutReadiness(resolved.invoice.company_id)
   const locale =
     query.lang === 'en' || query.lang === 'es' || query.lang === 'pt'
       ? query.lang
       : resolved.invoice.locale
+
   return (
     <PublicPaymentPage
       invoice={resolved.invoice}
       purpose={resolved.link.purpose}
-      publicCheckout={false}
-      paypalReady={runtime.mode === 'sandbox'}
+      publicCheckout={readiness.ready}
+      paypalClientId={readiness.clientId}
+      paymentToken={token}
       locale={locale}
     />
   )

@@ -1,3 +1,4 @@
+import { hasPermission } from '@/Lib/auth/permissions'
 import {
   requireApiPermission,
   resolveAuthorizedCompanyId,
@@ -11,8 +12,14 @@ export const revalidate = 0
 type Params = { params: Promise<{ id: string }> }
 
 export async function POST(_request: Request, { params }: Params) {
-  const auth = await requireApiPermission('quotes.manage')
+  const auth = await requireApiPermission('finance.invoices.view')
   if (!auth.ok) return auth.response
+  if (
+    !auth.session.isPlatformAdmin &&
+    !hasPermission(auth.session.permissions, 'quotes.manage')
+  ) {
+    return Response.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const { id } = await params
   const companyId = resolveAuthorizedCompanyId(auth.session)
@@ -43,7 +50,7 @@ export async function POST(_request: Request, { params }: Params) {
 }
 
 export async function GET(_request: Request, { params }: Params) {
-  const auth = await requireApiPermission('quotes.view')
+  const auth = await requireApiPermission('finance.invoices.view')
   if (!auth.ok) return auth.response
 
   const { id } = await params
@@ -56,6 +63,7 @@ export async function GET(_request: Request, { params }: Params) {
     )
     .eq('company_id', companyId)
     .eq('quote_id', id)
+    .eq('invoice_kind', 'original')
     .neq('status', 'canceled')
     .maybeSingle()
 

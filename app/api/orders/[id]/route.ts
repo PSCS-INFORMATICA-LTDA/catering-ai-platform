@@ -57,7 +57,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
   const { data: order, error: fetchError } = await db
     .from('service_orders')
-    .select('id, company_id, status')
+    .select('id, company_id, quote_id, status')
     .eq('id', id)
     .eq('company_id', companyId)
     .maybeSingle()
@@ -69,56 +69,86 @@ export async function PATCH(request: Request, { params }: Params) {
     return Response.json({ error: 'Ordem de Serviço não encontrada.' }, { status: 404 })
   }
 
-  const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  const includeFinancial =
+    auth.session.isPlatformAdmin ||
+    hasPermission(auth.session.permissions, 'orders.financial.view')
 
-  if (typeof body.notes === 'string') {
-    update.notes = body.notes
-  }
+  const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (typeof body.notes === 'string') update.notes = body.notes
 
   let statusChanged = false
   if (body.status && body.status !== order.status) {
     if (!isValidServiceOrderTransition(order.status, body.status)) {
       return Response.json(
-        {
-          error: `Transição de status inválida: ${order.status} → ${body.status}.`,
-        },
+        { error: `Transição de status inválida: ${order.status} → ${body.status}.` },
         { status: 400 },
       )
     }
 
     if (serviceOrderStatusRequiresReason(body.status) && !body.cancel_reason?.trim()) {
-      return Response.json(
-        { error: 'Informe o motivo do cancelamento.' },
-        { status: 400 },
-      )
+      return Response.json({ error: 'Informe o motivo do cancelamento.' }, { status: 400 })
     }
 
     update.status = body.status
     statusChanged = true
-
-    if (body.status === 'cancelled') {
-      update.cancel_reason = body.cancel_reason?.trim()
-      update.cancelled_at = new Date().toISOString()
-    }
-    if (body.status === 'completed') {
-      update.completed_at = new Date().toISOString()
-    }
+    if (body.status === 'completed') update.completed_at = new Date().toISOString()
   }
 
-  const includeFinancial =
-    auth.session.isPlatformAdmin ||
-    hasPermission(auth.session.permissions, 'orders.financial.view')
+  let financeCoordination: Record<string, unknown> | null = null
+  let updated: Record<string, unknown> | null = null
 
-  const { data: updated, error: updateError } = await db
-    .from('service_orders')
-    .update(update)
-    .eq('id', id)
-    .eq('company_id', companyId)
-    .select('*')
-    .single()
+  if (statusChanged && body.status === 'cancelled') {
+    // One database transaction owns the critical cancellation effects: cancel OS,
+    // release agenda/checkout holds, revoke payment links and create the invoice
+    // cancellation. Captured money is never erased; it becomes pending_refund.
+    const { data: coordinated, error: cancellationError } = await db.rpc(
+      'cancel_service_order_with_finance',
+      {
+        p_company_id: companyId,
+        p_service_order_id: id,
+        p_reason: body.cancel_reason?.trim() || '',
+        p_actor_user_id: auth.session.userId,
+        p_notes: typeof body.notes === 'string' ? body.notes : null,
+      },
+    )
+    if (cancellationError) {
+      const raw = cancellationError.message || ''
+      if (raw.includes('service_order_not_found')) {
+        return Response.json({ error: 'Ordem de Serviço não encontrada.' }, { status: 404 })
+      }
+      if (raw.includes('service_order_terminal')) {
+        return Response.json({ error: 'Ordem de Serviço já está em estado terminal.' }, { status: 409 })
+      }
+      return Response.json({ error: 'Falha ao coordenar cancelamento financeiro.' }, { status: 500 })
+    }
+    financeCoordination =
+      coordinated && typeof coordinated === 'object' && !Array.isArray(coordinated)
+        ? (coordinated as Record<string, unknown>)
+        : null
 
-  if (updateError) {
-    return Response.json({ error: updateError.message }, { status: 500 })
+    const { data: cancelledOrder, error: reloadError } = await db
+      .from('service_orders')
+      .select('*')
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .single()
+    if (reloadError || !cancelledOrder) {
+      return Response.json({ error: reloadError?.message || 'Falha ao recarregar OS.' }, { status: 500 })
+    }
+    updated = cancelledOrder as unknown as Record<string, unknown>
+  } else {
+    const { data: normalUpdate, error: updateError } = await db
+      .from('service_orders')
+      .update(update)
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .select('*')
+      .single()
+
+    if (updateError) {
+      return Response.json({ error: updateError.message }, { status: 500 })
+    }
+    updated = (normalUpdate ?? {}) as unknown as Record<string, unknown>
   }
 
   if (statusChanged) {
@@ -133,10 +163,7 @@ export async function PATCH(request: Request, { params }: Params) {
         changed_by: auth.session.userId,
       })
     if (historyError) {
-      console.warn(
-        '[Orders] Falha ao gravar service_order_status_history:',
-        historyError.message,
-      )
+      console.warn('[Orders] Falha ao gravar service_order_status_history:', historyError.message)
     }
 
     try {
@@ -147,7 +174,10 @@ export async function PATCH(request: Request, { params }: Params) {
         entity_id: id,
         action: 'update_status',
         old_data: { status: order.status },
-        new_data: { status: body.status },
+        new_data: {
+          status: body.status,
+          ...(financeCoordination ? { finance_coordination: financeCoordination } : {}),
+        },
       })
     } catch (err) {
       console.warn(
@@ -157,11 +187,12 @@ export async function PATCH(request: Request, { params }: Params) {
     }
   }
 
-  // Resposta ao cliente: financeiro só com orders.financial.view
-  const payload = sanitizeServiceOrderListRowForActor(
-    (updated ?? {}) as unknown as Record<string, unknown>,
-    { includeFinancial },
-  )
+  const payload = sanitizeServiceOrderListRowForActor(updated ?? {}, { includeFinancial })
 
-  return Response.json({ data: payload })
+  return Response.json({
+    data: payload,
+    ...(includeFinancial && financeCoordination
+      ? { finance: financeCoordination }
+      : {}),
+  })
 }

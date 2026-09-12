@@ -53,7 +53,7 @@ export const CATERING_NAV: NavGroup[] = [
   {
     id: 'financial',
     label: 'Financeiro',
-    children: [{ href: '#', label: 'Em breve', soon: true }],
+    children: [{ href: '/invoices', label: 'Faturas' }],
   },
   {
     id: 'parameters',
@@ -95,6 +95,9 @@ export function isNavHrefActive(pathname: string, href: string): boolean {
   }
   if (href === '/orders') {
     return pathname === '/orders' || pathname.startsWith('/orders/')
+  }
+  if (href === '/invoices') {
+    return pathname === '/invoices' || pathname.startsWith('/invoices/')
   }
   if (href === '/estoque') {
     return pathname === '/estoque' || pathname.startsWith('/estoque/')

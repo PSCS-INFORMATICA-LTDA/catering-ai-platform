@@ -12,6 +12,9 @@ export const INVOICE_STATUSES = [
 
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number]
 
+export const INVOICE_KINDS = ['original', 'post_event_adjustment'] as const
+export type InvoiceKind = (typeof INVOICE_KINDS)[number]
+
 export const PAYMENT_PURPOSES = ['deposit', 'balance', 'full'] as const
 export type PaymentPurpose = (typeof PAYMENT_PURPOSES)[number]
 
@@ -76,6 +79,8 @@ export type InvoiceSnapshot = {
     quantity: number
     unitPrice: number
     total: number
+    lineType?: string | null
+    sourceRef?: string | null
   }>
   garnishes?: {
     included: boolean
@@ -111,6 +116,22 @@ export type InvoiceSnapshot = {
     currency: string
   }
   pricingBreakdown: PricingBreakdown | null
+  adjustment?: {
+    type: 'post_event'
+    closeoutId: string
+    serviceOrderId: string
+    serviceOrderNumber: string
+    originalInvoiceId: string
+    originalInvoiceNumber: string
+    originalInvoiceTotal: number
+    contractedBillableGuests: number
+    finalBillableGuests: number
+    billableGuestOverage: number
+    guestOverageTotal: number
+    extraServicesTotal: number
+    finalEventTotal: number
+    notes?: string | null
+  }
 }
 
 export type InvoiceRecord = {
@@ -119,6 +140,10 @@ export type InvoiceRecord = {
   quote_id: string
   invoice_number: string
   status: InvoiceStatus
+  invoice_kind: InvoiceKind
+  parent_invoice_id: string | null
+  service_order_id: string | null
+  closeout_id: string | null
   locale: QuoteLanguage
   currency_code: string
   snapshot: InvoiceSnapshot

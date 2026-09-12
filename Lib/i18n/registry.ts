@@ -6,6 +6,7 @@ import { listCommonI18nEntries } from './common.ts'
 import { listCompanySettingsI18nEntries } from './companySettings.ts'
 import { listCustomersI18nEntries } from './customers.ts'
 import { listDictionaryUiI18nEntries } from './dictionaryUi.ts'
+import { listEventFinancialCloseoutI18nEntries } from './eventFinancialCloseout.ts'
 import { listHelpI18nEntries } from './help.ts'
 import { listInventoryUiI18nEntries } from './inventoryUi.ts'
 import { listMediaI18nEntries } from './media.ts'
@@ -48,6 +49,7 @@ export function buildTranslationRegistry(): TranslationRegistryEntry[] {
     ...listShareI18nEntries(),
     ...listPaymentsI18nEntries(),
     ...listPaymentSettingsI18nEntries(),
+    ...listEventFinancialCloseoutI18nEntries(),
     ...listPublicOpsI18nEntries(),
     ...listQuotesOrdersI18nEntries(),
     ...listQuoteWizardI18nEntries(),

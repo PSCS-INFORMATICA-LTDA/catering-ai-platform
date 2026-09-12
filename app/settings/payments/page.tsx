@@ -11,6 +11,7 @@ import {
 } from '@/Lib/payments/companyPaypal'
 import {
   ensureOfflineMethods,
+  loadCompanyOfflinePaymentSettings,
   loadCompanyPaymentMethods,
 } from '@/Lib/payments/companyProviders'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
@@ -22,12 +23,8 @@ export const revalidate = 0
 export default async function PaymentSettingsPage() {
   const session = await getAuthSession()
   if (!session) redirect('/login?next=/settings/payments')
-
-  const allowed =
-    session.isPlatformAdmin ||
-    hasPermission(session.permissions, PAYMENT_SETTINGS_PERMISSION)
+  const allowed = session.isPlatformAdmin || hasPermission(session.permissions, PAYMENT_SETTINGS_PERMISSION)
   if (!allowed) redirect('/quotes')
-
   const companyContext = requireSessionCompanyId(session)
   if (!companyContext.ok) {
     return (
@@ -39,34 +36,28 @@ export default async function PaymentSettingsPage() {
   }
   const companyId = companyContext.companyId
   const locale = resolveAuthLocale(session.appUser?.preferred_language)
-
   const { data: company, error } = await getSupabaseServerClient()
-    .from('companies')
-    .select('id, company_name, trade_name')
-    .eq('id', companyId)
-    .maybeSingle()
-
+    .from('companies').select('id, company_name, trade_name').eq('id', companyId).maybeSingle()
   if (error) {
     return (
       <main className="p-6">
-        <h1 className="text-xl font-bold text-red-500">
-          {tPaymentSettings(locale, 'title')}
-        </h1>
+        <h1 className="text-xl font-bold text-red-500">{tPaymentSettings(locale, 'title')}</h1>
         <pre className="mt-3 text-sm">{error.message}</pre>
       </main>
     )
   }
-
   await ensureOfflineMethods(companyId)
   await ensurePaypalWebhookRouteKey(companyId)
   const paypal = await toPublicPaypalSettings(companyId, session.userId)
   const methods = await loadCompanyPaymentMethods(companyId)
-
+  const offlineSettings = await loadCompanyOfflinePaymentSettings(companyId)
   return (
     <PaymentSettingsDashboard
+      key={companyId}
       companyName={company?.trade_name || company?.company_name || ''}
       initialPaypal={paypal}
       initialMethods={methods}
+      initialOfflineSettings={offlineSettings}
     />
   )
 }

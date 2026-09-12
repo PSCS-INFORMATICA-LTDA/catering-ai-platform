@@ -1,0 +1,89 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+
+const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8')
+const config = read('Lib/payments/paypal/config.ts')
+const readiness = read('Lib/payments/paypal/publicCheckout.ts')
+const orders = read('app/api/payments/paypal/orders/route.ts')
+const capture = read('app/api/payments/paypal/capture/route.ts')
+const webhook = read('Lib/payments/paypal/processWebhook.ts')
+const legacyWebhook = read('app/api/payments/paypal/webhook/route.ts')
+const publicPage = read('app/pay/[token]/page.tsx')
+const client = read('components/payments/PaypalSandboxCheckout.tsx')
+const scheduleHold = read('Lib/payments/scheduleHold.ts')
+const holdMigration = read('supabase/migrations/20260910170000_paypal_checkout_schedule_hold.sql')
+const capacityMigration = read('supabase/migrations/20260911104500_paypal_checkout_configurable_capacity.sql')
+const caioPolicyMigration = read('supabase/migrations/20260911113000_cdl_schedule_policy_caio.sql')
+const paidDeposit = read('Lib/payments/confirmPaidDeposit.ts')
+
+assert.match(config, /productionBlocked/)
+assert.match(config, /PAYPAL_PRODUCTION_BLOCKED/)
+assert.match(config, /requestedEnv === 'live'/)
+assert.match(readiness, /connection_status !== 'validated'/)
+assert.match(readiness, /paypal_webhook_required/)
+assert.match(orders, /ignoreClientAmount\(body\?\.amount\)/)
+assert.match(orders, /resolveAmountDue/)
+assert.match(orders, /paymentLinkId/)
+assert.match(capture, /paypal_capture_amount_mismatch/)
+assert.match(capture, /verifiedAmount: true/)
+assert.match(webhook, /paypal_webhook_amount_mismatch/)
+assert.match(webhook, /webhook:\$\{eventId\}/)
+assert.match(legacyWebhook, /paypal_webhook_scoped_route_required/)
+assert.match(publicPage, /resolvePublicPaypalCheckoutReadiness/)
+assert.match(client, /body: JSON\.stringify\(\{ token \}\)/)
+assert.doesNotMatch(client, /clientSecret|amount:/)
+assert.doesNotMatch(client, /invoiceId/)
+
+// Schedule safety: a public payment cannot start/capture without an atomic,
+// company-scoped availability recheck. Links do not reserve capacity by themselves.
+assert.match(orders, /acquirePaymentScheduleHold/)
+assert.match(orders, /holdSeconds: 900/)
+assert.match(orders, /schedule_unavailable_for_payment/)
+assert.match(capture, /acquirePaymentScheduleHold/)
+assert.match(capture, /schedule_unavailable_before_capture/)
+assert.match(scheduleHold, /acquire_payment_schedule_hold/)
+assert.match(scheduleHold, /release_payment_schedule_hold/)
+assert.match(scheduleHold, /consume_payment_schedule_hold/)
+assert.match(paidDeposit, /consumePaymentScheduleHold/)
+
+// DB enforcement is atomic with the scheduling writes, not just a UI check.
+assert.match(holdMigration, /pg_advisory_xact_lock/)
+assert.match(holdMigration, /schedule_snapshot_mismatch/)
+assert.match(holdMigration, /status IN \('reserved', 'scheduled', 'completed'\)/)
+assert.match(holdMigration, /schedule_temporarily_held/)
+assert.match(holdMigration, /trg_agenda_events_payment_hold_guard/)
+assert.match(holdMigration, /trg_events_payment_hold_guard/)
+assert.match(holdMigration, /trg_quotes_payment_hold_guard/)
+assert.match(holdMigration, /REVOKE ALL ON TABLE public\.payment_schedule_holds FROM PUBLIC, anon, authenticated/)
+assert.match(holdMigration, /GRANT ALL ON TABLE public\.payment_schedule_holds TO service_role/)
+assert.doesNotMatch(holdMigration, /CREATE POLICY/)
+
+// Capacity is tenant-configurable, serialized under the same company lock, and
+// defaults to one unless an explicit commercial rule raises the limit.
+assert.match(capacityMigration, /max_concurrent_events/)
+assert.match(capacityMigration, /v_capacity integer := 1/)
+assert.match(capacityMigration, /v_used >= v_capacity/)
+assert.match(capacityMigration, /private\.payment_schedule_policy/)
+assert.match(capacityMigration, /company_code = 'CDL'/)
+assert.match(capacityMigration, /jsonb_build_object\('max_concurrent_events', 3\)/)
+assert.match(capacityMigration, /pg_advisory_xact_lock/)
+assert.match(capacityMigration, /REVOKE ALL ON FUNCTION private\.payment_schedule_policy/)
+
+// Caio-confirmed CDL DEV policy: four simultaneous events, six teams, three-hour
+// turnaround, no distance/size/guest capacity limit, Caio-owned exceptions, and
+// full refund as the recorded contingency when money was already captured.
+assert.match(caioPolicyMigration, /'max_concurrent_events', 4/)
+assert.match(caioPolicyMigration, /'operational_teams', 6/)
+assert.match(caioPolicyMigration, /'min_gap_minutes', 180/)
+assert.match(caioPolicyMigration, /'distance_affects_capacity', false/)
+assert.match(caioPolicyMigration, /'event_size_affects_capacity', false/)
+assert.match(caioPolicyMigration, /'guest_limit_enabled', false/)
+assert.match(caioPolicyMigration, /'exception_approver', 'Caio'/)
+assert.match(caioPolicyMigration, /'captured_payment_resolution', 'full_refund'/)
+assert.match(caioPolicyMigration, /'full_refund_required', true/)
+assert.match(caioPolicyMigration, /capacity_unavailable_message_pt/)
+
+console.log('PAYPAL_SANDBOX_CHECKOUT_V2_SECURITY=PASS')
+console.log('PAYPAL_SCHEDULE_HOLD_SECURITY=PASS')
+console.log('PAYPAL_CONFIGURABLE_CAPACITY_SECURITY=PASS')
+console.log('CDL_CAIO_SCHEDULE_POLICY=PASS')

@@ -8,10 +8,19 @@ type PaypalWebhookRecord = {
   event_types?: Array<{ name?: string }>
 }
 
-function hasCaptureCompleted(webhook: PaypalWebhookRecord) {
+const REQUIRED_FINANCE_EVENTS = [
+  'PAYMENT.CAPTURE.COMPLETED',
+  'PAYMENT.CAPTURE.REFUNDED',
+] as const
+
+function coversEvent(webhook: PaypalWebhookRecord, eventName: string) {
   return (webhook.event_types ?? []).some(
-    (event) => event.name === 'PAYMENT.CAPTURE.COMPLETED',
+    (event) => event.name === '*' || event.name === eventName,
   )
+}
+
+function coversFinanceEvents(webhook: PaypalWebhookRecord) {
+  return REQUIRED_FINANCE_EVENTS.every((eventName) => coversEvent(webhook, eventName))
 }
 
 export async function listSandboxWebhooks(accessToken: string) {
@@ -32,12 +41,19 @@ export async function listSandboxWebhooks(accessToken: string) {
 export async function findOrCreateSandboxWebhook(input: {
   accessToken: string
   url: string
-}): Promise<{ id: string; reused: boolean } | null> {
+}): Promise<{ id: string; reused: boolean; refundEventsConfigured: boolean } | null> {
   const existing = (await listSandboxWebhooks(input.accessToken)).find(
     (webhook) => webhook.url === input.url && webhook.id,
   )
   if (existing?.id) {
-    return { id: existing.id, reused: true }
+    // Existing subscriptions are preserved instead of being mutated implicitly.
+    // Direct Sandbox refund execution is still authoritative; operators can use
+    // Configure/Update Webhook later to migrate the subscription explicitly.
+    return {
+      id: existing.id,
+      reused: true,
+      refundEventsConfigured: coversFinanceEvents(existing),
+    }
   }
 
   const response = await fetch(`${paypalApiBase('sandbox')}/v1/notifications/webhooks`, {
@@ -48,24 +64,32 @@ export async function findOrCreateSandboxWebhook(input: {
     },
     body: JSON.stringify({
       url: input.url,
-      event_types: [{ name: 'PAYMENT.CAPTURE.COMPLETED' }],
+      event_types: REQUIRED_FINANCE_EVENTS.map((name) => ({ name })),
     }),
     cache: 'no-store',
   })
   const payload = (await response.json().catch(() => null)) as PaypalWebhookRecord | null
   if (response.ok && payload?.id) {
-    return { id: payload.id, reused: false }
+    return { id: payload.id, reused: false, refundEventsConfigured: true }
   }
 
   const afterConflict = (await listSandboxWebhooks(input.accessToken)).find(
     (webhook) => webhook.url === input.url && webhook.id,
   )
   if (afterConflict?.id) {
-    return { id: afterConflict.id, reused: true }
+    return {
+      id: afterConflict.id,
+      reused: true,
+      refundEventsConfigured: coversFinanceEvents(afterConflict),
+    }
   }
   return null
 }
 
 export function webhookCoversCapture(webhook: PaypalWebhookRecord) {
-  return hasCaptureCompleted(webhook)
+  return coversEvent(webhook, 'PAYMENT.CAPTURE.COMPLETED')
+}
+
+export function webhookCoversRefund(webhook: PaypalWebhookRecord) {
+  return coversEvent(webhook, 'PAYMENT.CAPTURE.REFUNDED')
 }

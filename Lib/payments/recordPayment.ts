@@ -75,6 +75,27 @@ export async function findPaymentByProviderOrder(
   return data ? toPayment(data) : null
 }
 
+async function reconcileInvoicePaidTotal(
+  companyId: string,
+  invoiceId: string,
+): Promise<InvoiceRecord | null> {
+  const supabase = getSupabaseServerClient()
+  const { error } = await supabase.rpc('reconcile_invoice_ledger', {
+    p_company_id: companyId,
+    p_invoice_id: invoiceId,
+  })
+  if (error) return null
+
+  const { data } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', invoiceId)
+    .eq('company_id', companyId)
+    .maybeSingle()
+
+  return data ? toInvoice(data) : null
+}
+
 export async function recordPaymentAttempt(
   input: RecordPaymentInput,
 ): Promise<
@@ -192,7 +213,8 @@ export async function recordPaymentAttempt(
         input.providerOrderId || existingByOrder.provider_order_id || '',
       )
       if (raced?.status === 'completed') {
-        return { ok: true, payment: raced, invoice, duplicate: true }
+        const reconciled = await reconcileInvoicePaidTotal(input.companyId, raced.invoice_id)
+        return { ok: true, payment: raced, invoice: reconciled ?? invoice, duplicate: true }
       }
       return { ok: false, status: 500, error: 'payment_complete_failed' }
     }
@@ -220,10 +242,13 @@ export async function recordPaymentAttempt(
     if (inserted.error || !inserted.data) {
       const raced = await findPaymentByIdempotency(input.companyId, input.idempotencyKey)
       if (raced) {
+        const reconciled = raced.status === 'completed'
+          ? await reconcileInvoicePaidTotal(input.companyId, raced.invoice_id)
+          : null
         return {
           ok: true,
           payment: raced,
-          invoice,
+          invoice: reconciled ?? invoice,
           duplicate: true,
         }
       }
@@ -234,7 +259,10 @@ export async function recordPaymentAttempt(
           input.providerOrderId,
         )
         if (byOrder) {
-          return { ok: true, payment: byOrder, invoice, duplicate: true }
+          const reconciled = byOrder.status === 'completed'
+            ? await reconcileInvoicePaidTotal(input.companyId, byOrder.invoice_id)
+            : null
+          return { ok: true, payment: byOrder, invoice: reconciled ?? invoice, duplicate: true }
         }
       }
       return { ok: false, status: 500, error: inserted.error?.message || 'payment_insert_failed' }
@@ -263,7 +291,12 @@ export async function recordPaymentAttempt(
       .eq('paid_total', invoice.paid_total)
       .select('*')
       .maybeSingle()
-    if (updated.data) nextInvoice = toInvoice(updated.data)
+
+    if (updated.data) {
+      nextInvoice = toInvoice(updated.data)
+    } else {
+      nextInvoice = (await reconcileInvoicePaidTotal(input.companyId, invoice.id)) ?? invoice
+    }
 
     if (
       isDepositSatisfied({

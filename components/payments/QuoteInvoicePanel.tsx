@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { tPayments } from '@/Lib/i18n/payments'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
@@ -90,6 +91,10 @@ export default function QuoteInvoicePanel({
           ? tPayments(locale, 'statusCanceled')
           : tPayments(locale, 'statusAwaitingDeposit')
 
+  const invoiceOutstanding = invoice
+    ? Math.max(0, Math.round((invoice.total - invoice.paid_total) * 100) / 100)
+    : 0
+
   return (
     <section
       data-invoice-panel
@@ -107,9 +112,16 @@ export default function QuoteInvoicePanel({
           <p>
             {tPayments(locale, 'total')}: US${invoice.total.toFixed(2)} ·{' '}
             {tPayments(locale, 'deposit')}: US${invoice.deposit_amount.toFixed(2)} ·{' '}
-            {tPayments(locale, 'paid')}: US${invoice.paid_total.toFixed(2)}
+            {tPayments(locale, 'paid')}: US${invoice.paid_total.toFixed(2)} ·{' '}
+            {tPayments(locale, 'invoiceOutstanding')}: US${invoiceOutstanding.toFixed(2)}
           </p>
           <div className="flex flex-wrap gap-2">
+            <Link
+              href={`/invoices/${invoice.id}`}
+              className="rounded-xl border border-cdl-border bg-cdl-surface px-4 py-2 text-xs font-bold uppercase"
+            >
+              {tPayments(locale, 'view')} {tPayments(locale, 'invoiceTitle')}
+            </Link>
             <a
               href={`/api/invoices/${invoice.id}/pdf`}
               className="rounded-xl border border-cdl-border bg-cdl-surface px-4 py-2 text-xs font-bold uppercase"

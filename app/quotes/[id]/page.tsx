@@ -49,7 +49,9 @@ export default async function QuoteDetailPage({
     session?.isPlatformAdmin || hasPermission(session?.permissions, 'quotes.convert'),
   )
   const canManageInvoice = Boolean(
-    session?.isPlatformAdmin || hasPermission(session?.permissions, 'quotes.manage'),
+    session?.isPlatformAdmin ||
+      (hasPermission(session?.permissions, 'quotes.manage') &&
+        hasPermission(session?.permissions, 'finance.invoices.view')),
   )
 
   return (

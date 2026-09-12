@@ -12,16 +12,13 @@ import { tCommon } from '@/Lib/i18n/common'
 import { tPaymentSettings } from '@/Lib/i18n/paymentSettings'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import type { CompanyPaypalPublicSettings } from '@/Lib/payments/paypalSettingsTypes'
+import type { OfflinePaymentSettings } from '@/Lib/payments/offlinePaymentSettingsTypes'
+import { paymentHelpLabels, paymentHelpText } from '@/Lib/payments/paymentSetupHelp'
+import PaymentSetupHelp from './PaymentSetupHelp'
 
-type OfflineMethods = {
-  zelle: boolean
-  bankTransfer: boolean
-}
+type OfflineMethods = { zelle: boolean; bankTransfer: boolean }
 
-function statusLabel(
-  locale: string,
-  status: CompanyPaypalPublicSettings['connectionStatus'],
-) {
+function statusLabel(locale: string, status: CompanyPaypalPublicSettings['connectionStatus']) {
   if (status === 'validated') return tPaymentSettings(locale, 'statusValidated')
   if (status === 'configured') return tPaymentSettings(locale, 'statusConfigured')
   if (status === 'error') return tPaymentSettings(locale, 'statusError')
@@ -33,31 +30,25 @@ function friendlyError(locale: string, code: string) {
   if (code === 'paypal_live_blocked') return tPaymentSettings(locale, 'errorLiveBlocked')
   if (code === 'paypal_sandbox_auth_failed') return tPaymentSettings(locale, 'errorAuthFailed')
   if (code === 'paypal_test_required') return tPaymentSettings(locale, 'errorTestRequired')
-  if (code === 'paypal_webhook_create_failed') {
-    return tPaymentSettings(locale, 'errorWebhookFailed')
-  }
-  if (
-    code === 'Forbidden' ||
-    code === 'company_context_required' ||
-    code === 'paypal_credentials_forbidden'
-  ) {
+  if (code === 'paypal_webhook_create_failed') return tPaymentSettings(locale, 'errorWebhookFailed')
+  if (code === 'Forbidden' || code === 'company_context_required' || code === 'paypal_credentials_forbidden') {
     return tPaymentSettings(locale, 'errorForbidden')
   }
   return code || tCommon(locale, 'error')
 }
 
 export default function PaymentSettingsDashboard({
-  companyName,
-  initialPaypal,
-  initialMethods,
+  companyName, initialPaypal, initialMethods, initialOfflineSettings,
 }: {
   companyName: string
   initialPaypal: CompanyPaypalPublicSettings
   initialMethods: OfflineMethods
+  initialOfflineSettings: OfflinePaymentSettings
 }) {
   const locale = useAuthLocaleFromMe()
   const [paypal, setPaypal] = useState(initialPaypal)
   const [methods] = useState(initialMethods)
+  const [offline, setOffline] = useState(initialOfflineSettings)
   const [clientId, setClientId] = useState(initialPaypal.clientId ?? '')
   const [clientSecret, setClientSecret] = useState('')
   const [replacingSecret, setReplacingSecret] = useState(false)
@@ -65,6 +56,7 @@ export default function PaymentSettingsDashboard({
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
   const [webhookBusy, setWebhookBusy] = useState(false)
+  const [offlineSaving, setOfflineSaving] = useState(false)
   const [copied, setCopied] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -72,10 +64,9 @@ export default function PaymentSettingsDashboard({
   const canManage = paypal.canManageCredentials
   const canTest = canManage && Boolean(paypal.clientId && paypal.clientSecretConfigured)
   const canWebhook = canManage && paypal.connectionStatus === 'validated'
-
   const lastTest = useMemo(() => {
     if (!paypal.lastTestedAt) return tPaymentSettings(locale, 'never')
-    return `${paypal.lastTestedAt} · ${paypal.lastTestStatus || '—'}`
+    return `${paypal.lastTestedAt} \u00b7 ${paypal.lastTestStatus || '\u2014'}`
   }, [locale, paypal.lastTestStatus, paypal.lastTestedAt])
 
   function applySettings(next: CompanyPaypalPublicSettings) {
@@ -88,95 +79,58 @@ export default function PaymentSettingsDashboard({
 
   async function onSave(event: FormEvent) {
     event.preventDefault()
-    if (!canManage) {
-      setError(tPaymentSettings(locale, 'errorForbidden'))
-      return
-    }
+    if (!canManage) { setError(tPaymentSettings(locale, 'errorForbidden')); return }
     setSaving(true)
     setError(null)
     setMessage(null)
     try {
       const res = await fetch('/api/company/payment-providers/paypal', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          environment: 'sandbox',
-          enabled,
-          clientId,
-          clientSecret: clientSecret.trim() || undefined,
-        }),
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ environment: 'sandbox', enabled, clientId, clientSecret: clientSecret.trim() || undefined }),
       })
-      const json = (await res.json()) as {
-        error?: string
-        data?: CompanyPaypalPublicSettings
-      }
-      if (!res.ok || !json.data) {
-        throw new Error(json.error || tCommon(locale, 'error'))
-      }
+      const json = (await res.json()) as { error?: string; data?: CompanyPaypalPublicSettings }
+      if (!res.ok || !json.data) throw new Error(json.error || tCommon(locale, 'error'))
       applySettings(json.data)
       setMessage(tPaymentSettings(locale, 'saved'))
     } catch (err) {
       setError(friendlyError(locale, err instanceof Error ? err.message : ''))
-    } finally {
-      setSaving(false)
-    }
+    } finally { setSaving(false) }
   }
 
   async function onTest() {
-    if (!canManage) {
-      setError(tPaymentSettings(locale, 'errorForbidden'))
-      return
-    }
+    if (!canManage) { setError(tPaymentSettings(locale, 'errorForbidden')); return }
     setTesting(true)
     setError(null)
     setMessage(null)
     try {
-      const res = await fetch('/api/company/payment-providers/paypal/test', {
-        method: 'POST',
-      })
-      const json = (await res.json()) as {
-        error?: string
-        data?: { message?: string; connectionStatus?: string }
-      }
+      const res = await fetch('/api/company/payment-providers/paypal/test', { method: 'POST' })
+      const json = (await res.json()) as { error?: string; data?: { message?: string; connectionStatus?: string } }
       const refresh = await fetch('/api/company/payment-providers/paypal')
-      const refreshed = (await refresh.json()) as {
-        data?: CompanyPaypalPublicSettings
-      }
+      const refreshed = (await refresh.json()) as { data?: CompanyPaypalPublicSettings }
       if (refreshed.data) applySettings(refreshed.data)
       if (!res.ok) throw new Error(json.error || tCommon(locale, 'error'))
       setMessage(json.data?.message || tPaymentSettings(locale, 'testOk'))
     } catch (err) {
       setError(friendlyError(locale, err instanceof Error ? err.message : ''))
-    } finally {
-      setTesting(false)
-    }
+    } finally { setTesting(false) }
   }
 
   async function onWebhook() {
-    if (!canManage) {
-      setError(tPaymentSettings(locale, 'errorForbidden'))
-      return
-    }
+    if (!canManage) { setError(tPaymentSettings(locale, 'errorForbidden')); return }
     setWebhookBusy(true)
     setError(null)
     setMessage(null)
     try {
-      const res = await fetch('/api/company/payment-providers/paypal/webhook', {
-        method: 'POST',
-      })
+      const res = await fetch('/api/company/payment-providers/paypal/webhook', { method: 'POST' })
       const json = (await res.json()) as { error?: string }
       const refresh = await fetch('/api/company/payment-providers/paypal')
-      const refreshed = (await refresh.json()) as {
-        data?: CompanyPaypalPublicSettings
-      }
+      const refreshed = (await refresh.json()) as { data?: CompanyPaypalPublicSettings }
       if (refreshed.data) applySettings(refreshed.data)
       if (!res.ok) throw new Error(json.error || tCommon(locale, 'error'))
       setMessage(tPaymentSettings(locale, 'webhookOk'))
     } catch (err) {
       setError(friendlyError(locale, err instanceof Error ? err.message : ''))
-    } finally {
-      setWebhookBusy(false)
-    }
+    } finally { setWebhookBusy(false) }
   }
 
   async function copyWebhook() {
@@ -186,235 +140,140 @@ export default function PaymentSettingsDashboard({
     window.setTimeout(() => setCopied(false), 1600)
   }
 
+  async function onOfflineSave(event: FormEvent) {
+    event.preventDefault()
+    setOfflineSaving(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/company/payment-providers/offline', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(offline),
+      })
+      const json = (await res.json()) as { error?: string; data?: OfflinePaymentSettings }
+      if (!res.ok || !json.data) throw new Error(json.error || tCommon(locale, 'error'))
+      setOffline(json.data)
+      setMessage(tPaymentSettings(locale, 'offlineSaved'))
+    } catch (err) {
+      setError(friendlyError(locale, err instanceof Error ? err.message : ''))
+    } finally { setOfflineSaving(false) }
+  }
+
   return (
-    <main
-      data-settings-payments
-      data-paypal-live-blocked="true"
-      data-paypal-public-checkout="off"
-      data-payment-settings-permission="company.settings"
-      data-paypal-company-scoped="true"
-      data-paypal-credential-manager={canManage ? 'yes' : 'no'}
-      className="p-4 sm:p-6"
-    >
+    <main data-settings-payments data-paypal-live-blocked="true" data-paypal-public-checkout="off"
+      data-payment-settings-permission="company.settings" data-paypal-company-scoped="true"
+      data-paypal-credential-manager={canManage ? 'yes' : 'no'} className="p-4 sm:p-6">
       <header className="mb-6">
-        <p
-          data-paypal-breadcrumb
-          className="text-xs font-bold uppercase tracking-[0.2em] text-red-600"
-        >
-          {tPaymentSettings(locale, 'breadcrumbSettings')}
-          {' → '}
-          {tPaymentSettings(locale, 'breadcrumbPayments')}
-          {' → '}
-          {tPaymentSettings(locale, 'breadcrumbProviders')}
-          {' → '}
+        <p data-paypal-breadcrumb className="text-xs font-bold uppercase tracking-[0.2em] text-red-600">
+          {tPaymentSettings(locale, 'breadcrumbSettings')}{' \u2192 '}
+          {tPaymentSettings(locale, 'breadcrumbPayments')}{' \u2192 '}
+          {tPaymentSettings(locale, 'breadcrumbProviders')}{' \u2192 '}
           {tPaymentSettings(locale, 'breadcrumbPaypal')}
         </p>
-        <h1 className="mt-1 text-2xl font-black text-neutral-900">
-          {tPaymentSettings(locale, 'title')}
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-neutral-600">
-          {tPaymentSettings(locale, 'subtitle')}
-        </p>
-        {companyName ? (
-          <p className="mt-2 text-sm font-semibold text-neutral-800">
-            {companyName}
-          </p>
-        ) : null}
-        <p className="mt-2 text-xs text-neutral-500">
-          {tPaymentSettings(locale, 'canonicalNote')}
-        </p>
-        <p className="mt-1 text-xs text-neutral-500">
-          {canManage
-            ? tPaymentSettings(locale, 'credentialManagerYes')
-            : tPaymentSettings(locale, 'credentialManagerNo')}
-        </p>
+        <h1 className="mt-1 text-2xl font-black text-neutral-900">{tPaymentSettings(locale, 'title')}</h1>
+        <p className="mt-2 max-w-2xl text-sm text-neutral-600">{tPaymentSettings(locale, 'subtitle')}</p>
+        {companyName ? <p className="mt-2 text-sm font-semibold text-neutral-800">{companyName}</p> : null}
+        <p className="mt-2 text-xs text-neutral-500">{tPaymentSettings(locale, 'canonicalNote')}</p>
+        <p className="mt-1 text-xs text-neutral-500">{tPaymentSettings(locale, canManage ? 'credentialManagerYes' : 'credentialManagerNo')}</p>
       </header>
 
-      {error ? (
-        <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
-      {message ? (
-        <p className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          {message}
-        </p>
-      ) : null}
+      <div className="mb-6"><PaymentSetupHelp locale={locale} /></div>
+      {error ? <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+      {message ? <p className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{message}</p> : null}
 
       <form onSubmit={onSave} className="space-y-5">
-        <BackofficeFormCard
-          title={tPaymentSettings(locale, 'paypal')}
-          actions={
-            <>
-              <BackofficeBtnPrimary type="submit" disabled={!canManage || saving}>
-                {saving ? tCommon(locale, 'saving') : tPaymentSettings(locale, 'save')}
-              </BackofficeBtnPrimary>
-              <BackofficeBtnSecondary onClick={onTest} disabled={!canTest || testing}>
-                {tPaymentSettings(locale, 'test')}
-              </BackofficeBtnSecondary>
-              <BackofficeBtnSecondary
-                onClick={onWebhook}
-                disabled={!canWebhook || webhookBusy}
-              >
-                {tPaymentSettings(locale, 'configureWebhook')}
-              </BackofficeBtnSecondary>
-            </>
-          }
-        >
+        <BackofficeFormCard title={tPaymentSettings(locale, 'paypal')} actions={<>
+          <BackofficeBtnPrimary type="submit" disabled={!canManage || saving}>{saving ? tCommon(locale, 'saving') : tPaymentSettings(locale, 'save')}</BackofficeBtnPrimary>
+          <BackofficeBtnSecondary onClick={onTest} disabled={!canTest || testing}>{tPaymentSettings(locale, 'test')}</BackofficeBtnSecondary>
+          <BackofficeBtnSecondary onClick={onWebhook} disabled={!canWebhook || webhookBusy}>{tPaymentSettings(locale, 'configureWebhook')}</BackofficeBtnSecondary>
+        </>}>
           <div className="sm:col-span-2 lg:col-span-3 flex flex-wrap gap-2">
-            <span
-              data-paypal-status={paypal.connectionStatus}
-              className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-700"
-            >
-              {statusLabel(locale, paypal.connectionStatus)}
-            </span>
-            <span
-              data-paypal-environment="sandbox"
-              className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-200"
-            >
-              {tPaymentSettings(locale, 'environment')}: {tPaymentSettings(locale, 'sandbox')}
-            </span>
-            <span
-              data-paypal-live-status="blocked"
-              className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-600"
-            >
-              {tPaymentSettings(locale, 'liveDisabled')}
-            </span>
-            <span
-              data-public-checkout-off
-              className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-600"
-            >
-              {tPaymentSettings(locale, 'publicCheckoutOff')}
-            </span>
+            <span data-paypal-status={paypal.connectionStatus} className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-700">{statusLabel(locale, paypal.connectionStatus)}</span>
+            <span data-paypal-environment="sandbox" className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">{tPaymentSettings(locale, 'environment')}: {tPaymentSettings(locale, 'sandbox')}</span>
+            <span data-paypal-live-status="blocked" className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-600">{tPaymentSettings(locale, 'liveDisabled')}</span>
+            <span data-public-checkout-off className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-600">{tPaymentSettings(locale, 'publicCheckoutOff')}</span>
           </div>
-
-          <BackofficeField label={tPaymentSettings(locale, 'clientId')} className="sm:col-span-2">
-            <BackofficeInput
-              value={clientId}
-              onChange={setClientId}
-              placeholder="AY..."
-              disabled={!canManage}
-            />
-          </BackofficeField>
-
-          <BackofficeField
-            label={tPaymentSettings(locale, 'clientSecret')}
-            className="sm:col-span-2"
-          >
-            <input
-              data-paypal-secret-masked
-              type="password"
-              autoComplete="new-password"
-              value={
-                paypal.clientSecretConfigured && !replacingSecret
-                  ? '••••••••••••'
-                  : clientSecret
-              }
-              disabled={!canManage || (paypal.clientSecretConfigured && !replacingSecret)}
-              placeholder={
-                paypal.clientSecretConfigured
-                  ? '••••••••••••'
-                  : tPaymentSettings(locale, 'secretPlaceholder')
-              }
-              onChange={(event) => setClientSecret(event.target.value)}
-              className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100 disabled:text-neutral-400"
-            />
-            <span className="mt-1 flex items-center justify-between text-xs text-neutral-500">
-              <span>
-                {paypal.clientSecretConfigured
-                  ? tPaymentSettings(locale, 'secretConfigured')
-                  : tPaymentSettings(locale, 'secretPlaceholder')}
+          <div className="sm:col-span-2 lg:col-span-3"><PaymentSetupHelp locale={locale} topic="buyer" /></div>
+          <div className="min-w-0 space-y-2 sm:col-span-2">
+            <PaymentSetupHelp locale={locale} topic="clientId" />
+            <BackofficeField label={tPaymentSettings(locale, 'clientId')}>
+              <BackofficeInput value={clientId} onChange={setClientId} placeholder="AY..." disabled={!canManage} />
+            </BackofficeField>
+          </div>
+          <div className="min-w-0 space-y-2 sm:col-span-2">
+            <PaymentSetupHelp locale={locale} topic="clientSecret" />
+            <BackofficeField label={tPaymentSettings(locale, 'clientSecret')}>
+              <input data-paypal-secret-masked type="password" autoComplete="new-password"
+                value={paypal.clientSecretConfigured && !replacingSecret ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : clientSecret}
+                disabled={!canManage || (paypal.clientSecretConfigured && !replacingSecret)}
+                placeholder={paypal.clientSecretConfigured ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : tPaymentSettings(locale, 'secretPlaceholder')}
+                onChange={(event) => setClientSecret(event.target.value)}
+                className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100 disabled:text-neutral-400" />
+              <span className="mt-1 flex items-center justify-between text-xs text-neutral-500">
+                <span>{tPaymentSettings(locale, paypal.clientSecretConfigured ? 'secretConfigured' : 'secretPlaceholder')}</span>
+                {canManage ? <button type="button" className="font-semibold text-red-600" onClick={() => { setReplacingSecret(true); setClientSecret('') }}>{tPaymentSettings(locale, 'replaceSecret')}</button> : null}
               </span>
-              {canManage ? (
-                <button
-                  type="button"
-                  className="font-semibold text-red-600"
-                  onClick={() => {
-                    setReplacingSecret(true)
-                    setClientSecret('')
-                  }}
-                >
-                  {tPaymentSettings(locale, 'replaceSecret')}
-                </button>
-              ) : null}
-            </span>
-          </BackofficeField>
-
-          <BackofficeField
-            label={tPaymentSettings(locale, 'webhookUrl')}
-            className="sm:col-span-2 lg:col-span-3"
-          >
+            </BackofficeField>
+          </div>
+          <div className="sm:col-span-2 lg:col-span-3"><PaymentSetupHelp locale={locale} topic="webhook" /></div>
+          <BackofficeField label={tPaymentSettings(locale, 'webhookUrl')} className="sm:col-span-2 lg:col-span-3">
             <div className="flex flex-col gap-2 sm:flex-row">
-              <input
-                readOnly
-                value={paypal.webhookUrl || ''}
-                className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-700"
-              />
-              <BackofficeBtnSecondary onClick={copyWebhook} disabled={!paypal.webhookUrl}>
-                {copied
-                  ? tPaymentSettings(locale, 'copied')
-                  : tPaymentSettings(locale, 'copy')}
-              </BackofficeBtnSecondary>
+              <input readOnly value={paypal.webhookUrl || ''} className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-700" />
+              <BackofficeBtnSecondary onClick={copyWebhook} disabled={!paypal.webhookUrl}>{tPaymentSettings(locale, copied ? 'copied' : 'copy')}</BackofficeBtnSecondary>
             </div>
           </BackofficeField>
-
           <BackofficeField label={tPaymentSettings(locale, 'webhookStatus')}>
-            <p
-              data-paypal-webhook-status={paypal.webhookConfigured ? 'configured' : 'missing'}
-              className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-700"
-            >
-              {paypal.webhookConfigured
-                ? tPaymentSettings(locale, 'webhookReady')
-                : tPaymentSettings(locale, 'webhookMissing')}
-            </p>
+            <p data-paypal-webhook-status={paypal.webhookConfigured ? 'configured' : 'missing'} className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-700">{tPaymentSettings(locale, paypal.webhookConfigured ? 'webhookReady' : 'webhookMissing')}</p>
           </BackofficeField>
-
-          <BackofficeField label={tPaymentSettings(locale, 'webhookId')}>
-            <BackofficeInput value={paypal.webhookId || ''} onChange={() => undefined} disabled />
-          </BackofficeField>
-
-          <BackofficeField label={tPaymentSettings(locale, 'lastTest')}>
-            <p className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-700">
-              {lastTest}
-            </p>
-          </BackofficeField>
-
+          <BackofficeField label={tPaymentSettings(locale, 'webhookId')}><BackofficeInput value={paypal.webhookId || ''} onChange={() => undefined} disabled /></BackofficeField>
+          <BackofficeField label={tPaymentSettings(locale, 'lastTest')}><p className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-700">{lastTest}</p></BackofficeField>
           <label className="sm:col-span-2 lg:col-span-3 flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm font-semibold text-neutral-800">
-            <input
-              type="checkbox"
-              checked={enabled}
-              disabled={!canManage}
-              onChange={(event) => setEnabled(event.target.checked)}
-            />
-            {tPaymentSettings(locale, 'enabled')}
+            <input type="checkbox" checked={enabled} disabled={!canManage} onChange={(event) => setEnabled(event.target.checked)} />{tPaymentSettings(locale, 'enabled')}
           </label>
         </BackofficeFormCard>
       </form>
 
-      <section className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <article
-          data-zelle-preserved={methods.zelle ? 'yes' : 'no'}
-          className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm"
-        >
-          <h2 className="text-lg font-bold text-neutral-900">
-            {tPaymentSettings(locale, 'zelle')}
-          </h2>
-          <p className="mt-2 text-sm text-neutral-600">
-            {tPaymentSettings(locale, 'preserved')}
-          </p>
-        </article>
-        <article
-          data-bank-transfer-preserved={methods.bankTransfer ? 'yes' : 'no'}
-          className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm"
-        >
-          <h2 className="text-lg font-bold text-neutral-900">
-            {tPaymentSettings(locale, 'bank')}
-          </h2>
-          <p className="mt-2 text-sm text-neutral-600">
-            {tPaymentSettings(locale, 'preserved')}
-          </p>
-        </article>
-      </section>
+      <form onSubmit={onOfflineSave} className="mt-6 space-y-5">
+        <BackofficeFormCard title={tPaymentSettings(locale, 'zelle')} actions={
+          <BackofficeBtnPrimary type="submit" disabled={offlineSaving}>{offlineSaving ? tCommon(locale, 'saving') : tPaymentSettings(locale, 'saveOffline')}</BackofficeBtnPrimary>
+        }>
+          <span hidden data-zelle-preserved={methods.zelle ? 'yes' : 'no'} />
+          <div className="sm:col-span-2 lg:col-span-3"><PaymentSetupHelp locale={locale} topic="zelle" /></div>
+          <BackofficeField label={tPaymentSettings(locale, 'recipientName')}>
+            <BackofficeInput value={offline.zelle.recipientName} onChange={(value) => setOffline((current) => ({ ...current, zelle: { ...current.zelle, recipientName: value } }))} />
+          </BackofficeField>
+          <BackofficeField label={tPaymentSettings(locale, 'zelleContact')}>
+            <BackofficeInput value={offline.zelle.recipientContact} onChange={(value) => setOffline((current) => ({ ...current, zelle: { ...current.zelle, recipientContact: value } }))} placeholder={tPaymentSettings(locale, 'zelleContactHint')} />
+          </BackofficeField>
+          <BackofficeField label={tPaymentSettings(locale, 'instructions')} className="sm:col-span-2 lg:col-span-3">
+            <textarea value={offline.zelle.instructions} onChange={(event) => setOffline((current) => ({ ...current, zelle: { ...current.zelle, instructions: event.target.value } }))} className="min-h-24 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100" />
+          </BackofficeField>
+          <label className="sm:col-span-2 lg:col-span-3 flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm font-semibold text-neutral-800">
+            <input type="checkbox" checked={offline.zelle.enabled} onChange={(event) => setOffline((current) => ({ ...current, zelle: { ...current.zelle, enabled: event.target.checked } }))} />{tPaymentSettings(locale, 'zelleEnabled')}
+          </label>
+        </BackofficeFormCard>
+        <BackofficeFormCard title={tPaymentSettings(locale, 'bank')} actions={
+          <BackofficeBtnPrimary type="submit" disabled={offlineSaving}>{offlineSaving ? tCommon(locale, 'saving') : tPaymentSettings(locale, 'saveOffline')}</BackofficeBtnPrimary>
+        }>
+          <span hidden data-bank-transfer-preserved={methods.bankTransfer ? 'yes' : 'no'} />
+          <div className="sm:col-span-2 lg:col-span-3"><PaymentSetupHelp locale={locale} topic="bank" /></div>
+          <BackofficeField label={tPaymentSettings(locale, 'bankName')}><BackofficeInput value={offline.bankTransfer.bankName} onChange={(value) => setOffline((current) => ({ ...current, bankTransfer: { ...current.bankTransfer, bankName: value } }))} /></BackofficeField>
+          <BackofficeField label={tPaymentSettings(locale, 'accountHolder')}><BackofficeInput value={offline.bankTransfer.accountHolder} onChange={(value) => setOffline((current) => ({ ...current, bankTransfer: { ...current.bankTransfer, accountHolder: value } }))} /></BackofficeField>
+          <BackofficeField label={tPaymentSettings(locale, 'routingNumber')}><BackofficeInput value={offline.bankTransfer.routingNumber} onChange={(value) => setOffline((current) => ({ ...current, bankTransfer: { ...current.bankTransfer, routingNumber: value } }))} /></BackofficeField>
+          <BackofficeField label={tPaymentSettings(locale, 'accountNumber')}><BackofficeInput value={offline.bankTransfer.accountNumber} onChange={(value) => setOffline((current) => ({ ...current, bankTransfer: { ...current.bankTransfer, accountNumber: value } }))} /></BackofficeField>
+          {(['wireRoutingNumber', 'paymentAddress', 'checkPayableTo'] as const).map((field) => (
+            <BackofficeField key={field} label={paymentHelpText(locale, paymentHelpLabels[field])}>
+              <BackofficeInput value={offline.bankTransfer[field] ?? ''} onChange={(value) => setOffline((current) => ({ ...current, bankTransfer: { ...current.bankTransfer, [field]: value } }))} />
+            </BackofficeField>
+          ))}
+          <BackofficeField label={tPaymentSettings(locale, 'instructions')} className="sm:col-span-2 lg:col-span-3">
+            <textarea value={offline.bankTransfer.instructions} onChange={(event) => setOffline((current) => ({ ...current, bankTransfer: { ...current.bankTransfer, instructions: event.target.value } }))} className="min-h-24 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100" />
+          </BackofficeField>
+          <p className="sm:col-span-2 lg:col-span-3 text-xs text-amber-800">{tPaymentSettings(locale, 'offlineSecurityNote')}</p>
+          <label className="sm:col-span-2 lg:col-span-3 flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm font-semibold text-neutral-800">
+            <input type="checkbox" checked={offline.bankTransfer.enabled} onChange={(event) => setOffline((current) => ({ ...current, bankTransfer: { ...current.bankTransfer, enabled: event.target.checked } }))} />{tPaymentSettings(locale, 'bankEnabled')}
+          </label>
+        </BackofficeFormCard>
+      </form>
     </main>
   )
 }
