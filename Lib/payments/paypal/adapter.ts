@@ -32,12 +32,30 @@ export type PaypalCaptureResult = PaypalOrderResult & {
   currency: string
 }
 
+export type PaypalRefundResult = {
+  provider: 'paypal'
+  environment: 'sandbox'
+  captureId: string
+  refundId: string
+  status: string
+  amount: number
+  currency: string
+  mock: boolean
+}
+
 export interface PaypalOrdersAdapter {
   createOrder(input: PaypalCreateOrderInput): Promise<PaypalOrderResult>
   captureOrder(input: {
     orderId: string
     requestId: string
   }): Promise<PaypalCaptureResult>
+  refundCapture(input: {
+    captureId: string
+    amount: number
+    currency: string
+    requestId: string
+    note?: string | null
+  }): Promise<PaypalRefundResult>
 }
 
 const mockOrders = new Map<string, PaypalCreateOrderInput>()
@@ -71,6 +89,25 @@ export class MockPaypalAdapter implements PaypalOrdersAdapter {
       status: 'COMPLETED',
       amount: created.amount,
       currency: created.currency,
+      mock: true,
+    }
+  }
+
+  async refundCapture(input: {
+    captureId: string
+    amount: number
+    currency: string
+    requestId: string
+    note?: string | null
+  }): Promise<PaypalRefundResult> {
+    return {
+      provider: 'paypal',
+      environment: 'sandbox',
+      captureId: input.captureId,
+      refundId: `MOCK-REFUND-${input.requestId.slice(0, 16)}`,
+      status: 'COMPLETED',
+      amount: input.amount,
+      currency: input.currency,
       mock: true,
     }
   }
@@ -187,6 +224,57 @@ export class SandboxPaypalAdapter implements PaypalOrdersAdapter {
       status: data.status || 'COMPLETED',
       amount: Number(capture.amount?.value || 0),
       currency: capture.amount?.currency_code || 'USD',
+      mock: false,
+    }
+  }
+
+  async refundCapture(input: {
+    captureId: string
+    amount: number
+    currency: string
+    requestId: string
+    note?: string | null
+  }): Promise<PaypalRefundResult> {
+    assertSandboxOnly()
+    const token = await paypalAccessToken(this.clientId, this.secret)
+    const response = await fetch(
+      `${paypalApiBase('sandbox')}/v2/payments/captures/${encodeURIComponent(input.captureId)}/refund`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'PayPal-Request-Id': input.requestId,
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify({
+          amount: {
+            value: Number(input.amount).toFixed(2),
+            currency_code: input.currency.toUpperCase(),
+          },
+          ...(input.note?.trim()
+            ? { note_to_payer: input.note.trim().slice(0, 255) }
+            : {}),
+        }),
+        cache: 'no-store',
+      },
+    )
+    const data = (await response.json().catch(() => null)) as {
+      id?: string
+      status?: string
+      amount?: { value?: string; currency_code?: string }
+    } | null
+    if (!response.ok || !data?.id) {
+      throw new Error('PAYPAL_REFUND_FAILED')
+    }
+    return {
+      provider: 'paypal',
+      environment: 'sandbox',
+      captureId: input.captureId,
+      refundId: data.id,
+      status: data.status || 'PENDING',
+      amount: Number(data.amount?.value || input.amount),
+      currency: data.amount?.currency_code || input.currency,
       mock: false,
     }
   }
