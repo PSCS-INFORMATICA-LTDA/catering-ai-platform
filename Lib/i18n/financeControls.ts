@@ -44,6 +44,11 @@ const { t, list } = makeI18nModule('financeControls', 'billing', {
     en: 'PayPal Sandbox refund executed and balance recalculated.',
     es: 'Reembolso PayPal Sandbox ejecutado y saldo recalculado.',
   },
+  paypalRefundPending: {
+    pt: 'O PayPal aceitou o reembolso e ele está processando. O webhook verificado finalizará a conciliação quando o status mudar para concluído.',
+    en: 'PayPal accepted the refund and it is processing. The verified webhook will finish reconciliation when the status becomes completed.',
+    es: 'PayPal aceptó el reembolso y está procesando. El webhook verificado finalizará la conciliación cuando el estado cambie a completado.',
+  },
   paypalSandboxRefundCopy: {
     pt: 'Este botão devolve o valor pela captura original no PayPal Sandbox. O valor e a moeda vêm do servidor. Live continua bloqueado.',
     en: 'This button refunds the original capture in PayPal Sandbox. Amount and currency are server-owned. Live remains blocked.',
