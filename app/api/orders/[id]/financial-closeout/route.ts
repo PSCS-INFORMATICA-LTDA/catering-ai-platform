@@ -3,6 +3,7 @@ import {
   requireApiAuth,
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
+import type { AuthSessionContext } from '@/Lib/auth/types'
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 import {
   finalizeEventFinancialCloseout,
@@ -18,7 +19,7 @@ type Params = { params: Promise<{ id: string }> }
 
 const EXTRA_TYPES = new Set(['extra_service', 'overtime', 'equipment', 'damage', 'other'])
 
-function canViewFinancial(session: Awaited<ReturnType<typeof requireApiAuth>> extends { ok: true; session: infer S } ? S : never) {
+function canViewFinancial(session: AuthSessionContext) {
   return (
     session.isPlatformAdmin ||
     hasPermission(session.permissions, 'orders.financial.view') ||
@@ -26,7 +27,7 @@ function canViewFinancial(session: Awaited<ReturnType<typeof requireApiAuth>> ex
   )
 }
 
-function canManageCloseout(session: Awaited<ReturnType<typeof requireApiAuth>> extends { ok: true; session: infer S } ? S : never) {
+function canManageCloseout(session: AuthSessionContext) {
   return session.isPlatformAdmin || hasPermission(session.permissions, 'finance.adjustments.manage')
 }
 
