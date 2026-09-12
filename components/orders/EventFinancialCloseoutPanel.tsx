@@ -39,6 +39,19 @@ function lineTypeLabel(type: ExtraDraft['line_type'], locale: string | null | un
   return tEventFinancialCloseout(locale, 'typeExtraService')
 }
 
+function closeoutErrorMessage(code: string, locale: string | null | undefined) {
+  if (code === 'service_order_must_be_completed') {
+    return tEventFinancialCloseout(locale, 'completeOrderFirst')
+  }
+  if (code === 'guest_overage_pricing_missing') {
+    return tEventFinancialCloseout(locale, 'pricingMissing')
+  }
+  if (code === 'original_invoice_canceled') {
+    return tEventFinancialCloseout(locale, 'originalInvoiceCanceled')
+  }
+  return `${tEventFinancialCloseout(locale, 'error')} (${code})`
+}
+
 export default function EventFinancialCloseoutPanel({
   orderId,
   canManage,
@@ -91,7 +104,8 @@ export default function EventFinancialCloseoutPanel({
       if (!response.ok || !payload?.data) throw new Error(payload?.error || `HTTP ${response.status}`)
       hydrateForm(payload.data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : tEventFinancialCloseout(locale, 'error'))
+      const code = err instanceof Error ? err.message : 'unknown_error'
+      setError(closeoutErrorMessage(code, locale))
     } finally {
       setLoading(false)
     }
@@ -110,7 +124,10 @@ export default function EventFinancialCloseoutPanel({
     [adults, children4To12],
   )
   const finalized = data?.status === 'invoiced' || data?.status === 'closed_no_charge' || data?.status === 'void'
-  const orderCompleted = data?.service_order_status === 'completed'
+  const originalOutstanding = useMemo(
+    () => Math.max(0, Math.round(((data?.original_invoice?.total || 0) - (data?.original_invoice?.paid_total || 0)) * 100) / 100),
+    [data?.original_invoice?.paid_total, data?.original_invoice?.total],
+  )
 
   function addExtra() {
     setExtras((current) => [
@@ -158,7 +175,8 @@ export default function EventFinancialCloseoutPanel({
       hydrateForm(payload.data)
       setHint(tEventFinancialCloseout(locale, 'saved'))
     } catch (err) {
-      setError(err instanceof Error ? err.message : tEventFinancialCloseout(locale, 'error'))
+      const code = err instanceof Error ? err.message : 'unknown_error'
+      setError(closeoutErrorMessage(code, locale))
     } finally {
       setBusy(false)
     }
@@ -169,6 +187,9 @@ export default function EventFinancialCloseoutPanel({
     setError(null)
     setHint(null)
     try {
+      // The database checks the Service Order status at this exact moment. We do
+      // not disable this action based on cached client state, so a just-completed
+      // order can be finalized without a page reload.
       const response = await fetch(`/api/orders/${orderId}/financial-closeout`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -186,7 +207,8 @@ export default function EventFinancialCloseoutPanel({
           : tEventFinancialCloseout(locale, 'finalized'),
       )
     } catch (err) {
-      setError(err instanceof Error ? err.message : tEventFinancialCloseout(locale, 'error'))
+      const code = err instanceof Error ? err.message : 'unknown_error'
+      setError(closeoutErrorMessage(code, locale))
     } finally {
       setBusy(false)
     }
@@ -210,7 +232,8 @@ export default function EventFinancialCloseoutPanel({
       setPaymentLink(payload.data.url)
       setHint(tEventFinancialCloseout(locale, 'paymentLinkCreated'))
     } catch (err) {
-      setError(err instanceof Error ? err.message : tEventFinancialCloseout(locale, 'error'))
+      const code = err instanceof Error ? err.message : 'unknown_error'
+      setError(closeoutErrorMessage(code, locale))
     } finally {
       setBusy(false)
     }
@@ -368,12 +391,19 @@ export default function EventFinancialCloseoutPanel({
         </div>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <MoneyMetric label={tEventFinancialCloseout(locale, 'originalTotal')} value={data.original_invoice?.total || 0} currency={data.currency_code} locale={locale} />
+        <MoneyMetric label={tEventFinancialCloseout(locale, 'originalOutstanding')} value={originalOutstanding} currency={data.currency_code} locale={locale} />
         <MoneyMetric label={tEventFinancialCloseout(locale, 'guestOverageTotal')} value={data.guest_overage_total} currency={data.currency_code} locale={locale} />
         <MoneyMetric label={tEventFinancialCloseout(locale, 'extrasTotal')} value={data.extra_services_total} currency={data.currency_code} locale={locale} />
         <MoneyMetric label={tEventFinancialCloseout(locale, 'finalEventTotal')} value={data.final_event_total} currency={data.currency_code} locale={locale} strong />
       </div>
+
+      {originalOutstanding > 0 && data.supplemental_invoice ? (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+          {tEventFinancialCloseout(locale, 'originalBalanceNotice')}
+        </p>
+      ) : null}
 
       {data.original_invoice ? (
         <div className="flex flex-wrap gap-3 text-sm">
@@ -398,7 +428,7 @@ export default function EventFinancialCloseoutPanel({
           </button>
         ) : null}
         {canManage && data.status === 'ready_for_review' ? (
-          <button type="button" className={glassBtn('secondary')} disabled={busy || !orderCompleted} onClick={() => void finalizeCloseout()}>
+          <button type="button" className={glassBtn('secondary')} disabled={busy} onClick={() => void finalizeCloseout()}>
             {tEventFinancialCloseout(locale, 'finalize')}
           </button>
         ) : null}
@@ -408,12 +438,6 @@ export default function EventFinancialCloseoutPanel({
           </button>
         ) : null}
       </div>
-
-      {canManage && data.status === 'ready_for_review' && !orderCompleted ? (
-        <p className="text-sm font-semibold text-amber-700">
-          {tEventFinancialCloseout(locale, 'completeOrderFirst')}
-        </p>
-      ) : null}
 
       {paymentLink ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
