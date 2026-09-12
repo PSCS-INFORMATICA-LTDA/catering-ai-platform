@@ -34,6 +34,26 @@ const { t, list } = makeI18nModule('financeControls', 'billing', {
   markRefundComplete: { pt: 'Registrar reembolso concluído', en: 'Record completed refund', es: 'Registrar reembolso completado' },
   refundReference: { pt: 'Referência do reembolso', en: 'Refund reference', es: 'Referencia del reembolso' },
   refundCompleted: { pt: 'Reembolso concluído e saldo recalculado.', en: 'Refund completed and balance recalculated.', es: 'Reembolso completado y saldo recalculado.' },
+  executePaypalRefund: {
+    pt: 'Executar no PayPal Sandbox',
+    en: 'Execute in PayPal Sandbox',
+    es: 'Ejecutar en PayPal Sandbox',
+  },
+  paypalRefundExecuted: {
+    pt: 'Reembolso PayPal Sandbox executado e saldo recalculado.',
+    en: 'PayPal Sandbox refund executed and balance recalculated.',
+    es: 'Reembolso PayPal Sandbox ejecutado y saldo recalculado.',
+  },
+  paypalSandboxRefundCopy: {
+    pt: 'Este botão devolve o valor pela captura original no PayPal Sandbox. O valor e a moeda vêm do servidor. Live continua bloqueado.',
+    en: 'This button refunds the original capture in PayPal Sandbox. Amount and currency are server-owned. Live remains blocked.',
+    es: 'Este botón reembolsa la captura original en PayPal Sandbox. El monto y la moneda los controla el servidor. Live sigue bloqueado.',
+  },
+  manualRefundCopy: {
+    pt: 'Para Zelle ou banco, faça a devolução fora do sistema e registre aqui a referência somente depois de confirmar que ela foi concluída.',
+    en: 'For Zelle or bank transfer, return the funds outside the system and record the reference here only after confirming completion.',
+    es: 'Para Zelle o transferencia bancaria, devuelva los fondos fuera del sistema y registre aquí la referencia solo después de confirmar que terminó.',
+  },
   refundStatusRequested: { pt: 'Solicitado', en: 'Requested', es: 'Solicitado' },
   refundStatusProcessing: { pt: 'Processando', en: 'Processing', es: 'Procesando' },
   refundStatusCompleted: { pt: 'Concluído', en: 'Completed', es: 'Completado' },
@@ -66,9 +86,9 @@ const { t, list } = makeI18nModule('financeControls', 'billing', {
     es: 'Hay una Orden de Servicio vinculada. Cancele la OS por el flujo operativo antes de cancelar la factura.',
   },
   noAutomaticRefund: {
-    pt: 'Este controle registra o reembolso; não movimenta dinheiro no PayPal, Zelle ou banco automaticamente.',
-    en: 'This control records the refund; it does not automatically move money in PayPal, Zelle, or the bank.',
-    es: 'Este control registra el reembolso; no mueve dinero automáticamente en PayPal, Zelle o el banco.',
+    pt: 'PayPal pode ser devolvido automaticamente apenas no Sandbox. Zelle e banco continuam exigindo confirmação externa. PayPal Live permanece bloqueado.',
+    en: 'PayPal can be refunded automatically in Sandbox only. Zelle and bank transfers still require external confirmation. PayPal Live remains blocked.',
+    es: 'PayPal puede reembolsarse automáticamente solo en Sandbox. Zelle y banco aún requieren confirmación externa. PayPal Live sigue bloqueado.',
   },
 })
 
