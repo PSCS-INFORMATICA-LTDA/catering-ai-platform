@@ -43,6 +43,15 @@ function cancellationStatusLabel(status: string, locale: string | null | undefin
   return status
 }
 
+type PostPayload = {
+  error?: string
+  data?: {
+    pending?: boolean
+    status?: string
+    [key: string]: unknown
+  }
+}
+
 export default function FinanceControls({
   invoice,
   canReconcile,
@@ -71,8 +80,10 @@ export default function FinanceControls({
     () => invoice.payments.filter((payment) => payment.status === 'completed'),
     [invoice.payments],
   )
-  const openRefunds = useMemo(
-    () => invoice.refunds.filter((refund) => refund.status === 'requested' || refund.status === 'processing'),
+  const actionableRefunds = useMemo(
+    () => invoice.refunds.filter((refund) =>
+      refund.status === 'requested' || refund.status === 'processing' || refund.status === 'failed',
+    ),
     [invoice.refunds],
   )
   const activeCancellation = invoice.cancellations.find(
@@ -82,13 +93,14 @@ export default function FinanceControls({
   const [refundPaymentId, setRefundPaymentId] = useState(completedPayments[0]?.id || '')
   const [refundAmount, setRefundAmount] = useState('')
   const [refundReason, setRefundReason] = useState('')
-  const [completeRefundId, setCompleteRefundId] = useState(openRefunds[0]?.id || '')
+  const [completeRefundId, setCompleteRefundId] = useState(actionableRefunds[0]?.id || '')
   const [refundReference, setRefundReference] = useState('')
   const [cancellationReason, setCancellationReason] = useState('')
 
-  const selectedOpenRefund = openRefunds.find((refund) => refund.id === completeRefundId) || openRefunds[0]
+  const selectedActionableRefund =
+    actionableRefunds.find((refund) => refund.id === completeRefundId) || actionableRefunds[0]
   const selectedRefundPayment = completedPayments.find(
-    (payment) => payment.id === selectedOpenRefund?.payment_id,
+    (payment) => payment.id === selectedActionableRefund?.payment_id,
   )
   const selectedRefundIsPaypal = selectedRefundPayment?.provider === 'paypal'
 
@@ -98,9 +110,9 @@ export default function FinanceControls({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    const payload = (await response.json().catch(() => null)) as { error?: string } | null
+    const payload = (await response.json().catch(() => null)) as PostPayload | null
     if (!response.ok) throw new Error(payload?.error || `HTTP ${response.status}`)
-    return payload
+    return { status: response.status, payload }
   }
 
   function begin(action: string) {
@@ -179,7 +191,13 @@ export default function FinanceControls({
     if (!completeRefundId) return
     begin('paypal-refund')
     try {
-      await postJson(`/api/invoices/${invoice.id}/refunds/${completeRefundId}/execute-paypal`)
+      const result = await postJson(
+        `/api/invoices/${invoice.id}/refunds/${completeRefundId}/execute-paypal`,
+      )
+      if (result.status === 202 || result.payload?.data?.pending === true) {
+        finish(tFinanceControls(locale, 'paypalRefundPending'))
+        return
+      }
       finish(tFinanceControls(locale, 'paypalRefundExecuted'))
     } catch (err) {
       fail(err)
@@ -278,13 +296,13 @@ export default function FinanceControls({
               </form>
             ) : null}
 
-            {openRefunds.length > 0 ? (
+            {actionableRefunds.length > 0 ? (
               <div className="mt-5 space-y-3 border-t border-neutral-100 pt-4">
                 <label className="block text-xs font-bold text-neutral-600">
                   {tFinanceControls(locale, 'refundsTitle')}
                   <select value={completeRefundId} onChange={(event) => { setCompleteRefundId(event.target.value); setRefundReference('') }} className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900">
-                    {openRefunds.map((refund) => (
-                      <option value={refund.id} key={refund.id}>{formatMoney(refund.amount, refund.currency_code, locale)} · {refund.reason}</option>
+                    {actionableRefunds.map((refund) => (
+                      <option value={refund.id} key={refund.id}>{refundStatusLabel(refund.status, locale)} · {formatMoney(refund.amount, refund.currency_code, locale)} · {refund.reason}</option>
                     ))}
                   </select>
                 </label>
