@@ -31,6 +31,16 @@ const { t, list } = makeI18nModule('eventFinancialCloseout', 'finance', {
     en: 'The supplemental invoice can only be issued after the Service Order is Completed.',
     es: 'La factura adicional solo puede emitirse después de que la Orden de Servicio esté Completada.',
   },
+  pricingMissing: {
+    pt: 'Há convidados adicionais, mas o preço contratado por pessoa não pôde ser recuperado. Revise o fechamento antes de faturar.',
+    en: 'There are additional guests, but the contracted per-person price could not be recovered. Review the closeout before invoicing.',
+    es: 'Hay invitados adicionales, pero no se pudo recuperar el precio contratado por persona. Revise el cierre antes de facturar.',
+  },
+  originalInvoiceCanceled: {
+    pt: 'A fatura original está cancelada. O ajuste pós-evento não pode ser finalizado por este fluxo.',
+    en: 'The original invoice is canceled. The post-event adjustment cannot be finalized through this flow.',
+    es: 'La factura original está cancelada. El ajuste posterior al evento no puede finalizarse por este flujo.',
+  },
   noAutomaticCredit: {
     pt: 'Se o público real for menor que o contratado, o sistema não gera crédito ou reembolso automaticamente.',
     en: 'If actual attendance is below the contracted amount, the system does not create an automatic credit or refund.',
@@ -42,7 +52,13 @@ const { t, list } = makeI18nModule('eventFinancialCloseout', 'finance', {
   extrasTotal: { pt: 'Outros extras', en: 'Other extras', es: 'Otros extras' },
   adjustmentTotal: { pt: 'Fatura complementar', en: 'Supplemental invoice', es: 'Factura complementaria' },
   originalTotal: { pt: 'Valor original', en: 'Original total', es: 'Valor original' },
+  originalOutstanding: { pt: 'Saldo pendente da fatura original', en: 'Original invoice outstanding', es: 'Saldo pendiente de la factura original' },
   finalEventTotal: { pt: 'Total final da festa', en: 'Final event total', es: 'Total final del evento' },
+  originalBalanceNotice: {
+    pt: 'A cobrança adicional não quita automaticamente o saldo pendente da fatura original; os dois documentos permanecem rastreáveis separadamente.',
+    en: 'The supplemental charge does not automatically settle any outstanding balance on the original invoice; both documents remain separately traceable.',
+    es: 'El cobro adicional no liquida automáticamente el saldo pendiente de la factura original; ambos documentos permanecen trazables por separado.',
+  },
   originalInvoice: { pt: 'Fatura original', en: 'Original invoice', es: 'Factura original' },
   supplementalInvoice: { pt: 'Fatura adicional', en: 'Supplemental invoice', es: 'Factura adicional' },
   viewInvoice: { pt: 'Abrir fatura', en: 'Open invoice', es: 'Abrir factura' },
