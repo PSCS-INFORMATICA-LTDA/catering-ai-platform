@@ -63,7 +63,7 @@ export const CATERING_NAV: NavGroup[] = [
       },
       {
         href: '/invoices',
-        label: 'Faturas',
+        label: 'Faturamento',
         requiredAnyPermission: ['finance.invoices.view', 'orders.financial.view'],
       },
       {

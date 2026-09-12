@@ -2,14 +2,14 @@ import { makeI18nModule } from './makeModule.ts'
 
 const { t, list } = makeI18nModule('financeObservability', 'finance', {
   invoiceControlTitle: {
-    pt: 'Controle de faturas',
-    en: 'Invoice Control',
-    es: 'Control de facturas',
+    pt: 'Faturamento',
+    en: 'Invoices',
+    es: 'Facturación',
   },
   invoiceControlSubtitle: {
-    pt: 'Visão operacional somente leitura das faturas, pagamentos e linhagem financeira.',
-    en: 'Read-only operational view of invoices, payments, and financial lineage.',
-    es: 'Vista operativa de solo lectura de facturas, pagos y linaje financiero.',
+    pt: 'Controle completo de invoices, recebimentos e saldos.',
+    en: 'Complete control of invoices, receipts, and balances.',
+    es: 'Control completo de facturas, cobros y saldos.',
   },
   kpiBilled: { pt: 'Total faturado', en: 'Total billed', es: 'Total facturado' },
   kpiReceived: { pt: 'Total recebido', en: 'Total received', es: 'Total recibido' },

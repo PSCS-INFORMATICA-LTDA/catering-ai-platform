@@ -226,7 +226,7 @@ export default function InvoiceObservabilityPanels({
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+      <section id="payments" className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
         <div className="border-b border-neutral-100 px-5 py-4">
           <h2 className="text-sm font-black uppercase tracking-wider">{tFinanceObservability(locale, 'blockPayments')}</h2>
         </div>
@@ -248,7 +248,7 @@ export default function InvoiceObservabilityPanels({
         )}
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+      <section id="links" className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
         <div className="border-b border-neutral-100 px-5 py-4">
           <h2 className="text-sm font-black uppercase tracking-wider">{tFinanceObservability(locale, 'blockLinks')}</h2>
         </div>
