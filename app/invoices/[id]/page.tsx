@@ -1,6 +1,7 @@
 import { FinanceBackLink, FinanceBreadcrumb } from '@/components/finance/FinanceChrome'
 import FinanceControls from '@/components/payments/FinanceControls'
 import InvoiceAdjustmentSummary from '@/components/payments/InvoiceAdjustmentSummary'
+import InvoiceDocumentSummary from '@/components/payments/InvoiceDocumentSummary'
 import InvoiceObservabilityPanels from '@/components/payments/InvoiceObservabilityPanels'
 import Link from 'next/link'
 import { hasPermission } from '@/Lib/auth/permissions'
@@ -38,9 +39,9 @@ export default async function InvoiceDetailPage({
   if (detail.error) {
     if (detail.error.status === 404) notFound()
     return (
-      <main className="min-h-screen bg-cdl-bg p-10 text-cdl-fg">
+      <main className="min-h-screen bg-background p-10 text-foreground">
         <h1 className="text-2xl font-bold text-red-400">Erro</h1>
-        <pre className="mt-4 rounded-3xl bg-cdl-surface p-4 text-sm text-red-400">
+        <pre className="mt-4 rounded-3xl bg-neutral-950/5 p-4 text-sm text-red-500 dark:bg-white/5">
           {detail.error.message}
         </pre>
       </main>
@@ -65,23 +66,27 @@ export default async function InvoiceDetailPage({
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3">
         <FinanceBreadcrumb locale={locale} current={detail.data.invoice_number} />
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-4">
-          <FinanceBackLink locale={locale} />
-          <Link
-            href="/invoices"
-            className="text-xs font-bold uppercase tracking-wider text-[var(--brand-primary-2)] hover:underline"
+          <div className="flex flex-wrap items-center gap-4">
+            <FinanceBackLink locale={locale} />
+            <Link
+              href="/invoices"
+              className="text-xs font-bold uppercase tracking-wider text-[var(--brand-primary-2)] hover:underline"
+            >
+              ← {tPayments(locale, 'backToInvoices')}
+            </Link>
+          </div>
+          <a
+            href={`/api/invoices/${detail.data.id}/pdf`}
+            className="inline-flex min-h-[40px] items-center justify-center rounded-xl bg-[var(--brand-primary-2,#1e3a5f)] px-4 py-2 text-xs font-bold uppercase tracking-wide text-white"
           >
-            ← {tPayments(locale, 'backToInvoices')}
-          </Link>
-        </div>
-        <a
-          href={`/api/invoices/${detail.data.id}/pdf`}
-          className="inline-flex min-h-[40px] items-center justify-center rounded-xl bg-[var(--brand-primary-2,#1e3a5f)] px-4 py-2 text-xs font-bold uppercase tracking-wide text-white"
-        >
-          {tPayments(locale, 'downloadPdf')}
-        </a>
+            {tPayments(locale, 'downloadPdf')}
+          </a>
         </div>
       </div>
+
+      <InvoiceDocumentSummary invoice={detail.data} />
+      <InvoiceAdjustmentSummary invoice={detail.data} />
+
       {observability.data ? (
         <InvoiceObservabilityPanels data={observability.data} />
       ) : (
@@ -89,7 +94,7 @@ export default async function InvoiceDetailPage({
           {observability.error?.message}
         </div>
       )}
-      <InvoiceAdjustmentSummary invoice={detail.data} />
+
       <div className="mx-auto w-full max-w-6xl">
         <FinanceControls
           invoice={detail.data}
