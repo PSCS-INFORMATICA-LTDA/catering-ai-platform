@@ -9,7 +9,7 @@ import type {
 export const FINANCE_PAGE_SIZES = [25, 50, 100] as const
 export type FinancePageSize = (typeof FINANCE_PAGE_SIZES)[number]
 
-export const FINANCE_PERIODS = ['today', '7d', '30d', 'custom', 'all'] as const
+export const FINANCE_PERIODS = ['today', '7d', '30d', '90d', 'custom', 'all'] as const
 export type FinancePeriod = (typeof FINANCE_PERIODS)[number]
 
 export const MONEY_DIVERGENCE_THRESHOLD = 0.01

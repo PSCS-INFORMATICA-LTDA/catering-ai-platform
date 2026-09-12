@@ -60,7 +60,8 @@ export function resolveFinancePeriodRange(input: {
   if (period === 'today') {
     start.setHours(0, 0, 0, 0)
   } else {
-    start.setDate(start.getDate() - (period === '7d' ? 7 : 30))
+    const days = period === '7d' ? 7 : period === '90d' ? 90 : 30
+    start.setDate(start.getDate() - days)
   }
   return { period, from: start.toISOString(), to: now.toISOString() }
 }
