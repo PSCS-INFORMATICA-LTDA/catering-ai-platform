@@ -21,8 +21,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Catering AI Platform · CDL",
-  description: "Quotes and BBQ at Home catering",
+  title: "Catering · PSCS One",
+  description: "Multi-company catering operations, quotes, orders, invoices and finance",
 };
 
 export default async function RootLayout({
@@ -45,7 +45,7 @@ export default async function RootLayout({
         <ThemeScript />
       </head>
 
-      <body className="flex min-h-full flex-col bg-cdl-bg text-cdl-fg">
+      <body className="flex min-h-full flex-col bg-background text-foreground">
         <ThemeProvider>
           <AppSessionProvider initialSession={bootstrap?.session ?? null}>
             <TenantProvider initialTenantContext={bootstrap?.tenant ?? null}>
