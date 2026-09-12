@@ -87,7 +87,7 @@ export async function POST(_request: Request, { params }: Params) {
   }
 
   // Processing is intentionally retryable. PayPal-Request-Id below is stable,
-  // so a network retry cannot create a second provider refund.
+  // so retries cannot create a second provider refund.
   if (refund.status === 'requested' || refund.status === 'failed') {
     const { error: processingError } = await db
       .from('invoice_refunds')
@@ -132,16 +132,32 @@ export async function POST(_request: Request, { params }: Params) {
   ) {
     await db
       .from('invoice_refunds')
-      .update({ status: 'failed', updated_at: new Date().toISOString() })
+      .update({
+        status: 'failed',
+        provider_refund_id: providerRefund.refundId || refund.provider_refund_id,
+        updated_at: new Date().toISOString(),
+      })
       .eq('company_id', companyId)
       .eq('invoice_id', invoiceId)
       .eq('id', refundId)
     return Response.json({ error: 'paypal_refund_amount_mismatch' }, { status: 409 })
   }
 
-  if (providerRefund.status !== 'COMPLETED') {
-    // A pending provider refund remains processing. A later retry or verified
-    // refund webhook can complete the local ledger without duplicating money.
+  if (providerRefund.status === 'PENDING') {
+    const { error: pendingError } = await db
+      .from('invoice_refunds')
+      .update({
+        status: 'processing',
+        provider_refund_id: providerRefund.refundId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('company_id', companyId)
+      .eq('invoice_id', invoiceId)
+      .eq('id', refundId)
+      .neq('status', 'completed')
+    if (pendingError) {
+      return Response.json({ error: pendingError.message }, { status: 500 })
+    }
     return Response.json(
       {
         data: {
@@ -154,6 +170,21 @@ export async function POST(_request: Request, { params }: Params) {
     )
   }
 
+  if (providerRefund.status !== 'COMPLETED') {
+    await db
+      .from('invoice_refunds')
+      .update({
+        status: 'failed',
+        provider_refund_id: providerRefund.refundId || refund.provider_refund_id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('company_id', companyId)
+      .eq('invoice_id', invoiceId)
+      .eq('id', refundId)
+      .neq('status', 'completed')
+    return Response.json({ error: 'paypal_refund_not_completed' }, { status: 409 })
+  }
+
   const completed = await completeInvoiceRefund({
     companyId,
     invoiceId,
@@ -162,9 +193,20 @@ export async function POST(_request: Request, { params }: Params) {
     actorUserId: auth.session.userId,
   })
   if (!completed.ok) {
-    // The provider already returned the money. Keep the local row processing so
-    // operators cannot accidentally send another refund; deterministic provider
-    // idempotency allows safe recovery on a retry.
+    // The provider already returned the money. The row remains processing and
+    // carries a deterministic provider id; verified webhook or retry can safely
+    // finish the local ledger without moving money twice.
+    await db
+      .from('invoice_refunds')
+      .update({
+        status: 'processing',
+        provider_refund_id: providerRefund.refundId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('company_id', companyId)
+      .eq('invoice_id', invoiceId)
+      .eq('id', refundId)
+      .neq('status', 'completed')
     return Response.json(
       { error: completed.error, providerRefundId: providerRefund.refundId },
       { status: 500 },
