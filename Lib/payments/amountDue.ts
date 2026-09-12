@@ -1,5 +1,5 @@
 import type { PaymentPurpose } from './types'
-import { isInvoiceFullyPaid } from './invoiceStatus'
+import { isInvoiceFullyPaid } from './invoiceStatus.ts'
 
 export type AmountDueInput = {
   total: number

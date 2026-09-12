@@ -63,6 +63,12 @@ export async function requireApiAuth(): Promise<ApiAuthResult> {
 export async function requireApiPermission(
   permission: string,
 ): Promise<ApiAuthResult> {
+  return requireAnyApiPermission(permission)
+}
+
+export async function requireAnyApiPermission(
+  ...permissions: string[]
+): Promise<ApiAuthResult> {
   const auth = await requireApiAuth()
   if (!auth.ok) return auth
 
@@ -70,11 +76,11 @@ export async function requireApiPermission(
     return auth
   }
 
-  if (!hasPermission(auth.session.permissions, permission)) {
-    return { ok: false, response: jsonError(403, 'Forbidden') }
+  if (permissions.some((permission) => hasPermission(auth.session.permissions, permission))) {
+    return auth
   }
 
-  return auth
+  return { ok: false, response: jsonError(403, 'Forbidden') }
 }
 
 export async function requirePlatformAdminApi(): Promise<ApiAuthResult> {
