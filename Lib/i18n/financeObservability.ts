@@ -34,6 +34,7 @@ const { t, list } = makeI18nModule('financeObservability', 'finance', {
   periodToday: { pt: 'Hoje', en: 'Today', es: 'Hoy' },
   period7d: { pt: '7 dias', en: '7 days', es: '7 días' },
   period30d: { pt: '30 dias', en: '30 days', es: '30 días' },
+  period90d: { pt: '90 dias', en: '90 days', es: '90 días' },
   periodCustom: { pt: 'Personalizado', en: 'Custom', es: 'Personalizado' },
   periodAll: { pt: 'Tudo', en: 'All', es: 'Todo' },
   allKinds: { pt: 'Todos os tipos', en: 'All kinds', es: 'Todos los tipos' },

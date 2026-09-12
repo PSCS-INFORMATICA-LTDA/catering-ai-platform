@@ -8,7 +8,9 @@ import {
   paymentStatusLabel,
   tPayments,
 } from '@/Lib/i18n/payments'
+import { tFinanceControl } from '@/Lib/i18n/financeControl'
 import { tFinanceObservability } from '@/Lib/i18n/financeObservability'
+import { buildDocumentaryLineage, computeInvoiceMoneyFlow } from '@/Lib/payments/financeControlCenter'
 import { formatUiDate } from '@/Lib/i18n/locales'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import type { InvoiceObservabilityPayload } from '@/Lib/payments/financeObservabilityTypes'
@@ -23,6 +25,38 @@ export default function InvoiceObservabilityPanels({
   const locale = useAuthLocaleFromMe()
   const invoice = data.invoice
   const check = data.financial_check
+  const flow = computeInvoiceMoneyFlow({
+    total: check.invoiceTotal,
+    completedPaymentsTotal: check.completedPaymentsTotal,
+    refundedTotal: check.refundedTotal,
+    paidTotal: check.registeredPaidTotal,
+    currency_code: invoice.currency_code,
+  })
+  const lineage = buildDocumentaryLineage({
+    quote_id: invoice.quote_id,
+    quote_number: invoice.quote_number,
+    original_invoice_id:
+      data.lineage.kind === 'post_event_adjustment' ? data.lineage.parent?.id ?? invoice.id : invoice.id,
+    original_invoice_number:
+      data.lineage.kind === 'post_event_adjustment'
+        ? data.lineage.parent?.invoice_number ?? invoice.invoice_number
+        : invoice.invoice_number,
+    payment_id: data.payments.find((payment) => payment.status === 'completed')?.id ?? data.payments[0]?.id ?? null,
+    service_order_id: invoice.service_order_id,
+    service_order_number: invoice.service_order_number,
+    event_name: invoice.event_name,
+    closeout_id: invoice.closeout_id,
+    supplemental_invoice_id:
+      data.lineage.kind === 'post_event_adjustment'
+        ? invoice.id
+        : data.lineage.supplements[0]?.id ?? null,
+    supplemental_invoice_number:
+      data.lineage.kind === 'post_event_adjustment'
+        ? invoice.invoice_number
+        : data.lineage.supplements[0]?.invoice_number ?? null,
+    final_payment_id:
+      data.payments.filter((payment) => payment.status === 'completed').at(-1)?.id ?? null,
+  })
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
@@ -49,6 +83,62 @@ export default function InvoiceObservabilityPanels({
           <Value label={tFinanceObservability(locale, 'registeredPaidTotal')} value={formatFinanceMoney(invoice.paid_total, invoice.currency_code, locale)} />
           <Value label={tFinanceObservability(locale, 'outstanding')} value={formatFinanceMoney(invoice.outstanding_amount, invoice.currency_code, locale)} strong />
         </div>
+      </section>
+
+      <section className="liquid-glass-card p-5" aria-label={tFinanceControl(locale, 'moneyFlowTitle')}>
+        <h2 className="text-sm font-black uppercase tracking-wider">{tFinanceControl(locale, 'moneyFlowTitle')}</h2>
+        <ol className="mt-4 grid gap-2 sm:grid-cols-5">
+          {[
+            [tFinanceControl(locale, 'moneyTotal'), flow.total],
+            [tFinanceControl(locale, 'moneyPayments'), flow.payments],
+            [tFinanceControl(locale, 'moneyRefunds'), flow.refunds],
+            [tFinanceControl(locale, 'moneyNetPaid'), flow.net_paid],
+            [tFinanceControl(locale, 'moneyOutstanding'), flow.outstanding],
+          ].map(([label, value], index) => (
+            <li key={String(label)} className="rounded-2xl bg-cdl-bg/70 p-3">
+              <p className="text-[10px] font-black uppercase tracking-wider text-cdl-muted">{label}</p>
+              <p className="mt-1 text-sm font-black">{formatFinanceMoney(Number(value), flow.currency_code, locale)}</p>
+              {index < 4 ? <p className="mt-1 text-[10px] font-bold text-cdl-muted" aria-hidden>↓</p> : null}
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="liquid-glass-card p-5" aria-label={tFinanceControl(locale, 'lineageTitle')}>
+        <h2 className="text-sm font-black uppercase tracking-wider">{tFinanceControl(locale, 'lineageTitle')}</h2>
+        <ol className="mt-4 space-y-2">
+          {lineage.filter((node) => node.present).map((node) => (
+            <li key={node.key} className="flex flex-col gap-1 rounded-xl bg-cdl-bg/70 px-3 py-2">
+              <span className="text-[10px] font-black uppercase tracking-wider text-cdl-muted">
+                {tFinanceControl(
+                  locale,
+                  node.key === 'quote'
+                    ? 'lineageQuote'
+                    : node.key === 'original_invoice'
+                      ? 'lineageOriginal'
+                      : node.key === 'payment'
+                        ? 'lineagePayment'
+                        : node.key === 'service_order'
+                          ? 'lineageOs'
+                          : node.key === 'event'
+                            ? 'lineageEvent'
+                            : node.key === 'closeout'
+                              ? 'lineageCloseout'
+                              : node.key === 'supplemental_invoice'
+                                ? 'lineageSupplemental'
+                                : 'lineageFinalPayment',
+                )}
+              </span>
+              {node.href ? (
+                <Link href={node.href} className="text-sm font-bold text-[var(--brand-primary-2)] hover:underline">
+                  {node.label}
+                </Link>
+              ) : (
+                <span className="text-sm font-bold">{node.label}</span>
+              )}
+            </li>
+          ))}
+        </ol>
       </section>
 
       <section className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">

@@ -1,3 +1,4 @@
+import { FinanceBackLink, FinanceBreadcrumb } from '@/components/finance/FinanceChrome'
 import FinanceControls from '@/components/payments/FinanceControls'
 import InvoiceAdjustmentSummary from '@/components/payments/InvoiceAdjustmentSummary'
 import InvoiceObservabilityPanels from '@/components/payments/InvoiceObservabilityPanels'
@@ -61,19 +62,25 @@ export default async function InvoiceDetailPage({
 
   return (
     <div className="space-y-5">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Link
-          href="/invoices"
-          className="text-xs font-bold uppercase tracking-wider text-[var(--brand-primary-2)] hover:underline"
-        >
-          ← {tPayments(locale, 'backToInvoices')}
-        </Link>
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3">
+        <FinanceBreadcrumb locale={locale} current={detail.data.invoice_number} />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-4">
+          <FinanceBackLink locale={locale} />
+          <Link
+            href="/invoices"
+            className="text-xs font-bold uppercase tracking-wider text-[var(--brand-primary-2)] hover:underline"
+          >
+            ← {tPayments(locale, 'backToInvoices')}
+          </Link>
+        </div>
         <a
           href={`/api/invoices/${detail.data.id}/pdf`}
           className="inline-flex min-h-[40px] items-center justify-center rounded-xl bg-[var(--brand-primary-2,#1e3a5f)] px-4 py-2 text-xs font-bold uppercase tracking-wide text-white"
         >
           {tPayments(locale, 'downloadPdf')}
         </a>
+        </div>
       </div>
       {observability.data ? (
         <InvoiceObservabilityPanels data={observability.data} />

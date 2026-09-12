@@ -57,14 +57,39 @@ export const CATERING_NAV: NavGroup[] = [
     label: 'Financeiro',
     children: [
       {
+        href: '/finance',
+        label: 'Visão Geral',
+        requiredAnyPermission: ['finance.invoices.view', 'orders.financial.view'],
+      },
+      {
         href: '/invoices',
-        label: 'Controle de faturas',
+        label: 'Faturas',
         requiredAnyPermission: ['finance.invoices.view', 'orders.financial.view'],
       },
       {
         href: '/payments/paypal-control',
-        label: 'PayPal Control',
+        label: 'PayPal',
         requiredPermission: 'finance.invoices.view',
+      },
+      {
+        href: '/finance/refunds',
+        label: 'Reembolsos',
+        requiredAnyPermission: ['finance.invoices.view', 'orders.financial.view'],
+      },
+      {
+        href: '/finance/post-event',
+        label: 'Pós-evento',
+        requiredAnyPermission: ['finance.invoices.view', 'orders.financial.view'],
+      },
+      {
+        href: '/finance/reconciliation',
+        label: 'Conciliação',
+        requiredAnyPermission: ['finance.invoices.view', 'orders.financial.view'],
+      },
+      {
+        href: '/finance/pscs-one',
+        label: 'Integração PSCS One',
+        requiredAnyPermission: ['finance.invoices.view', 'orders.financial.view'],
       },
     ],
   },
@@ -108,6 +133,9 @@ export function isNavHrefActive(pathname: string, href: string): boolean {
   }
   if (href === '/orders') {
     return pathname === '/orders' || pathname.startsWith('/orders/')
+  }
+  if (href === '/finance') {
+    return pathname === '/finance'
   }
   if (href === '/invoices') {
     return pathname === '/invoices' || pathname.startsWith('/invoices/')

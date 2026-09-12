@@ -17,6 +17,8 @@ import type {
 } from '@/Lib/payments/financeObservabilityTypes'
 import { FINANCE_PAGE_SIZES } from '@/Lib/payments/financeObservabilityTypes'
 import { INVOICE_KINDS, INVOICE_STATUSES, PAYMENT_ATTEMPT_STATUSES, PAYMENT_PROVIDERS } from '@/Lib/payments/types'
+import { tFinanceControl } from '@/Lib/i18n/financeControl'
+import { FinanceBackLink, FinanceBreadcrumb } from '@/components/finance/FinanceChrome'
 import { formatFinanceDateTime, formatFinanceMoney, INVOICE_STATUS_BADGE, kindBadgeClass } from './financeUi'
 
 type FiltersState = {
@@ -129,6 +131,8 @@ export default function InvoicesDashboard() {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+      <FinanceBreadcrumb locale={locale} current={tFinanceControl(locale, 'invoices')} />
+      <FinanceBackLink locale={locale} />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-[var(--brand-primary)] sm:text-3xl">

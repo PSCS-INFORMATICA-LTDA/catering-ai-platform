@@ -19,6 +19,9 @@ import type {
 } from '@/Lib/payments/financeObservabilityTypes'
 import { FINANCE_PAGE_SIZES } from '@/Lib/payments/financeObservabilityTypes'
 import { PAYMENT_ATTEMPT_STATUSES, PAYMENT_PURPOSES } from '@/Lib/payments/types'
+import { tFinanceControl } from '@/Lib/i18n/financeControl'
+import { computeCaptureSuccessRate } from '@/Lib/payments/financeControlCenter'
+import { FinanceBackLink, FinanceBreadcrumb } from '@/components/finance/FinanceChrome'
 import FinanceCopyId from './FinanceCopyId'
 import { formatFinanceDateTime, formatFinanceMoney } from './financeUi'
 
@@ -142,10 +145,12 @@ export default function PaypalControlCenter() {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+      <FinanceBreadcrumb locale={locale} current={tFinanceControl(locale, 'paypal')} />
+      <FinanceBackLink locale={locale} />
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-black tracking-tight text-[var(--brand-primary)] sm:text-3xl">
-            {tFinanceObservability(locale, 'paypalControlTitle')}
+            {tFinanceControl(locale, 'paypalSandboxControl')}
           </h1>
           <span className="rounded-full border-2 border-amber-400 bg-amber-100 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-amber-950">
             {tFinanceObservability(locale, 'paypalSandboxBadge')}
@@ -205,7 +210,13 @@ export default function PaypalControlCenter() {
         </div>
       ) : null}
 
-      {loading ? <div className="rounded-2xl border border-neutral-200 bg-white p-8 text-center text-neutral-500">…</div> : null}
+      {loading ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-hidden>
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="h-24 animate-pulse rounded-2xl bg-neutral-100" />
+          ))}
+        </div>
+      ) : null}
 
       {!failClosed && !loading && tab === 'overview' && health ? (
         <Overview health={health} kpis={kpis} locale={locale} />
@@ -334,6 +345,14 @@ function Overview({
           <Kpi label={tFinanceObservability(locale, 'kpiPendingCreated')} value={String(kpis.pending_created)} />
           <Kpi label={tFinanceObservability(locale, 'kpiTotalCaptured')} value={formatFinanceMoney(kpis.total_captured, currency, locale)} />
           <Kpi label={tFinanceObservability(locale, 'kpiTotalRefunded')} value={formatFinanceMoney(kpis.total_refunded, currency, locale)} />
+          <Kpi
+            label={tFinanceControl(locale, 'captureSuccessRate')}
+            value={
+              computeCaptureSuccessRate(kpis.captured_in_period, kpis.failed_in_period) == null
+                ? '—'
+                : `${computeCaptureSuccessRate(kpis.captured_in_period, kpis.failed_in_period)?.toFixed(1)}%`
+            }
+          />
         </div>
       ) : null}
     </div>
