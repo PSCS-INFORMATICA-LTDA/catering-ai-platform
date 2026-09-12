@@ -16,12 +16,23 @@ export async function confirmPaidDepositReservation(input: {
   const db = getSupabaseServerClient()
   const { data: invoice } = await db
     .from('invoices')
-    .select('id, quote_id, deposit_amount, paid_total')
+    .select('id, quote_id, invoice_kind, deposit_amount, paid_total')
     .eq('id', input.invoiceId)
     .eq('company_id', input.companyId)
     .maybeSingle()
 
   if (!invoice) return { ok: false as const, error: 'invoice_not_found' }
+
+  // A supplemental post-event charge belongs to an event that already happened.
+  // Paying it must never confirm/recreate a reservation or consume schedule capacity.
+  if (invoice.invoice_kind === 'post_event_adjustment') {
+    return {
+      ok: true as const,
+      reservationRequired: false,
+      reason: 'post_event_adjustment',
+    }
+  }
+
   if (!isDepositSatisfied({
     depositAmount: Number(invoice.deposit_amount),
     paidTotal: Number(invoice.paid_total),
