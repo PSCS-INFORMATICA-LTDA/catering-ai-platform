@@ -167,7 +167,7 @@ SET payload = o.payload || jsonb_build_object(
     ),
     updated_at = now()
 FROM public.invoices i
-WHERE o.invoice_id = i.id
+WHERE o.payload->>'invoice_id' = i.id::text
   AND o.company_id = i.company_id
   AND o.status = 'pending'
   AND o.event_type IN ('invoice.created', 'invoice.paid', 'invoice.canceled', 'payment.completed', 'payment.failed', 'payment.refunded');
