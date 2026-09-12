@@ -1,5 +1,6 @@
-import InvoiceDetailView from '@/components/payments/InvoiceDetailView'
 import FinanceControls from '@/components/payments/FinanceControls'
+import InvoiceAdjustmentSummary from '@/components/payments/InvoiceAdjustmentSummary'
+import InvoiceDetailView from '@/components/payments/InvoiceDetailView'
 import { hasPermission } from '@/Lib/auth/permissions'
 import { resolveAuthorizedCompanyId } from '@/Lib/auth/requireApi'
 import { getAuthSession } from '@/Lib/auth/session'
@@ -53,6 +54,7 @@ export default async function InvoiceDetailPage({
   return (
     <div className="space-y-5">
       <InvoiceDetailView invoice={data} />
+      <InvoiceAdjustmentSummary invoice={data} />
       <div className="mx-auto w-full max-w-6xl">
         <FinanceControls
           invoice={data}
