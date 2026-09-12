@@ -16,6 +16,99 @@ export const MONEY_DIVERGENCE_THRESHOLD = 0.01
 
 export type MonitorSeverity = 'ok' | 'warning' | 'error'
 
+export const INVOICE_WORKSPACE_VIEWS = [
+  'all',
+  'receivable',
+  'partially_paid',
+  'paid',
+  'awaiting_deposit',
+  'failed',
+  'adjustments',
+  'canceled',
+] as const
+export type InvoiceWorkspaceView = (typeof INVOICE_WORKSPACE_VIEWS)[number]
+
+export const INVOICE_WORKSPACE_SORTS = [
+  'invoice_number',
+  'customer',
+  'event_date',
+  'created_at',
+  'total',
+  'received',
+  'outstanding',
+  'status',
+] as const
+export type InvoiceWorkspaceSort = (typeof INVOICE_WORKSPACE_SORTS)[number]
+export type InvoiceWorkspaceDirection = 'asc' | 'desc'
+
+export const INVOICE_WORKSPACE_COLUMNS = [
+  'invoice',
+  'customer',
+  'customer_email',
+  'customer_phone',
+  'event',
+  'event_date',
+  'quote',
+  'os',
+  'kind',
+  'status',
+  'total',
+  'gross',
+  'refunds',
+  'net',
+  'outstanding',
+  'deposit',
+  'balance',
+  'provider',
+  'last_payment_status',
+  'last_payment',
+  'created_at',
+  'updated_at',
+  'actions',
+] as const
+export type InvoiceWorkspaceColumnId = (typeof INVOICE_WORKSPACE_COLUMNS)[number]
+
+export const INVOICE_WORKSPACE_DEFAULT_COLUMNS: InvoiceWorkspaceColumnId[] = [
+  'invoice',
+  'customer',
+  'event',
+  'quote',
+  'os',
+  'status',
+  'total',
+  'net',
+  'refunds',
+  'outstanding',
+  'provider',
+  'last_payment',
+  'actions',
+]
+
+export const INVOICE_WORKSPACE_WORKING_SET_CAP = 5000
+export const INVOICE_WORKSPACE_EXPORT_MAX = 2000
+export const INVOICE_WORKSPACE_QUERY_CHUNK = 200
+
+export type InvoiceWorkspaceViewCounts = {
+  all: number
+  receivable: number
+  partially_paid: number
+  paid: number
+  awaiting_deposit: number
+  failed: number
+  adjustments: number
+  canceled: number
+}
+
+export type InvoiceWorkspacePaymentPreview = {
+  id: string
+  provider: PaymentProvider
+  status: PaymentAttemptStatus
+  amount: number
+  currency_code: string
+  created_at: string
+  captured_at: string | null
+}
+
 export type InvoiceControlListItem = {
   id: string
   invoice_number: string
@@ -28,16 +121,26 @@ export type InvoiceControlListItem = {
   service_order_number: string | null
   closeout_id: string | null
   customer_name: string
+  customer_email: string | null
+  customer_phone: string | null
   event_name: string | null
   event_date: string | null
   status: InvoiceStatus
   currency_code: string
   total: number
+  deposit_amount: number
+  balance_amount: number
   paid_total: number
+  gross_received: number
+  refunded_total: number
+  net_received: number
   outstanding_amount: number
+  divergence: boolean
   last_provider: PaymentProvider | null
   last_payment_status: PaymentAttemptStatus | null
   last_payment_at: string | null
+  payment_link_state: 'active' | 'expired' | 'revoked' | null
+  recent_payments: InvoiceWorkspacePaymentPreview[]
   created_at: string
   updated_at: string
 }
@@ -47,7 +150,12 @@ export type InvoiceControlKpis = {
   billed_total: number
   received_total: number
   outstanding_total: number
+  refunded_total: number
   canceled_total: number
+  invoice_count: number
+  receivable_count: number
+  partially_paid_count: number
+  failed_count: number
   original_count: number
   adjustment_count: number
   payments_completed: number
@@ -58,6 +166,7 @@ export type InvoiceControlFilters = {
   period: FinancePeriod
   from: string | null
   to: string | null
+  q: string
   invoiceNumber: string
   quoteNumber: string
   os: string
@@ -66,6 +175,15 @@ export type InvoiceControlFilters = {
   invoiceKind: InvoiceKind | 'all'
   provider: PaymentProvider | 'all'
   paymentStatus: PaymentAttemptStatus | 'all'
+  view: InvoiceWorkspaceView
+  sort: InvoiceWorkspaceSort
+  direction: InvoiceWorkspaceDirection
+  eventFrom: string
+  eventTo: string
+  minTotal: number | null
+  maxTotal: number | null
+  minOutstanding: number | null
+  maxOutstanding: number | null
   page: number
   pageSize: FinancePageSize
 }

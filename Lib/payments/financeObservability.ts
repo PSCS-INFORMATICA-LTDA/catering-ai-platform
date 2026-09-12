@@ -92,12 +92,25 @@ export function computeInvoiceControlKpis(input: {
     total: number
     paid_total: number
     currency_code?: string
+    outstanding_amount?: number
+    refunded_total?: number
+    net_received?: number
+    has_failed_payment?: boolean
   }>
   payments: Array<{ status: PaymentAttemptStatus }>
   currency?: string
 }): InvoiceControlKpis {
   const active = input.invoices.filter((invoice) => invoice.status !== 'canceled')
   const canceled = input.invoices.filter((invoice) => invoice.status === 'canceled')
+  const receivedTotal = roundFinanceMoney(
+    active.reduce((sum, invoice) => sum + (invoice.net_received ?? invoice.paid_total), 0),
+  )
+  const outstandingTotal = roundFinanceMoney(
+    active.reduce((sum, invoice) => {
+      if (typeof invoice.outstanding_amount === 'number') return sum + invoice.outstanding_amount
+      return sum + Math.max(0, invoice.total - invoice.paid_total)
+    }, 0),
+  )
   return {
     currency_code:
       input.currency ||
@@ -105,11 +118,23 @@ export function computeInvoiceControlKpis(input: {
       input.invoices[0]?.currency_code ||
       'USD',
     billed_total: roundFinanceMoney(active.reduce((sum, invoice) => sum + invoice.total, 0)),
-    received_total: roundFinanceMoney(active.reduce((sum, invoice) => sum + invoice.paid_total, 0)),
-    outstanding_total: roundFinanceMoney(
-      active.reduce((sum, invoice) => sum + Math.max(0, invoice.total - invoice.paid_total), 0),
+    received_total: receivedTotal,
+    outstanding_total: outstandingTotal,
+    refunded_total: roundFinanceMoney(
+      input.invoices.reduce((sum, invoice) => sum + (invoice.refunded_total ?? 0), 0),
     ),
     canceled_total: roundFinanceMoney(canceled.reduce((sum, invoice) => sum + invoice.total, 0)),
+    invoice_count: input.invoices.length,
+    receivable_count: input.invoices.filter((invoice) => {
+      if (invoice.status === 'canceled') return false
+      const outstanding =
+        typeof invoice.outstanding_amount === 'number'
+          ? invoice.outstanding_amount
+          : Math.max(0, invoice.total - invoice.paid_total)
+      return outstanding > 0
+    }).length,
+    partially_paid_count: input.invoices.filter((invoice) => invoice.status === 'partially_paid').length,
+    failed_count: input.invoices.filter((invoice) => invoice.has_failed_payment).length,
     original_count: input.invoices.filter((invoice) => invoice.invoice_kind !== 'post_event_adjustment').length,
     adjustment_count: input.invoices.filter((invoice) => invoice.invoice_kind === 'post_event_adjustment').length,
     payments_completed: input.payments.filter((payment) => payment.status === 'completed').length,

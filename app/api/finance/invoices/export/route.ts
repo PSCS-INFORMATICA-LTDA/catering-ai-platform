@@ -3,6 +3,10 @@ import {
   fetchFinanceDashboard,
   parseInvoiceControlFilters,
 } from '@/Lib/payments/fetchFinanceDashboard'
+import {
+  buildInvoiceWorkspaceCsv,
+  invoiceWorkspaceCsvHasForbiddenContent,
+} from '@/Lib/payments/invoiceWorkspace'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -16,23 +20,26 @@ export async function GET(request: Request) {
   if (!company.ok) return company.response
 
   const filters = parseInvoiceControlFilters(url.searchParams)
-  const result = await fetchFinanceDashboard({ companyId: company.companyId, filters })
+  const result = await fetchFinanceDashboard({
+    companyId: company.companyId,
+    filters,
+    mode: 'export',
+  })
   if (result.error) {
     return Response.json({ error: result.error.message }, { status: 500 })
   }
 
-  return Response.json(
-    {
-      data: result.invoices,
-      kpis: result.kpis,
-      viewCounts: result.viewCounts,
-      total: result.total,
-      page: result.page,
-      pageSize: result.pageSize,
-      sort: result.sort,
-      direction: result.direction,
-      truncated: result.truncated,
+  const csv = buildInvoiceWorkspaceCsv(result.invoices)
+  if (invoiceWorkspaceCsvHasForbiddenContent(csv)) {
+    return Response.json({ error: 'export_blocked' }, { status: 500 })
+  }
+
+  return new Response(csv, {
+    status: 200,
+    headers: {
+      'Cache-Control': 'no-store, max-age=0',
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': 'attachment; filename="faturamento.csv"',
     },
-    { headers: { 'Cache-Control': 'no-store, max-age=0' } },
-  )
+  })
 }
