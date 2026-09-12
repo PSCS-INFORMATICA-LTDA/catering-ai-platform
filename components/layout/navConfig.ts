@@ -21,7 +21,7 @@ export type NavGroup = {
   children: NavChild[]
 }
 
-/** Menu lateral agrupado (espelho Logistics — domínio catering). */
+/** Menu lateral do produto Catering, independente da empresa/tenant ativo. */
 export const CATERING_NAV: NavGroup[] = [
   {
     id: 'operational',
@@ -63,7 +63,7 @@ export const CATERING_NAV: NavGroup[] = [
       },
       {
         href: '/invoices',
-        label: 'Faturamento',
+        label: 'Faturas',
         requiredAnyPermission: ['finance.invoices.view', 'orders.financial.view'],
       },
       {
@@ -78,7 +78,7 @@ export const CATERING_NAV: NavGroup[] = [
       },
       {
         href: '/finance/post-event',
-        label: 'Pós-evento',
+        label: 'Fechamento de eventos',
         requiredAnyPermission: ['finance.invoices.view', 'orders.financial.view'],
       },
       {
