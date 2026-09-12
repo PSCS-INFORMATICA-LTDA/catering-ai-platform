@@ -2,6 +2,7 @@ import 'server-only'
 
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import type {
+  InvoiceKind,
   InvoiceSnapshot,
   InvoiceStatus,
   PaymentAttemptStatus,
@@ -13,6 +14,10 @@ export type InvoiceBackofficeListItem = {
   id: string
   quote_id: string
   invoice_number: string
+  invoice_kind: InvoiceKind
+  parent_invoice_id: string | null
+  service_order_id: string | null
+  closeout_id: string | null
   quote_number: string | null
   customer_name: string
   event_name: string | null
@@ -81,6 +86,14 @@ export type InvoiceBackofficeDetail = InvoiceBackofficeListItem & {
   subtotal: number
   balance_amount: number
   snapshot: InvoiceSnapshot | null
+  parent_invoice_number: string | null
+  supplemental_invoices: Array<{
+    id: string
+    invoice_number: string
+    status: InvoiceStatus
+    total: number
+    paid_total: number
+  }>
   payments: InvoiceBackofficePayment[]
   payment_links: InvoiceBackofficePaymentLink[]
   refunds: InvoiceBackofficeRefund[]
@@ -111,6 +124,10 @@ function toListItem(row: InvoiceRow): InvoiceBackofficeListItem {
     id: String(row.id),
     quote_id: String(row.quote_id),
     invoice_number: String(row.invoice_number),
+    invoice_kind: (row.invoice_kind || 'original') as InvoiceKind,
+    parent_invoice_id: row.parent_invoice_id ? String(row.parent_invoice_id) : null,
+    service_order_id: row.service_order_id ? String(row.service_order_id) : null,
+    closeout_id: row.closeout_id ? String(row.closeout_id) : null,
     quote_number: snapshot?.quote?.number ?? null,
     customer_name: snapshot?.customer?.name?.trim() || '—',
     event_name: snapshot?.event?.name ?? null,
@@ -137,7 +154,7 @@ export async function fetchInvoiceBackofficeList(
   const { data, error } = await getSupabaseServerClient()
     .from('invoices')
     .select(
-      'id, company_id, quote_id, invoice_number, status, currency_code, snapshot, total, deposit_amount, paid_total, created_at, updated_at',
+      'id, company_id, quote_id, invoice_number, invoice_kind, parent_invoice_id, service_order_id, closeout_id, status, currency_code, snapshot, total, deposit_amount, paid_total, created_at, updated_at',
     )
     .eq('company_id', companyId)
     .order('created_at', { ascending: false })
@@ -166,7 +183,7 @@ export async function fetchInvoiceBackofficeDetail(
   const invoiceResult = await supabase
     .from('invoices')
     .select(
-      'id, company_id, quote_id, invoice_number, status, locale, currency_code, snapshot, subtotal, total, deposit_amount, balance_amount, paid_total, created_at, updated_at',
+      'id, company_id, quote_id, invoice_number, invoice_kind, parent_invoice_id, service_order_id, closeout_id, status, locale, currency_code, snapshot, subtotal, total, deposit_amount, balance_amount, paid_total, created_at, updated_at',
     )
     .eq('company_id', companyId)
     .eq('id', invoiceId)
@@ -179,7 +196,10 @@ export async function fetchInvoiceBackofficeDetail(
     return { data: null, error: { message: 'invoice_not_found', status: 404 } }
   }
 
-  const [paymentsResult, linksResult, refundsResult, cancellationsResult] = await Promise.all([
+  const invoiceRow = invoiceResult.data as unknown as InvoiceRow
+  const parentInvoiceId = invoiceRow.parent_invoice_id ? String(invoiceRow.parent_invoice_id) : null
+
+  const [paymentsResult, linksResult, refundsResult, cancellationsResult, parentResult, supplementsResult] = await Promise.all([
     supabase
       .from('invoice_payments')
       .select(
@@ -210,16 +230,29 @@ export async function fetchInvoiceBackofficeDetail(
       .eq('company_id', companyId)
       .eq('invoice_id', invoiceId)
       .order('requested_at', { ascending: false }),
+    parentInvoiceId
+      ? supabase
+          .from('invoices')
+          .select('invoice_number')
+          .eq('company_id', companyId)
+          .eq('id', parentInvoiceId)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    supabase
+      .from('invoices')
+      .select('id, invoice_number, status, total, paid_total')
+      .eq('company_id', companyId)
+      .eq('parent_invoice_id', invoiceId)
+      .order('created_at', { ascending: true }),
   ])
 
-  for (const result of [paymentsResult, linksResult, refundsResult, cancellationsResult]) {
+  for (const result of [paymentsResult, linksResult, refundsResult, cancellationsResult, parentResult, supplementsResult]) {
     if (result.error) {
       return { data: null, error: { message: result.error.message } }
     }
   }
 
-  const row = invoiceResult.data as unknown as InvoiceRow
-  const base = toListItem(row)
+  const base = toListItem(invoiceRow)
   const payments: InvoiceBackofficePayment[] = (paymentsResult.data ?? []).map((payment) => ({
     id: String(payment.id),
     provider: payment.provider as PaymentProvider,
@@ -271,10 +304,18 @@ export async function fetchInvoiceBackofficeDetail(
   return {
     data: {
       ...base,
-      locale: String(row.locale || 'pt'),
-      subtotal: money(row.subtotal),
-      balance_amount: money(row.balance_amount),
-      snapshot: snapshotFrom(row),
+      locale: String(invoiceRow.locale || 'pt'),
+      subtotal: money(invoiceRow.subtotal),
+      balance_amount: money(invoiceRow.balance_amount),
+      snapshot: snapshotFrom(invoiceRow),
+      parent_invoice_number: parentResult.data?.invoice_number ? String(parentResult.data.invoice_number) : null,
+      supplemental_invoices: (supplementsResult.data ?? []).map((child) => ({
+        id: String(child.id),
+        invoice_number: String(child.invoice_number),
+        status: child.status as InvoiceStatus,
+        total: money(child.total),
+        paid_total: money(child.paid_total),
+      })),
       payments,
       payment_links: paymentLinks,
       refunds,
