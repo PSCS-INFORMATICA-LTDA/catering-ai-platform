@@ -23,10 +23,7 @@ function formatDateTime(value: string | null | undefined, locale: string | null 
   if (!value) return '—'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleString(toBcp47Locale(locale), {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  })
+  return date.toLocaleString(toBcp47Locale(locale), { dateStyle: 'short', timeStyle: 'short' })
 }
 
 function refundStatusLabel(status: string, locale: string | null | undefined) {
@@ -79,7 +76,7 @@ export default function FinanceControls({
     [invoice.refunds],
   )
   const activeCancellation = invoice.cancellations.find(
-    (cancellation) => cancellation.status === 'requested' || cancellation.status === 'pending_refund',
+    (item) => item.status === 'requested' || item.status === 'pending_refund',
   )
 
   const [refundPaymentId, setRefundPaymentId] = useState(completedPayments[0]?.id || '')
@@ -89,7 +86,13 @@ export default function FinanceControls({
   const [refundReference, setRefundReference] = useState('')
   const [cancellationReason, setCancellationReason] = useState('')
 
-  async function postJson(url: string, body: Record<string, unknown>) {
+  const selectedOpenRefund = openRefunds.find((refund) => refund.id === completeRefundId) || openRefunds[0]
+  const selectedRefundPayment = completedPayments.find(
+    (payment) => payment.id === selectedOpenRefund?.payment_id,
+  )
+  const selectedRefundIsPaypal = selectedRefundPayment?.provider === 'paypal'
+
+  async function postJson(url: string, body: Record<string, unknown> = {}) {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -158,16 +161,26 @@ export default function FinanceControls({
     }
   }
 
-  async function completeRefund(event: React.FormEvent) {
+  async function completeManualRefund(event: React.FormEvent) {
     event.preventDefault()
     begin('refund-complete')
     try {
-      await postJson(
-        `/api/invoices/${invoice.id}/refunds/${completeRefundId}/complete`,
-        { providerRefundId: refundReference },
-      )
+      await postJson(`/api/invoices/${invoice.id}/refunds/${completeRefundId}/complete`, {
+        providerRefundId: refundReference,
+      })
       setRefundReference('')
       finish(tFinanceControls(locale, 'refundCompleted'))
+    } catch (err) {
+      fail(err)
+    }
+  }
+
+  async function executePaypalRefund() {
+    if (!completeRefundId) return
+    begin('paypal-refund')
+    try {
+      await postJson(`/api/invoices/${invoice.id}/refunds/${completeRefundId}/execute-paypal`)
+      finish(tFinanceControls(locale, 'paypalRefundExecuted'))
     } catch (err) {
       fail(err)
     }
@@ -177,9 +190,7 @@ export default function FinanceControls({
     event.preventDefault()
     begin('cancel')
     try {
-      await postJson(`/api/invoices/${invoice.id}/cancel`, {
-        reason: cancellationReason,
-      })
+      await postJson(`/api/invoices/${invoice.id}/cancel`, { reason: cancellationReason })
       setCancellationReason('')
       finish(tFinanceControls(locale, 'cancellationRequested'))
     } catch (err) {
@@ -198,44 +209,28 @@ export default function FinanceControls({
       </h2>
 
       {message ? (
-        <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          {message}
-        </p>
+        <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{message}</p>
       ) : null}
       {error ? (
-        <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </p>
+        <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       ) : null}
 
       <div className="mt-4 grid gap-5 xl:grid-cols-3">
         {canReconcile && invoice.status !== 'canceled' && invoice.status !== 'paid' ? (
           <form onSubmit={reconcileManualPayment} className="rounded-xl border border-neutral-200 p-4">
-            <h3 className="font-black text-neutral-900">
-              {tFinanceControls(locale, 'manualPaymentTitle')}
-            </h3>
-            <p className="mt-1 text-xs leading-5 text-neutral-500">
-              {tFinanceControls(locale, 'manualPaymentCopy')}
-            </p>
+            <h3 className="font-black text-neutral-900">{tFinanceControls(locale, 'manualPaymentTitle')}</h3>
+            <p className="mt-1 text-xs leading-5 text-neutral-500">{tFinanceControls(locale, 'manualPaymentCopy')}</p>
             <div className="mt-4 space-y-3">
               <label className="block text-xs font-bold text-neutral-600">
                 {tFinanceControls(locale, 'provider')}
-                <select
-                  value={provider}
-                  onChange={(event) => setProvider(event.target.value as 'zelle' | 'bank_transfer')}
-                  className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900"
-                >
+                <select value={provider} onChange={(event) => setProvider(event.target.value as 'zelle' | 'bank_transfer')} className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900">
                   <option value="zelle">{tFinanceControls(locale, 'zelle')}</option>
                   <option value="bank_transfer">{tFinanceControls(locale, 'bankTransfer')}</option>
                 </select>
               </label>
               <label className="block text-xs font-bold text-neutral-600">
                 {tFinanceControls(locale, 'purpose')}
-                <select
-                  value={purpose}
-                  onChange={(event) => setPurpose(event.target.value as PaymentPurpose)}
-                  className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900"
-                >
+                <select value={purpose} onChange={(event) => setPurpose(event.target.value as PaymentPurpose)} className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900">
                   <option value="deposit">{tFinanceControls(locale, 'deposit')}</option>
                   <option value="balance">{tFinanceControls(locale, 'balance')}</option>
                   <option value="full">{tFinanceControls(locale, 'full')}</option>
@@ -243,28 +238,13 @@ export default function FinanceControls({
               </label>
               <label className="block text-xs font-bold text-neutral-600">
                 {tFinanceControls(locale, 'receiptReference')}
-                <input
-                  value={confirmationReference}
-                  onChange={(event) => setConfirmationReference(event.target.value)}
-                  required
-                  minLength={3}
-                  placeholder={tFinanceControls(locale, 'receiptReferenceHint')}
-                  className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900"
-                />
+                <input value={confirmationReference} onChange={(event) => setConfirmationReference(event.target.value)} required minLength={3} placeholder={tFinanceControls(locale, 'receiptReferenceHint')} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900" />
               </label>
               <label className="block text-xs font-bold text-neutral-600">
                 {tFinanceControls(locale, 'note')}
-                <textarea
-                  value={confirmationNote}
-                  onChange={(event) => setConfirmationNote(event.target.value)}
-                  rows={2}
-                  className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900"
-                />
+                <textarea value={confirmationNote} onChange={(event) => setConfirmationNote(event.target.value)} rows={2} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900" />
               </label>
-              <button
-                disabled={busy !== null}
-                className="w-full rounded-lg bg-[var(--brand-primary-2,#1e3a5f)] px-3 py-2 text-sm font-bold text-white disabled:opacity-50"
-              >
+              <button disabled={busy !== null} className="w-full rounded-lg bg-[var(--brand-primary-2,#1e3a5f)] px-3 py-2 text-sm font-bold text-white disabled:opacity-50">
                 {tFinanceControls(locale, 'confirmReceipt')}
               </button>
             </div>
@@ -274,124 +254,74 @@ export default function FinanceControls({
         {canRefund ? (
           <div className="rounded-xl border border-neutral-200 p-4">
             <h3 className="font-black text-neutral-900">{tFinanceControls(locale, 'refundsTitle')}</h3>
-            <p className="mt-1 text-xs leading-5 text-amber-700">
-              {tFinanceControls(locale, 'noAutomaticRefund')}
-            </p>
+            <p className="mt-1 text-xs leading-5 text-amber-700">{tFinanceControls(locale, 'noAutomaticRefund')}</p>
+
             {completedPayments.length > 0 ? (
               <form onSubmit={requestRefund} className="mt-4 space-y-3">
                 <label className="block text-xs font-bold text-neutral-600">
                   {tFinanceControls(locale, 'payment')}
-                  <select
-                    value={refundPaymentId}
-                    onChange={(event) => setRefundPaymentId(event.target.value)}
-                    className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900"
-                  >
+                  <select value={refundPaymentId} onChange={(event) => setRefundPaymentId(event.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900">
                     {completedPayments.map((payment) => (
-                      <option value={payment.id} key={payment.id}>
-                        {payment.provider} · {formatMoney(payment.amount, payment.currency_code, locale)}
-                      </option>
+                      <option value={payment.id} key={payment.id}>{payment.provider} · {formatMoney(payment.amount, payment.currency_code, locale)}</option>
                     ))}
                   </select>
                 </label>
                 <label className="block text-xs font-bold text-neutral-600">
                   {tFinanceControls(locale, 'refundAmount')}
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={refundAmount}
-                    onChange={(event) => setRefundAmount(event.target.value)}
-                    placeholder="100.00"
-                    className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900"
-                  />
+                  <input type="number" min="0.01" step="0.01" value={refundAmount} onChange={(event) => setRefundAmount(event.target.value)} placeholder="100.00" className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900" />
                 </label>
                 <label className="block text-xs font-bold text-neutral-600">
                   {tFinanceControls(locale, 'refundReason')}
-                  <input
-                    value={refundReason}
-                    onChange={(event) => setRefundReason(event.target.value)}
-                    required
-                    minLength={3}
-                    className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900"
-                  />
+                  <input value={refundReason} onChange={(event) => setRefundReason(event.target.value)} required minLength={3} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900" />
                 </label>
-                <button
-                  disabled={busy !== null || !refundPaymentId}
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm font-bold text-neutral-800 disabled:opacity-50"
-                >
-                  {tFinanceControls(locale, 'requestRefund')}
-                </button>
+                <button disabled={busy !== null || !refundPaymentId} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm font-bold text-neutral-800 disabled:opacity-50">{tFinanceControls(locale, 'requestRefund')}</button>
               </form>
             ) : null}
 
             {openRefunds.length > 0 ? (
-              <form onSubmit={completeRefund} className="mt-5 space-y-3 border-t border-neutral-100 pt-4">
+              <div className="mt-5 space-y-3 border-t border-neutral-100 pt-4">
                 <label className="block text-xs font-bold text-neutral-600">
                   {tFinanceControls(locale, 'refundsTitle')}
-                  <select
-                    value={completeRefundId}
-                    onChange={(event) => setCompleteRefundId(event.target.value)}
-                    className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900"
-                  >
+                  <select value={completeRefundId} onChange={(event) => { setCompleteRefundId(event.target.value); setRefundReference('') }} className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900">
                     {openRefunds.map((refund) => (
-                      <option value={refund.id} key={refund.id}>
-                        {formatMoney(refund.amount, refund.currency_code, locale)} · {refund.reason}
-                      </option>
+                      <option value={refund.id} key={refund.id}>{formatMoney(refund.amount, refund.currency_code, locale)} · {refund.reason}</option>
                     ))}
                   </select>
                 </label>
-                <label className="block text-xs font-bold text-neutral-600">
-                  {tFinanceControls(locale, 'refundReference')}
-                  <input
-                    value={refundReference}
-                    onChange={(event) => setRefundReference(event.target.value)}
-                    required
-                    minLength={3}
-                    className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900"
-                  />
-                </label>
-                <button
-                  disabled={busy !== null || !completeRefundId}
-                  className="w-full rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800 disabled:opacity-50"
-                >
-                  {tFinanceControls(locale, 'markRefundComplete')}
-                </button>
-              </form>
+
+                {selectedRefundIsPaypal ? (
+                  <div className="space-y-3">
+                    <p className="text-xs leading-5 text-neutral-600">{tFinanceControls(locale, 'paypalSandboxRefundCopy')}</p>
+                    <button type="button" onClick={executePaypalRefund} disabled={busy !== null || !completeRefundId} className="w-full rounded-lg border border-amber-400 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-900 disabled:opacity-50">{tFinanceControls(locale, 'executePaypalRefund')}</button>
+                  </div>
+                ) : (
+                  <form onSubmit={completeManualRefund} className="space-y-3">
+                    <p className="text-xs leading-5 text-neutral-600">{tFinanceControls(locale, 'manualRefundCopy')}</p>
+                    <label className="block text-xs font-bold text-neutral-600">
+                      {tFinanceControls(locale, 'refundReference')}
+                      <input value={refundReference} onChange={(event) => setRefundReference(event.target.value)} required minLength={3} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900" />
+                    </label>
+                    <button disabled={busy !== null || !completeRefundId} className="w-full rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800 disabled:opacity-50">{tFinanceControls(locale, 'markRefundComplete')}</button>
+                  </form>
+                )}
+              </div>
             ) : null}
           </div>
         ) : null}
 
         {canCancel && invoice.status !== 'canceled' ? (
           <form onSubmit={requestCancellation} className="rounded-xl border border-neutral-200 p-4">
-            <h3 className="font-black text-neutral-900">
-              {tFinanceControls(locale, 'cancellationTitle')}
-            </h3>
-            <p className="mt-1 text-xs leading-5 text-neutral-500">
-              {tFinanceControls(locale, 'cancellationCopy')}
-            </p>
+            <h3 className="font-black text-neutral-900">{tFinanceControls(locale, 'cancellationTitle')}</h3>
+            <p className="mt-1 text-xs leading-5 text-neutral-500">{tFinanceControls(locale, 'cancellationCopy')}</p>
             {activeCancellation ? (
-              <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800">
-                {cancellationStatusLabel(activeCancellation.status, locale)}
-              </p>
+              <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800">{cancellationStatusLabel(activeCancellation.status, locale)}</p>
             ) : (
               <div className="mt-4 space-y-3">
                 <label className="block text-xs font-bold text-neutral-600">
                   {tFinanceControls(locale, 'cancellationReason')}
-                  <textarea
-                    value={cancellationReason}
-                    onChange={(event) => setCancellationReason(event.target.value)}
-                    required
-                    minLength={3}
-                    rows={3}
-                    className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900"
-                  />
+                  <textarea value={cancellationReason} onChange={(event) => setCancellationReason(event.target.value)} required minLength={3} rows={3} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900" />
                 </label>
-                <button
-                  disabled={busy !== null}
-                  className="w-full rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-bold text-red-700 disabled:opacity-50"
-                >
-                  {tFinanceControls(locale, 'cancelInvoice')}
-                </button>
+                <button disabled={busy !== null} className="w-full rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-bold text-red-700 disabled:opacity-50">{tFinanceControls(locale, 'cancelInvoice')}</button>
               </div>
             )}
           </form>
@@ -400,9 +330,7 @@ export default function FinanceControls({
 
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <div className="overflow-hidden rounded-xl border border-neutral-200">
-          <div className="bg-neutral-50 px-4 py-3 text-xs font-black uppercase tracking-wider text-neutral-600">
-            {tFinanceControls(locale, 'refundsTitle')} · {tFinanceControls(locale, 'history')}
-          </div>
+          <div className="bg-neutral-50 px-4 py-3 text-xs font-black uppercase tracking-wider text-neutral-600">{tFinanceControls(locale, 'refundsTitle')} · {tFinanceControls(locale, 'history')}</div>
           {invoice.refunds.length === 0 ? (
             <p className="p-4 text-sm text-neutral-500">{tFinanceControls(locale, 'noRefunds')}</p>
           ) : (
@@ -410,12 +338,8 @@ export default function FinanceControls({
               {invoice.refunds.map((refund) => (
                 <div className="p-4 text-sm" key={refund.id}>
                   <div className="flex items-center justify-between gap-3">
-                    <strong className="text-neutral-900">
-                      {formatMoney(refund.amount, refund.currency_code, locale)}
-                    </strong>
-                    <span className="text-xs font-bold uppercase text-neutral-600">
-                      {refundStatusLabel(refund.status, locale)}
-                    </span>
+                    <strong className="text-neutral-900">{formatMoney(refund.amount, refund.currency_code, locale)}</strong>
+                    <span className="text-xs font-bold uppercase text-neutral-600">{refundStatusLabel(refund.status, locale)}</span>
                   </div>
                   <p className="mt-1 text-neutral-700">{refund.reason}</p>
                   <p className="mt-1 text-xs text-neutral-500">
@@ -429,24 +353,18 @@ export default function FinanceControls({
         </div>
 
         <div className="overflow-hidden rounded-xl border border-neutral-200">
-          <div className="bg-neutral-50 px-4 py-3 text-xs font-black uppercase tracking-wider text-neutral-600">
-            {tFinanceControls(locale, 'cancellationTitle')} · {tFinanceControls(locale, 'history')}
-          </div>
+          <div className="bg-neutral-50 px-4 py-3 text-xs font-black uppercase tracking-wider text-neutral-600">{tFinanceControls(locale, 'cancellationTitle')} · {tFinanceControls(locale, 'history')}</div>
           {invoice.cancellations.length === 0 ? (
             <p className="p-4 text-sm text-neutral-500">—</p>
           ) : (
             <div className="divide-y divide-neutral-100">
-              {invoice.cancellations.map((cancellation) => (
-                <div className="p-4 text-sm" key={cancellation.id}>
+              {invoice.cancellations.map((item) => (
+                <div className="p-4 text-sm" key={item.id}>
                   <div className="flex items-center justify-between gap-3">
-                    <strong className="text-neutral-900">{cancellation.reason}</strong>
-                    <span className="text-xs font-bold uppercase text-neutral-600">
-                      {cancellationStatusLabel(cancellation.status, locale)}
-                    </span>
+                    <strong className="text-neutral-900">{item.reason}</strong>
+                    <span className="text-xs font-bold uppercase text-neutral-600">{cancellationStatusLabel(item.status, locale)}</span>
                   </div>
-                  <p className="mt-1 text-xs text-neutral-500">
-                    {tFinanceControls(locale, 'requestedAt')}: {formatDateTime(cancellation.requested_at, locale)}
-                  </p>
+                  <p className="mt-1 text-xs text-neutral-500">{tFinanceControls(locale, 'requestedAt')}: {formatDateTime(item.requested_at, locale)}</p>
                 </div>
               ))}
             </div>
