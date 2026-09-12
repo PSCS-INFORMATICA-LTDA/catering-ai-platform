@@ -89,6 +89,7 @@ function rpcError(message: string | null | undefined) {
   const known = [
     'service_order_not_found',
     'original_invoice_not_found',
+    'original_invoice_canceled',
     'invalid_final_guest_counts',
     'invalid_extra_services',
     'too_many_extra_services',
@@ -96,6 +97,7 @@ function rpcError(message: string | null | undefined) {
     'extra_service_quantity_invalid',
     'extra_service_unit_price_invalid',
     'extra_service_type_invalid',
+    'guest_overage_pricing_missing',
     'closeout_finalized',
     'closeout_not_found',
     'closeout_not_ready',
@@ -119,7 +121,9 @@ export function financialCloseoutErrorStatus(code: string) {
   if (
     code === 'closeout_finalized' ||
     code === 'closeout_not_ready' ||
-    code === 'service_order_must_be_completed'
+    code === 'service_order_must_be_completed' ||
+    code === 'guest_overage_pricing_missing' ||
+    code === 'original_invoice_canceled'
   ) return 409
   return 500
 }
