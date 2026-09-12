@@ -48,8 +48,9 @@ export default async function InvoiceDetailPage({
     session.isPlatformAdmin ||
     hasPermission(session.permissions, 'finance.refunds.manage')
   const canCancel =
-    session.isPlatformAdmin ||
-    hasPermission(session.permissions, 'finance.invoices.cancel')
+    data.invoice_kind !== 'post_event_adjustment' &&
+    (session.isPlatformAdmin ||
+      hasPermission(session.permissions, 'finance.invoices.cancel'))
 
   return (
     <div className="space-y-5">
