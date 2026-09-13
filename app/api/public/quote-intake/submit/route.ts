@@ -83,6 +83,56 @@ export async function POST(request: NextRequest) {
     if (!/^[A-Za-z0-9._:-]{16,200}$/.test(idempotencyKey)) {
       throw new PublicQuoteHttpError(400, 'invalid_payload')
     }
+    const idempotencyKeyHash = sha256(idempotencyKey)
+    if (
+      session.status === 'submitted' &&
+      session.quote_id &&
+      session.idempotency_key_hash === idempotencyKeyHash
+    ) {
+      const supabase = getSupabaseServerClient()
+      const { data: existing, error: existingError } = await supabase
+        .from('quotes')
+        .select('id, quote_number, quote_total, currency_code, event_id, pricing_breakdown')
+        .eq('id', session.quote_id)
+        .eq('company_id', session.company_id)
+        .maybeSingle()
+      if (existingError) throw new PublicQuoteHttpError(500, 'server_error')
+      if (!existing) throw new PublicQuoteHttpError(404, 'not_found')
+      const { data: event } = await supabase
+        .from('events')
+        .select('event_name, event_date')
+        .eq('id', existing.event_id)
+        .eq('company_id', session.company_id)
+        .maybeSingle()
+      const { data: application } = await supabase
+        .from('quote_coupon_applications')
+        .select('coupon_code_snapshot, approval_status, potential_discount_amount, applied_discount_amount')
+        .eq('quote_id', existing.id)
+        .eq('company_id', session.company_id)
+        .maybeSingle()
+      return NextResponse.json(
+        {
+          quote: {
+            id: existing.id,
+            number: existing.quote_number,
+            eventName: event?.event_name ?? null,
+            eventDate: event?.event_date ?? null,
+            total: existing.quote_total,
+            currency: existing.currency_code,
+          },
+          alreadySubmitted: true,
+          coupon: application
+            ? {
+                code: application.coupon_code_snapshot,
+                approvalStatus: application.approval_status,
+                potentialDiscountAmount: application.potential_discount_amount,
+                appliedDiscountAmount: application.applied_discount_amount,
+              }
+            : null,
+        },
+        { headers: NO_STORE },
+      )
+    }
 
     const contactConsent = body.consent?.accepted === true
     const privacyPolicyVersion =
@@ -194,7 +244,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const idempotencyKeyHash = sha256(idempotencyKey)
     const submissionHash = stableJsonHash({
       draft,
       consentVersion: privacyPolicyVersion,

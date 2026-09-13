@@ -515,6 +515,41 @@ async function main() {
     evidence.applications.push(after.application?.id)
   }
 
+  {
+    const phone = await unusedPhone(db, '140755522')
+    const payload = draft({
+      locale: 'en',
+      firstName: 'QA',
+      lastName: 'Idempotent',
+      phone,
+      email: 'qa.hard.idem@example.invalid',
+      eventName: `${TAG} idempotent`,
+    })
+    payload.selection.packageSelections = selections
+    const started = await startSession('en')
+    const saved = await saveDraft(started.cookie, payload)
+    await applyCoupon(saved.cookie, 'WELCOME')
+    const key = `qa-coupon-center-${randomUUID()}`
+    const first = await submitQuote(saved.cookie, payload, consentVersion, key)
+    const second = await submitQuote(first.cookie, payload, consentVersion, key)
+    record(
+      'E2E-same-idempotency-key',
+      first.response.ok &&
+        second.response.ok &&
+        second.data?.alreadySubmitted === true &&
+        second.data?.quote?.id === first.data?.quote?.id,
+      JSON.stringify({
+        first: first.response.status,
+        second: second.response.status,
+        already: second.data?.alreadySubmitted,
+        quoteId: first.data?.quote?.id,
+        retryId: second.data?.quote?.id,
+        error: second.data?.code || second.data?.error || null,
+      }),
+    )
+    if (first.data?.quote?.id) evidence.quotes.push(first.data.quote.id)
+  }
+
   const failed = rows.filter((row) => !row.ok)
   console.log(`\nCOUPON HARDENING E2E: ${rows.length - failed.length}/${rows.length} passed`)
   console.log(JSON.stringify(evidence, null, 2))
