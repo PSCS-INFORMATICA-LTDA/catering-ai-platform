@@ -96,7 +96,14 @@ export const CATERING_NAV: NavGroup[] = [
   {
     id: 'parameters',
     label: 'Parâmetros',
-    children: [{ href: '/commercial-rules', label: 'Regras comerciais' }],
+    children: [
+      { href: '/commercial-rules', label: 'Regras comerciais' },
+      {
+        href: '/coupons',
+        label: 'Cupons',
+        requiredPermission: 'commercial.coupons.view',
+      },
+    ],
   },
   {
     id: 'settings',
@@ -139,6 +146,9 @@ export function isNavHrefActive(pathname: string, href: string): boolean {
   }
   if (href === '/invoices') {
     return pathname === '/invoices' || pathname.startsWith('/invoices/')
+  }
+  if (href === '/coupons') {
+    return pathname === '/coupons' || pathname.startsWith('/coupons/')
   }
   if (href === '/estoque') {
     return pathname === '/estoque' || pathname.startsWith('/estoque/')
