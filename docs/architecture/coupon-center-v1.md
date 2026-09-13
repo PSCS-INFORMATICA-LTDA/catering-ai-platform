@@ -30,6 +30,7 @@ Submit
   → same resolver
   → finalize_public_quote
   → persistQuoteCouponApplication
+  → public.reserve_quote_coupon_application (row lock + customer usage lock)
   → quotes + current quote_versions snapshot
 ```
 
@@ -99,7 +100,9 @@ Statuses: `pending` → `applied` or `rejected`. `revoked` remains in the check 
 - Submit includes coupon facts in the submission hash.
 - `uq_quote_coupon_once` on `(quote_id, coupon_id)`.
 - Approval uses conditional update.
-- `max_uses_per_customer` is checked server-side via `customers.phone_normalized`. A remaining race across two brand-new quotes is documented; the unique quote+coupon constraint is the last barrier for the same quote.
+- `max_uses_per_customer` is checked server-side via `customers.phone_normalized` before submit.
+- The last barrier is `public.reserve_quote_coupon_application` (`SECURITY DEFINER`, `service_role` only): coupon `FOR UPDATE`, customer advisory lock, then count `pending|applied` uses and insert. Same quote+coupon is idempotent.
+- If that RPC is not yet live, persist falls back to a deterministic UUID v5 claim on `quote_coupon_applications.id` for `(company, coupon, customer, slot)`. The primary key is the concurrent mutex: two first uses of a limit=1 coupon collide and only one row is stored.
 
 ## RLS
 

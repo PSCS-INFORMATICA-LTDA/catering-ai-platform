@@ -14,6 +14,7 @@
 | `20260913024000_coupon_pending_progression_guard` | yes | invoice/SO inserts are guarded in app; function is `private` and not in public RPC cache | Git SQL known | MATCHED (behavior present; SQL history not readable) | none | MATCHED |
 | `20260913024500_coupon_pending_guard_function_privileges` | yes | public RPC lookup of the guard function 404s (expected, privileges revoked) | Git SQL known | MATCHED | none | MATCHED |
 | `20260913040124_coupon_rules_v1` | **no** | `public.coupon_rules` 404; OpenAPI has no such table | original SQL **not recovered** | UNVERIFIED_HISTORY / NOT_IN_LIVE_SCHEMA | do not invent the file; do not mark applied | DOCUMENTED, not fabricated |
+| `20260913190000_coupon_customer_usage_lock` | yes | function not in live PostgREST yet; persist uses UUID v5 customer-usage claim until the RPC is applied | yes, from Git file | LOCAL_ONLY until Management/SQL apply | apply this file only when a DEV SQL console/token exists; never recreate `40124` | IN_GIT, claim-id barrier live |
 
 ## Live coupon catalog (DEV, not deleted)
 
@@ -28,6 +29,8 @@ All four rows are company `65fd576f-8d97-49ba-bf38-61bc1e94e94a` and marked `dev
 
 ## Decision
 
-No forward-only SQL was added in this round. Application invariants now enforce allocation and approval rules. Adding an unapplied Git migration would create LOCAL_ONLY drift that this environment cannot execute without a SQL console.
+`20260913040124_coupon_rules_v1` remains **UNVERIFIED_HISTORY / NOT_IN_LIVE_SCHEMA**. The original SQL was not recovered. No look-alike file was added.
+
+`20260913190000_coupon_customer_usage_lock` is the only new forward-only SQL in this round. It adds `public.reserve_quote_coupon_application` as the concurrent last barrier for `max_uses_per_customer` / `max_uses_per_quote`. It does not create `coupon_rules`.
 
 If Philippe later recovers the exact `20260913040124_coupon_rules_v1` statement from `supabase_migrations.schema_migrations`, attach that exact SQL. Do not write a look-alike.
