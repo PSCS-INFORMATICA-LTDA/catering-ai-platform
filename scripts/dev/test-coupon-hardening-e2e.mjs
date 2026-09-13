@@ -431,6 +431,7 @@ async function main() {
     const after = await loadQuote(db, quoteId)
     const ok =
       approve.response.ok &&
+      approve.data?.via === 'rpc' &&
       after.application?.approval_status === 'applied' &&
       Number(after.application?.applied_discount_amount) > 0 &&
       Number(after.quote?.quote_total) < beforeTotal &&
@@ -444,6 +445,7 @@ async function main() {
       ok,
       JSON.stringify({
         http: approve.response.status,
+        via: approve.data?.via ?? null,
         applicationId: after.application?.id,
         quoteId,
         beforeTotal,
@@ -453,10 +455,12 @@ async function main() {
         discount: after.application?.applied_discount_amount,
       }),
     )
+    record('E2E-approve-via-rpc', approve.data?.via === 'rpc', String(approve.data?.via ?? 'missing'))
     evidence.approve = {
       quoteId,
       applicationId: after.application?.id,
       versionId: after.version?.id,
+      via: approve.data?.via ?? null,
       beforeTotal,
       afterTotal: after.quote?.quote_total,
       deposit: after.quote?.reservation_amount,
@@ -496,6 +500,7 @@ async function main() {
         : null
     const ok =
       reject.response.ok &&
+      reject.data?.via === 'rpc' &&
       after.application?.approval_status === 'rejected' &&
       Number(after.application?.applied_discount_amount) === 0 &&
       Number(after.quote?.quote_total) === beforeTotal &&
@@ -506,6 +511,7 @@ async function main() {
       ok,
       JSON.stringify({
         http: reject.response.status,
+        via: reject.data?.via ?? null,
         applicationId: after.application?.id,
         quoteId,
         total: after.quote?.quote_total,
@@ -514,9 +520,11 @@ async function main() {
         snapshotStatus: snapshotCoupon?.approval_status,
       }),
     )
+    record('E2E-reject-via-rpc', reject.data?.via === 'rpc', String(reject.data?.via ?? 'missing'))
     evidence.reject = {
       quoteId,
       applicationId: after.application?.id,
+      via: reject.data?.via ?? null,
       total: after.quote?.quote_total,
     }
     evidence.quotes.push(quoteId)

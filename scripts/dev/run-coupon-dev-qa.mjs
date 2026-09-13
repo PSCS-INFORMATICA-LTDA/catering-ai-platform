@@ -1,7 +1,8 @@
 /**
  * Controlled DEV/QA persist proof for Coupon Center V1.
- * Creates clearly tagged public quotes. Does not delete commercial rows.
- * Does not touch PROD. Does not use PayPal Live.
+ * Creates clearly tagged public quotes. Approves CDL10 through the
+ * authenticated PATCH so the atomic decide RPC is exercised. Does not
+ * delete commercial rows. Does not touch PROD. Does not use PayPal Live.
  *
  *   COUPON_E2E_BASE_URL=https://... node scripts/dev/run-coupon-dev-qa.mjs
  */
@@ -9,8 +10,7 @@ import { randomUUID } from 'node:crypto'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
-import { allocateApprovedCoupon } from '../../Lib/coupons/couponMath.ts'
-import { assertDevUrl, loadDevEnv } from './loadDevEnv.mjs'
+import { assertDevUrl, DEV_REF, loadDevEnv } from './loadDevEnv.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const COMPANY = '65fd576f-8d97-49ba-bf38-61bc1e94e94a'
@@ -65,6 +65,18 @@ async function jsonFetch(path, { method = 'GET', body, cookie = '' } = {}) {
     data = { raw: text.slice(0, 300) }
   }
   return { response, data, cookie: jarFrom(response, cookie) }
+}
+
+function authCookie(session) {
+  const payload = {
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+    expires_in: session.expires_in,
+    expires_at: session.expires_at,
+    token_type: 'bearer',
+    user: session.user,
+  }
+  return `sb-${DEV_REF}-auth-token=${encodeURIComponent(JSON.stringify(payload))}`
 }
 
 async function unusedPhone(db, prefix) {
@@ -211,95 +223,6 @@ async function loadQuoteEvidence(db, quoteId) {
   return { quote: quote.data, version: version.data, application: application.data }
 }
 
-async function approveApplication(db, application, quote) {
-  const now = new Date().toISOString()
-  const breakdown =
-    quote.pricing_breakdown && typeof quote.pricing_breakdown === 'object'
-      ? { ...quote.pricing_breakdown }
-      : null
-  const rules =
-    application.rules_snapshot && typeof application.rules_snapshot === 'object'
-      ? application.rules_snapshot
-      : {}
-  const discount = Number(application.potential_discount_amount || 0)
-  const allocation = allocateApprovedCoupon({
-    total: Number(breakdown?.total ?? quote.quote_total ?? 0),
-    deposit: Number(breakdown?.deposit ?? quote.reservation_amount ?? 0),
-    authorizedDiscount: discount,
-    applyToDeposit: rules.apply_to_deposit === true,
-    applyToBalance: rules.apply_to_balance !== false,
-  })
-  if ('error' in allocation) throw new Error(allocation.error)
-  const claimed = await db
-    .from('quote_coupon_applications')
-    .update({
-      approval_status: 'applied',
-      applied_discount_amount: allocation.authorizedDiscount,
-      approved_at: now,
-      updated_at: now,
-    })
-    .eq('id', application.id)
-    .eq('company_id', COMPANY)
-    .eq('approval_status', 'pending')
-    .select('id')
-    .maybeSingle()
-  if (claimed.error) throw new Error(claimed.error.message)
-  const updatedBreakdown = {
-    ...breakdown,
-    total: allocation.finalTotal,
-    deposit: allocation.depositDue,
-    balance: allocation.balanceDue,
-    coupon: {
-      ...(breakdown?.coupon && typeof breakdown.coupon === 'object' ? breakdown.coupon : {}),
-      approval_status: 'applied',
-      applied_discount_amount: allocation.authorizedDiscount,
-      approved_at: now,
-    },
-  }
-  await db
-    .from('quotes')
-    .update({
-      discount: allocation.authorizedDiscount,
-      discount_amount: allocation.authorizedDiscount,
-      reservation_amount: allocation.depositDue,
-      deposit_amount: allocation.depositDue,
-      balance_due: allocation.balanceDue,
-      total_amount: allocation.finalTotal,
-      quote_total: allocation.finalTotal,
-      pricing_breakdown: updatedBreakdown,
-    })
-    .eq('id', quote.id)
-    .eq('company_id', COMPANY)
-  const versions = await db
-    .from('quote_versions')
-    .select('id, commercial_snapshot')
-    .eq('quote_id', quote.id)
-    .eq('company_id', COMPANY)
-    .eq('is_current', true)
-  for (const version of versions.data ?? []) {
-    const snapshot =
-      version.commercial_snapshot && typeof version.commercial_snapshot === 'object'
-        ? { ...version.commercial_snapshot }
-        : {}
-    await db
-      .from('quote_versions')
-      .update({
-        discount_amount: allocation.authorizedDiscount,
-        reservation_amount: allocation.depositDue,
-        balance_due: allocation.balanceDue,
-        quote_total: allocation.finalTotal,
-        commercial_snapshot: {
-          ...snapshot,
-          pricing_breakdown: updatedBreakdown,
-          coupon: updatedBreakdown.coupon,
-        },
-      })
-      .eq('id', version.id)
-      .eq('company_id', COMPANY)
-  }
-  return allocation
-}
-
 async function main() {
   const env = loadDevEnv(root)
   assertDevUrl(env.url)
@@ -309,6 +232,17 @@ async function main() {
   const db = createClient(env.url, env.service, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
+  const anon = createClient(env.url, env.anon, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  const email = process.env.CATERING_DEV_LOGIN_EMAIL
+  const password = process.env.CATERING_DEV_LOGIN_PASSWORD
+  if (!email || !password) throw new Error('CATERING_DEV_LOGIN_* required')
+  const signed = await anon.auth.signInWithPassword({ email, password })
+  if (signed.error || !signed.data.session) {
+    throw new Error(`admin login failed: ${signed.error?.message || 'no session'}`)
+  }
+  const adminCookie = authCookie(signed.data.session)
   const settings = await db
     .from('company_public_quote_settings')
     .select('enabled, consent_version')
@@ -498,21 +432,29 @@ async function main() {
         Boolean(serviceOrder.error) && /coupon_approval_pending/i.test(serviceOrder.error?.message || ''),
         serviceOrder.error?.message || 'service order inserted',
       )
-      const allocation = await approveApplication(db, loaded.application, loaded.quote)
+      const approve = await jsonFetch('/api/coupons/applications', {
+        method: 'PATCH',
+        cookie: adminCookie,
+        body: { id: loaded.application.id, action: 'approve' },
+      })
       const after = await loadQuoteEvidence(db, quoteId)
       const total = Number(after.quote?.quote_total)
       const deposit = Number(after.quote?.reservation_amount ?? after.quote?.deposit_amount)
       const balance = Number(after.quote?.balance_due)
       record(
         'E2E-cdl10-approved',
-        after.application?.approval_status === 'applied' &&
+        approve.response.ok &&
+          approve.data?.via === 'rpc' &&
+          after.application?.approval_status === 'applied' &&
           Number(after.application?.applied_discount_amount) > 0 &&
           Math.abs(deposit + balance - total) < 0.01 &&
-          Math.abs(total - allocation.finalTotal) < 0.01,
+          Math.abs(total - Number(approve.data?.total)) < 0.01,
         JSON.stringify({
           quoteId,
           versionId: after.version?.id,
           applicationId: after.application?.id,
+          via: approve.data?.via ?? null,
+          http: approve.response.status,
           status: after.application?.approval_status,
           applied: after.application?.applied_discount_amount,
           total,
@@ -520,11 +462,13 @@ async function main() {
           balance,
         }),
       )
+      record('E2E-cdl10-via-rpc', approve.data?.via === 'rpc', String(approve.data?.via ?? 'missing'))
       evidence.cdl10 = {
         quoteId,
         versionId: after.version?.id,
         applicationId: after.application?.id,
         customerId: after.quote?.customer_id,
+        via: approve.data?.via ?? null,
         total,
         deposit,
         balance,

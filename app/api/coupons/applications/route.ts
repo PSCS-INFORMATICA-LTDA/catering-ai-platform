@@ -206,6 +206,7 @@ export async function PATCH(request: Request) {
   })
   if (decided.error) {
     if (isMissingCouponDecideFunction(decided.error)) {
+      console.warn('[coupon-decide]', JSON.stringify({ via: 'fallback', action, applicationId: id }))
       const fallback = await decideQuoteCouponFallback({
         db,
         companyId: ctx.companyId,
@@ -223,12 +224,14 @@ export async function PATCH(request: Request) {
           ok: true,
           status: 'rejected',
           idempotent: fallback.idempotent === true,
+          via: 'fallback',
         }, { headers: NO_STORE })
       }
       return Response.json({
         ok: true,
         status: 'applied',
         idempotent: fallback.idempotent === true,
+        via: 'fallback',
         total: allocation && !('error' in allocation) ? allocation.finalTotal : undefined,
         deposit: allocation && !('error' in allocation) ? allocation.depositDue : undefined,
         balance: allocation && !('error' in allocation) ? allocation.balanceDue : undefined,
@@ -253,11 +256,19 @@ export async function PATCH(request: Request) {
   const result = decided.data && typeof decided.data === 'object'
     ? (decided.data as { ok?: boolean; status?: string; idempotent?: boolean; total?: number; deposit?: number; balance?: number })
     : {}
+  console.info('[coupon-decide]', JSON.stringify({
+    via: 'rpc',
+    action,
+    applicationId: id,
+    status: result.status ?? (action === 'reject' ? 'rejected' : 'applied'),
+    idempotent: result.idempotent === true,
+  }))
   if (action === 'reject') {
     return Response.json({
       ok: true,
       status: 'rejected',
       idempotent: result.idempotent === true,
+      via: 'rpc',
     }, { headers: NO_STORE })
   }
 
@@ -265,6 +276,7 @@ export async function PATCH(request: Request) {
     ok: true,
     status: 'applied',
     idempotent: result.idempotent === true,
+    via: 'rpc',
     total: allocation && !('error' in allocation) ? allocation.finalTotal : result.total,
     deposit: allocation && !('error' in allocation) ? allocation.depositDue : result.deposit,
     balance: allocation && !('error' in allocation) ? allocation.balanceDue : result.balance,
