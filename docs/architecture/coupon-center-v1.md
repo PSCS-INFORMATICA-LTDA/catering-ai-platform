@@ -1,6 +1,6 @@
 # Coupon Center V1
 
-**Status:** BLOCKED — `decide_quote_coupon_application` is in Git but not live on DEV; approve/reject currently uses the compensating fallback. Not merged, not production.
+**Status:** DEV live — `decide_quote_coupon_application` is live on DEV (`SECURITY DEFINER`, `service_role` only). Approve/reject uses the atomic RPC. Compensating fallback remains only if the RPC is missing. Not merged, not production. Approval remains Philippe’s.
 **Branch:** `feat/coupon-center-v1-dev-v2`  
 **PR:** #48  
 **Environment:** DEV only (`yasprgtlqclwsjcshtls`)  
@@ -93,7 +93,7 @@ Statuses: `pending` → `applied` or `rejected`. `revoked` remains in the check 
 - Approve/reject require `commercial.coupons.manage`, are company-scoped, and go through `public.decide_quote_coupon_application` (`SECURITY DEFINER`, `service_role` only).
 - The RPC locks the application (and the quote on approve/reject) and writes `quote_coupon_applications` + `quotes` + current `quote_versions` in one transaction. Partial financial state is not allowed.
 - Reject also stamps `pricing_breakdown.coupon.approval_status = rejected` so the UI cannot keep showing a projected discount.
-- If that RPC is not yet live, approve/reject uses a compensating fallback that reverts the application (and quote/version snapshots) when a later write fails. The fallback is temporary and is not the atomic target.
+- If that RPC is missing, approve/reject uses a compensating fallback that reverts the application (and quote/version snapshots) when a later write fails. The fallback is temporary and is not the atomic target. Official DEV now prefers the RPC and returns `via: "rpc"` on success.
 - Money math stays in TypeScript (`allocateApprovedCoupon` on the frozen `potential_discount_amount`). The RPC only applies the server-built patch.
 - Retry of the same decision is idempotent. Applied/rejected cannot return to pending in the API.
 - Approval uses the frozen `potential_discount_amount` and `rules_snapshot`, not the live coupon definition.
