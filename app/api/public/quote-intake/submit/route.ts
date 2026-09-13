@@ -314,10 +314,11 @@ export async function POST(request: NextRequest) {
           resolution: couponResolution,
           breakdown: pricing.breakdown,
         })
-        if (!persistedCoupon) {
+        if (!persistedCoupon.ok) {
           console.error('[public-quote] coupon persistence failed', {
             stage: 'coupon_snapshot',
             code: couponResolution.coupon?.code ?? couponCode,
+            reason: persistedCoupon.reason,
           })
           await rollbackPublicQuoteFinalize(
             supabase,
@@ -325,6 +326,9 @@ export async function POST(request: NextRequest) {
             result.quote.id,
             session.id,
           )
+          if (persistedCoupon.reason === 'usage_limit_reached') {
+            throw new PublicQuoteHttpError(409, 'usage_limit_reached')
+          }
           throw new PublicQuoteHttpError(500, 'server_error')
         }
       }

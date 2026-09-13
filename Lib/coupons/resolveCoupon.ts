@@ -12,8 +12,17 @@ import {
   type CouponRuleFields,
 } from '@/Lib/coupons/couponMath'
 import { normalizePhone } from '@/Lib/normalizePhone'
+import {
+  classifyCouponReserveError,
+  couponCustomerUsageClaimId,
+  isMissingCouponReserveFunction,
+  isUniqueViolation,
+  type PersistQuoteCouponResult,
+} from '@/Lib/coupons/couponPersistError'
 import type { PricingBreakdown } from '@/Lib/pricing/pricingBreakdownTypes'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
+
+export type { PersistQuoteCouponResult }
 
 export type CouponRecord = CouponRuleFields
 export type CouponResolution = CouponEvaluation
@@ -239,14 +248,114 @@ export function pricedBreakdownFromCoupon(
   return applyCouponToBreakdown(breakdown, resolution)
 }
 
+async function insertWithCustomerUsageClaim(input: {
+  db: ReturnType<typeof getSupabaseServerClient>
+  companyId: string
+  quoteId: string
+  couponId: string
+  maxUsesPerCustomer: number | null
+  maxUsesPerQuote: number
+  payload: Record<string, unknown>
+}): Promise<PersistQuoteCouponResult> {
+  const existing = await input.db
+    .from('quote_coupon_applications')
+    .select('id')
+    .eq('company_id', input.companyId)
+    .eq('quote_id', input.quoteId)
+    .eq('coupon_id', input.couponId)
+    .maybeSingle()
+  if (existing.data?.id) return { ok: true }
+
+  const quoteUses = await input.db
+    .from('quote_coupon_applications')
+    .select('id', { head: true, count: 'exact' })
+    .eq('company_id', input.companyId)
+    .eq('quote_id', input.quoteId)
+    .in('approval_status', ['pending', 'applied'])
+  if (Number(quoteUses.count ?? 0) >= input.maxUsesPerQuote) {
+    return { ok: false, reason: 'usage_limit_reached' }
+  }
+
+  const quote = await input.db
+    .from('quotes')
+    .select('customer_id')
+    .eq('id', input.quoteId)
+    .eq('company_id', input.companyId)
+    .maybeSingle()
+  const customerId =
+    typeof quote.data?.customer_id === 'string' ? quote.data.customer_id : null
+
+  if (!customerId || input.maxUsesPerCustomer == null) {
+    const inserted = await input.db.from('quote_coupon_applications').insert(input.payload)
+    if (!inserted.error) return { ok: true }
+    if (isUniqueViolation(inserted.error)) {
+      const sameQuote = await input.db
+        .from('quote_coupon_applications')
+        .select('id')
+        .eq('company_id', input.companyId)
+        .eq('quote_id', input.quoteId)
+        .eq('coupon_id', input.couponId)
+        .maybeSingle()
+      if (sameQuote.data?.id) return { ok: true }
+    }
+    return { ok: false, reason: classifyCouponReserveError(inserted.error) }
+  }
+
+  const customerQuotes = await input.db
+    .from('quotes')
+    .select('id')
+    .eq('company_id', input.companyId)
+    .eq('customer_id', customerId)
+  const quoteIds = (customerQuotes.data ?? []).map((row) => String(row.id))
+  const uses = quoteIds.length
+    ? await input.db
+        .from('quote_coupon_applications')
+        .select('id', { head: true, count: 'exact' })
+        .eq('company_id', input.companyId)
+        .eq('coupon_id', input.couponId)
+        .in('quote_id', quoteIds)
+        .in('approval_status', ['pending', 'applied'])
+    : { count: 0 }
+  const liveUses = Number(uses.count ?? 0)
+  if (liveUses >= input.maxUsesPerCustomer) {
+    return { ok: false, reason: 'usage_limit_reached' }
+  }
+
+  for (let slot = liveUses + 1; slot <= input.maxUsesPerCustomer; slot += 1) {
+    const claimId = couponCustomerUsageClaimId(
+      input.companyId,
+      input.couponId,
+      customerId,
+      slot,
+    )
+    const inserted = await input.db.from('quote_coupon_applications').insert({
+      ...input.payload,
+      id: claimId,
+    })
+    if (!inserted.error) return { ok: true }
+    if (!isUniqueViolation(inserted.error)) {
+      return { ok: false, reason: classifyCouponReserveError(inserted.error) }
+    }
+    const sameQuote = await input.db
+      .from('quote_coupon_applications')
+      .select('id')
+      .eq('company_id', input.companyId)
+      .eq('quote_id', input.quoteId)
+      .eq('coupon_id', input.couponId)
+      .maybeSingle()
+    if (sameQuote.data?.id) return { ok: true }
+  }
+  return { ok: false, reason: 'usage_limit_reached' }
+}
+
 export async function persistQuoteCouponApplication(args: {
   companyId: string
   quoteId: string
   resolution: CouponResolution
   breakdown: PricingBreakdown
-}) {
+}): Promise<PersistQuoteCouponResult> {
   const { resolution } = args
-  if (!resolution.valid || !resolution.coupon) return true
+  if (!resolution.valid || !resolution.coupon) return { ok: true }
   const db = getSupabaseServerClient()
   const now = new Date().toISOString()
   const snapshot = buildCouponCommercialSnapshot(resolution, {
@@ -255,30 +364,54 @@ export async function persistQuoteCouponApplication(args: {
   const priced = args.breakdown.coupon
     ? args.breakdown
     : applyCouponToBreakdown(args.breakdown, resolution)
-  const { error: applicationError } = await db
-    .from('quote_coupon_applications')
-    .upsert(
-      {
-        company_id: args.companyId,
-        quote_id: args.quoteId,
-        coupon_id: resolution.coupon.id,
-        coupon_code_snapshot: resolution.coupon.code,
-        campaign_name_snapshot: resolution.coupon.campaign_name,
-        eligible_amount: resolution.eligibleAmount,
-        potential_discount_amount: resolution.potentialDiscountAmount,
-        applied_discount_amount: resolution.appliedDiscountAmount,
-        approval_status: resolution.approvalStatus,
-        rules_snapshot: {
-          ...resolution.rulesSnapshot,
-          allocation: resolution.allocation,
-          projected_allocation: resolution.projectedAllocation,
-          commercial_snapshot: snapshot,
-        },
-        updated_at: now,
-      },
-      { onConflict: 'quote_id,coupon_id' },
-    )
-  if (applicationError) return false
+  const rulesSnapshot = {
+    ...resolution.rulesSnapshot,
+    allocation: resolution.allocation,
+    projected_allocation: resolution.projectedAllocation,
+    commercial_snapshot: snapshot,
+  }
+  const payload = {
+    company_id: args.companyId,
+    quote_id: args.quoteId,
+    coupon_id: resolution.coupon.id,
+    coupon_code_snapshot: resolution.coupon.code,
+    campaign_name_snapshot: resolution.coupon.campaign_name,
+    eligible_amount: resolution.eligibleAmount,
+    potential_discount_amount: resolution.potentialDiscountAmount,
+    applied_discount_amount: resolution.appliedDiscountAmount,
+    approval_status: resolution.approvalStatus,
+    rules_snapshot: rulesSnapshot,
+    updated_at: now,
+  }
+  const reserved = await db.rpc('reserve_quote_coupon_application', {
+    p_company_id: args.companyId,
+    p_quote_id: args.quoteId,
+    p_coupon_id: resolution.coupon.id,
+    p_payload: {
+      coupon_code_snapshot: payload.coupon_code_snapshot,
+      campaign_name_snapshot: payload.campaign_name_snapshot,
+      eligible_amount: payload.eligible_amount,
+      potential_discount_amount: payload.potential_discount_amount,
+      applied_discount_amount: payload.applied_discount_amount,
+      approval_status: payload.approval_status,
+      rules_snapshot: rulesSnapshot,
+    },
+  })
+  if (reserved.error && !isMissingCouponReserveFunction(reserved.error)) {
+    return { ok: false, reason: classifyCouponReserveError(reserved.error) }
+  }
+  if (reserved.error) {
+    const claimed = await insertWithCustomerUsageClaim({
+      db,
+      companyId: args.companyId,
+      quoteId: args.quoteId,
+      couponId: resolution.coupon.id,
+      maxUsesPerCustomer: resolution.coupon.max_uses_per_customer,
+      maxUsesPerQuote: resolution.coupon.max_uses_per_quote,
+      payload,
+    })
+    if (!claimed.ok) return claimed
+  }
 
   const { error: quoteError } = await db
     .from('quotes')
@@ -294,7 +427,7 @@ export async function persistQuoteCouponApplication(args: {
     })
     .eq('id', args.quoteId)
     .eq('company_id', args.companyId)
-  if (quoteError) return false
+  if (quoteError) return { ok: false, reason: 'persist_failed' }
 
   const { data: versions, error: versionReadError } = await db
     .from('quote_versions')
@@ -302,7 +435,7 @@ export async function persistQuoteCouponApplication(args: {
     .eq('quote_id', args.quoteId)
     .eq('company_id', args.companyId)
     .eq('is_current', true)
-  if (versionReadError) return false
+  if (versionReadError) return { ok: false, reason: 'persist_failed' }
   for (const version of versions ?? []) {
     const current =
       version.commercial_snapshot && typeof version.commercial_snapshot === 'object'
@@ -323,7 +456,7 @@ export async function persistQuoteCouponApplication(args: {
       })
       .eq('id', version.id)
       .eq('company_id', args.companyId)
-    if (error) return false
+    if (error) return { ok: false, reason: 'persist_failed' }
   }
-  return true
+  return { ok: true }
 }
