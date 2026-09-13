@@ -9,6 +9,7 @@ import type {
 import type { PricingBreakdown } from '@/Lib/pricing/pricingBreakdownTypes'
 import { getQuoteStrings } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage, WizardState } from '@/Lib/quoteWizardTypes'
+import PublicCouponBox from '@/components/quotes/PublicCouponBox'
 import QuoteReviewLayout from './QuoteReviewLayout'
 import {
   mapWizardBreakdownToQuoteReview,
@@ -157,7 +158,6 @@ export default function PublicQuoteConfirmationStep({
           : !cancellationPolicyAccepted
             ? w.cancellationPolicyRequired
             : w.consentRequired
-  void currency
 
   return (
     <div className="space-y-6 pb-8">
@@ -236,6 +236,14 @@ export default function PublicQuoteConfirmationStep({
         </p>
       ) : null}
 
+      {breakdown && !pricingLoading && !pricingError ? (
+        <PublicCouponBox
+          language={language}
+          currency={currency}
+          onPricingRefresh={onRetryPricing}
+        />
+      ) : null}
+
       {submitError ? (
         <p
           role="alert"
@@ -245,13 +253,6 @@ export default function PublicQuoteConfirmationStep({
         </p>
       ) : null}
 
-      {/*
-        One decision unit: accepting and submitting are the same action, so the
-        consent sits in the shell with the button and travels with it. Sticky at
-        every width, so the customer can confirm from anywhere in the review
-        without scrolling to the last pixel, and there is no second copy of
-        either control in the page body.
-      */}
       <div
         data-public-review-actions
         className="sticky bottom-0 z-20 -mx-4 border-t border-cdl-border bg-cdl-bg/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:mx-0 sm:rounded-t-2xl sm:px-5"

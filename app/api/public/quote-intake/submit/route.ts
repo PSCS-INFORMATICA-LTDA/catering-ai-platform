@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { normalizeGrillRentalQty } from '@/Lib/grillRental'
 import { computeQuotePricing } from '@/Lib/pricing/computeQuotePricing'
+import {
+  persistQuoteCouponApplication,
+  resolveCouponForPricing,
+  type CouponResolution,
+} from '@/Lib/coupons/resolveCoupon'
 import { resolvePublicQuoteMileageDistance } from '@/Lib/publicQuote/distance'
+import {
+  isOwnGrillWithoutPhoto,
+  persistOwnGrillWithoutPhoto,
+  rollbackPublicQuoteFinalize,
+  toFinalizePayloadForCurrentRpc,
+} from '@/Lib/publicQuote/ownGrillSubmitCompat'
 import {
   assertHoneypot,
   assertRequestOrigin,
@@ -16,16 +28,9 @@ import {
   loadPublicQuoteSessionTenant,
 } from '@/Lib/publicQuote/session'
 import { validateCompletePublicQuoteDraft } from '@/Lib/publicQuote/validation'
-import {
-  isOwnGrillWithoutPhoto,
-  persistOwnGrillWithoutPhoto,
-  rollbackPublicQuoteFinalize,
-  toFinalizePayloadForCurrentRpc,
-} from '@/Lib/publicQuote/ownGrillSubmitCompat'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { fetchSupabaseCommercialRules } from '@/Lib/supabaseCommercialRules'
 import { CDL_CANCEL_POLICY_VERSION } from '@/Lib/cdlCancellationPolicy'
-import { normalizeGrillRentalQty } from '@/Lib/grillRental'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -62,9 +67,7 @@ export async function POST(request: NextRequest) {
       throw new PublicQuoteHttpError(400, 'invalid_payload')
     }
 
-    const session = await loadPublicQuoteSession(request, {
-      allowSubmitted: true,
-    })
+    const session = await loadPublicQuoteSession(request, { allowSubmitted: true })
     const tenant = await loadPublicQuoteSessionTenant(session)
     await consumePublicQuoteRateLimit(
       request,
@@ -75,20 +78,14 @@ export async function POST(request: NextRequest) {
     )
 
     const idempotencyKey =
-      typeof body.idempotencyKey === 'string'
-        ? body.idempotencyKey.trim()
-        : ''
+      typeof body.idempotencyKey === 'string' ? body.idempotencyKey.trim() : ''
     if (!/^[A-Za-z0-9._:-]{16,200}$/.test(idempotencyKey)) {
       throw new PublicQuoteHttpError(400, 'invalid_payload')
     }
 
-    // A single explicit checkbox records contactConsent and acceptance of the
-    // configured privacyPolicy version shown next to it.
     const contactConsent = body.consent?.accepted === true
     const privacyPolicyVersion =
-      typeof body.consent?.version === 'string'
-        ? body.consent.version.trim()
-        : ''
+      typeof body.consent?.version === 'string' ? body.consent.version.trim() : ''
     const cancellationAccepted = body.cancellationConsent?.accepted === true
     const cancellationVersion =
       typeof body.cancellationConsent?.version === 'string'
@@ -116,7 +113,7 @@ export async function POST(request: NextRequest) {
       rules.mileageBaseLocation,
       { referer: request.headers.get('origin') || request.nextUrl.origin },
     )
-    const pricing = await computeQuotePricing({
+    const pricingArgs = {
       companyId: session.company_id,
       packageId: draft.selection.packageId,
       additionals: draft.selection.additionals,
@@ -132,16 +129,64 @@ export async function POST(request: NextRequest) {
       reservationPercentage: null,
       reservationAmountOverride: null,
       useCustomReservation: false,
-      discountAmount: 0,
       language: session.locale,
       requireSupabaseRules: true,
+    } as const
+
+    const basePricing = await computeQuotePricing({
+      ...pricingArgs,
+      discountAmount: 0,
     })
-    if (!pricing.ok) {
+    if (!basePricing.ok) {
       console.warn('[public-quote] submit pricing rejected', {
-        code: pricing.error.code,
-        field: pricing.error.field ?? null,
+        code: basePricing.error.code,
+        field: basePricing.error.field ?? null,
       })
       throw new PublicQuoteHttpError(422, 'invalid_payload')
+    }
+
+    const supabase = getSupabaseServerClient()
+    const { data: sessionCoupon, error: sessionCouponError } = await supabase
+      .from('public_quote_intake_sessions')
+      .select('coupon_code')
+      .eq('id', session.id)
+      .eq('company_id', session.company_id)
+      .maybeSingle()
+    if (sessionCouponError) throw new PublicQuoteHttpError(500, 'server_error')
+
+    const couponCode =
+      typeof sessionCoupon?.coupon_code === 'string'
+        ? sessionCoupon.coupon_code.trim()
+        : ''
+    let couponResolution: CouponResolution | null = null
+    let pricing = basePricing
+
+    if (couponCode) {
+      couponResolution = await resolveCouponForPricing({
+        companyId: session.company_id,
+        code: couponCode,
+        eventDate: draft.event.eventDate,
+        packageId: draft.selection.packageId,
+        breakdown: basePricing.breakdown,
+        contactPhone: draft.contact.phone,
+      })
+      if (!couponResolution.valid) {
+        console.warn('[public-quote] coupon rejected at submit', {
+          reason: couponResolution.reason ?? 'unknown',
+          code: couponCode,
+        })
+        throw new PublicQuoteHttpError(422, 'invalid_payload')
+      }
+      if (couponResolution.appliedDiscountAmount > 0) {
+        const discounted = await computeQuotePricing({
+          ...pricingArgs,
+          discountAmount: couponResolution.appliedDiscountAmount,
+        })
+        if (!discounted.ok) {
+          throw new PublicQuoteHttpError(422, 'invalid_payload')
+        }
+        pricing = discounted
+      }
     }
 
     const idempotencyKeyHash = sha256(idempotencyKey)
@@ -149,8 +194,15 @@ export async function POST(request: NextRequest) {
       draft,
       consentVersion: privacyPolicyVersion,
       cancellationPolicyVersion: CDL_CANCEL_POLICY_VERSION,
+      coupon: couponResolution?.valid
+        ? {
+            code: couponResolution.coupon?.code ?? couponCode,
+            approvalStatus: couponResolution.approvalStatus,
+            potentialDiscountAmount: couponResolution.potentialDiscountAmount,
+            appliedDiscountAmount: couponResolution.appliedDiscountAmount,
+          }
+        : null,
     })
-    const supabase = getSupabaseServerClient()
     const ownGrillWithoutPhoto = isOwnGrillWithoutPhoto(draft)
     const rpcPayload = toFinalizePayloadForCurrentRpc(draft)
     const { data, error } = await supabase.rpc('finalize_public_quote', {
@@ -168,6 +220,17 @@ export async function POST(request: NextRequest) {
         resolvedAdditionals: pricing.resolvedAdditionals,
         mileageDistance: mileage.distance,
         mileageStatus: mileage.status,
+        coupon: couponResolution?.valid
+          ? {
+              id: couponResolution.coupon?.id,
+              code: couponResolution.coupon?.code,
+              campaignName: couponResolution.coupon?.campaign_name,
+              approvalStatus: couponResolution.approvalStatus,
+              eligibleAmount: couponResolution.eligibleAmount,
+              potentialDiscountAmount: couponResolution.potentialDiscountAmount,
+              appliedDiscountAmount: couponResolution.appliedDiscountAmount,
+            }
+          : null,
       },
       p_consent_version: privacyPolicyVersion,
     })
@@ -208,33 +271,57 @@ export async function POST(request: NextRequest) {
           ? 'expired'
           : code === 'conflict'
             ? 'conflict'
-          : code === 'not_found'
-            ? 'not_found'
-            : code === 'invalid_event_date'
-              ? 'invalid_event_date'
-              : code.startsWith('invalid_')
-                ? 'invalid_payload'
-                : 'server_error',
+            : code === 'not_found'
+              ? 'not_found'
+              : code === 'invalid_event_date'
+                ? 'invalid_event_date'
+                : code.startsWith('invalid_')
+                  ? 'invalid_payload'
+                  : 'server_error',
       )
     }
 
-    if (ownGrillWithoutPhoto && result.alreadySubmitted !== true) {
-      const persisted = await persistOwnGrillWithoutPhoto(
-        supabase,
-        session.company_id,
-        result.quote.id,
-      )
-      if (!persisted) {
-        console.error('[public-quote] own-grill no-photo persist failed', {
-          stage: 'own_grill_correction',
-        })
-        await rollbackPublicQuoteFinalize(
+    if (result.alreadySubmitted !== true) {
+      if (ownGrillWithoutPhoto) {
+        const persisted = await persistOwnGrillWithoutPhoto(
           supabase,
           session.company_id,
           result.quote.id,
-          session.id,
         )
-        throw new PublicQuoteHttpError(500, 'server_error')
+        if (!persisted) {
+          console.error('[public-quote] own-grill no-photo persist failed', {
+            stage: 'own_grill_correction',
+          })
+          await rollbackPublicQuoteFinalize(
+            supabase,
+            session.company_id,
+            result.quote.id,
+            session.id,
+          )
+          throw new PublicQuoteHttpError(500, 'server_error')
+        }
+      }
+
+      if (couponResolution?.valid) {
+        const persistedCoupon = await persistQuoteCouponApplication({
+          companyId: session.company_id,
+          quoteId: result.quote.id,
+          resolution: couponResolution,
+          breakdown: pricing.breakdown,
+        })
+        if (!persistedCoupon) {
+          console.error('[public-quote] coupon persistence failed', {
+            stage: 'coupon_snapshot',
+            code: couponResolution.coupon?.code ?? couponCode,
+          })
+          await rollbackPublicQuoteFinalize(
+            supabase,
+            session.company_id,
+            result.quote.id,
+            session.id,
+          )
+          throw new PublicQuoteHttpError(500, 'server_error')
+        }
       }
     }
 
@@ -242,6 +329,14 @@ export async function POST(request: NextRequest) {
       {
         quote: result.quote,
         alreadySubmitted: result.alreadySubmitted === true,
+        coupon: couponResolution?.valid
+          ? {
+              code: couponResolution.coupon?.code,
+              approvalStatus: couponResolution.approvalStatus,
+              potentialDiscountAmount: couponResolution.potentialDiscountAmount,
+              appliedDiscountAmount: couponResolution.appliedDiscountAmount,
+            }
+          : null,
       },
       { headers: NO_STORE },
     )

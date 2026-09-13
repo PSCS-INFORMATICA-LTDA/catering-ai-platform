@@ -105,6 +105,8 @@ export async function computeQuotePricing(
 
   const discountAmount = Math.max(0, Number(input.discountAmount ?? 0))
 
+  // buildPricingBreakdown is the single owner of discount arithmetic.
+  // Subtracting it again here applied the same discount twice.
   const breakdown = buildPricingBreakdown({
     context: resolved.context,
     totals,
@@ -116,11 +118,6 @@ export async function computeQuotePricing(
     grillRentalQty: normalizeGrillRentalQty(Boolean(input.grillRentalRequired)),
   })
 
-  if (discountAmount > 0) {
-    breakdown.total = Math.max(0, roundMoney(breakdown.total - discountAmount))
-    breakdown.balance = roundMoney(breakdown.total - breakdown.deposit)
-  }
-
   return {
     ok: true,
     breakdown,
@@ -128,10 +125,6 @@ export async function computeQuotePricing(
     resolvedAdditionals,
     packagePricePerPerson: resolved.context.packagePricePerPerson,
   }
-}
-
-function roundMoney(value: number) {
-  return Math.round(value * 100) / 100
 }
 
 export type QuotePricingPreviewBody = {
