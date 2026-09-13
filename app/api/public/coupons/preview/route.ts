@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { normalizeGrillRentalQty } from '@/Lib/grillRental'
 import { computeQuotePricing } from '@/Lib/pricing/computeQuotePricing'
 import {
+  applyCouponToBreakdown,
   normalizeCouponCode,
   resolveCouponForPricing,
   type CouponResolution,
@@ -100,27 +101,23 @@ async function resolve(request: NextRequest, code: string) {
     breakdown: base.breakdown,
     contactPhone: draft.contact.phone,
   })
-  const final =
-    resolution.valid && resolution.appliedDiscountAmount > 0
-      ? await computeQuotePricing({
-          ...pricingArgs,
-          discountAmount: resolution.appliedDiscountAmount,
-        })
-      : base
-  if (!final.ok) throw new PublicQuoteHttpError(422, 'invalid_payload')
+  const breakdown = applyCouponToBreakdown(base.breakdown, resolution)
   return {
     session,
     resolution,
     pricing: {
-      subtotal: final.breakdown.subtotal,
-      total: final.breakdown.total,
-      deposit: final.breakdown.deposit,
-      balance: final.breakdown.balance,
+      subtotal: breakdown.subtotal ?? breakdown.total,
+      total: breakdown.total,
+      deposit: breakdown.deposit,
+      balance: breakdown.balance,
     },
   }
 }
 
-function payload(resolution: CouponResolution, pricing: Record<string, number>) {
+function payload(
+  resolution: CouponResolution,
+  pricing: { subtotal: number; total: number; deposit: number; balance: number },
+) {
   const coupon = resolution.coupon
   return {
     coupon: coupon

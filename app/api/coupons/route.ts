@@ -59,8 +59,10 @@ function payload(body: Record<string, unknown>, companyId: string) {
   const validFrom = date(body.valid_from ?? body.validFrom)
   const validTo = date(body.valid_to ?? body.validTo)
   if (validFrom && validTo && validTo < validFrom) return { error: 'Data final não pode ser anterior à data inicial.' } as const
-  if (bool(body.apply_to_deposit ?? body.applyToDeposit)) {
-    return { error: 'Aplicação no sinal fica bloqueada no V1. O cupom atua no saldo.' } as const
+  const applyToDeposit = bool(body.apply_to_deposit ?? body.applyToDeposit)
+  const applyToBalance = bool(body.apply_to_balance ?? body.applyToBalance, true)
+  if (!applyToDeposit && !applyToBalance) {
+    return { error: 'O cupom precisa aplicar no sinal, no saldo ou em ambos.' } as const
   }
   const allPackages = bool(body.all_packages ?? body.allPackages, true)
   return {
@@ -87,8 +89,8 @@ function payload(body: Record<string, unknown>, companyId: string) {
       max_uses_per_customer: positiveInt(body.max_uses_per_customer ?? body.maxUsesPerCustomer),
       max_uses_per_quote: positiveInt(body.max_uses_per_quote ?? body.maxUsesPerQuote, 1) ?? 1,
       stackable: bool(body.stackable),
-      apply_to_deposit: false,
-      apply_to_balance: bool(body.apply_to_balance ?? body.applyToBalance, true),
+      apply_to_deposit: applyToDeposit,
+      apply_to_balance: applyToBalance,
       allow_post_event_adjustment: bool(body.allow_post_event_adjustment ?? body.allowPostEventAdjustment),
       manual_approval_required: bool(body.manual_approval_required ?? body.manualApprovalRequired),
       distribution_channel: nullableText(body.distribution_channel ?? body.distributionChannel, 300),

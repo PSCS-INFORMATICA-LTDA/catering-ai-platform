@@ -4,7 +4,10 @@ import {
   parseQuotePricingPreviewBody,
   type QuotePricingPreviewBody,
 } from '@/Lib/pricing/computeQuotePricing'
-import { resolveCouponForPricing } from '@/Lib/coupons/resolveCoupon'
+import {
+  applyCouponToBreakdown,
+  resolveCouponForPricing,
+} from '@/Lib/coupons/resolveCoupon'
 import { resolvePublicQuoteMileageDistance } from '@/Lib/publicQuote/distance'
 import {
   hasConfirmedGoogleAddress,
@@ -149,15 +152,9 @@ export async function POST(request: NextRequest) {
           potentialDiscountAmount: resolution.potentialDiscountAmount,
           appliedDiscountAmount: resolution.appliedDiscountAmount,
         }
-        if (resolution.appliedDiscountAmount > 0) {
-          const discounted = await computeQuotePricing({
-            ...pricingArgs,
-            discountAmount: resolution.appliedDiscountAmount,
-          })
-          if (!discounted.ok) {
-            throw new PublicQuoteHttpError(422, 'invalid_payload')
-          }
-          result = discounted
+        result = {
+          ...base,
+          breakdown: applyCouponToBreakdown(base.breakdown, resolution),
         }
       }
     }

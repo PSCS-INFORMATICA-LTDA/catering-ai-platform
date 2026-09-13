@@ -104,6 +104,7 @@ export type InvoiceSnapshot = {
     minimumOrderAmount: number
     minimumOrderApplied: boolean
     onlinePaymentFee: 0
+    coupon?: Record<string, unknown> | null
   }
   reservation: {
     percentage: number

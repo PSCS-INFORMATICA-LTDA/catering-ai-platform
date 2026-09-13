@@ -63,6 +63,7 @@ export type PricingBreakdown = {
   }
   computed_at: string
   engine_version: string
+  coupon?: Record<string, unknown> | null
 }
 
 export type PricingConfigurationError = {

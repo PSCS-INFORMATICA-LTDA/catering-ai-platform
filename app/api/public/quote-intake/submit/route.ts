@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { normalizeGrillRentalQty } from '@/Lib/grillRental'
 import { computeQuotePricing } from '@/Lib/pricing/computeQuotePricing'
 import {
+  applyCouponToBreakdown,
   persistQuoteCouponApplication,
   resolveCouponForPricing,
   type CouponResolution,
@@ -177,15 +178,19 @@ export async function POST(request: NextRequest) {
         })
         throw new PublicQuoteHttpError(422, 'invalid_payload')
       }
-      if (couponResolution.appliedDiscountAmount > 0) {
-        const discounted = await computeQuotePricing({
-          ...pricingArgs,
-          discountAmount: couponResolution.appliedDiscountAmount,
-        })
-        if (!discounted.ok) {
-          throw new PublicQuoteHttpError(422, 'invalid_payload')
-        }
-        pricing = discounted
+      const breakdown = applyCouponToBreakdown(
+        basePricing.breakdown,
+        couponResolution,
+      )
+      pricing = {
+        ...basePricing,
+        breakdown,
+        totals: {
+          ...basePricing.totals,
+          quoteTotal: breakdown.total,
+          reservationAmount: breakdown.deposit,
+          balanceDue: breakdown.balance,
+        },
       }
     }
 

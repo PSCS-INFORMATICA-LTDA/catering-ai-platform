@@ -127,6 +127,10 @@ export function buildInvoiceSnapshot(quote: QuoteDetail): InvoiceSnapshot {
       minimumOrderAmount: money(quote.minimum_order_amount),
       minimumOrderApplied: Boolean(quote.minimum_order_applied),
       onlinePaymentFee: 0,
+      coupon:
+        breakdown && 'coupon' in breakdown && breakdown.coupon
+          ? (breakdown.coupon as Record<string, unknown>)
+          : null,
     },
     reservation: {
       percentage: Number(quote.reservation_percentage ?? 30),
