@@ -165,12 +165,12 @@ async function applyCoupon(cookie, code) {
   })
 }
 
-async function submitQuote(cookie, payload, consentVersion) {
+async function submitQuote(cookie, payload, consentVersion, idempotencyKey = `qa-coupon-center-${randomUUID()}`) {
   return jsonFetch('/api/public/quote-intake/submit', {
     method: 'POST',
     cookie,
     body: {
-      idempotencyKey: `qa-coupon-center-${randomUUID()}`,
+      idempotencyKey,
       submission: payload,
       consent: { accepted: true, version: consentVersion },
       cancellationConsent: {
@@ -359,7 +359,8 @@ async function main() {
         total: preview.data?.pricing?.total,
       }),
     )
-    const submitted = await submitQuote(saved.cookie, payload, settings.data.consent_version)
+    const welcomeKey = `qa-coupon-center-${randomUUID()}`
+    const submitted = await submitQuote(saved.cookie, payload, settings.data.consent_version, welcomeKey)
     const quoteId = submitted.data?.quote?.id || ''
     record(
       'E2E-welcome-submit',
@@ -405,7 +406,7 @@ async function main() {
         deposit,
         balance,
       }
-      const retry = await submitQuote(saved.cookie, payload, settings.data.consent_version)
+      const retry = await submitQuote(saved.cookie, payload, settings.data.consent_version, welcomeKey)
       record(
         'E2E-welcome-duplicate-submit',
         retry.response.ok && retry.data?.alreadySubmitted === true && retry.data?.quote?.id === quoteId,
