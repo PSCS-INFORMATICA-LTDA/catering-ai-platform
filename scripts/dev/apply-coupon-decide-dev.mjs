@@ -1,5 +1,5 @@
 /**
- * Apply 20260913221500_coupon_decide_application on Catering DEV only.
+ * Apply 20260913233001_coupon_decide_application on Catering DEV only.
  * Never reprints the usage-lock migration. Never prints tokens.
  * Aborts on Catering PROD. Does not invent 20260913040124.
  *
@@ -18,7 +18,7 @@ const sqlPath = join(
   root,
   'supabase',
   'migrations',
-  '20260913221500_coupon_decide_application.sql',
+  '20260913233001_coupon_decide_application.sql',
 )
 const FORBIDDEN = '20260913040124_coupon_rules_v1'
 
