@@ -15,7 +15,7 @@
 | `20260913024500_coupon_pending_guard_function_privileges` | yes | public RPC lookup of the guard function 404s (expected, privileges revoked) | Git SQL known | MATCHED | none | MATCHED |
 | `20260913040124_coupon_rules_v1` | **no** | `public.coupon_rules` 404; OpenAPI has no such table | original SQL **not recovered** | UNVERIFIED_HISTORY / NOT_IN_LIVE_SCHEMA | do not invent the file; do not mark applied | DOCUMENTED, not fabricated |
 | `20260913190825_coupon_customer_usage_lock` | yes (renamed from Git `20260913190000_*` to match DEV history) | `public.reserve_quote_coupon_application` live; probe with null args returns `P0001 coupon_invalid_arguments`; grants: anon/authenticated NO EXECUTE, service_role EXECUTE | yes, exact SQL already applied on DEV | MATCHED to live history `20260913190825` | **do not reapply**; file was only renamed | RECONCILED |
-| `20260913221500_coupon_decide_application` | yes | new forward-only `public.decide_quote_coupon_application` | yes, from Git file | NEW | apply this file only; never reapply `190825` | PENDING live apply in this round |
+| `20260913221500_coupon_decide_application` | yes | `public.decide_quote_coupon_application` still missing (`PGRST202`; hint points at `reserve_quote_coupon_application`) | yes, from Git file | NEW | apply this file only when a DEV SQL token exists; never reapply `190825` | PENDING live apply — no `SUPABASE_ACCESS_TOKEN` / `DATABASE_URL` in this environment |
 
 ## Usage-lock reconciliation
 
@@ -42,4 +42,4 @@ All four rows are company `65fd576f-8d97-49ba-bf38-61bc1e94e94a` and marked `dev
 
 ## Decision
 
-Git + DEV objects are reproducible for the usage-lock RPC after the filename rename. The decide RPC is a new forward-only migration and is the only SQL this round may apply.
+Git + DEV objects are reproducible for the usage-lock RPC after the filename rename. The decide RPC is a new forward-only migration and is the only SQL this round may apply. It is still **not live** on DEV (`PGRST202`). Reject now stamps the quote snapshot in both the Git RPC and the compensating fallback.
