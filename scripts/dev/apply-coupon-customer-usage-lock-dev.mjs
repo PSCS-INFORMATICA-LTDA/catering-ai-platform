@@ -1,5 +1,7 @@
 /**
- * Apply 20260913190000_coupon_customer_usage_lock on Catering DEV only.
+ * Apply 20260913190825_coupon_customer_usage_lock on Catering DEV only.
+ * The live DEV history already recorded this version. The script probes first
+ * and must no-op when public.reserve_quote_coupon_application already exists.
  * Never prints tokens. Aborts on Catering PROD. Does not invent 20260913040124.
  *
  *   node scripts/dev/apply-coupon-customer-usage-lock-dev.mjs
@@ -17,7 +19,7 @@ const sqlPath = join(
   root,
   'supabase',
   'migrations',
-  '20260913190000_coupon_customer_usage_lock.sql',
+  '20260913190825_coupon_customer_usage_lock.sql',
 )
 const FORBIDDEN = '20260913040124_coupon_rules_v1'
 
