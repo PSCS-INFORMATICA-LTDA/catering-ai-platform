@@ -79,23 +79,17 @@ async function reserve(db, mode, companyId, quoteId, couponId, customerId) {
 }
 
 async function ensureCustomer(db) {
-  const phone = '14075550103'
-  const existing = await db
-    .from('customers')
-    .select('id, full_name, phone_normalized')
-    .eq('company_id', COMPANY)
-    .eq('phone_normalized', phone)
-    .maybeSingle()
-  if (existing.data?.id) return existing.data
+  const suffix = randomUUID().replace(/-/g, '').slice(0, 8)
+  const phone = `1407555${suffix.slice(0, 4)}`.slice(0, 11)
   const inserted = await db
     .from('customers')
     .insert({
       company_id: COMPANY,
-      full_name: TAG,
-      ab_name: TAG,
-      phone: '+14075550103',
+      full_name: `${TAG} ${suffix}`,
+      ab_name: `${TAG} ${suffix}`,
+      phone: `+${phone}`,
       phone_normalized: phone,
-      email: 'qa.coupon.concurrency@example.invalid',
+      email: `qa.coupon.concurrency.${suffix}@example.invalid`,
       source: 'qa_coupon_center',
       active: true,
       is_customer: true,
