@@ -18,6 +18,7 @@ const PACKAGE_ID = process.env.COUPON_E2E_PACKAGE_ID || '95a67f3e-3c1c-4eb1-ad5b
 const BASE = (process.env.COUPON_E2E_BASE_URL || 'http://127.0.0.1:3000').replace(/\/$/, '')
 const CDL_CANCEL_POLICY_VERSION = 'CDL_CANCEL_2026_V1'
 const TAG = 'QA Coupon Center'
+const QA_UA = `CouponPersistQA/${randomUUID()}`
 
 const rows = []
 function record(id, ok, detail) {
@@ -51,6 +52,7 @@ async function jsonFetch(path, { method = 'GET', body, cookie = '' } = {}) {
     headers: {
       origin: BASE,
       'content-type': 'application/json',
+      'user-agent': QA_UA,
       ...(cookie ? { cookie } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,

@@ -69,6 +69,12 @@ begin
   end if;
 
   if p_decision = 'reject' then
+    if v_patch->'pricing_breakdown' is null then
+      raise exception using
+        errcode = 'P0001',
+        message = 'coupon_invalid_arguments';
+    end if;
+
     update public.quote_coupon_applications
     set
       approval_status = 'rejected',
@@ -87,6 +93,31 @@ begin
         'idempotent', true
       );
     end if;
+
+    update public.quotes
+    set
+      discount = 0,
+      discount_amount = 0,
+      reservation_amount = coalesce((v_patch->>'reservation_amount')::numeric, reservation_amount),
+      deposit_amount = coalesce((v_patch->>'deposit_amount')::numeric, deposit_amount),
+      balance_due = coalesce((v_patch->>'balance_due')::numeric, balance_due),
+      total_amount = coalesce((v_patch->>'total_amount')::numeric, total_amount),
+      quote_total = coalesce((v_patch->>'quote_total')::numeric, quote_total),
+      pricing_breakdown = v_patch->'pricing_breakdown'
+    where id = v_application.quote_id
+      and company_id = p_company_id;
+
+    update public.quote_versions
+    set
+      discount_amount = 0,
+      commercial_snapshot = coalesce(commercial_snapshot, '{}'::jsonb)
+        || jsonb_build_object(
+          'pricing_breakdown', v_patch->'pricing_breakdown',
+          'coupon', coalesce(v_patch->'coupon_snapshot', '{}'::jsonb)
+        )
+    where quote_id = v_application.quote_id
+      and company_id = p_company_id
+      and is_current = true;
 
     return jsonb_build_object(
       'ok', true,

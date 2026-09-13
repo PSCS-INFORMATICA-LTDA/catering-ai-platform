@@ -140,6 +140,27 @@ export default function PricingBreakdownView({
         </div>
       </div>
 
+      {couponStory?.kind === 'rejected' ? (
+        <div
+          data-testid="pricing-coupon-rejected"
+          className="rounded-2xl border border-red-200 bg-red-50 px-5 py-3"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            {couponStory.code ? (
+              <span className="rounded-lg bg-black px-2.5 py-1 font-mono text-[11px] font-black tracking-wider text-amber-300">
+                {couponStory.code}
+              </span>
+            ) : null}
+            <span className="rounded-full bg-red-200 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-red-900">
+              {tCoupons(language, 'rejected')}
+            </span>
+          </div>
+          <p className="mt-2 text-xs font-semibold leading-5 text-red-900">
+            {tCoupons(language, 'rejectedText')}
+          </p>
+        </div>
+      ) : null}
+
       {couponStory?.kind === 'applied' ? (
         <div
           data-testid="pricing-coupon-applied"

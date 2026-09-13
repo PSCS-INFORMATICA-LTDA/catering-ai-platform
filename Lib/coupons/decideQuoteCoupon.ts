@@ -1,16 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { CouponQuotePatch } from './couponSnapshot.ts'
 
-type QuotePatch = {
-  discount: number
-  discount_amount: number
-  reservation_amount: number
-  deposit_amount: number
-  balance_due: number
-  total_amount: number
-  quote_total: number
-  pricing_breakdown: Record<string, unknown>
-  coupon_snapshot: Record<string, unknown>
-}
+type QuotePatch = CouponQuotePatch
 
 async function revertApplicationToPending(
   db: SupabaseClient,
@@ -68,7 +59,13 @@ export async function decideQuoteCouponFallback(input: {
     if (!claimed.data) {
       return { ok: true, status: 'rejected', idempotent: true }
     }
-    return { ok: true, status: 'rejected' }
+    if (!input.quotePatch) {
+      return { ok: true, status: 'rejected' }
+    }
+  } else {
+    if (!input.quotePatch) {
+      return { ok: false, error: 'Solicitação inválida.', status: 400 }
+    }
   }
 
   if (!input.quotePatch) {
@@ -84,6 +81,7 @@ export async function decideQuoteCouponFallback(input: {
     .eq('company_id', input.companyId)
     .maybeSingle()
   if (originalQuoteError || !originalQuote) {
+    await revertApplicationToPending(db, input.companyId, input.applicationId)
     return { ok: false, error: 'Falha ao carregar a cotação.', status: 500 }
   }
 
@@ -94,28 +92,31 @@ export async function decideQuoteCouponFallback(input: {
     .eq('company_id', input.companyId)
     .eq('is_current', true)
   if (originalVersionsError) {
+    await revertApplicationToPending(db, input.companyId, input.applicationId)
     return { ok: false, error: 'Não foi possível atualizar a versão da cotação.', status: 500 }
   }
 
-  const claimed = await db
-    .from('quote_coupon_applications')
-    .update({
-      approval_status: 'applied',
-      applied_discount_amount: input.quotePatch.discount_amount,
-      approved_by: input.userId,
-      approved_at: now,
-      updated_at: now,
-    })
-    .eq('id', input.applicationId)
-    .eq('company_id', input.companyId)
-    .eq('approval_status', 'pending')
-    .select('id')
-    .maybeSingle()
-  if (claimed.error) {
-    return { ok: false, error: 'Não foi possível aprovar o cupom.', status: 500 }
-  }
-  if (!claimed.data) {
-    return { ok: true, status: 'applied', idempotent: true }
+  if (input.action === 'approve') {
+    const claimed = await db
+      .from('quote_coupon_applications')
+      .update({
+        approval_status: 'applied',
+        applied_discount_amount: input.quotePatch.discount_amount,
+        approved_by: input.userId,
+        approved_at: now,
+        updated_at: now,
+      })
+      .eq('id', input.applicationId)
+      .eq('company_id', input.companyId)
+      .eq('approval_status', 'pending')
+      .select('id')
+      .maybeSingle()
+    if (claimed.error) {
+      return { ok: false, error: 'Não foi possível aprovar o cupom.', status: 500 }
+    }
+    if (!claimed.data) {
+      return { ok: true, status: 'applied', idempotent: true }
+    }
   }
 
   const quoteUpdate = await db
@@ -134,7 +135,14 @@ export async function decideQuoteCouponFallback(input: {
     .eq('company_id', input.companyId)
   if (quoteUpdate.error) {
     await revertApplicationToPending(db, input.companyId, input.applicationId)
-    return { ok: false, error: 'Não foi possível atualizar a cotação aprovada.', status: 500 }
+    return {
+      ok: false,
+      error:
+        input.action === 'reject'
+          ? 'Não foi possível atualizar a cotação rejeitada.'
+          : 'Não foi possível atualizar a cotação aprovada.',
+      status: 500,
+    }
   }
 
   for (const version of originalVersions ?? []) {
@@ -190,5 +198,5 @@ export async function decideQuoteCouponFallback(input: {
     }
   }
 
-  return { ok: true, status: 'applied' }
+  return { ok: true, status: input.action === 'reject' ? 'rejected' : 'applied' }
 }

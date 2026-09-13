@@ -63,5 +63,20 @@ describe('readCouponFinancialStory', () => {
       }),
       null,
     )
+    const rejected = readCouponFinancialStory({
+      total: 2820,
+      coupon: {
+        code: 'CDL10',
+        approval_status: 'rejected',
+        potential_discount_amount: 141,
+        applied_discount_amount: 0,
+      },
+    })
+    assert.equal(rejected?.kind, 'rejected')
+    if (rejected?.kind === 'rejected') {
+      assert.equal(rejected.currentPayable, 2820)
+      assert.equal('requestedDiscount' in rejected, false)
+      assert.equal('projectedTotal' in rejected, false)
+    }
   })
 })

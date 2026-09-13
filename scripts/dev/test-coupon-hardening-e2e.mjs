@@ -15,6 +15,7 @@ const PACKAGE_ID = process.env.COUPON_E2E_PACKAGE_ID || '95a67f3e-3c1c-4eb1-ad5b
 const BASE = (process.env.COUPON_E2E_BASE_URL || '').replace(/\/$/, '')
 const CDL_CANCEL_POLICY_VERSION = 'CDL_CANCEL_2026_V1'
 const TAG = 'QA Coupon Hardening'
+const QA_UA = `CouponHardeningQA/${randomUUID()}`
 const rows = []
 const evidence = { quotes: [], applications: [], reasons: {}, approve: null, reject: null }
 
@@ -49,6 +50,7 @@ async function jsonFetch(path, { method = 'GET', body, cookie = '' } = {}) {
     headers: {
       origin: BASE,
       'content-type': 'application/json',
+      'user-agent': QA_UA,
       ...(cookie ? { cookie } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
@@ -488,12 +490,17 @@ async function main() {
       body: { id: before.application?.id, action: 'reject' },
     })
     const after = await loadQuote(db, quoteId)
+    const snapshotCoupon =
+      after.quote?.pricing_breakdown && typeof after.quote.pricing_breakdown === 'object'
+        ? after.quote.pricing_breakdown.coupon
+        : null
     const ok =
       reject.response.ok &&
       after.application?.approval_status === 'rejected' &&
       Number(after.application?.applied_discount_amount) === 0 &&
       Number(after.quote?.quote_total) === beforeTotal &&
-      Number(after.quote?.discount_amount ?? after.quote?.discount ?? 0) === 0
+      Number(after.quote?.discount_amount ?? after.quote?.discount ?? 0) === 0 &&
+      snapshotCoupon?.approval_status === 'rejected'
     record(
       'E2E-reject-authenticated',
       ok,
@@ -504,6 +511,7 @@ async function main() {
         total: after.quote?.quote_total,
         discount: after.quote?.discount_amount,
         status: after.application?.approval_status,
+        snapshotStatus: snapshotCoupon?.approval_status,
       }),
     )
     evidence.reject = {

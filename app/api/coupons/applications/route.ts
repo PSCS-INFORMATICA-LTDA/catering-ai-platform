@@ -3,6 +3,7 @@ import {
   requireSessionCompanyId,
 } from '@/Lib/auth/requireApi'
 import { allocateApprovedCoupon } from '@/Lib/coupons/couponMath'
+import { buildRejectedCouponQuotePatch } from '@/Lib/coupons/couponSnapshot'
 import { decideQuoteCouponFallback } from '@/Lib/coupons/decideQuoteCoupon'
 import {
   classifyCouponDecideError,
@@ -91,6 +92,19 @@ export async function PATCH(request: Request) {
   const now = new Date().toISOString()
   let quotePatch: Record<string, unknown> | null = null
   let allocation: ReturnType<typeof allocateApprovedCoupon> | null = null
+
+  if (action === 'reject') {
+    const { data: quote, error: quoteError } = await db
+      .from('quotes')
+      .select('id, pricing_breakdown, quote_total, total_amount, deposit_amount, reservation_amount, balance_due')
+      .eq('id', application.quote_id)
+      .eq('company_id', ctx.companyId)
+      .maybeSingle()
+    if (quoteError) return Response.json({ error: 'Falha ao carregar a cotação.' }, { status: 500, headers: NO_STORE })
+    if (!quote) return Response.json({ error: 'Cotação não encontrada.' }, { status: 404, headers: NO_STORE })
+    quotePatch = buildRejectedCouponQuotePatch(quote, now)
+    if (!quotePatch) return Response.json({ error: 'Cotação sem snapshot de preço.' }, { status: 409, headers: NO_STORE })
+  }
 
   if (action === 'approve') {
     const { count: invoiceCount, error: invoiceError } = await db.from('invoices').select('id', { count: 'exact', head: true })
