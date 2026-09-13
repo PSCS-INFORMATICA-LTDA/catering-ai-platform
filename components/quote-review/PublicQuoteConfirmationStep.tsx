@@ -191,6 +191,15 @@ export default function PublicQuoteConfirmationStep({
             breakdown={breakdown}
             rulesVariant="summary"
             publicReviewFooter
+            afterPricing={
+              <div className="mt-4">
+                <PublicCouponBox
+                  language={language}
+                  currency={currency}
+                  onPricingRefresh={onRetryPricing}
+                />
+              </div>
+            }
           />
         </div>
       ) : (
@@ -230,14 +239,6 @@ export default function PublicQuoteConfirmationStep({
         <p className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900">
           {w.mileagePendingReview}
         </p>
-      ) : null}
-
-      {breakdown && !pricingLoading && !pricingError ? (
-        <PublicCouponBox
-          language={language}
-          currency={currency}
-          onPricingRefresh={onRetryPricing}
-        />
       ) : null}
 
       {submitError ? (

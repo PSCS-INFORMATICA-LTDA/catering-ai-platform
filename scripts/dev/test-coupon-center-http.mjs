@@ -189,7 +189,9 @@ for (const locale of ['en', 'pt', 'es']) {
     `E2E-${locale}-manual-pending`,
     cdl10.response.ok &&
       cdl10.data?.coupon?.approvalStatus === 'pending' &&
-      Number(cdl10.data.coupon.appliedDiscountAmount) === 0,
+      Number(cdl10.data.coupon.appliedDiscountAmount) === 0 &&
+      Number(cdl10.data.pricing?.total) === Number(cdl10.data.coupon.totalBeforeCoupon) &&
+      Number(cdl10.data.coupon.projectedTotalAfterApproval) < Number(cdl10.data.pricing?.total || 0),
     `${cdl10.response.status} ${JSON.stringify({
       code: cdl10.data?.coupon?.code,
       reason: cdl10.data?.reason,

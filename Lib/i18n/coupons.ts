@@ -13,7 +13,11 @@ const { t, list } = makeI18nModule('coupons', 'commercial', {
     en: 'Enter the code before submitting your quote.',
     es: 'Ingresa el código antes de enviar la cotización.',
   },
-  placeholder: { pt: 'EX.: CDL10', en: 'E.G. CDL10', es: 'EJ.: CDL10' },
+  placeholder: {
+    pt: 'Digite seu código promocional',
+    en: 'Enter promo code',
+    es: 'Ingresa tu código promocional',
+  },
   apply: { pt: 'Aplicar', en: 'Apply', es: 'Aplicar' },
   checking: { pt: 'Validando…', en: 'Checking…', es: 'Validando…' },
   remove: { pt: 'Remover cupom', en: 'Remove coupon', es: 'Quitar cupón' },
@@ -29,28 +33,65 @@ const { t, list } = makeI18nModule('coupons', 'commercial', {
     es: 'Cupón recibido — pendiente de aprobación',
   },
   pendingText: {
-    pt: 'O pedido foi registrado. O desconto só entra depois da aprovação comercial.',
-    en: 'The request was received. The discount becomes final only after commercial approval.',
-    es: 'La solicitud fue registrada. El descuento solo entra después de la aprobación comercial.',
+    pt: 'O preço final será atualizado após a aprovação comercial. O valor de agora não muda até lá.',
+    en: 'The final price will update after commercial approval. The amount due now does not change until then.',
+    es: 'El precio final se actualizará después de la aprobación comercial. El importe actual no cambia hasta entonces.',
   },
+  couponReceived: { pt: 'Cupom recebido', en: 'Coupon received', es: 'Cupón recibido' },
+  currentPayable: {
+    pt: 'Total pagável agora',
+    en: 'Amount due now',
+    es: 'Total a pagar ahora',
+  },
+  currentPayableHint: {
+    pt: 'Valor atual desta cotação',
+    en: 'Current quote amount',
+    es: 'Importe actual de esta cotización',
+  },
+  estimatedAfterApproval: {
+    pt: 'Total estimado após aprovação',
+    en: 'Estimated total after approval',
+    es: 'Total estimado después de la aprobación',
+  },
+  projectedNotPayable: {
+    pt: 'Estimativa — ainda não é o total pagável',
+    en: 'Estimate — not the amount due yet',
+    es: 'Estimación — todavía no es el total a pagar',
+  },
+  youSaved: {
+    pt: 'Você economizou {amount}',
+    en: 'You saved {amount}',
+    es: 'Te ahorraste {amount}',
+  },
+  finalTotal: { pt: 'Total final', en: 'Final total', es: 'Total final' },
+  removed: { pt: 'Cupom removido.', en: 'Coupon removed.', es: 'Cupón quitado.' },
   rejected: { pt: 'Cupom recusado', en: 'Coupon rejected', es: 'Cupón rechazado' },
+  rejectedText: {
+    pt: 'Esta solicitação não foi aprovada. O valor da cotação permanece o original.',
+    en: 'This request was not approved. The quote amount stays the original total.',
+    es: 'Esta solicitud no fue aprobada. El importe de la cotización permanece el original.',
+  },
   eligible: { pt: 'Base elegível', en: 'Eligible amount', es: 'Base elegible' },
   discount: { pt: 'Desconto', en: 'Discount', es: 'Descuento' },
   subtotal: { pt: 'Subtotal', en: 'Subtotal', es: 'Subtotal' },
   total: { pt: 'Total com cupom', en: 'Total with coupon', es: 'Total con cupón' },
   projected: {
-    pt: 'Total após aprovação',
-    en: 'Total after approval',
-    es: 'Total después de aprobación',
+    pt: 'Total estimado após aprovação',
+    en: 'Estimated total after approval',
+    es: 'Total estimado después de la aprobación',
   },
   deposit: { pt: 'Sinal', en: 'Deposit', es: 'Seña' },
   balance: { pt: 'Saldo', en: 'Balance', es: 'Saldo' },
   invalid: {
-    pt: 'Código inválido ou indisponível para esta cotação.',
-    en: 'Invalid code or unavailable for this quote.',
-    es: 'Código inválido o no disponible para esta cotización.',
+    pt: 'Cupom inválido ou indisponível.',
+    en: 'Invalid or unavailable coupon.',
+    es: 'Cupón inválido o no disponible.',
   },
-  not_found: { pt: 'Cupom não encontrado.', en: 'Coupon not found.', es: 'Cupón no encontrado.' },
+  not_found: {
+    pt: 'Cupom inválido ou indisponível.',
+    en: 'Invalid or unavailable coupon.',
+    es: 'Cupón inválido o no disponible.',
+  },
   inactive: { pt: 'Este cupom não está ativo.', en: 'This coupon is not active.', es: 'Este cupón no está activo.' },
   paused: { pt: 'Este cupom está pausado.', en: 'This coupon is paused.', es: 'Este cupón está pausado.' },
   not_started: {
@@ -356,6 +397,9 @@ export function tCouponReason(
   locale: string | null | undefined,
   reason: string | null | undefined,
 ) {
+  if (reason === 'not_found' || reason === 'inactive') {
+    return t(locale, 'invalid')
+  }
   if (reason && (REASON_KEYS as readonly string[]).includes(reason)) {
     return t(locale, reason as (typeof REASON_KEYS)[number])
   }

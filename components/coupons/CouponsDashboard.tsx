@@ -45,6 +45,7 @@ type Package = {
 
 type Pending = {
   id: string
+  quote_id: string
   quote_number: string | null
   customer_name: string | null
   coupon_code_snapshot: string
@@ -197,7 +198,7 @@ function Editor({ initial, packages, saving, locale, onCancel, onSave }: {
               <input
                 value={form.code}
                 maxLength={32}
-                placeholder="CDL10"
+                placeholder={tCoupons(locale, 'placeholder')}
                 onChange={(event) => patch('code', event.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''))}
                 className={`${INPUT} font-mono font-black uppercase tracking-wider`}
               />
@@ -477,7 +478,13 @@ export default function CouponsDashboard() {
           <h2 className="mt-1 text-xl font-black text-cdl-title">{tCoupons(locale, 'pendingTitle')}</h2>
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
             {pending.map((application) => (
-              <article key={application.id} className="rounded-2xl border border-amber-200 bg-white p-4">
+              <article
+                key={application.id}
+                data-testid="coupon-approval-card"
+                data-application-id={application.id}
+                data-quote-id={application.quote_id}
+                className="rounded-2xl border border-amber-200 bg-white p-4"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <span className="rounded-lg bg-black px-2.5 py-1 font-mono text-xs font-black text-amber-300">{application.coupon_code_snapshot}</span>
@@ -491,8 +498,8 @@ export default function CouponsDashboard() {
                   </div>
                 </div>
                 <div className="mt-4 flex gap-2">
-                  <button type="button" disabled={saving} onClick={() => void decide(application.id, 'reject')} className="min-h-10 flex-1 rounded-xl border border-red-200 bg-red-50 text-xs font-black text-red-700 disabled:opacity-50">{tCoupons(locale, 'reject')}</button>
-                  <button type="button" disabled={saving} onClick={() => void decide(application.id, 'approve')} className="min-h-10 flex-1 rounded-xl bg-emerald-600 text-xs font-black text-white disabled:opacity-50">{tCoupons(locale, 'approve')}</button>
+                  <button type="button" data-testid="coupon-reject" disabled={saving} onClick={() => void decide(application.id, 'reject')} className="min-h-10 flex-1 rounded-xl border border-red-200 bg-red-50 text-xs font-black text-red-700 disabled:opacity-50">{tCoupons(locale, 'reject')}</button>
+                  <button type="button" data-testid="coupon-approve" disabled={saving} onClick={() => void decide(application.id, 'approve')} className="min-h-10 flex-1 rounded-xl bg-emerald-600 text-xs font-black text-white disabled:opacity-50">{tCoupons(locale, 'approve')}</button>
                 </div>
               </article>
             ))}

@@ -1,5 +1,7 @@
 'use client'
 
+import { readCouponFinancialStory } from '@/Lib/coupons/couponFinancialStory'
+import { tCoupons } from '@/Lib/i18n/coupons'
 import type {
   PricingBreakdown,
   PricingBreakdownLine,
@@ -103,6 +105,7 @@ export default function PricingBreakdownView({
             !GUEST_LINE_KEYS.has(line.line_key) &&
             (line.amount !== 0 || line.line_key === 'package'),
         )
+  const couponStory = readCouponFinancialStory(breakdown)
 
   return (
     <div className="space-y-4">
@@ -137,20 +140,98 @@ export default function PricingBreakdownView({
         </div>
       </div>
 
+      {couponStory?.kind === 'applied' ? (
+        <div
+          data-testid="pricing-coupon-applied"
+          className="rounded-2xl border border-emerald-300 bg-emerald-50 px-5 py-3"
+        >
+          <p className="text-sm font-black text-emerald-800">
+            {tCoupons(language, 'youSaved', {
+              amount: formatCurrency(couponStory.saved),
+            })}
+          </p>
+          <p className="mt-1 text-xs font-semibold text-emerald-900/80">
+            {tCoupons(language, 'finalTotal')} {formatCurrency(couponStory.total)}
+          </p>
+        </div>
+      ) : null}
+
       <div
+        data-pricing-role="payable"
+        data-testid="pricing-payable-total"
         className={`rounded-2xl border px-5 py-4 ${
-          emphasizeTotal
-            ? 'border-cdl-accent-border bg-cdl-accent/5'
+          couponStory?.kind === 'pending'
+            ? 'border-cdl-border bg-cdl-surface'
+            : emphasizeTotal
+              ? 'border-cdl-accent-border bg-cdl-accent/5'
             : 'border-cdl-border bg-cdl-surface'
         }`}
       >
         <p className="text-xs font-bold uppercase tracking-wider text-cdl-muted">
-          {tw(language, 'totalToPay')}
+          {couponStory?.kind === 'pending'
+            ? tCoupons(language, 'currentPayable')
+            : couponStory?.kind === 'applied'
+              ? tCoupons(language, 'finalTotal')
+              : tw(language, 'totalToPay')}
         </p>
         <p className="mt-1 text-3xl font-black tabular-nums text-cdl-price">
           {formatCurrency(breakdown.total)}
         </p>
+        {couponStory?.kind === 'pending' ? (
+          <p className="mt-1 text-xs font-semibold text-cdl-muted">
+            {tCoupons(language, 'currentPayableHint')}
+          </p>
+        ) : null}
       </div>
+
+      {couponStory?.kind === 'pending' ? (
+        <div
+          data-pricing-role="projected"
+          data-testid="pricing-coupon-pending"
+          className="rounded-2xl border border-dashed border-amber-400 bg-amber-50 px-5 py-4"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            {couponStory.code ? (
+              <span className="rounded-lg bg-black px-2.5 py-1 font-mono text-[11px] font-black tracking-wider text-amber-300">
+                {couponStory.code}
+              </span>
+            ) : null}
+            <span className="rounded-full bg-amber-200 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-amber-950">
+              {tCoupons(language, 'pending')}
+            </span>
+          </div>
+          <p className="mt-3 text-sm font-black text-amber-950">
+            {tCoupons(language, 'couponReceived')}
+          </p>
+          <dl className="mt-3 space-y-2 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <dt className="font-semibold text-amber-900/80">
+                {tCoupons(language, 'requestedDiscount')}
+              </dt>
+              <dd className="font-black tabular-nums text-emerald-800">
+                -{formatCurrency(couponStory.requestedDiscount)}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <dt className="font-semibold text-amber-900/80">
+                {tCoupons(language, 'estimatedAfterApproval')}
+              </dt>
+              <dd
+                data-testid="pricing-projected-total"
+                className="text-lg font-black tabular-nums text-amber-950"
+              >
+                {formatCurrency(couponStory.projectedTotal)}
+              </dd>
+            </div>
+          </dl>
+          <p className="mt-3 text-[11px] font-bold uppercase tracking-wide text-amber-800">
+            {tCoupons(language, 'projectedNotPayable')}
+          </p>
+          <p className="mt-1 text-xs font-semibold leading-5 text-amber-900">
+            {tCoupons(language, 'pendingText')}
+          </p>
+        </div>
+      ) : null}
 
       {showDeposit ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
