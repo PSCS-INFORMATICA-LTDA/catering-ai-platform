@@ -9,6 +9,7 @@ import type {
 import type { PricingBreakdown } from '@/Lib/pricing/pricingBreakdownTypes'
 import { getQuoteStrings } from '@/Lib/quoteTranslations'
 import type { QuoteLanguage, WizardState } from '@/Lib/quoteWizardTypes'
+import PublicCouponBox from '@/components/quotes/PublicCouponBox'
 import QuoteReviewLayout from './QuoteReviewLayout'
 import {
   mapWizardBreakdownToQuoteReview,
@@ -157,7 +158,6 @@ export default function PublicQuoteConfirmationStep({
           : !cancellationPolicyAccepted
             ? w.cancellationPolicyRequired
             : w.consentRequired
-  void currency
 
   return (
     <div className="space-y-6 pb-8">
@@ -208,9 +208,7 @@ export default function PublicQuoteConfirmationStep({
               <p className="text-xs font-bold uppercase tracking-wide text-cdl-muted">
                 {w.confirmSectionPackage}
               </p>
-              <p className="font-semibold text-cdl-title">
-                {packageName || '—'}
-              </p>
+              <p className="font-semibold text-cdl-title">{packageName || '—'}</p>
             </div>
           </div>
           <PricingPreviewStatus
@@ -223,9 +221,7 @@ export default function PublicQuoteConfirmationStep({
                   : null
             }
             language={language}
-            onRetry={
-              state.packageId && !pricingLoading ? onRetryPricing : undefined
-            }
+            onRetry={state.packageId && !pricingLoading ? onRetryPricing : undefined}
           />
         </section>
       )}
@@ -234,6 +230,14 @@ export default function PublicQuoteConfirmationStep({
         <p className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900">
           {w.mileagePendingReview}
         </p>
+      ) : null}
+
+      {breakdown && !pricingLoading && !pricingError ? (
+        <PublicCouponBox
+          language={language}
+          currency={currency}
+          onPricingRefresh={onRetryPricing}
+        />
       ) : null}
 
       {submitError ? (
@@ -245,37 +249,20 @@ export default function PublicQuoteConfirmationStep({
         </p>
       ) : null}
 
-      {/*
-        One decision unit: accepting and submitting are the same action, so the
-        consent sits in the shell with the button and travels with it. Sticky at
-        every width, so the customer can confirm from anywhere in the review
-        without scrolling to the last pixel, and there is no second copy of
-        either control in the page body.
-      */}
       <div
         data-public-review-actions
         className="sticky bottom-0 z-20 -mx-4 border-t border-cdl-border bg-cdl-bg/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:mx-0 sm:rounded-t-2xl sm:px-5"
       >
-        <label
-          data-cancellation-consent
-          className="mb-3 flex cursor-pointer items-start gap-2.5"
-        >
+        <label data-cancellation-consent className="mb-3 flex cursor-pointer items-start gap-2.5">
           <input
             type="checkbox"
             checked={cancellationPolicyAccepted}
-            onChange={(event) =>
-              onCancellationPolicyChange(event.target.checked)
-            }
+            onChange={(event) => onCancellationPolicyChange(event.target.checked)}
             className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--brand-primary)]"
           />
-          <span className="text-xs leading-5 text-cdl-text-secondary">
-            {cancellationPolicyLabel}
-          </span>
+          <span className="text-xs leading-5 text-cdl-text-secondary">{cancellationPolicyLabel}</span>
         </label>
-        <label
-          data-public-consent
-          className="mb-3 flex cursor-pointer items-start gap-2.5"
-        >
+        <label data-public-consent className="mb-3 flex cursor-pointer items-start gap-2.5">
           <input
             type="checkbox"
             checked={state.publicConsentAccepted}
@@ -285,32 +272,19 @@ export default function PublicQuoteConfirmationStep({
           <span className="text-xs leading-5 text-cdl-text-secondary">
             {consentLabel}{' '}
             {privacyUrl ? (
-              <a
-                href={privacyUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="font-bold text-[var(--brand-primary)] underline"
-              >
+              <a href={privacyUrl} target="_blank" rel="noreferrer" className="font-bold text-[var(--brand-primary)] underline">
                 {w.privacyLink}
               </a>
             ) : null}
           </span>
         </label>
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="button"
-            onClick={onBack}
-            className="rounded-xl border border-cdl-border bg-cdl-surface px-6 py-3 text-sm font-bold"
-          >
+          <button type="button" onClick={onBack} className="rounded-xl border border-cdl-border bg-cdl-surface px-6 py-3 text-sm font-bold">
             {copy.back}
           </button>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             {state.packageId && (pricingError || (!breakdown && !pricingLoading)) ? (
-              <button
-                type="button"
-                onClick={onRetryPricing}
-                className="rounded-xl border border-cdl-border px-6 py-3 text-sm font-bold"
-              >
+              <button type="button" onClick={onRetryPricing} className="rounded-xl border border-cdl-border px-6 py-3 text-sm font-bold">
                 {w.pricingRetry}
               </button>
             ) : null}
@@ -324,11 +298,7 @@ export default function PublicQuoteConfirmationStep({
               {saving ? w.publicSubmittingRequest : w.publicSubmitRequest}
             </button>
             {blockedReason ? (
-              <p
-                data-submit-blocked-reason
-                role="status"
-                className="text-center text-xs font-semibold text-cdl-muted sm:text-left"
-              >
+              <p data-submit-blocked-reason role="status" className="text-center text-xs font-semibold text-cdl-muted sm:text-left">
                 {blockedReason}
               </p>
             ) : null}

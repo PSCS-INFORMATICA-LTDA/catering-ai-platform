@@ -4,6 +4,7 @@ import {
   parseQuotePricingPreviewBody,
   type QuotePricingPreviewBody,
 } from '@/Lib/pricing/computeQuotePricing'
+import { resolveCouponForPricing } from '@/Lib/coupons/resolveCoupon'
 import { resolvePublicQuoteMileageDistance } from '@/Lib/publicQuote/distance'
 import {
   hasConfirmedGoogleAddress,
@@ -21,6 +22,7 @@ import {
   loadPublicQuoteSessionTenant,
 } from '@/Lib/publicQuote/session'
 import { fetchSupabaseCommercialRules } from '@/Lib/supabaseCommercialRules'
+import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -80,7 +82,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const result = await computeQuotePricing({
+    const pricingArgs = {
       ...parsed,
       companyId: session.company_id,
       language: session.locale,
@@ -88,19 +90,78 @@ export async function POST(request: NextRequest) {
       reservationPercentage: null,
       reservationAmountOverride: null,
       useCustomReservation: false,
-      discountAmount: 0,
       requireSupabaseRules: true,
-    })
-    if (!result.ok) {
+    } as const
+    const base = await computeQuotePricing({ ...pricingArgs, discountAmount: 0 })
+    if (!base.ok) {
       return NextResponse.json(
         {
           error: 'Request could not be processed.',
-          code: result.error.code,
-          field: result.error.field ?? null,
+          code: base.error.code,
+          field: base.error.field ?? null,
         },
         { status: 422, headers: NO_STORE },
       )
     }
+
+    const db = getSupabaseServerClient()
+    const { data: sessionRow, error: sessionError } = await db
+      .from('public_quote_intake_sessions')
+      .select('coupon_code')
+      .eq('id', session.id)
+      .eq('company_id', session.company_id)
+      .maybeSingle()
+    if (sessionError) throw new PublicQuoteHttpError(500, 'server_error')
+
+    const couponCode =
+      typeof sessionRow?.coupon_code === 'string' ? sessionRow.coupon_code.trim() : ''
+    let coupon: Record<string, unknown> | null = null
+    let result = base
+
+    if (couponCode) {
+      const resolution = await resolveCouponForPricing({
+        companyId: session.company_id,
+        code: couponCode,
+        eventDate:
+          typeof draft.event?.eventDate === 'string'
+            ? draft.event.eventDate
+            : body.eventDate || '',
+        packageId: parsed.packageId,
+        breakdown: base.breakdown,
+        contactPhone:
+          typeof draft.contact?.phone === 'string' ? draft.contact.phone : null,
+      })
+      if (!resolution.valid) {
+        await db
+          .from('public_quote_intake_sessions')
+          .update({ coupon_code: null })
+          .eq('id', session.id)
+          .eq('company_id', session.company_id)
+          .eq('status', 'active')
+        coupon = {
+          invalidated: true,
+          reason: resolution.reason ?? 'not_found',
+        }
+      } else {
+        coupon = {
+          code: resolution.coupon?.code,
+          approvalStatus: resolution.approvalStatus,
+          potentialDiscountAmount: resolution.potentialDiscountAmount,
+          appliedDiscountAmount: resolution.appliedDiscountAmount,
+        }
+        if (resolution.appliedDiscountAmount > 0) {
+          const discounted = await computeQuotePricing({
+            ...pricingArgs,
+            discountAmount: resolution.appliedDiscountAmount,
+          })
+          if (!discounted.ok) {
+            throw new PublicQuoteHttpError(422, 'invalid_payload')
+          }
+          result = discounted
+        }
+      }
+    }
+
     return NextResponse.json(
       {
         breakdown: result.breakdown,
@@ -108,6 +169,7 @@ export async function POST(request: NextRequest) {
         packagePricePerPerson: result.packagePricePerPerson,
         resolvedAdditionals: result.resolvedAdditionals,
         mileage,
+        coupon,
       },
       { headers: NO_STORE },
     )
