@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  classifyCouponDecideError,
   classifyCouponReserveError,
   couponCustomerUsageClaimId,
+  isMissingCouponDecideFunction,
   isMissingCouponReserveFunction,
   isUniqueViolation,
 } from './couponPersistError.ts'
@@ -49,6 +51,24 @@ describe('classifyCouponReserveError', () => {
   it('detects unique violations', () => {
     assert.equal(isUniqueViolation({ code: '23505' }), true)
     assert.equal(isUniqueViolation({ message: 'duplicate key value violates unique constraint' }), true)
+  })
+
+  it('maps atomic decide exceptions', () => {
+    assert.equal(
+      classifyCouponDecideError({ message: 'coupon_already_decided' }),
+      'already_decided',
+    )
+    assert.equal(
+      classifyCouponDecideError({ details: 'coupon_invoice_exists' }),
+      'invoice_exists',
+    )
+    assert.equal(
+      isMissingCouponDecideFunction({
+        code: 'PGRST202',
+        message: 'Could not find the function public.decide_quote_coupon_application',
+      }),
+      true,
+    )
   })
 
   it('builds a stable customer usage claim id', () => {

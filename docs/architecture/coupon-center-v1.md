@@ -90,7 +90,10 @@ Statuses: `pending` → `applied` or `rejected`. `revoked` remains in the check 
 - Manual coupons persist a quote with `applied_discount_amount = 0`.
 - Pending blocks invoice create, deposit confirmation / agenda reserve, and service-order conversion in application code.
 - Database trigger `private.assert_no_pending_coupon_for_quote` remains the last barrier on `invoices` and `service_orders`.
-- Approve/reject require `commercial.coupons.manage`, are company-scoped, and claim the row with `approval_status = pending`.
+- Approve/reject require `commercial.coupons.manage`, are company-scoped, and go through `public.decide_quote_coupon_application` (`SECURITY DEFINER`, `service_role` only).
+- The RPC locks the application (and the quote on approve) and writes `quote_coupon_applications` + `quotes` + current `quote_versions` in one transaction. Partial financial state is not allowed.
+- If that RPC is not yet live, approve/reject uses a compensating fallback that reverts the application (and quote/version snapshots) when a later write fails. The fallback is temporary and is not the atomic target.
+- Money math stays in TypeScript (`allocateApprovedCoupon` on the frozen `potential_discount_amount`). The RPC only applies the server-built patch.
 - Retry of the same decision is idempotent. Applied/rejected cannot return to pending in the API.
 - Approval uses the frozen `potential_discount_amount` and `rules_snapshot`, not the live coupon definition.
 
@@ -118,7 +121,7 @@ PayPal Sandbox remains the only allowed PayPal mode. `/api/payments/paypal/order
 
 ## i18n
 
-Public and admin coupon copy live in `Lib/i18n/coupons.ts` via `makeI18nModule` and the existing registry. No second translation framework.
+Public and admin coupon copy live in `Lib/i18n/coupons.ts` via `makeI18nModule` and the existing registry. No second translation framework. Public placeholders never show a live catalog code. Pending coupons keep the payable total unchanged and show a separate estimated total after approval. Applied coupons show the saved amount and the new server-owned total.
 
 ## Outbox
 

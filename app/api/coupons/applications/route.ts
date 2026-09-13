@@ -3,6 +3,11 @@ import {
   requireSessionCompanyId,
 } from '@/Lib/auth/requireApi'
 import { allocateApprovedCoupon } from '@/Lib/coupons/couponMath'
+import { decideQuoteCouponFallback } from '@/Lib/coupons/decideQuoteCoupon'
+import {
+  classifyCouponDecideError,
+  isMissingCouponDecideFunction,
+} from '@/Lib/coupons/couponPersistError'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
@@ -84,141 +89,170 @@ export async function PATCH(request: Request) {
   }
 
   const now = new Date().toISOString()
-  if (action === 'reject') {
-    const claimed = await db.from('quote_coupon_applications').update({
-      approval_status: 'rejected',
-      applied_discount_amount: 0,
-      rejected_by: ctx.session.userId,
-      rejected_at: now,
-      updated_at: now,
-    }).eq('id', id).eq('company_id', ctx.companyId).eq('approval_status', 'pending').select('id').maybeSingle()
-    if (claimed.error) return Response.json({ error: 'Não foi possível rejeitar o cupom.' }, { status: 500, headers: NO_STORE })
-    if (!claimed.data) return Response.json({ ok: true, status: 'rejected', idempotent: true }, { headers: NO_STORE })
-    return Response.json({ ok: true, status: 'rejected' }, { headers: NO_STORE })
-  }
+  let quotePatch: Record<string, unknown> | null = null
+  let allocation: ReturnType<typeof allocateApprovedCoupon> | null = null
 
-  const { count: invoiceCount, error: invoiceError } = await db.from('invoices').select('id', { count: 'exact', head: true })
-    .eq('company_id', ctx.companyId).eq('quote_id', application.quote_id)
-  if (invoiceError) return Response.json({ error: 'Falha ao validar o financeiro da cotação.' }, { status: 500, headers: NO_STORE })
-  if ((invoiceCount ?? 0) > 0) return Response.json({ error: 'A cotação já possui invoice. Revise o financeiro antes de aprovar o desconto.' }, { status: 409, headers: NO_STORE })
+  if (action === 'approve') {
+    const { count: invoiceCount, error: invoiceError } = await db.from('invoices').select('id', { count: 'exact', head: true })
+      .eq('company_id', ctx.companyId).eq('quote_id', application.quote_id)
+    if (invoiceError) return Response.json({ error: 'Falha ao validar o financeiro da cotação.' }, { status: 500, headers: NO_STORE })
+    if ((invoiceCount ?? 0) > 0) return Response.json({ error: 'A cotação já possui invoice. Revise o financeiro antes de aprovar o desconto.' }, { status: 409, headers: NO_STORE })
 
-  const { data: quote, error: quoteError } = await db.from('quotes').select('id, pricing_breakdown, quote_total, deposit_amount, reservation_amount')
-    .eq('id', application.quote_id).eq('company_id', ctx.companyId).maybeSingle()
-  if (quoteError) return Response.json({ error: 'Falha ao carregar a cotação.' }, { status: 500, headers: NO_STORE })
-  if (!quote) return Response.json({ error: 'Cotação não encontrada.' }, { status: 404, headers: NO_STORE })
-  const breakdown = quote.pricing_breakdown && typeof quote.pricing_breakdown === 'object'
-    ? { ...(quote.pricing_breakdown as Record<string, unknown>) }
-    : null
-  if (!breakdown) return Response.json({ error: 'Cotação sem snapshot de preço.' }, { status: 409, headers: NO_STORE })
+    const { data: quote, error: quoteError } = await db.from('quotes').select('id, pricing_breakdown, quote_total, deposit_amount, reservation_amount')
+      .eq('id', application.quote_id).eq('company_id', ctx.companyId).maybeSingle()
+    if (quoteError) return Response.json({ error: 'Falha ao carregar a cotação.' }, { status: 500, headers: NO_STORE })
+    if (!quote) return Response.json({ error: 'Cotação não encontrada.' }, { status: 404, headers: NO_STORE })
+    const breakdown = quote.pricing_breakdown && typeof quote.pricing_breakdown === 'object'
+      ? { ...(quote.pricing_breakdown as Record<string, unknown>) }
+      : null
+    if (!breakdown) return Response.json({ error: 'Cotação sem snapshot de preço.' }, { status: 409, headers: NO_STORE })
 
-  const rules = application.rules_snapshot && typeof application.rules_snapshot === 'object'
-    ? (application.rules_snapshot as Record<string, unknown>)
-    : {}
-  const discount = money(Number(application.potential_discount_amount ?? 0))
-  if (!(discount > 0)) return Response.json({ error: 'Desconto potencial inválido.' }, { status: 409, headers: NO_STORE })
-  const originalTotal = money(Number(breakdown.total ?? quote.quote_total ?? 0))
-  const deposit = money(Number(breakdown.deposit ?? quote.reservation_amount ?? quote.deposit_amount ?? 0))
-  const allocation = allocateApprovedCoupon({
-    total: originalTotal,
-    deposit,
-    authorizedDiscount: discount,
-    applyToDeposit: rules.apply_to_deposit === true,
-    applyToBalance: rules.apply_to_balance !== false,
-  })
-  if ('error' in allocation) {
-    return Response.json({ error: 'Configuração financeira do cupom inválida.' }, { status: 409, headers: NO_STORE })
-  }
-  const adjustments = Array.isArray(breakdown.adjustments)
-    ? (breakdown.adjustments as Array<Record<string, unknown>>).filter((line) => line.line_key !== 'discount')
-    : []
-  adjustments.push({
-    line_key: 'discount',
-    source_type: 'discount',
-    source_id: application.coupon_id,
-    description: `Cupom ${application.coupon_code_snapshot}`,
-    quantity: 1,
-    unit: 'adjustment',
-    unit_price: -allocation.authorizedDiscount,
-    amount: -allocation.authorizedDiscount,
-    metadata: {
+    const rules = application.rules_snapshot && typeof application.rules_snapshot === 'object'
+      ? (application.rules_snapshot as Record<string, unknown>)
+      : {}
+    const discount = money(Number(application.potential_discount_amount ?? 0))
+    if (!(discount > 0)) return Response.json({ error: 'Desconto potencial inválido.' }, { status: 409, headers: NO_STORE })
+    const originalTotal = money(Number(breakdown.total ?? quote.quote_total ?? 0))
+    const deposit = money(Number(breakdown.deposit ?? quote.reservation_amount ?? quote.deposit_amount ?? 0))
+    allocation = allocateApprovedCoupon({
+      total: originalTotal,
+      deposit,
+      authorizedDiscount: discount,
+      applyToDeposit: rules.apply_to_deposit === true,
+      applyToBalance: rules.apply_to_balance !== false,
+    })
+    if ('error' in allocation) {
+      return Response.json({ error: 'Configuração financeira do cupom inválida.' }, { status: 409, headers: NO_STORE })
+    }
+    const adjustments = Array.isArray(breakdown.adjustments)
+      ? (breakdown.adjustments as Array<Record<string, unknown>>).filter((line) => line.line_key !== 'discount')
+      : []
+    adjustments.push({
+      line_key: 'discount',
+      source_type: 'discount',
+      source_id: application.coupon_id,
+      description: `Cupom ${application.coupon_code_snapshot}`,
+      quantity: 1,
+      unit: 'adjustment',
+      unit_price: -allocation.authorizedDiscount,
+      amount: -allocation.authorizedDiscount,
+      metadata: {
+        campaign_name: application.campaign_name_snapshot,
+        approved_manually: true,
+        apply_to_deposit: allocation.applyToDeposit,
+        apply_to_balance: allocation.applyToBalance,
+      },
+    })
+    const couponSnapshot = {
+      id: application.coupon_id,
+      code: application.coupon_code_snapshot,
       campaign_name: application.campaign_name_snapshot,
-      approved_manually: true,
+      discount_type: rules.discount_type ?? null,
+      discount_value: rules.discount_value ?? null,
+      approval_status: 'applied',
+      eligible_amount: application.eligible_amount,
+      potential_discount_amount: discount,
+      applied_discount_amount: allocation.authorizedDiscount,
+      deposit_discount_amount: allocation.fromDeposit,
+      balance_discount_amount: allocation.fromBalance,
       apply_to_deposit: allocation.applyToDeposit,
       apply_to_balance: allocation.applyToBalance,
-    },
-  })
-  const couponSnapshot = {
-    id: application.coupon_id,
-    code: application.coupon_code_snapshot,
-    campaign_name: application.campaign_name_snapshot,
-    discount_type: rules.discount_type ?? null,
-    discount_value: rules.discount_value ?? null,
-    approval_status: 'applied',
-    eligible_amount: application.eligible_amount,
-    potential_discount_amount: discount,
-    applied_discount_amount: allocation.authorizedDiscount,
-    deposit_discount_amount: allocation.fromDeposit,
-    balance_discount_amount: allocation.fromBalance,
-    apply_to_deposit: allocation.applyToDeposit,
-    apply_to_balance: allocation.applyToBalance,
-    currency: 'USD',
-    approved_at: now,
-    applied_at: now,
-    rules_snapshot: application.rules_snapshot,
-  }
-  const updatedBreakdown = {
-    ...breakdown,
-    adjustments,
-    total: allocation.finalTotal,
-    deposit: allocation.depositDue,
-    balance: allocation.balanceDue,
-    coupon: couponSnapshot,
-  }
-
-  const claimed = await db.from('quote_coupon_applications').update({
-    approval_status: 'applied',
-    applied_discount_amount: allocation.authorizedDiscount,
-    approved_by: ctx.session.userId,
-    approved_at: now,
-    updated_at: now,
-  }).eq('id', id).eq('company_id', ctx.companyId).eq('approval_status', 'pending').select('id').maybeSingle()
-  if (claimed.error) return Response.json({ error: 'Não foi possível aprovar o cupom.' }, { status: 500, headers: NO_STORE })
-  if (!claimed.data) return Response.json({ ok: true, status: 'applied', idempotent: true }, { headers: NO_STORE })
-
-  const quoteUpdate = await db.from('quotes').update({
-    discount: allocation.authorizedDiscount,
-    discount_amount: allocation.authorizedDiscount,
-    reservation_amount: allocation.depositDue,
-    deposit_amount: allocation.depositDue,
-    balance_due: allocation.balanceDue,
-    total_amount: allocation.finalTotal,
-    quote_total: allocation.finalTotal,
-    pricing_breakdown: updatedBreakdown,
-  }).eq('id', application.quote_id).eq('company_id', ctx.companyId)
-  if (quoteUpdate.error) return Response.json({ error: 'Não foi possível atualizar a cotação aprovada.' }, { status: 500, headers: NO_STORE })
-
-  const { data: versions, error: versionsError } = await db.from('quote_versions').select('id, commercial_snapshot')
-    .eq('quote_id', application.quote_id).eq('company_id', ctx.companyId).eq('is_current', true)
-  if (versionsError) return Response.json({ error: 'Não foi possível atualizar a versão da cotação.' }, { status: 500, headers: NO_STORE })
-  for (const version of versions ?? []) {
-    const snapshot = version.commercial_snapshot && typeof version.commercial_snapshot === 'object'
-      ? { ...(version.commercial_snapshot as Record<string, unknown>) }
-      : {}
-    const { error } = await db.from('quote_versions').update({
+      currency: 'USD',
+      approved_at: now,
+      applied_at: now,
+      rules_snapshot: application.rules_snapshot,
+    }
+    const updatedBreakdown = {
+      ...breakdown,
+      adjustments,
+      total: allocation.finalTotal,
+      deposit: allocation.depositDue,
+      balance: allocation.balanceDue,
+      coupon: couponSnapshot,
+    }
+    quotePatch = {
+      discount: allocation.authorizedDiscount,
       discount_amount: allocation.authorizedDiscount,
       reservation_amount: allocation.depositDue,
+      deposit_amount: allocation.depositDue,
       balance_due: allocation.balanceDue,
+      total_amount: allocation.finalTotal,
       quote_total: allocation.finalTotal,
-      commercial_snapshot: { ...snapshot, pricing_breakdown: updatedBreakdown, coupon: couponSnapshot },
-    }).eq('id', version.id).eq('company_id', ctx.companyId)
-    if (error) return Response.json({ error: 'Não foi possível gravar o snapshot da versão.' }, { status: 500, headers: NO_STORE })
+      pricing_breakdown: updatedBreakdown,
+      coupon_snapshot: couponSnapshot,
+    }
+  }
+
+  const decided = await db.rpc('decide_quote_coupon_application', {
+    p_company_id: ctx.companyId,
+    p_application_id: id,
+    p_decision: action,
+    p_reviewed_by: ctx.session.userId,
+    p_quote_patch: quotePatch,
+  })
+  if (decided.error) {
+    if (isMissingCouponDecideFunction(decided.error)) {
+      const fallback = await decideQuoteCouponFallback({
+        db,
+        companyId: ctx.companyId,
+        applicationId: id,
+        quoteId: String(application.quote_id),
+        userId: ctx.session.userId,
+        action,
+        quotePatch: quotePatch as Parameters<typeof decideQuoteCouponFallback>[0]['quotePatch'],
+      })
+      if (!fallback.ok) {
+        return Response.json({ error: fallback.error }, { status: fallback.status, headers: NO_STORE })
+      }
+      if (fallback.status === 'rejected') {
+        return Response.json({
+          ok: true,
+          status: 'rejected',
+          idempotent: fallback.idempotent === true,
+        }, { headers: NO_STORE })
+      }
+      return Response.json({
+        ok: true,
+        status: 'applied',
+        idempotent: fallback.idempotent === true,
+        total: allocation && !('error' in allocation) ? allocation.finalTotal : undefined,
+        deposit: allocation && !('error' in allocation) ? allocation.depositDue : undefined,
+        balance: allocation && !('error' in allocation) ? allocation.balanceDue : undefined,
+      }, { headers: NO_STORE })
+    }
+    const reason = classifyCouponDecideError(decided.error)
+    const status =
+      reason === 'not_found' ? 404
+        : reason === 'invalid_arguments' ? 400
+          : reason === 'already_decided' || reason === 'invoice_exists' ? 409
+            : 500
+    const message =
+      reason === 'already_decided' ? 'Esta solicitação já foi decidida.'
+        : reason === 'invoice_exists' ? 'A cotação já possui invoice. Revise o financeiro antes de aprovar o desconto.'
+          : reason === 'not_found' ? 'Solicitação não encontrada.'
+            : reason === 'invalid_arguments' ? 'Solicitação inválida.'
+              : action === 'reject' ? 'Não foi possível rejeitar o cupom.'
+                : 'Não foi possível aprovar o cupom.'
+    return Response.json({ error: message }, { status, headers: NO_STORE })
+  }
+
+  const result = decided.data && typeof decided.data === 'object'
+    ? (decided.data as { ok?: boolean; status?: string; idempotent?: boolean; total?: number; deposit?: number; balance?: number })
+    : {}
+  if (action === 'reject') {
+    return Response.json({
+      ok: true,
+      status: 'rejected',
+      idempotent: result.idempotent === true,
+    }, { headers: NO_STORE })
   }
 
   return Response.json({
     ok: true,
     status: 'applied',
-    total: allocation.finalTotal,
-    deposit: allocation.depositDue,
-    balance: allocation.balanceDue,
+    idempotent: result.idempotent === true,
+    total: allocation && !('error' in allocation) ? allocation.finalTotal : result.total,
+    deposit: allocation && !('error' in allocation) ? allocation.depositDue : result.deposit,
+    balance: allocation && !('error' in allocation) ? allocation.balanceDue : result.balance,
   }, { headers: NO_STORE })
 }

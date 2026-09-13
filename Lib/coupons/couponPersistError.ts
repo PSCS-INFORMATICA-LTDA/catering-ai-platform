@@ -34,6 +34,39 @@ export function classifyCouponReserveError(error: {
   return 'persist_failed'
 }
 
+export type CouponDecideFailureReason =
+  | 'already_decided'
+  | 'invoice_exists'
+  | 'not_found'
+  | 'invalid_arguments'
+  | 'decide_unavailable'
+  | 'decide_failed'
+
+export function classifyCouponDecideError(error: {
+  message?: string | null
+  details?: string | null
+  hint?: string | null
+  code?: string | null
+} | null): CouponDecideFailureReason {
+  const text = errorText(error)
+  if (/coupon_already_decided/i.test(text)) return 'already_decided'
+  if (/coupon_invoice_exists/i.test(text)) return 'invoice_exists'
+  if (/coupon_application_not_found|quote_not_found/i.test(text)) return 'not_found'
+  if (/coupon_invalid_arguments/i.test(text)) return 'invalid_arguments'
+  return 'decide_failed'
+}
+
+export function isMissingCouponDecideFunction(error: {
+  message?: string | null
+  details?: string | null
+  hint?: string | null
+  code?: string | null
+} | null) {
+  return /PGRST202|Could not find the function.*decide_quote_coupon_application/i.test(
+    errorText(error),
+  )
+}
+
 export function isMissingCouponReserveFunction(error: {
   message?: string | null
   details?: string | null
