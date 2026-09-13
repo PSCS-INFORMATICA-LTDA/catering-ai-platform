@@ -1,6 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { tCoupons } from '@/Lib/i18n/coupons'
+import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
 type Coupon = {
   id: string
@@ -54,13 +56,13 @@ type Pending = {
 type Form = Omit<Coupon, 'id'> & { id?: string }
 
 const DAYS = [
-  { value: 1, label: 'Seg' },
-  { value: 2, label: 'Ter' },
-  { value: 3, label: 'Qua' },
-  { value: 4, label: 'Qui' },
-  { value: 5, label: 'Sex' },
-  { value: 6, label: 'Sáb' },
-  { value: 0, label: 'Dom' },
+  { value: 1, label: 'dayMon' as const },
+  { value: 2, label: 'dayTue' as const },
+  { value: 3, label: 'dayWed' as const },
+  { value: 4, label: 'dayThu' as const },
+  { value: 5, label: 'dayFri' as const },
+  { value: 6, label: 'daySat' as const },
+  { value: 0, label: 'daySun' as const },
 ]
 
 const EMPTY: Form = {
@@ -105,8 +107,8 @@ function money(value: number | null | undefined) {
   }).format(Number(value ?? 0))
 }
 
-function formatDate(value: string | null) {
-  if (!value) return 'Sem limite'
+function formatDate(value: string | null, fallback: string) {
+  if (!value) return fallback
   const [year, month, day] = value.split('-')
   return `${month}/${day}/${year}`
 }
@@ -165,15 +167,15 @@ function Toggle({ label, description, checked, disabled = false, onChange }: {
   )
 }
 
-function Editor({ initial, packages, saving, onCancel, onSave }: {
+function Editor({ initial, packages, saving, locale, onCancel, onSave }: {
   initial: Form
   packages: Package[]
   saving: boolean
+  locale: string
   onCancel: () => void
   onSave: (form: Form) => Promise<void>
 }) {
   const [form, setForm] = useState<Form>(initial)
-  useEffect(() => setForm(initial), [initial])
   const patch = <K extends keyof Form>(key: K, value: Form[K]) =>
     setForm((current) => ({ ...current, [key]: value }))
 
@@ -182,16 +184,16 @@ function Editor({ initial, packages, saving, onCancel, onSave }: {
       <div className="max-h-[95vh] w-full max-w-5xl overflow-y-auto rounded-t-3xl border border-cdl-border bg-cdl-surface shadow-2xl sm:rounded-3xl">
         <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-cdl-border bg-cdl-surface/95 px-5 py-4 backdrop-blur sm:px-7">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-600">Configuração comercial</p>
-            <h2 className="mt-1 text-2xl font-black text-cdl-title">{form.id ? `Editar ${form.code}` : 'Novo cupom'}</h2>
-            <p className="mt-1 text-xs text-cdl-muted">A regra é revalidada no servidor antes da cotação ser criada.</p>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-600">{tCoupons(locale, 'editorEyebrow')}</p>
+            <h2 className="mt-1 text-2xl font-black text-cdl-title">{form.id ? `${tCoupons(locale, 'editConfig')} ${form.code}` : tCoupons(locale, 'editorNew')}</h2>
+            <p className="mt-1 text-xs text-cdl-muted">{tCoupons(locale, 'editorHint')}</p>
           </div>
-          <button type="button" onClick={onCancel} className="rounded-full border border-cdl-border px-3 py-1.5 text-sm font-bold text-cdl-muted">Fechar</button>
+          <button type="button" onClick={onCancel} className="rounded-full border border-cdl-border px-3 py-1.5 text-sm font-bold text-cdl-muted">{tCoupons(locale, 'close')}</button>
         </header>
 
         <div className="space-y-7 p-5 sm:p-7">
           <section className="grid gap-4 rounded-2xl border border-cdl-border bg-cdl-bg p-4 sm:grid-cols-2">
-            <Field label="Código">
+            <Field label={tCoupons(locale, 'code')}>
               <input
                 value={form.code}
                 maxLength={32}
@@ -200,64 +202,64 @@ function Editor({ initial, packages, saving, onCancel, onSave }: {
                 className={`${INPUT} font-mono font-black uppercase tracking-wider`}
               />
             </Field>
-            <Field label="Campanha">
+            <Field label={tCoupons(locale, 'campaign')}>
               <input value={form.campaign_name} placeholder="CDL Barbecue Comercial" onChange={(event) => patch('campaign_name', event.target.value)} className={INPUT} />
             </Field>
-            <Field label="Status">
+            <Field label={tCoupons(locale, 'status')}>
               <select value={form.status} onChange={(event) => patch('status', event.target.value as Form['status'])} className={INPUT}>
-                <option value="draft">Rascunho</option>
-                <option value="active">Ativo</option>
-                <option value="paused">Pausado</option>
-                <option value="archived">Arquivado</option>
+                <option value="draft">{tCoupons(locale, 'statusDraft')}</option>
+                <option value="active">{tCoupons(locale, 'statusActive')}</option>
+                <option value="paused">{tCoupons(locale, 'statusPaused')}</option>
+                <option value="archived">{tCoupons(locale, 'statusArchived')}</option>
               </select>
             </Field>
-            <Field label="Divulgação / canal">
+            <Field label={tCoupons(locale, 'channel')}>
               <input value={form.distribution_channel ?? ''} placeholder="Caio e parceiros comerciais" onChange={(event) => patch('distribution_channel', event.target.value)} className={INPUT} />
             </Field>
             <div className="sm:col-span-2">
-              <Field label="Descrição">
+              <Field label={tCoupons(locale, 'description')}>
                 <textarea rows={3} value={form.description ?? ''} onChange={(event) => patch('description', event.target.value)} className={`${INPUT} py-2.5`} />
               </Field>
             </div>
           </section>
 
           <section>
-            <h3 className="text-lg font-black text-cdl-title">Benefício, mínimos e validade</h3>
+            <h3 className="text-lg font-black text-cdl-title">{tCoupons(locale, 'benefitTitle')}</h3>
             <div className="mt-3 grid gap-4 rounded-2xl border border-cdl-border bg-cdl-bg p-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Field label="Tipo">
+              <Field label={tCoupons(locale, 'type')}>
                 <select value={form.discount_type} onChange={(event) => patch('discount_type', event.target.value as Form['discount_type'])} className={INPUT}>
-                  <option value="percent">Percentual (%)</option>
-                  <option value="fixed">Valor fixo (US$)</option>
+                  <option value="percent">{tCoupons(locale, 'typePercent')}</option>
+                  <option value="fixed">{tCoupons(locale, 'typeFixed')}</option>
                 </select>
               </Field>
-              <Field label={form.discount_type === 'percent' ? 'Percentual' : 'Valor fixo'}>
+              <Field label={form.discount_type === 'percent' ? tCoupons(locale, 'percentValue') : tCoupons(locale, 'fixedValue')}>
                 <NumberField value={form.discount_value} onChange={(value) => patch('discount_value', value ?? 0)} />
               </Field>
-              <Field label="Desconto máximo" hint="Opcional para limitar percentuais.">
-                <NumberField value={form.max_discount_amount} placeholder="Sem teto" onChange={(value) => patch('max_discount_amount', value)} />
+              <Field label={tCoupons(locale, 'maxDiscount')} hint={tCoupons(locale, 'maxDiscountHint')}>
+                <NumberField value={form.max_discount_amount} placeholder={tCoupons(locale, 'noLimit')} onChange={(value) => patch('max_discount_amount', value)} />
               </Field>
-              <Field label="Pedido mínimo elegível">
+              <Field label={tCoupons(locale, 'minEligible')}>
                 <NumberField value={form.min_eligible_amount} onChange={(value) => patch('min_eligible_amount', value ?? 0)} />
               </Field>
-              <Field label="Mínimo final Seg–Qui">
-                <NumberField value={form.minimum_final_mon_thu} placeholder="Sem piso" onChange={(value) => patch('minimum_final_mon_thu', value)} />
+              <Field label={tCoupons(locale, 'minFinalMonThu')}>
+                <NumberField value={form.minimum_final_mon_thu} placeholder={tCoupons(locale, 'noLimit')} onChange={(value) => patch('minimum_final_mon_thu', value)} />
               </Field>
-              <Field label="Mínimo final Sex–Dom">
-                <NumberField value={form.minimum_final_fri_sun} placeholder="Sem piso" onChange={(value) => patch('minimum_final_fri_sun', value)} />
+              <Field label={tCoupons(locale, 'minFinalFriSun')}>
+                <NumberField value={form.minimum_final_fri_sun} placeholder={tCoupons(locale, 'noLimit')} onChange={(value) => patch('minimum_final_fri_sun', value)} />
               </Field>
-              <Field label="Validade inicial">
+              <Field label={tCoupons(locale, 'validFrom')}>
                 <input type="date" value={form.valid_from ?? ''} onChange={(event) => patch('valid_from', event.target.value || null)} className={INPUT} />
               </Field>
-              <Field label="Validade final">
+              <Field label={tCoupons(locale, 'validTo')}>
                 <input type="date" value={form.valid_to ?? ''} onChange={(event) => patch('valid_to', event.target.value || null)} className={INPUT} />
               </Field>
             </div>
           </section>
 
           <section>
-            <h3 className="text-lg font-black text-cdl-title">Elegibilidade</h3>
+            <h3 className="text-lg font-black text-cdl-title">{tCoupons(locale, 'eligibilityTitle')}</h3>
             <div className="mt-3 rounded-2xl border border-cdl-border bg-cdl-bg p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-cdl-muted">Dias do evento</p>
+              <p className="text-xs font-black uppercase tracking-wide text-cdl-muted">{tCoupons(locale, 'eventDays')}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {DAYS.map((day) => {
                   const active = form.eligible_weekdays.includes(day.value)
@@ -268,14 +270,14 @@ function Editor({ initial, packages, saving, onCancel, onSave }: {
                       onClick={() => patch('eligible_weekdays', active ? form.eligible_weekdays.filter((value) => value !== day.value) : [...form.eligible_weekdays, day.value])}
                       className={`rounded-full border px-3 py-2 text-xs font-black ${active ? 'border-amber-400 bg-amber-100 text-amber-900' : 'border-cdl-border bg-cdl-surface text-cdl-muted'}`}
                     >
-                      {day.label}
+                      {tCoupons(locale, day.label)}
                     </button>
                   )
                 })}
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <Toggle checked={form.all_packages} onChange={(value) => patch('all_packages', value)} label="Todos os pacotes" description="Desligue para escolher pacotes específicos." />
-                <Toggle checked={form.new_customer_only} onChange={(value) => patch('new_customer_only', value)} label="Somente cliente novo" description="A validação usa o telefone normalizado do cliente." />
+                <Toggle checked={form.all_packages} onChange={(value) => patch('all_packages', value)} label={tCoupons(locale, 'allPackages')} description={tCoupons(locale, 'allPackagesHint')} />
+                <Toggle checked={form.new_customer_only} onChange={(value) => patch('new_customer_only', value)} label={tCoupons(locale, 'newCustomer')} description={tCoupons(locale, 'newCustomerHint')} />
               </div>
               {!form.all_packages ? (
                 <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -289,7 +291,7 @@ function Editor({ initial, packages, saving, onCancel, onSave }: {
                           onChange={() => patch('eligible_package_ids', selected ? form.eligible_package_ids.filter((id) => id !== item.id) : [...form.eligible_package_ids, item.id])}
                           className="h-4 w-4 accent-amber-500"
                         />
-                        {item.label_pt || item.package_name || item.package_key || 'Pacote'}
+                        {item.label_pt || item.package_name || item.package_key || tCoupons(locale, 'packageFallback')}
                       </label>
                     )
                   })}
@@ -299,29 +301,29 @@ function Editor({ initial, packages, saving, onCancel, onSave }: {
           </section>
 
           <section>
-            <h3 className="text-lg font-black text-cdl-title">O que entra no desconto</h3>
+            <h3 className="text-lg font-black text-cdl-title">{tCoupons(locale, 'whatCountsTitle')}</h3>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <Toggle checked={form.include_additionals} onChange={(value) => patch('include_additionals', value)} label="Adicionais" />
-              <Toggle checked={form.include_additional_cuts} onChange={(value) => patch('include_additional_cuts', value)} label="Cortes adicionais" />
-              <Toggle checked={form.include_grill} onChange={(value) => patch('include_grill', value)} label="Churrasqueira" />
-              <Toggle checked={form.include_mileage} onChange={(value) => patch('include_mileage', value)} label="Milhagem" />
+              <Toggle checked={form.include_additionals} onChange={(value) => patch('include_additionals', value)} label={tCoupons(locale, 'additionals')} />
+              <Toggle checked={form.include_additional_cuts} onChange={(value) => patch('include_additional_cuts', value)} label={tCoupons(locale, 'additionalCuts')} />
+              <Toggle checked={form.include_grill} onChange={(value) => patch('include_grill', value)} label={tCoupons(locale, 'grill')} />
+              <Toggle checked={form.include_mileage} onChange={(value) => patch('include_mileage', value)} label={tCoupons(locale, 'mileage')} />
             </div>
           </section>
 
           <section>
-            <h3 className="text-lg font-black text-cdl-title">Controle e aprovação</h3>
+            <h3 className="text-lg font-black text-cdl-title">{tCoupons(locale, 'controlTitle')}</h3>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <Toggle checked={form.stackable} onChange={(value) => patch('stackable', value)} label="Combina com outros descontos" />
-              <Toggle checked={false} onChange={() => undefined} disabled label="Aplicar no sinal" description="Protegido no V1: o cupom atua somente no saldo." />
-              <Toggle checked={form.apply_to_balance} onChange={(value) => patch('apply_to_balance', value)} label="Aplicar no saldo" />
-              <Toggle checked={form.allow_post_event_adjustment} onChange={(value) => patch('allow_post_event_adjustment', value)} label="Ajuste pós-evento" />
-              <Toggle checked={form.manual_approval_required} onChange={(value) => patch('manual_approval_required', value)} label="Aprovação manual" description="O cliente solicita; o desconto só entra após aprovação." />
+              <Toggle checked={form.stackable} onChange={(value) => patch('stackable', value)} label={tCoupons(locale, 'stackable')} />
+              <Toggle checked={form.apply_to_deposit} onChange={(value) => patch('apply_to_deposit', value)} label={tCoupons(locale, 'applyDeposit')} description={tCoupons(locale, 'applyDepositHint')} />
+              <Toggle checked={form.apply_to_balance} onChange={(value) => patch('apply_to_balance', value)} label={tCoupons(locale, 'applyBalance')} description={tCoupons(locale, 'applyBalanceHint')} />
+              <Toggle checked={form.allow_post_event_adjustment} onChange={(value) => patch('allow_post_event_adjustment', value)} label={tCoupons(locale, 'postEvent')} />
+              <Toggle checked={form.manual_approval_required} onChange={(value) => patch('manual_approval_required', value)} label={tCoupons(locale, 'manualApproval')} description={tCoupons(locale, 'manualApprovalHint')} />
             </div>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <Field label="Máx. usos por cliente">
+              <Field label={tCoupons(locale, 'maxUsesCustomer')}>
                 <NumberField value={form.max_uses_per_customer} min={1} step="1" onChange={(value) => patch('max_uses_per_customer', value)} />
               </Field>
-              <Field label="Máx. aplicações por pedido">
+              <Field label={tCoupons(locale, 'maxUsesQuote')}>
                 <NumberField value={form.max_uses_per_quote} min={1} step="1" onChange={(value) => patch('max_uses_per_quote', Math.max(1, Math.floor(value ?? 1)))} />
               </Field>
             </div>
@@ -329,8 +331,8 @@ function Editor({ initial, packages, saving, onCancel, onSave }: {
         </div>
 
         <footer className="sticky bottom-0 flex flex-col-reverse gap-3 border-t border-cdl-border bg-cdl-surface/95 px-5 py-4 backdrop-blur sm:flex-row sm:justify-end sm:px-7">
-          <button type="button" onClick={onCancel} disabled={saving} className="min-h-11 rounded-xl border border-cdl-border px-5 text-sm font-bold text-cdl-title">Cancelar</button>
-          <button type="button" onClick={() => void onSave(form)} disabled={saving || !form.code || !form.campaign_name} className="min-h-11 rounded-xl bg-amber-400 px-6 text-sm font-black text-black shadow-sm hover:bg-amber-300 disabled:opacity-50">{saving ? 'Salvando…' : 'Salvar cupom'}</button>
+          <button type="button" onClick={onCancel} disabled={saving} className="min-h-11 rounded-xl border border-cdl-border px-5 text-sm font-bold text-cdl-title">{tCoupons(locale, 'cancel')}</button>
+          <button type="button" onClick={() => void onSave(form)} disabled={saving || !form.code || !form.campaign_name} className="min-h-11 rounded-xl bg-amber-400 px-6 text-sm font-black text-black shadow-sm hover:bg-amber-300 disabled:opacity-50">{saving ? tCoupons(locale, 'saving') : tCoupons(locale, 'save')}</button>
         </footer>
       </div>
     </div>
@@ -344,6 +346,7 @@ function statusClass(status: Coupon['status']) {
 }
 
 export default function CouponsDashboard() {
+  const locale = useAuthLocaleFromMe()
   const [coupons, setCoupons] = useState<Coupon[]>([])
   const [packages, setPackages] = useState<Package[]>([])
   const [pending, setPending] = useState<Pending[]>([])
@@ -354,33 +357,41 @@ export default function CouponsDashboard() {
   const [editor, setEditor] = useState<Form | null>(null)
 
   const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const response = await fetch('/api/coupons', { cache: 'no-store' })
-      const result = (await response.json()) as {
-        coupons?: Coupon[]
-        packages?: Package[]
-        canManage?: boolean
-        error?: string
-      }
-      if (!response.ok) throw new Error(result.error || 'Falha ao carregar cupons.')
-      setCoupons(result.coupons ?? [])
-      setPackages(result.packages ?? [])
-      setCanManage(Boolean(result.canManage))
-      if (result.canManage) {
-        const pendingResponse = await fetch('/api/coupons/applications', { cache: 'no-store' })
-        const pendingResult = (await pendingResponse.json().catch(() => ({}))) as { applications?: Pending[] }
-        if (pendingResponse.ok) setPending(pendingResult.applications ?? [])
-      }
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Falha ao carregar cupons.')
-    } finally {
-      setLoading(false)
+    const response = await fetch('/api/coupons', { cache: 'no-store' })
+    const result = (await response.json()) as {
+      coupons?: Coupon[]
+      packages?: Package[]
+      canManage?: boolean
+      error?: string
     }
-  }, [])
+    if (!response.ok) throw new Error(result.error || tCoupons(locale, 'loadError'))
+    setCoupons(result.coupons ?? [])
+    setPackages(result.packages ?? [])
+    setCanManage(Boolean(result.canManage))
+    if (result.canManage) {
+      const pendingResponse = await fetch('/api/coupons/applications', { cache: 'no-store' })
+      const pendingResult = (await pendingResponse.json().catch(() => ({}))) as { applications?: Pending[] }
+      if (pendingResponse.ok) setPending(pendingResult.applications ?? [])
+    }
+  }, [locale])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        await load()
+      } catch (caught) {
+        if (!cancelled) {
+          setError(caught instanceof Error ? caught.message : tCoupons(locale, 'loadError'))
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [load, locale])
 
   const summary = useMemo(() => ({
     active: coupons.filter((coupon) => coupon.status === 'active').length,
@@ -398,18 +409,18 @@ export default function CouponsDashboard() {
         body: JSON.stringify(form),
       })
       const result = (await response.json().catch(() => ({}))) as { error?: string }
-      if (!response.ok) throw new Error(result.error || 'Não foi possível salvar o cupom.')
+      if (!response.ok) throw new Error(result.error || tCoupons(locale, 'saveError'))
       setEditor(null)
       await load()
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Não foi possível salvar o cupom.')
+      setError(caught instanceof Error ? caught.message : tCoupons(locale, 'saveError'))
     } finally {
       setSaving(false)
     }
   }
 
   async function decide(id: string, action: 'approve' | 'reject') {
-    if (!window.confirm(action === 'approve' ? 'Aprovar este desconto?' : 'Rejeitar esta solicitação?')) return
+    if (!window.confirm(action === 'approve' ? tCoupons(locale, 'confirmApprove') : tCoupons(locale, 'confirmReject'))) return
     setSaving(true)
     setError(null)
     try {
@@ -419,10 +430,10 @@ export default function CouponsDashboard() {
         body: JSON.stringify({ id, action }),
       })
       const result = (await response.json().catch(() => ({}))) as { error?: string }
-      if (!response.ok) throw new Error(result.error || 'Não foi possível concluir a decisão.')
+      if (!response.ok) throw new Error(result.error || tCoupons(locale, 'decideError'))
       await load()
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Não foi possível concluir a decisão.')
+      setError(caught instanceof Error ? caught.message : tCoupons(locale, 'decideError'))
     } finally {
       setSaving(false)
     }
@@ -434,21 +445,21 @@ export default function CouponsDashboard() {
         <div className="bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.28),transparent_38%),linear-gradient(135deg,#111827,#050505)] px-5 py-7 text-white sm:px-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-300">Parâmetros comerciais</p>
-              <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Cupons e campanhas</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/70">Desconto, elegibilidade, mínimos, saldo e aprovação manual em um só lugar.</p>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-300">{tCoupons(locale, 'pageEyebrow')}</p>
+              <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{tCoupons(locale, 'pageTitle')}</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/70">{tCoupons(locale, 'pageSubtitle')}</p>
             </div>
             {canManage ? (
-              <button type="button" onClick={() => setEditor({ ...EMPTY, eligible_weekdays: [...EMPTY.eligible_weekdays], eligible_package_ids: [] })} className="min-h-12 rounded-xl bg-amber-400 px-5 text-sm font-black text-black shadow-lg shadow-amber-500/20 hover:bg-amber-300">+ Novo cupom</button>
+              <button type="button" onClick={() => setEditor({ ...EMPTY, eligible_weekdays: [...EMPTY.eligible_weekdays], eligible_package_ids: [] })} className="min-h-12 rounded-xl bg-amber-400 px-5 text-sm font-black text-black shadow-lg shadow-amber-500/20 hover:bg-amber-300">{tCoupons(locale, 'newCoupon')}</button>
             ) : null}
           </div>
         </div>
         <div className="grid gap-px bg-cdl-border sm:grid-cols-4">
           {[
-            ['Ativos', summary.active],
-            ['Rascunhos', summary.draft],
-            ['Aprovação manual', summary.manual],
-            ['Pendentes', pending.length],
+            [tCoupons(locale, 'kpiActive'), summary.active],
+            [tCoupons(locale, 'kpiDraft'), summary.draft],
+            [tCoupons(locale, 'kpiManual'), summary.manual],
+            [tCoupons(locale, 'kpiPending'), pending.length],
           ].map(([label, value]) => (
             <div key={String(label)} className="bg-cdl-surface p-4 sm:p-5">
               <p className="text-xs font-black uppercase tracking-wide text-cdl-muted">{label}</p>
@@ -462,26 +473,26 @@ export default function CouponsDashboard() {
 
       {canManage && pending.length ? (
         <section className="rounded-3xl border border-amber-200 bg-amber-50/60 p-4 shadow-sm sm:p-6">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">Ação necessária</p>
-          <h2 className="mt-1 text-xl font-black text-cdl-title">Cupons aguardando aprovação</h2>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">{tCoupons(locale, 'pendingEyebrow')}</p>
+          <h2 className="mt-1 text-xl font-black text-cdl-title">{tCoupons(locale, 'pendingTitle')}</h2>
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
             {pending.map((application) => (
               <article key={application.id} className="rounded-2xl border border-amber-200 bg-white p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <span className="rounded-lg bg-black px-2.5 py-1 font-mono text-xs font-black text-amber-300">{application.coupon_code_snapshot}</span>
-                    <p className="mt-2 text-sm font-black text-cdl-title">{application.customer_name || 'Cliente'} · {application.quote_number || 'Cotação'}</p>
+                    <p className="mt-2 text-sm font-black text-cdl-title">{application.customer_name || tCoupons(locale, 'customerFallback')} · {application.quote_number || tCoupons(locale, 'quoteFallback')}</p>
                     <p className="mt-1 text-xs text-cdl-muted">{application.campaign_name_snapshot}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[11px] text-cdl-muted">Desconto solicitado</p>
+                    <p className="text-[11px] text-cdl-muted">{tCoupons(locale, 'requestedDiscount')}</p>
                     <p className="text-lg font-black text-emerald-700">−{money(application.potential_discount_amount)}</p>
-                    <p className="text-[10px] text-cdl-muted">Base {money(application.eligible_amount)}</p>
+                    <p className="text-[10px] text-cdl-muted">{tCoupons(locale, 'eligibleBase')} {money(application.eligible_amount)}</p>
                   </div>
                 </div>
                 <div className="mt-4 flex gap-2">
-                  <button type="button" disabled={saving} onClick={() => void decide(application.id, 'reject')} className="min-h-10 flex-1 rounded-xl border border-red-200 bg-red-50 text-xs font-black text-red-700 disabled:opacity-50">Rejeitar</button>
-                  <button type="button" disabled={saving} onClick={() => void decide(application.id, 'approve')} className="min-h-10 flex-1 rounded-xl bg-emerald-600 text-xs font-black text-white disabled:opacity-50">Aprovar desconto</button>
+                  <button type="button" disabled={saving} onClick={() => void decide(application.id, 'reject')} className="min-h-10 flex-1 rounded-xl border border-red-200 bg-red-50 text-xs font-black text-red-700 disabled:opacity-50">{tCoupons(locale, 'reject')}</button>
+                  <button type="button" disabled={saving} onClick={() => void decide(application.id, 'approve')} className="min-h-10 flex-1 rounded-xl bg-emerald-600 text-xs font-black text-white disabled:opacity-50">{tCoupons(locale, 'approve')}</button>
                 </div>
               </article>
             ))}
@@ -492,10 +503,25 @@ export default function CouponsDashboard() {
       <section>
         <div className="mb-4 flex items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-cdl-muted">Campanhas configuradas</p>
-            <h2 className="mt-1 text-2xl font-black text-cdl-title">Central de cupons</h2>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-cdl-muted">{tCoupons(locale, 'configuredEyebrow')}</p>
+            <h2 className="mt-1 text-2xl font-black text-cdl-title">{tCoupons(locale, 'configuredTitle')}</h2>
           </div>
-          <button type="button" onClick={() => void load()} disabled={loading} className="rounded-xl border border-cdl-border px-4 py-2 text-xs font-bold text-cdl-muted">Atualizar</button>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => {
+              setLoading(true)
+              setError(null)
+              void load()
+                .catch((caught: unknown) => {
+                  setError(caught instanceof Error ? caught.message : tCoupons(locale, 'loadError'))
+                })
+                .finally(() => setLoading(false))
+            }}
+            className="rounded-xl border border-cdl-border px-4 py-2 text-xs font-bold text-cdl-muted"
+          >
+            {tCoupons(locale, 'refresh')}
+          </button>
         </div>
 
         {loading ? (
@@ -516,28 +542,28 @@ export default function CouponsDashboard() {
                       <h3 className="mt-3 text-lg font-black text-cdl-title">{coupon.campaign_name}</h3>
                     </div>
                     <div className="rounded-2xl bg-amber-50 px-3 py-2 text-right">
-                      <p className="text-[10px] font-black uppercase text-amber-700">Desconto</p>
+                      <p className="text-[10px] font-black uppercase text-amber-700">{tCoupons(locale, 'discount')}</p>
                       <p className="text-xl font-black text-amber-900">{coupon.discount_type === 'percent' ? `${Number(coupon.discount_value)}%` : money(coupon.discount_value)}</p>
                     </div>
                   </div>
                   {coupon.description ? <p className="mt-3 text-xs leading-5 text-cdl-muted">{coupon.description}</p> : null}
                 </div>
                 <div className="grid flex-1 grid-cols-2 gap-2 p-4 text-xs">
-                  <div className="rounded-xl bg-cdl-bg p-3"><p className="text-cdl-muted">Validade</p><p className="mt-1 font-black text-cdl-title">{formatDate(coupon.valid_from)} → {formatDate(coupon.valid_to)}</p></div>
-                  <div className="rounded-xl bg-cdl-bg p-3"><p className="text-cdl-muted">Mínimo elegível</p><p className="mt-1 font-black text-cdl-title">{money(coupon.min_eligible_amount)}</p></div>
-                  <div className="rounded-xl bg-cdl-bg p-3"><p className="text-cdl-muted">Aplicação</p><p className="mt-1 font-black text-cdl-title">Saldo</p></div>
-                  <div className="rounded-xl bg-cdl-bg p-3"><p className="text-cdl-muted">Aprovação</p><p className="mt-1 font-black text-cdl-title">{coupon.manual_approval_required ? 'Manual' : 'Automática'}</p></div>
+                  <div className="rounded-xl bg-cdl-bg p-3"><p className="text-cdl-muted">{tCoupons(locale, 'validity')}</p><p className="mt-1 font-black text-cdl-title">{formatDate(coupon.valid_from, tCoupons(locale, 'noLimit'))} → {formatDate(coupon.valid_to, tCoupons(locale, 'noLimit'))}</p></div>
+                  <div className="rounded-xl bg-cdl-bg p-3"><p className="text-cdl-muted">{tCoupons(locale, 'minEligibleShort')}</p><p className="mt-1 font-black text-cdl-title">{money(coupon.min_eligible_amount)}</p></div>
+                  <div className="rounded-xl bg-cdl-bg p-3"><p className="text-cdl-muted">{tCoupons(locale, 'application')}</p><p className="mt-1 font-black text-cdl-title">{coupon.apply_to_deposit && coupon.apply_to_balance ? tCoupons(locale, 'applicationBoth') : coupon.apply_to_deposit ? tCoupons(locale, 'applicationDeposit') : tCoupons(locale, 'applicationBalance')}</p></div>
+                  <div className="rounded-xl bg-cdl-bg p-3"><p className="text-cdl-muted">{tCoupons(locale, 'approval')}</p><p className="mt-1 font-black text-cdl-title">{coupon.manual_approval_required ? tCoupons(locale, 'approvalManual') : tCoupons(locale, 'approvalAuto')}</p></div>
                 </div>
                 <div className="flex flex-wrap gap-1.5 px-4 pb-4">
-                  {coupon.include_additionals ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-700">Adicionais</span> : null}
-                  {coupon.include_additional_cuts ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-700">Cortes</span> : null}
-                  {coupon.include_grill ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-700">Churrasqueira</span> : null}
-                  {coupon.include_mileage ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-700">Milhagem</span> : null}
-                  {coupon.allow_post_event_adjustment ? <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-bold text-violet-700">Pós-evento</span> : null}
+                  {coupon.include_additionals ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-700">{tCoupons(locale, 'additionals')}</span> : null}
+                  {coupon.include_additional_cuts ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-700">{tCoupons(locale, 'additionalCuts')}</span> : null}
+                  {coupon.include_grill ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-700">{tCoupons(locale, 'grill')}</span> : null}
+                  {coupon.include_mileage ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-700">{tCoupons(locale, 'mileage')}</span> : null}
+                  {coupon.allow_post_event_adjustment ? <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-bold text-violet-700">{tCoupons(locale, 'postEvent')}</span> : null}
                 </div>
                 {canManage ? (
                   <div className="border-t border-cdl-border p-3">
-                    <button type="button" onClick={() => setEditor({ ...coupon, eligible_weekdays: [...coupon.eligible_weekdays], eligible_package_ids: [...coupon.eligible_package_ids] })} className="min-h-10 w-full rounded-xl border border-cdl-border bg-cdl-bg text-xs font-black text-cdl-title hover:border-amber-300 hover:bg-amber-50">Editar configuração</button>
+                    <button type="button" onClick={() => setEditor({ ...coupon, eligible_weekdays: [...coupon.eligible_weekdays], eligible_package_ids: [...coupon.eligible_package_ids] })} className="min-h-10 w-full rounded-xl border border-cdl-border bg-cdl-bg text-xs font-black text-cdl-title hover:border-amber-300 hover:bg-amber-50">{tCoupons(locale, 'editConfig')}</button>
                   </div>
                 ) : null}
               </article>
@@ -546,7 +572,7 @@ export default function CouponsDashboard() {
         )}
       </section>
 
-      {editor ? <Editor initial={editor} packages={packages} saving={saving} onCancel={() => setEditor(null)} onSave={save} /> : null}
+      {editor ? <Editor key={editor.id ?? 'new'} initial={editor} packages={packages} saving={saving} locale={locale} onCancel={() => setEditor(null)} onSave={save} /> : null}
     </main>
   )
 }
