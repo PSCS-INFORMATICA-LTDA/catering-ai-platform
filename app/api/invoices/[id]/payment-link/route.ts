@@ -4,14 +4,8 @@ import {
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
 import { loadCompanyInvoice } from '@/Lib/payments/createInvoiceFromQuote'
-import {
-  createPaymentLinkToken,
-  defaultPaymentLinkExpiry,
-  hashPaymentLinkToken,
-  isPaymentPurpose,
-} from '@/Lib/payments/paymentLinks'
-import { invoiceAmountContext, resolveServerPurposeAmounts } from '@/Lib/payments/loadInvoiceAmountDue'
-import { createInvoicePaymentLink } from '@/Lib/payments/resolvePaymentLink'
+import { createPayablePaymentLink } from '@/Lib/payments/createPayablePaymentLink'
+import { isPaymentPurpose } from '@/Lib/payments/paymentLinks'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -40,49 +34,43 @@ export async function POST(request: Request, { params }: Params) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  if (invoice.status === 'canceled' || invoice.status === 'paid') {
-    return Response.json({ error: 'invoice_not_payable' }, { status: 409 })
-  }
-
   const body = (await request.json().catch(() => null)) as {
     purpose?: string
     expires?: boolean
   } | null
   const defaultPurpose = invoice.deposit_amount <= 0 ? 'full' : 'deposit'
   const purpose = isPaymentPurpose(body?.purpose) ? body.purpose : defaultPurpose
-  const rawToken = createPaymentLinkToken()
-  const created = await createInvoicePaymentLink({
+  const created = await createPayablePaymentLink({
     companyId,
     invoiceId: invoice.id,
     purpose,
-    rawToken,
-    tokenHash: hashPaymentLinkToken(rawToken),
-    expiresAt: body?.expires === false ? null : defaultPaymentLinkExpiry(),
+    origin: new URL(request.url).origin,
     actorUserId: auth.session.userId,
+    expires: body?.expires,
   })
   if (!created.ok) {
-    return Response.json({ error: created.error }, { status: 500 })
+    return Response.json(
+      {
+        error: created.error,
+        deposit_due: created.deposit_due,
+        balance_due: created.balance_due,
+        full_due: created.full_due,
+      },
+      { status: created.status },
+    )
   }
 
-  const amounts = await resolveServerPurposeAmounts(invoiceAmountContext(invoice))
-  const amount =
-    purpose === 'deposit'
-      ? amounts.depositDue
-      : purpose === 'balance'
-        ? amounts.balanceDue
-        : amounts.fullDue
-  const origin = new URL(request.url).origin
   return Response.json({
     data: {
       id: created.id,
-      purpose,
-      url: `${origin}/pay/${rawToken}`,
-      token: rawToken,
-      amount,
-      currency: invoice.currency_code,
-      deposit_due: amounts.depositDue,
-      balance_due: amounts.balanceDue,
-      full_due: amounts.fullDue,
+      purpose: created.purpose,
+      url: created.url,
+      token: created.token,
+      amount: created.amount,
+      currency: created.currency,
+      deposit_due: created.deposit_due,
+      balance_due: created.balance_due,
+      full_due: created.full_due,
     },
   })
 }

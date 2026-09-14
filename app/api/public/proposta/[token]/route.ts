@@ -1,5 +1,7 @@
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 import { loadPublicProposalByToken } from '@/Lib/commercialReview/loadPublicProposal'
+import { quoteHasPendingCoupon } from '@/Lib/coupons/resolveCoupon'
+import { loadPublicProposalPaymentSnapshot } from '@/Lib/payments/publicProposalPayment'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
@@ -11,10 +13,27 @@ function invalidToken(token: string) {
   return !token || token.trim().length < 32
 }
 
+async function withPayment(
+  loaded: Awaited<ReturnType<typeof loadPublicProposalByToken>>,
+) {
+  if (!loaded.ok) return loaded.payload
+  const quote = loaded.payload.quote as
+    | { quote_status?: string | null }
+    | undefined
+  const payment = await loadPublicProposalPaymentSnapshot({
+    companyId: loaded.companyId,
+    quoteId: loaded.quoteId,
+    proposalResponse: String(loaded.payload.proposal_response || 'pending'),
+    quoteStatus: quote?.quote_status ?? null,
+  })
+  return { ...loaded.payload, payment }
+}
+
 export async function GET(_request: Request, { params }: Params) {
   const { token } = await params
   const loaded = await loadPublicProposalByToken(token)
-  return Response.json(loaded.payload, { status: loaded.status })
+  const payload = await withPayment(loaded)
+  return Response.json(payload, { status: loaded.status })
 }
 
 export async function POST(request: Request, { params }: Params) {
@@ -53,8 +72,39 @@ export async function POST(request: Request, { params }: Params) {
       { status: 409 },
     )
   }
+
+  const alreadyAccepted = quote.proposal_response === 'accepted'
+  if (alreadyAccepted && body.action === 'accept') {
+    const payment = await loadPublicProposalPaymentSnapshot({
+      companyId: quote.company_id,
+      quoteId: quote.id,
+      proposalResponse: 'accepted',
+      quoteStatus: quote.quote_status,
+    })
+    return Response.json({
+      data: {
+        proposal_response: 'accepted',
+        quote_status: quote.quote_status,
+        proposal_shared_version_id: quote.proposal_shared_version_id,
+        accepted_version_id: quote.accepted_version_id,
+        already_accepted: true,
+        payment,
+      },
+    })
+  }
+
   if (quote.proposal_response !== 'pending') {
     return Response.json({ error: 'Proposta já respondida' }, { status: 409 })
+  }
+
+  if (body.action === 'accept') {
+    const pendingCoupon = await quoteHasPendingCoupon(quote.company_id, quote.id)
+    if (!pendingCoupon.ok) {
+      return Response.json({ error: 'coupon_approval_check_failed' }, { status: 500 })
+    }
+    if (pendingCoupon.pending) {
+      return Response.json({ error: 'coupon_approval_pending' }, { status: 409 })
+    }
   }
 
   const now = new Date().toISOString()
@@ -102,11 +152,35 @@ export async function POST(request: Request, { params }: Params) {
     },
   })
 
+  const payment =
+    body.action === 'accept'
+      ? await loadPublicProposalPaymentSnapshot({
+          companyId: quote.company_id,
+          quoteId: quote.id,
+          proposalResponse: 'accepted',
+          quoteStatus: data?.quote_status ?? 'approved',
+        })
+      : emptyRejectedPayment()
+
   return Response.json({
     data: {
       ...data,
       proposal_shared_version_id:
         data?.proposal_shared_version_id ?? sharedVersionId,
+      payment,
     },
   })
+}
+
+function emptyRejectedPayment() {
+  return {
+    available: false,
+    reason: 'proposal_rejected',
+    currency_code: 'USD',
+    total: 0,
+    paid_total: 0,
+    deposit_percent: 0,
+    balance_percent: 0,
+    choices: [],
+  }
 }
