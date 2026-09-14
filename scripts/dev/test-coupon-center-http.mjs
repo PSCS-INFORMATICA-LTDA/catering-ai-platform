@@ -3,7 +3,11 @@
  * Does not create commercial data and does not touch PROD.
  */
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
+const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const base = (process.env.COUPON_E2E_BASE_URL || 'http://127.0.0.1:3000').replace(/\/$/, '')
 const origin = base
 const packageId = process.env.COUPON_E2E_PACKAGE_ID || '95a67f3e-3c1c-4eb1-ad5b-6012d7fbea71'
@@ -228,6 +232,29 @@ for (const locale of ['en', 'pt', 'es']) {
       second.data?.coupon?.code === 'WELCOME' &&
       first.data?.coupon?.appliedDiscountAmount === second.data?.coupon?.appliedDiscountAmount,
     `first=${first.data?.coupon?.appliedDiscountAmount} second=${second.data?.coupon?.appliedDiscountAmount}`,
+  )
+}
+
+{
+  const quoteReview = readFileSync(join(root, 'components/quotes/QuoteCouponDecisionCard.tsx'), 'utf8')
+  const sharePanel = readFileSync(join(root, 'components/quotes/QuoteProposalSharePanel.tsx'), 'utf8')
+  const proposalApi = readFileSync(join(root, 'app/api/quotes/[id]/proposal/route.ts'), 'utf8')
+  const dashboard = readFileSync(join(root, 'components/coupons/CouponsDashboard.tsx'), 'utf8')
+  record(
+    'SRC-quote-review-same-decide-api',
+    quoteReview.includes('/api/coupons/applications') &&
+      quoteReview.includes('decideCouponApplicationClient') &&
+      dashboard.includes('decideCouponApplicationClient'),
+    'quote review and coupon center share decideCouponApplicationClient',
+  )
+  record(
+    'SRC-share-blocked-pending',
+    sharePanel.includes('pendingManualCoupon') &&
+      sharePanel.includes('shareBlockedPending') &&
+      sharePanel.includes('coupon-share-blocked') &&
+      proposalApi.includes('quoteHasPendingCoupon') &&
+      proposalApi.includes('coupon_approval_pending'),
+    'share UI + proposal API guard pending coupons',
   )
 }
 

@@ -256,6 +256,7 @@ async function main() {
     base: BASE,
     welcome: null,
     cdl10: null,
+    rejectShare: null,
     concurrency: null,
   }
 
@@ -432,6 +433,38 @@ async function main() {
         Boolean(serviceOrder.error) && /coupon_approval_pending/i.test(serviceOrder.error?.message || ''),
         serviceOrder.error?.message || 'service order inserted',
       )
+      const quotePage = await fetch(`${BASE}/quotes/${quoteId}`, {
+        headers: { cookie: adminCookie, 'user-agent': QA_UA },
+      })
+      const quoteHtml = await quotePage.text()
+      record(
+        'E2E-cdl10-quote-review-card',
+        quotePage.ok &&
+          quoteHtml.includes('data-testid="coupon-quote-decision"') &&
+          quoteHtml.includes('data-testid="coupon-quote-approve"') &&
+          (quoteHtml.includes('data-testid="coupon-share-blocked"') ||
+            quoteHtml.includes('data-testid="coupon-quote-share-hint"')),
+        `${quotePage.status} card=${quoteHtml.includes('data-testid="coupon-quote-decision"')} share=${quoteHtml.includes('data-testid="coupon-share-blocked"') || quoteHtml.includes('data-testid="coupon-quote-share-hint"')}`,
+      )
+      const anonymousPage = await fetch(`${BASE}/quotes/${quoteId}`, {
+        headers: { 'user-agent': QA_UA },
+        redirect: 'manual',
+      })
+      record(
+        'E2E-cdl10-quote-review-unauthenticated',
+        anonymousPage.status === 307 || anonymousPage.status === 302 || anonymousPage.status === 401,
+        String(anonymousPage.status),
+      )
+      const blockedShare = await jsonFetch(`/api/quotes/${quoteId}/proposal`, {
+        method: 'POST',
+        cookie: adminCookie,
+        body: { action: 'ensure_token' },
+      })
+      record(
+        'E2E-cdl10-share-blocked-pending',
+        blockedShare.response.status === 409 && blockedShare.data?.code === 'coupon_approval_pending',
+        `${blockedShare.response.status} ${blockedShare.data?.code || blockedShare.data?.error || ''}`,
+      )
       const approve = await jsonFetch('/api/coupons/applications', {
         method: 'PATCH',
         cookie: adminCookie,
@@ -463,6 +496,46 @@ async function main() {
         }),
       )
       record('E2E-cdl10-via-rpc', approve.data?.via === 'rpc', String(approve.data?.via ?? 'missing'))
+      const releasedShare = await jsonFetch(`/api/quotes/${quoteId}/proposal`, {
+        method: 'POST',
+        cookie: adminCookie,
+        body: { action: 'ensure_token' },
+      })
+      record(
+        'E2E-cdl10-share-released-after-approve',
+        releasedShare.response.ok && Boolean(releasedShare.data?.data?.token || releasedShare.data?.data?.proposal_token),
+        `${releasedShare.response.status} ${JSON.stringify(releasedShare.data).slice(0, 180)}`,
+      )
+      const approveAgain = await jsonFetch('/api/coupons/applications', {
+        method: 'PATCH',
+        cookie: adminCookie,
+        body: { id: loaded.application.id, action: 'approve' },
+      })
+      const rejectAfterApprove = await jsonFetch('/api/coupons/applications', {
+        method: 'PATCH',
+        cookie: adminCookie,
+        body: { id: loaded.application.id, action: 'reject' },
+      })
+      record(
+        'E2E-cdl10-already-decided',
+        approveAgain.response.ok &&
+          approveAgain.data?.idempotent === true &&
+          rejectAfterApprove.response.status === 409,
+        JSON.stringify({
+          approveAgain: approveAgain.response.status,
+          idempotent: approveAgain.data?.idempotent ?? null,
+          reject: rejectAfterApprove.response.status,
+        }),
+      )
+      const afterPage = await fetch(`${BASE}/quotes/${quoteId}`, {
+        headers: { cookie: adminCookie, 'user-agent': QA_UA },
+      })
+      const afterHtml = await afterPage.text()
+      record(
+        'E2E-cdl10-quote-review-card-gone',
+        afterPage.ok && !afterHtml.includes('data-testid="coupon-quote-decision"'),
+        `${afterPage.status} pendingCard=${afterHtml.includes('data-testid="coupon-quote-decision"')}`,
+      )
       evidence.cdl10 = {
         quoteId,
         versionId: after.version?.id,
@@ -474,6 +547,71 @@ async function main() {
         balance,
         applied: after.application?.applied_discount_amount,
       }
+    }
+  }
+
+  {
+    const phone = await unusedPhone(db, '140755505')
+    const payload = draft({
+      locale: 'en',
+      firstName: 'QA',
+      lastName: 'CouponRejectShare',
+      phone,
+      email: 'qa.coupon.reject.share@example.invalid',
+      eventName: `${TAG} reject share`,
+    })
+    payload.selection.packageSelections = selections
+    const started = await startSession('en')
+    const saved = await saveDraft(started.cookie, payload)
+    await applyCoupon(saved.cookie, 'CDL10')
+    const submitted = await submitQuote(saved.cookie, payload, settings.data.consent_version)
+    const quoteId = submitted.data?.quote?.id || ''
+    const loaded = quoteId ? await loadQuoteEvidence(db, quoteId) : { application: null, quote: null, version: null }
+    const blocked = quoteId
+      ? await jsonFetch(`/api/quotes/${quoteId}/proposal`, {
+          method: 'POST',
+          cookie: adminCookie,
+          body: { action: 'ensure_token' },
+        })
+      : { response: { status: 0 }, data: null }
+    const reject = loaded.application?.id
+      ? await jsonFetch('/api/coupons/applications', {
+          method: 'PATCH',
+          cookie: adminCookie,
+          body: { id: loaded.application.id, action: 'reject' },
+        })
+      : { response: { status: 0 }, data: null }
+    const released = quoteId
+      ? await jsonFetch(`/api/quotes/${quoteId}/proposal`, {
+          method: 'POST',
+          cookie: adminCookie,
+          body: { action: 'ensure_token' },
+        })
+      : { response: { status: 0 }, data: null }
+    const after = quoteId ? await loadQuoteEvidence(db, quoteId) : loaded
+    record(
+      'E2E-cdl10-share-released-after-reject',
+      Boolean(quoteId) &&
+        blocked.response.status === 409 &&
+        reject.response.ok &&
+        reject.data?.via === 'rpc' &&
+        after.application?.approval_status === 'rejected' &&
+        released.response.ok &&
+        Boolean(released.data?.data?.token || released.data?.data?.proposal_token),
+      JSON.stringify({
+        quoteId,
+        applicationId: after.application?.id,
+        blocked: blocked.response.status,
+        reject: reject.response.status,
+        via: reject.data?.via ?? null,
+        released: released.response.status,
+        snapshot: after.quote?.pricing_breakdown?.coupon?.approval_status ?? null,
+      }),
+    )
+    evidence.rejectShare = {
+      quoteId,
+      applicationId: after.application?.id,
+      via: reject.data?.via ?? null,
     }
   }
 

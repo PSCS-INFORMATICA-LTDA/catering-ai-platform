@@ -423,6 +423,27 @@ async function main() {
     )
     const before = await loadQuote(db, quoteId)
     const beforeTotal = Number(before.quote?.quote_total)
+    const quotePage = await fetch(`${BASE}/quotes/${quoteId}`, {
+      headers: { cookie: adminCookie, 'user-agent': QA_UA },
+    })
+    const quoteHtml = await quotePage.text()
+    record(
+      'E2E-approve-quote-review-card',
+      quotePage.ok &&
+        quoteHtml.includes('data-testid="coupon-quote-decision"') &&
+        quoteHtml.includes('data-testid="coupon-quote-approve"'),
+      `${quotePage.status} card=${quoteHtml.includes('data-testid="coupon-quote-decision"')}`,
+    )
+    const blockedShare = await jsonFetch(`/api/quotes/${quoteId}/proposal`, {
+      method: 'POST',
+      cookie: adminCookie,
+      body: { action: 'ensure_token' },
+    })
+    record(
+      'E2E-approve-share-blocked',
+      blockedShare.response.status === 409 && blockedShare.data?.code === 'coupon_approval_pending',
+      `${blockedShare.response.status} ${blockedShare.data?.code || ''}`,
+    )
     const approve = await jsonFetch('/api/coupons/applications', {
       method: 'PATCH',
       cookie: adminCookie,
@@ -456,6 +477,16 @@ async function main() {
       }),
     )
     record('E2E-approve-via-rpc', approve.data?.via === 'rpc', String(approve.data?.via ?? 'missing'))
+    const releasedShare = await jsonFetch(`/api/quotes/${quoteId}/proposal`, {
+      method: 'POST',
+      cookie: adminCookie,
+      body: { action: 'ensure_token' },
+    })
+    record(
+      'E2E-approve-share-released',
+      releasedShare.response.ok && Boolean(releasedShare.data?.data?.token || releasedShare.data?.data?.proposal_token),
+      `${releasedShare.response.status}`,
+    )
     evidence.approve = {
       quoteId,
       applicationId: after.application?.id,
@@ -488,6 +519,16 @@ async function main() {
     const quoteId = submitted.data?.quote?.id || ''
     const before = await loadQuote(db, quoteId)
     const beforeTotal = Number(before.quote?.quote_total)
+    const blockedShare = await jsonFetch(`/api/quotes/${quoteId}/proposal`, {
+      method: 'POST',
+      cookie: adminCookie,
+      body: { action: 'ensure_token' },
+    })
+    record(
+      'E2E-reject-share-blocked',
+      blockedShare.response.status === 409 && blockedShare.data?.code === 'coupon_approval_pending',
+      `${blockedShare.response.status} ${blockedShare.data?.code || ''}`,
+    )
     const reject = await jsonFetch('/api/coupons/applications', {
       method: 'PATCH',
       cookie: adminCookie,
@@ -521,6 +562,16 @@ async function main() {
       }),
     )
     record('E2E-reject-via-rpc', reject.data?.via === 'rpc', String(reject.data?.via ?? 'missing'))
+    const releasedShare = await jsonFetch(`/api/quotes/${quoteId}/proposal`, {
+      method: 'POST',
+      cookie: adminCookie,
+      body: { action: 'ensure_token' },
+    })
+    record(
+      'E2E-reject-share-released',
+      releasedShare.response.ok && Boolean(releasedShare.data?.data?.token || releasedShare.data?.data?.proposal_token),
+      `${releasedShare.response.status}`,
+    )
     evidence.reject = {
       quoteId,
       applicationId: after.application?.id,
