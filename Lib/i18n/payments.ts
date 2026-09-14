@@ -32,6 +32,71 @@ const { t, list } = makeI18nModule('payments', 'billing', {
     es: 'Crear enlace seguro',
   },
   copyLink: { pt: 'Copiar link', en: 'Copy link', es: 'Copiar enlace' },
+  customerWhatsApp: {
+    pt: 'WhatsApp do cliente',
+    en: 'Customer WhatsApp',
+    es: 'WhatsApp del cliente',
+  },
+  sendDepositWhatsApp: {
+    pt: 'Enviar sinal no WhatsApp',
+    en: 'Send deposit on WhatsApp',
+    es: 'Enviar depósito por WhatsApp',
+  },
+  sendBalanceWhatsApp: {
+    pt: 'Enviar saldo no WhatsApp',
+    en: 'Send balance on WhatsApp',
+    es: 'Enviar saldo por WhatsApp',
+  },
+  copyPaymentMessage: {
+    pt: 'Copiar mensagem',
+    en: 'Copy message',
+    es: 'Copiar mensaje',
+  },
+  paymentMessageCopied: {
+    pt: 'Mensagem copiada.',
+    en: 'Message copied.',
+    es: 'Mensaje copiado.',
+  },
+  paymentLinkCopied: {
+    pt: 'Link copiado.',
+    en: 'Link copied.',
+    es: 'Enlace copiado.',
+  },
+  missingCustomerWhatsApp: {
+    pt: 'Cliente sem WhatsApp válido cadastrado.',
+    en: 'Customer has no valid WhatsApp on file.',
+    es: 'El cliente no tiene un WhatsApp válido registrado.',
+  },
+  showPaymentUrl: {
+    pt: 'Mostrar URL',
+    en: 'Show URL',
+    es: 'Mostrar URL',
+  },
+  hidePaymentUrl: {
+    pt: 'Ocultar URL',
+    en: 'Hide URL',
+    es: 'Ocultar URL',
+  },
+  ogPaymentDescription: {
+    pt: 'Pagamento seguro da sua cotação.',
+    en: 'Secure payment for your catering quote.',
+    es: 'Pago seguro de tu cotización.',
+  },
+  lastShareDeposit: {
+    pt: 'Mensagem do sinal pronta',
+    en: 'Deposit message ready',
+    es: 'Mensaje del depósito listo',
+  },
+  lastShareBalance: {
+    pt: 'Mensagem do saldo pronta',
+    en: 'Balance message ready',
+    es: 'Mensaje del saldo listo',
+  },
+  generateShareFirst: {
+    pt: 'Gere o sinal ou o saldo para copiar.',
+    en: 'Generate the deposit or balance first to copy.',
+    es: 'Genere el depósito o el saldo para copiar.',
+  },
   downloadPdf: { pt: 'Baixar PDF', en: 'Download PDF', es: 'Descargar PDF' },
   statusDraft: { pt: 'Rascunho', en: 'Draft', es: 'Borrador' },
   statusReady: { pt: 'Pronta', en: 'Ready', es: 'Lista' },
