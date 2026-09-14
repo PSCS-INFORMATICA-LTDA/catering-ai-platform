@@ -195,7 +195,7 @@ test('PAYPAL INVOICING SPIKE RECORDED', () => {
 
 test('OPERATOR PANEL EXISTS', () => {
   assert.match(panel, /data-invoice-panel/)
-  assert.match(read('app/quotes/[id]/QuoteDetailView.tsx'), /QuoteInvoicePanel/)
+  assert.match(read('components/commercial-review/CommercialReviewWorkspace.tsx'), /QuoteInvoicePanel/)
 })
 
 test('WEBHOOK REJECTS UNSIGNED PAYLOAD', () => {
