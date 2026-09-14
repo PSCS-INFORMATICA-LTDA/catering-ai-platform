@@ -51,7 +51,7 @@ export function ReviewField({
           large ? 'text-2xl font-black tabular-nums' : 'text-sm font-semibold'
         }`}
       >
-        {value || '—'}
+        {value === 0 || value ? value : '—'}
       </dd>
     </div>
   )
