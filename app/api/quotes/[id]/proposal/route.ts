@@ -3,7 +3,9 @@ import {
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
 import { quoteHasPendingCoupon } from '@/Lib/coupons/resolveCoupon'
+import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 import { newProposalToken } from '@/Lib/quoteProposal'
+import { ensureCurrentQuoteVersion } from '@/Lib/quotes/versions'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
@@ -11,7 +13,18 @@ export const revalidate = 0
 
 type Params = { params: Promise<{ id: string }> }
 
+const QUOTE_PROPOSAL_SELECT =
+  'id, company_id, quote_number, quote_status, proposal_token, proposal_sent_at, proposal_response, proposal_accepted_at, proposal_rejected_at, proposal_follow_up_count, proposal_last_follow_up_at, proposal_shared_version_id, proposal_shared_by, quote_total, reservation_amount, currency_code, customer_id, package_id, active'
+
 async function loadQuote(quoteId: string, companyId: string) {
+  const primary = await getSupabaseServerClient()
+    .from('quotes')
+    .select(QUOTE_PROPOSAL_SELECT)
+    .eq('id', quoteId)
+    .eq('company_id', companyId)
+    .maybeSingle()
+  if (!primary.error) return primary
+  if (!/column|proposal_shared/i.test(primary.error.message)) return primary
   return getSupabaseServerClient()
     .from('quotes')
     .select(
@@ -20,6 +33,13 @@ async function loadQuote(quoteId: string, companyId: string) {
     .eq('id', quoteId)
     .eq('company_id', companyId)
     .maybeSingle()
+}
+
+function actorUserId(session: {
+  appUser?: { id?: string | null } | null
+  userId?: string
+}) {
+  return session.appUser?.id || session.userId || null
 }
 
 export async function GET(_request: Request, { params }: Params) {
@@ -45,6 +65,12 @@ export async function GET(_request: Request, { params }: Params) {
       proposal_rejected_at: data.proposal_rejected_at,
       proposal_follow_up_count: data.proposal_follow_up_count ?? 0,
       proposal_last_follow_up_at: data.proposal_last_follow_up_at,
+      proposal_shared_version_id:
+        (data as { proposal_shared_version_id?: string | null })
+          .proposal_shared_version_id ?? null,
+      proposal_shared_by:
+        (data as { proposal_shared_by?: string | null }).proposal_shared_by ??
+        null,
       quote_status: data.quote_status,
     },
   })
@@ -120,35 +146,68 @@ export async function POST(request: Request, { params }: Params) {
     return Response.json({ data })
   }
 
-  // mark_sent
   const sentAt =
     (quote.proposal_sent_at as string | null) || new Date().toISOString()
   const currentStatus = String(quote.quote_status ?? 'draft')
   const keepStatus = ['approved', 'cancelled', 'canceled'].includes(currentStatus)
   const response =
     quote.proposal_response === 'accepted' ? 'accepted' : 'pending'
+  const actorId = actorUserId(auth.session)
+  const version = await ensureCurrentQuoteVersion(companyId, id, {
+    createdBy: actorId,
+  })
 
-  const { data, error } = await db
-    .from('quotes')
-    .update({
-      proposal_token: token,
-      proposal_sent_at: sentAt,
-      proposal_response: response,
-      quote_status: keepStatus
+  const update: Record<string, unknown> = {
+    proposal_token: token,
+    proposal_sent_at: sentAt,
+    proposal_response: response,
+    quote_status: keepStatus
+      ? currentStatus
+      : response === 'accepted'
         ? currentStatus
-        : response === 'accepted'
-          ? currentStatus
-          : 'sent',
-    })
+        : 'sent',
+  }
+  if (version.data?.id) {
+    update.proposal_shared_version_id = version.data.id
+  }
+  if (actorId) {
+    update.proposal_shared_by = actorId
+  }
+
+  let { data, error } = await db
+    .from('quotes')
+    .update(update)
     .eq('id', id)
     .eq('company_id', companyId)
     .select(
-      'proposal_token, proposal_sent_at, proposal_response, proposal_follow_up_count, proposal_last_follow_up_at, quote_status',
+      'proposal_token, proposal_sent_at, proposal_response, proposal_follow_up_count, proposal_last_follow_up_at, quote_status, proposal_shared_version_id, proposal_shared_by',
     )
     .single()
 
+  if (error && /proposal_shared|column/i.test(error.message)) {
+    const fallback = await db
+      .from('quotes')
+      .update({
+        proposal_token: token,
+        proposal_sent_at: sentAt,
+        proposal_response: response,
+        quote_status: keepStatus
+          ? currentStatus
+          : response === 'accepted'
+            ? currentStatus
+            : 'sent',
+      })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .select(
+        'proposal_token, proposal_sent_at, proposal_response, proposal_follow_up_count, proposal_last_follow_up_at, quote_status',
+      )
+      .single()
+    data = fallback.data as typeof data
+    error = fallback.error
+  }
+
   if (error) {
-    // Colunas ainda não migradas
     if (/proposal_token|column/i.test(error.message)) {
       return Response.json(
         {
@@ -159,6 +218,23 @@ export async function POST(request: Request, { params }: Params) {
       )
     }
     return Response.json({ error: error.message }, { status: 500 })
+  }
+
+  await writeOperationalAudit({
+    companyId,
+    actorUserId: actorId,
+    entityType: 'quote_proposal',
+    entityId: id,
+    action: 'proposal_shared',
+    newData: {
+      quote_id: id,
+      quote_version_id: version.data?.id ?? null,
+      proposal_sent_at: sentAt,
+    },
+  })
+
+  if (!data) {
+    return Response.json({ error: 'Falha ao registrar o envio da proposta.' }, { status: 500 })
   }
 
   return Response.json({

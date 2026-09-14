@@ -43,6 +43,9 @@ const OFFICIAL_GUEST_COLUMNS =
 const PROPOSAL_COLUMNS =
   'proposal_token, proposal_sent_at, proposal_response, proposal_accepted_at, proposal_rejected_at, proposal_follow_up_count, proposal_last_follow_up_at'
 
+const WORKSPACE_COLUMNS =
+  'internal_notes, proposal_shared_version_id, proposal_shared_by'
+
 const ORDER_COLUMNS = 'accepted_version_id, converted_service_order_id'
 
 /** Colunas comerciais que a quote_detail_view pode não expor ainda. */
@@ -54,6 +57,7 @@ const QUOTE_TABLE_COLUMNS = [
   PROPOSAL_COLUMNS,
   ORDER_COLUMNS,
   COMMERCIAL_COLUMNS,
+  WORKSPACE_COLUMNS,
   'pricing_breakdown',
 ].join(', ')
 
@@ -80,7 +84,7 @@ async function loadQuoteTableExtras(
     )
   }
 
-  const [guestRes, proposalRes, orderRes, commercialRes, breakdownRes] =
+  const [guestRes, proposalRes, orderRes, commercialRes, breakdownRes, workspaceRes] =
     await Promise.all([
       supabase
         .from('quotes')
@@ -112,6 +116,12 @@ async function loadQuoteTableExtras(
         .eq('id', id)
         .eq('company_id', companyId)
         .maybeSingle(),
+      supabase
+        .from('quotes')
+        .select(WORKSPACE_COLUMNS)
+        .eq('id', id)
+        .eq('company_id', companyId)
+        .maybeSingle(),
     ])
 
   return {
@@ -120,6 +130,7 @@ async function loadQuoteTableExtras(
     ...(orderRes.data && !orderRes.error ? orderRes.data : {}),
     ...(commercialRes.data && !commercialRes.error ? commercialRes.data : {}),
     ...(breakdownRes.data && !breakdownRes.error ? breakdownRes.data : {}),
+    ...(workspaceRes.data && !workspaceRes.error ? workspaceRes.data : {}),
   } as Record<string, unknown>
 }
 

@@ -29,6 +29,7 @@ export type QuoteDetailPackageCatalogRow = PackageCatalogRecord & {
 
 export type QuoteDetail = {
   id: string
+  company_id?: string | null
   quote_number?: string | null
   quote_status?: string | null
   created_at?: string | null
@@ -104,6 +105,9 @@ export type QuoteDetail = {
   proposal_rejected_at?: string | null
   proposal_follow_up_count?: number | null
   proposal_last_follow_up_at?: string | null
+  proposal_shared_version_id?: string | null
+  proposal_shared_by?: string | null
+  internal_notes?: string | null
   team_presentation_time?: string | null
   designated_team_id?: string | null
   accepted_version_id?: string | null
