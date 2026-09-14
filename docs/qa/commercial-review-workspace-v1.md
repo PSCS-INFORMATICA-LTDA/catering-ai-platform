@@ -34,6 +34,9 @@
 | W | Pending share block | `409 coupon_approval_pending` |
 | X | Approve → share | Same coupon PATCH + `mark_sent` |
 | Y | Reject → share | Same coupon PATCH + `mark_sent` |
+| Z | Public proposal stays on pinned version | After V2, same token still returns V1 totals/coupon |
+| AA | Public/shared PDF stays on V1 | `/api/public/proposta/{token}/pdf` and workspace PDF |
+| AB | Fail-closed share | No `quote_version` → 409 `quote_version_required`; `proposal_sent_at` unchanged |
 
 Migration filename on Git must match DEV history: `20260914111651_commercial_review_workspace_v1.sql`. See `docs/qa/commercial-review-migration-reconciliation.md`.
 

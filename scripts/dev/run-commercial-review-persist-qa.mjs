@@ -10,6 +10,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
+import { requireShareableQuoteVersion } from '../../Lib/commercialReview/sharedProposal.ts'
 import { assertDevUrl, DEV_REF, loadDevEnv } from './loadDevEnv.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -276,12 +277,12 @@ async function countAgenda(db, quoteId) {
   }
 }
 
-async function createFollowUpVersion(db, quoteId, previous, marker, createdBy) {
+async function createFollowUpVersion(db, quoteId, previous, marker, createdBy, extraSnapshot = {}) {
   const nextNumber = Number(previous.version_number ?? 1) + 1
   const snapshot =
     previous.commercial_snapshot && typeof previous.commercial_snapshot === 'object'
-      ? { ...previous.commercial_snapshot, qa_review_marker: marker }
-      : { qa_review_marker: marker }
+      ? { ...previous.commercial_snapshot, qa_review_marker: marker, ...extraSnapshot }
+      : { qa_review_marker: marker, ...extraSnapshot }
   const cleared = await db
     .from('quote_versions')
     .update({ is_current: false })
@@ -303,7 +304,7 @@ async function createFollowUpVersion(db, quoteId, previous, marker, createdBy) {
       discount_amount: previous.discount_amount ?? 0,
       reservation_amount: previous.reservation_amount ?? 0,
       balance_due: previous.balance_due ?? 0,
-      quote_total: previous.quote_total ?? 0,
+      quote_total: extraSnapshot.quote_total ?? previous.quote_total ?? 0,
       commercial_snapshot: snapshot,
       schema_version: 1,
       is_current: true,
@@ -544,6 +545,43 @@ async function main() {
 
       const originalSnapshot = currentBeforeShare?.commercial_snapshot ?? snapshot
       const originalHash = snapshotHash(originalSnapshot)
+      const v1Total = Number(afterShare.quote?.quote_total)
+      const v1Deposit = Number(afterShare.quote?.reservation_amount)
+      const v1Balance = Number(afterShare.quote?.balance_due)
+      const v1Discount = Number(afterShare.quote?.discount_amount ?? 100)
+      const v1Coupon =
+        afterShare.quote?.pricing_breakdown?.coupon?.code ||
+        originalSnapshot?.pricing_breakdown?.coupon?.code ||
+        'WELCOME'
+      const liveTotal = v1Total + 999
+      const liveDeposit = v1Deposit + 111
+      const liveBalance = v1Balance + 888
+      const mutatedBreakdown = {
+        ...(afterShare.quote?.pricing_breakdown &&
+        typeof afterShare.quote.pricing_breakdown === 'object'
+          ? afterShare.quote.pricing_breakdown
+          : {}),
+        total: liveTotal,
+        deposit: liveDeposit,
+        balance: liveBalance,
+        coupon: {
+          code: 'LIVEFAKE',
+          approval_status: 'applied',
+          applied_discount_amount: 1,
+        },
+      }
+      const mutateLive = await db
+        .from('quotes')
+        .update({
+          quote_total: liveTotal,
+          reservation_amount: liveDeposit,
+          balance_due: liveBalance,
+          discount_amount: 1,
+          adult_count: 99,
+          pricing_breakdown: mutatedBreakdown,
+        })
+        .eq('id', quoteId)
+        .eq('company_id', COMPANY)
       const marker = `QAREVIEW${randomUUID().replace(/-/g, '').slice(0, 16)}`
       const revisedNote = `${TAG} after-share ${secret}REV`
       const noteAfterShare = await jsonFetch(`/api/quotes/${quoteId}/internal-notes`, {
@@ -557,19 +595,26 @@ async function main() {
         afterShare.version || currentBeforeShare,
         marker,
         authUserId,
+        {
+          quote_total: liveTotal,
+          pricing_breakdown: mutatedBreakdown,
+        },
       )
       const afterRevision = await loadQuoteEvidence(db, quoteId)
       const pinnedAfter = afterRevision.versions.find((row) => row.id === pinnedId)
       const currentAfter = afterRevision.version
       record(
         'E2E-controlled-revision',
-        noteAfterShare.response.ok &&
+        !mutateLive.error &&
+          noteAfterShare.response.ok &&
           follow.inserted.data?.id &&
           currentAfter?.id &&
-          currentAfter.id !== pinnedId,
+          currentAfter.id !== pinnedId &&
+          Number(afterRevision.quote?.quote_total) === liveTotal,
         JSON.stringify({
           newVersion: follow.inserted.data?.id || follow.inserted.error?.message,
           currentAfter: currentAfter?.id,
+          liveTotal: afterRevision.quote?.quote_total,
         }),
       )
       record(
@@ -592,6 +637,86 @@ async function main() {
         }),
       )
       const publicAfter = token ? await jsonFetch(`/api/public/proposta/${token}`) : { data: null }
+      const publicQuote = publicAfter.data?.quote || {}
+      record(
+        'E2E-public-source-shared-version',
+        publicAfter.data?.source === 'shared_version' &&
+          publicAfter.data?.proposal_shared_version_id === pinnedId,
+        JSON.stringify({
+          source: publicAfter.data?.source,
+          pin: publicAfter.data?.proposal_shared_version_id,
+        }),
+      )
+      record(
+        'E2E-public-stays-v1-totals',
+        Number(publicQuote.quote_total) === v1Total &&
+          Number(publicQuote.reservation_amount) === v1Deposit &&
+          Number(publicQuote.balance_due) === v1Balance &&
+          Number(publicQuote.quote_total) !== liveTotal,
+        JSON.stringify({
+          publicTotal: publicQuote.quote_total,
+          publicDeposit: publicQuote.reservation_amount,
+          publicBalance: publicQuote.balance_due,
+          liveTotal,
+          v1Total,
+        }),
+      )
+      record(
+        'E2E-public-stays-v1-coupon',
+        publicQuote.coupon?.code === v1Coupon &&
+          Number(publicQuote.coupon?.applied_discount_amount ?? publicQuote.discount_amount) ===
+            v1Discount &&
+          publicQuote.coupon?.code !== 'LIVEFAKE',
+        JSON.stringify({
+          publicCoupon: publicQuote.coupon,
+          discount: publicQuote.discount_amount,
+        }),
+      )
+      const publicPageAfter = token
+        ? await fetch(`${BASE}/proposta/${token}`, { headers: { 'user-agent': QA_UA } })
+        : { ok: false, status: 0, text: async () => '' }
+      const publicHtmlAfter =
+        publicPageAfter.ok || publicPageAfter.status === 200 ? await publicPageAfter.text() : ''
+      record(
+        'E2E-public-page-stays-v1',
+        publicHtmlAfter.includes('data-testid="public-proposal-source"') &&
+          publicHtmlAfter.includes('shared_version') &&
+          publicHtmlAfter.includes(String(pinnedId)) &&
+          !publicHtmlAfter.includes('LIVEFAKE') &&
+          !publicHtmlAfter.includes(secret) &&
+          !publicHtmlAfter.includes('REV'),
+        `status=${publicPageAfter.status}`,
+      )
+      const publicPdf = token
+        ? await fetch(`${BASE}/api/public/proposta/${token}/pdf`, {
+            headers: { 'user-agent': QA_UA },
+          })
+        : { ok: false, status: 0, arrayBuffer: async () => new ArrayBuffer(0) }
+      const publicPdfBytes = Buffer.from(await publicPdf.arrayBuffer())
+      const publicPdfText = publicPdfBytes.toString('latin1')
+      const v1Money = `$${v1Total.toFixed(2)}`
+      const liveMoney = `$${liveTotal.toFixed(2)}`
+      record(
+        'E2E-public-pdf-stays-v1',
+        publicPdf.ok &&
+          publicPdfText.includes(v1Money) &&
+          !publicPdfText.includes(liveMoney) &&
+          !publicPdfText.includes(secret) &&
+          !publicPdfText.includes('LIVEFAKE'),
+        `${publicPdf.status} bytes=${publicPdfBytes.length} v1=${v1Money}`,
+      )
+      const internalPdf = await fetch(`${BASE}/api/quotes/${quoteId}/pdf`, {
+        headers: { cookie: adminCookie, 'user-agent': QA_UA },
+      })
+      const internalPdfText = Buffer.from(await internalPdf.arrayBuffer()).toString('latin1')
+      record(
+        'E2E-shared-internal-pdf-stays-v1',
+        internalPdf.ok &&
+          internalPdfText.includes(v1Money) &&
+          !internalPdfText.includes(liveMoney) &&
+          !internalPdfText.includes(secret),
+        `${internalPdf.status} v1=${internalPdfText.includes(v1Money)}`,
+      )
       record(
         'E2E-historical-not-rebuilt-from-live-notes',
         !containsSecret(publicAfter.data, secret) &&
@@ -608,8 +733,81 @@ async function main() {
         proposalSharedBy: afterRevision.quote?.proposal_shared_by,
         actorId,
         token,
+        v1Total,
+        liveTotal,
       }
     }
+  }
+
+  {
+    const rule = requireShareableQuoteVersion({ data: null, error: null })
+    record(
+      'E2E-share-fail-closed-rule',
+      rule.ok === false && rule.code === 'quote_version_required',
+      JSON.stringify(rule),
+    )
+    const phone = await unusedPhone(db, '140755515')
+    const payload = draft({
+      locale: 'en',
+      firstName: 'QA',
+      lastName: 'ReviewFailClosed',
+      phone,
+      email: 'qa.commercial.review.failclosed@example.invalid',
+      eventName: `${TAG} fail-closed share`,
+    })
+    payload.selection.packageSelections = selections
+    const started = await startSession('en')
+    const saved = await saveDraft(started.cookie, payload)
+    const submitted = await submitQuote(saved.cookie, payload, settings.data.consent_version)
+    const quoteId = submitted.data?.quote?.id || ''
+    const before = quoteId ? await loadQuoteEvidence(db, quoteId) : { quote: null }
+    const sentBefore = before.quote?.proposal_sent_at ?? null
+    if (quoteId) {
+      await db.from('quote_versions').delete().eq('quote_id', quoteId).eq('company_id', COMPANY)
+      const poison = await db.from('quote_versions').insert({
+        company_id: COMPANY,
+        quote_id: quoteId,
+        version_number: 2147483647,
+        language: 'en',
+        currency_code: 'USD',
+        package_total: 0,
+        additional_total: 0,
+        mileage_fee: 0,
+        discount_amount: 0,
+        reservation_amount: 0,
+        balance_due: 0,
+        quote_total: 0,
+        commercial_snapshot: { qa: true, purpose: 'fail_closed_share' },
+        schema_version: 1,
+        is_current: false,
+        created_by: authUserId,
+      })
+      if (poison.error) throw new Error(`fail-closed poison: ${poison.error.message}`)
+    }
+    const share = quoteId
+      ? await jsonFetch(`/api/quotes/${quoteId}/proposal`, {
+          method: 'POST',
+          cookie: adminCookie,
+          body: { action: 'mark_sent' },
+        })
+      : { response: { status: 0 }, data: null }
+    const after = quoteId ? await loadQuoteEvidence(db, quoteId) : { quote: null }
+    record(
+      'E2E-share-fail-closed-http',
+      Boolean(quoteId) &&
+        share.response.status === 409 &&
+        share.data?.code === 'quote_version_required' &&
+        (after.quote?.proposal_sent_at ?? null) === sentBefore &&
+        !after.quote?.proposal_shared_version_id,
+      JSON.stringify({
+        quoteId,
+        http: share.response.status,
+        code: share.data?.code || share.data?.error || null,
+        sentBefore,
+        sentAfter: after.quote?.proposal_sent_at ?? null,
+        pin: after.quote?.proposal_shared_version_id ?? null,
+      }),
+    )
   }
 
   {

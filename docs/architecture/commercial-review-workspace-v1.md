@@ -66,8 +66,17 @@ DEV applied this schema as `20260914111651_commercial_review_workspace_v1`. Git 
 On successful `mark_sent` it:
 
 1. Reuses `ensureCurrentQuoteVersion()` so a shared proposal always points at a `quote_versions` row.
-2. Stamps `proposal_shared_version_id` + `proposal_shared_by` when those columns exist.
-3. Writes `audit_logs.proposal_shared`.
+2. **Fails closed** if that version cannot be obtained. `proposal_sent_at` is not written without a pin.
+3. Stamps `proposal_shared_version_id` + `proposal_shared_by`.
+4. Writes `audit_logs.proposal_shared`.
+
+The public page `/proposta/[token]`, `GET /api/public/proposta/[token]`, public PDF, and the shared-proposal PDF all reconstruct commercial facts from that pinned `quote_versions` row + `commercial_snapshot` / frozen `pricing_breakdown`. Live `quotes` money, coupon, guests, package, and additionals do not overwrite the sent proposal.
+
+Legacy proposals with `proposal_shared_version_id` NULL keep a documented live-quote fallback. New V1 shares never take that path.
+
+Customer accept/reject records `accepted_version_id = proposal_shared_version_id` on accept. No second proposal model.
+
+The SQL RPC `get_public_quote_proposal` still exists and still reads live columns if called directly. The Next.js public surface no longer uses it.
 
 Future package/price/coupon edits create a new current version. They must not rewrite the pinned shared version.
 
