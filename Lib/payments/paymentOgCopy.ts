@@ -15,6 +15,13 @@ export function isCompanyOgId(value: string | null | undefined): boolean {
   return COMPANY_OG_ID_RE.test(String(value || '').trim())
 }
 
+export function isAppPublicLogoPath(logoUrl: string | null | undefined): boolean {
+  const value = String(logoUrl || '').trim()
+  if (!value.startsWith('/') || value.startsWith('//') || value.includes('..')) return false
+  if (value.startsWith('/api/')) return false
+  return /\.(png|jpe?g|webp|gif)$/i.test(value)
+}
+
 export function companyLogoStoragePath(logoUrl: string | null | undefined): string | null {
   if (!logoUrl) return null
   const marker = '/storage/v1/object/public/company-logos/'

@@ -11,6 +11,7 @@ import { ignoreClientAmount } from './amountDue.ts'
 import { tPayments } from '../i18n/payments.ts'
 import {
   companyLogoStoragePath,
+  isAppPublicLogoPath,
   isCompanyOgId,
   paymentOgDescription,
   paymentOgMetadataIsSafe,
@@ -180,6 +181,13 @@ test('N/O: company A and B keep distinct logo storage paths', () => {
 test('P: missing logo has no storage path', () => {
   assert.equal(companyLogoStoragePath(null), null)
   assert.equal(companyLogoStoragePath('https://example.test/cdn/logo.png'), null)
+})
+
+test('registered public logo paths stay readable without a second company table', () => {
+  assert.equal(isAppPublicLogoPath('/cdl/logo.png'), true)
+  assert.equal(isAppPublicLogoPath('/brand/catering-logo-dark.png'), true)
+  assert.equal(isAppPublicLogoPath('/api/public/company-brand/x/og'), false)
+  assert.equal(isAppPublicLogoPath('../secret.png'), false)
 })
 
 test('i18n payment share keys exist in PT/EN/ES', () => {

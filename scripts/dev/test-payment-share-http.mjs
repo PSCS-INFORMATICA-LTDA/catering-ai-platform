@@ -125,10 +125,21 @@ async function main() {
   }
   const cookie = authCookie(signed.data.session)
 
-  const quotes = await jsonFetch('/api/quotes?pageSize=15', { cookie })
+  const quotes = await jsonFetch('/api/quotes?pageSize=25', { cookie })
   const list = Array.isArray(quotes.data?.data) ? quotes.data.data : []
-  let quote = list.find((row) => paymentSharePhoneDigits(row.phone || row.customer_phone))
-  if (!quote) quote = list[0]
+  let quote = null
+  let invoice = null
+  for (const row of list) {
+    const existing = (await jsonFetch(`/api/quotes/${row.id}/invoice`, { cookie })).data?.data
+    if (existing?.id) {
+      quote = row
+      invoice = existing
+      break
+    }
+  }
+  if (!quote) {
+    quote = list.find((row) => paymentSharePhoneDigits(row.phone || row.customer_phone)) || list[0]
+  }
   check('E2E-quote', Boolean(quote?.id), quote?.id || 'missing')
 
   if (!quote?.id) {
@@ -151,7 +162,6 @@ async function main() {
     html.includes('data-invoice-panel') ? 'panel' : 'missing-panel',
   )
 
-  let invoice = (await jsonFetch(`/api/quotes/${quote.id}/invoice`, { cookie })).data?.data
   if (!invoice?.id) {
     const created = await jsonFetch(`/api/quotes/${quote.id}/invoice`, {
       method: 'POST',
@@ -247,11 +257,11 @@ async function main() {
       const bytesA = Buffer.from(await logoA.arrayBuffer())
       const bytesB = Buffer.from(await logoB.arrayBuffer())
       const bytesF = Buffer.from(await fallback.arrayBuffer())
-      check(
-        'N-company-a-og',
-        logoA.status === 200 && bytesA.length > 1000,
-        String(logoA.status),
-      )
+  check(
+    'N-company-a-og',
+    logoA.status === 200 && bytesA.length > 1000,
+    `${logoA.status} ${bytesA.length}`,
+  )
       check(
         'O-company-b-og',
         logoB.status === 200 && bytesB.length > 1000 && !bytesA.equals(bytesB),

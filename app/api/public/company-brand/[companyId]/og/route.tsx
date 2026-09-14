@@ -1,8 +1,11 @@
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { ImageResponse } from 'next/og'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { loadCompanyOgBrand } from '@/Lib/payments/loadPaymentOgBrand'
 import {
   companyLogoStoragePath,
+  isAppPublicLogoPath,
   isCompanyOgId,
   paymentOgDescription,
 } from '@/Lib/payments/paymentOgCopy'
@@ -19,7 +22,35 @@ async function asDataUri(buffer: Buffer, mime: string): Promise<string | null> {
   return `data:${mime};base64,${buffer.toString('base64')}`
 }
 
-async function loadLogoDataUri(logoUrl: string | null): Promise<string | null> {
+function mimeFromPath(path: string): string {
+  if (/\.webp$/i.test(path)) return 'image/webp'
+  if (/\.jpe?g$/i.test(path)) return 'image/jpeg'
+  if (/\.gif$/i.test(path)) return 'image/gif'
+  return 'image/png'
+}
+
+function ogWords(text: string, fontSize: number, extra: Record<string, string | number> = {}) {
+  const parts = String(text || '')
+    .split(/\s+/)
+    .filter(Boolean)
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', fontSize, ...extra }}>
+      {parts.map((word, index) => (
+        <span
+          key={`${index}-${word}`}
+          style={{ marginRight: index === parts.length - 1 ? 0 : Math.round(fontSize * 0.22) }}
+        >
+          {word}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+async function loadLogoDataUri(
+  logoUrl: string | null,
+  requestOrigin: string,
+): Promise<string | null> {
   if (!logoUrl) return null
   try {
     const storagePath = companyLogoStoragePath(logoUrl)
@@ -30,6 +61,19 @@ async function loadLogoDataUri(logoUrl: string | null): Promise<string | null> {
       if (error || !data) return null
       const buffer = Buffer.from(await data.arrayBuffer())
       return asDataUri(buffer, data.type || 'image/png')
+    }
+    if (isAppPublicLogoPath(logoUrl)) {
+      try {
+        const filePath = join(process.cwd(), 'public', logoUrl.replace(/^\//, ''))
+        const buffer = await readFile(filePath)
+        return asDataUri(buffer, mimeFromPath(filePath))
+      } catch {
+        const response = await fetch(`${requestOrigin}${logoUrl}`, { cache: 'no-store' })
+        if (!response.ok) return null
+        const buffer = Buffer.from(await response.arrayBuffer())
+        const mime = response.headers.get('content-type') || mimeFromPath(logoUrl)
+        return asDataUri(buffer, mime)
+      }
     }
     if (!/^https:\/\/[a-z0-9-]+\.supabase\.co\//i.test(logoUrl)) return null
     const response = await fetch(logoUrl, { cache: 'no-store' })
@@ -43,7 +87,7 @@ async function loadLogoDataUri(logoUrl: string | null): Promise<string | null> {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ companyId: string }> },
 ) {
   const { companyId } = await params
@@ -56,7 +100,7 @@ export async function GET(
         locale: 'pt' as const,
         description: paymentOgDescription('pt'),
       }
-  const logoSrc = await loadLogoDataUri(brand.logoUrl)
+  const logoSrc = await loadLogoDataUri(brand.logoUrl, new URL(request.url).origin)
   const initials =
     brand.displayName
       .split(/\s+/)
@@ -116,22 +160,17 @@ export async function GET(
             </div>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 760 }}>
-            <div
-              style={{
-                fontSize: 22,
-                letterSpacing: 4,
-                textTransform: 'uppercase',
-                opacity: 0.7,
-              }}
-            >
-              Catering AI
-            </div>
-            <div style={{ fontSize: 64, fontWeight: 800, lineHeight: 1.1, marginTop: 12 }}>
-              {brand.displayName}
-            </div>
-            <div style={{ fontSize: 28, marginTop: 20, opacity: 0.85 }}>
-              {brand.description}
-            </div>
+            {ogWords('Catering AI', 22, {
+              letterSpacing: 4,
+              textTransform: 'uppercase',
+              opacity: 0.7,
+            })}
+            {ogWords(brand.displayName, 58, {
+              fontWeight: 800,
+              lineHeight: 1.1,
+              marginTop: 12,
+            })}
+            {ogWords(brand.description, 28, { marginTop: 20, opacity: 0.85 })}
           </div>
         </div>
       </div>
