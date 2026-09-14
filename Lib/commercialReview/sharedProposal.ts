@@ -18,6 +18,7 @@ export type SharedVersionRow = {
   package_total?: number | null
   additional_total?: number | null
   mileage_fee?: number | null
+  language?: string | null
   commercial_snapshot?: Record<string, unknown> | null
 }
 
@@ -264,7 +265,7 @@ export function readFrozenCommercialFacts(
       breakdownGuests.billable_guest_count,
       totals.billableGuestCount,
     ),
-    language: asText(snapshot.language),
+    language: firstText(snapshot.language, version.language),
     currency_code: firstText(snapshot.currency_code, totals.currency) ?? 'USD',
     event_name: firstText(event.event_name, event.eventName),
     event_date: firstText(event.event_date, event.eventDate),

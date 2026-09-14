@@ -68,7 +68,7 @@ async function loadSharedVersion(
   const { data, error } = await db
     .from('quote_versions')
     .select(
-      'id, quote_id, company_id, version_number, quote_total, reservation_amount, balance_due, discount_amount, package_total, additional_total, mileage_fee, commercial_snapshot',
+      'id, quote_id, company_id, version_number, quote_total, reservation_amount, balance_due, discount_amount, package_total, additional_total, mileage_fee, language, commercial_snapshot',
     )
     .eq('id', versionId)
     .eq('quote_id', quoteId)
@@ -215,6 +215,7 @@ export async function loadPublicProposalByToken(
       }
     }
     facts = readFrozenCommercialFacts(version)
+    if (!facts.language) facts.language = row.language
     source = 'shared_version'
     sharedVersionId = version.id
   }

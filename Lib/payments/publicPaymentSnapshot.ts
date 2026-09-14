@@ -149,14 +149,14 @@ export function publicPaymentGate(input: {
 }): { ok: true } | { ok: false; status: number; error: string } {
   if (!input.found) return { ok: false, status: 404, error: 'not_found' }
   if (!input.proposalSentAt) return { ok: false, status: 409, error: 'proposal_not_sent' }
+  if (input.proposalResponse === 'rejected') {
+    return { ok: false, status: 409, error: 'proposal_rejected' }
+  }
   const status = String(input.quoteStatus || '')
     .trim()
     .toLowerCase()
   if (status === 'cancelled' || status === 'canceled' || status === 'archived') {
     return { ok: false, status: 409, error: 'quote_canceled' }
-  }
-  if (input.proposalResponse === 'rejected') {
-    return { ok: false, status: 409, error: 'proposal_rejected' }
   }
   if (input.proposalResponse !== 'accepted') {
     return { ok: false, status: 409, error: 'proposal_not_accepted' }

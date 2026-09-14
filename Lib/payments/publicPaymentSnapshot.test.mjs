@@ -187,6 +187,7 @@ test('T01/T02/T09/T27: public payment gate is fail-closed', () => {
       found: true,
       proposalSentAt: '2026-09-14T00:00:00Z',
       proposalResponse: 'rejected',
+      quoteStatus: 'cancelled',
     }).error,
     'proposal_rejected',
   )

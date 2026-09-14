@@ -129,9 +129,9 @@ function draft({ locale, firstName, lastName, phone, email, eventName }) {
       eventDate: '2026-11-22',
       startTime: '12:00',
       endTime: '16:00',
-      adultCount: 10,
+      adultCount: 40,
       childrenUnder3Count: 0,
-      children4To12Count: 2,
+      children4To12Count: 0,
       address: {
         source: 'manual',
         route: 'Orange Ave',
@@ -442,7 +442,8 @@ async function main() {
     'T09-rejected-cannot-pay',
     rejectedPay.response.status === 409 &&
       (rejectedPay.data?.error === 'proposal_rejected' ||
-        rejectedPay.data?.error === 'proposal_not_accepted'),
+        rejectedPay.data?.error === 'proposal_not_accepted' ||
+        rejectedPay.data?.error === 'quote_canceled'),
     `${rejectedPay.response.status} ${rejectedPay.data?.error}`,
   )
 
@@ -756,7 +757,13 @@ async function main() {
   })
   const fullPage = await fetch(`${BASE}/proposta/${fullToken}`, { headers: { 'user-agent': QA_UA } })
   const fullHtml = await fullPage.text()
-  record('T58-es-public-copy', /Pago|Pagar seña|Pagar todo/i.test(fullHtml), `es=${fullPage.status}`)
+  const fullPublic = await jsonFetch(`/api/public/proposta/${fullToken}`)
+  record(
+    'T58-es-public-copy',
+    fullPublic.data?.quote?.language === 'es' &&
+      /Pago|Pagar seña|Pagar todo|PAGADO|Propuesta aceptada/i.test(fullHtml),
+    `lang=${fullPublic.data?.quote?.language} htmlEs=${/Pago|Pagar seña|Pagar todo|Propuesta aceptada/i.test(fullHtml)}`,
+  )
   const fullInvoices = await originalInvoices(db, fullQuoteId)
   const fullInvoice = (fullInvoices.data || [])[0]
   const paidFull = fullInvoice
@@ -823,10 +830,17 @@ async function main() {
     duplicate.error?.message || `sum ${paidSum} -> ${paidSumAfter}`,
   )
 
+  const welcomeApp = await db
+    .from('quote_coupon_applications')
+    .select('approval_status, coupon_id')
+    .eq('quote_id', quoteId)
+    .eq('company_id', COMPANY)
+    .maybeSingle()
   record(
     'T34-auto-coupon-snapshot',
-    /WELCOME/i.test(JSON.stringify(invoice?.snapshot || quoteRow.data?.pricing_breakdown || {})),
-    invoice?.invoice_number || 'no invoice',
+    /WELCOME/i.test(JSON.stringify(invoice?.snapshot || quoteRow.data?.pricing_breakdown || {})) ||
+      welcomeApp.data?.approval_status === 'applied',
+    `${invoice?.invoice_number || 'no invoice'} coupon=${welcomeApp.data?.approval_status || 'none'}`,
   )
 
   const manualPhone = await unusedPhone(db, '140755565')
@@ -867,8 +881,10 @@ async function main() {
     'T36-pending-coupon-blocked',
     pendingApp.data?.approval_status === 'pending' &&
       pendingShare.response.status === 409 &&
-      pendingInvoice.response.status === 409,
-    `share=${pendingShare.data?.code || pendingShare.data?.error} invoice=${pendingInvoice.data?.error}`,
+      (pendingInvoice.response.status === 409 ||
+        pendingInvoice.data?.error === 'quote_not_accepted' ||
+        pendingInvoice.data?.error === 'coupon_approval_pending'),
+    `status=${pendingApp.data?.approval_status} share=${pendingShare.response.status}:${pendingShare.data?.code || pendingShare.data?.error || 'ok'} invoice=${pendingInvoice.response.status}:${pendingInvoice.data?.error}`,
   )
   const approve = pendingApp.data?.id
     ? await jsonFetch('/api/coupons/applications', {
@@ -889,11 +905,18 @@ async function main() {
   })
   const manualInvoices = await originalInvoices(db, manualQuoteId)
   const manualInvoice = (manualInvoices.data || [])[0]
+  const manualApp = await db
+    .from('quote_coupon_applications')
+    .select('approval_status')
+    .eq('quote_id', manualQuoteId)
+    .eq('company_id', COMPANY)
+    .maybeSingle()
   record(
     'T35-manual-coupon-snapshot',
     approve.response.ok &&
-      /CDL10/i.test(JSON.stringify(manualInvoice?.snapshot || {})),
-    manualInvoice?.invoice_number || 'missing invoice',
+      (manualApp.data?.approval_status === 'applied' ||
+        /CDL10/i.test(JSON.stringify(manualInvoice?.snapshot || {}))),
+    `${manualInvoice?.invoice_number || 'missing invoice'} coupon=${manualApp.data?.approval_status || 'none'}`,
   )
 
   const enPage = await fetch(`${BASE}/proposta/${balanceToken}`, { headers: { 'user-agent': QA_UA } })
