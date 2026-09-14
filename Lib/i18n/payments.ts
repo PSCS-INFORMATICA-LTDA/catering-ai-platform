@@ -47,6 +47,16 @@ const { t, list } = makeI18nModule('payments', 'billing', {
     en: 'Send balance on WhatsApp',
     es: 'Enviar saldo por WhatsApp',
   },
+  sendFullWhatsApp: {
+    pt: 'Enviar pagamento total',
+    en: 'Send full payment',
+    es: 'Enviar pago total',
+  },
+  awaitingCustomerAcceptance: {
+    pt: 'Aguardando aceite do cliente',
+    en: 'Awaiting customer acceptance',
+    es: 'Esperando aceptación del cliente',
+  },
   copyPaymentMessage: {
     pt: 'Copiar mensagem',
     en: 'Copy message',
@@ -91,6 +101,11 @@ const { t, list } = makeI18nModule('payments', 'billing', {
     pt: 'Mensagem do saldo pronta',
     en: 'Balance message ready',
     es: 'Mensaje del saldo listo',
+  },
+  lastShareFull: {
+    pt: 'Mensagem do pagamento total pronta',
+    en: 'Full payment message ready',
+    es: 'Mensaje del pago total listo',
   },
   generateShareFirst: {
     pt: 'Gere o sinal ou o saldo para copiar.',

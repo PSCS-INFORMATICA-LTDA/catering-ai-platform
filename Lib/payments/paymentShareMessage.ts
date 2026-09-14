@@ -8,7 +8,7 @@ export function paymentSharePhoneDigits(
 }
 
 export type PaymentShareLocale = 'pt' | 'en' | 'es'
-export type PaymentSharePurpose = 'deposit' | 'balance'
+export type PaymentSharePurpose = 'deposit' | 'balance' | 'full'
 
 export type PaymentShareMessageInput = {
   locale: string | null | undefined
@@ -109,6 +109,22 @@ export function buildPaymentShareMessage(
         ].join('\n'),
       }
     }
+    if (input.purpose === 'full') {
+      return {
+        text: [
+          hi,
+          '',
+          `Here is the secure link to pay the full amount for quote`,
+          `${quoteNumber} with ${companyName}.`,
+          '',
+          `Amount due: ${formattedAmount}`,
+          '',
+          paymentUrl,
+          '',
+          'Please let us know if you need any help.',
+        ].join('\n'),
+      }
+    }
     return {
       text: [
         hi,
@@ -142,6 +158,22 @@ export function buildPaymentShareMessage(
         ].join('\n'),
       }
     }
+    if (input.purpose === 'full') {
+      return {
+        text: [
+          hi,
+          '',
+          `Aquí tienes el enlace seguro para pagar el importe total de tu`,
+          `cotización ${quoteNumber} con ${companyName}.`,
+          '',
+          `Importe a pagar: ${formattedAmount}`,
+          '',
+          paymentUrl,
+          '',
+          'Estamos a tu disposición si necesitas ayuda.',
+        ].join('\n'),
+      }
+    }
     return {
       text: [
         hi,
@@ -167,6 +199,23 @@ export function buildPaymentShareMessage(
         `${quoteNumber} com ${companyName}.`,
         '',
         `Valor do sinal: ${formattedAmount}`,
+        '',
+        paymentUrl,
+        '',
+        'Se precisar de ajuda, estamos à disposição.',
+      ].join('\n'),
+    }
+  }
+
+  if (input.purpose === 'full') {
+    return {
+      text: [
+        hi,
+        '',
+        `Segue o link seguro para pagamento total da sua cotação`,
+        `${quoteNumber} com ${companyName}.`,
+        '',
+        `Valor a pagar: ${formattedAmount}`,
         '',
         paymentUrl,
         '',

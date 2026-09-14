@@ -22,9 +22,52 @@ const { t, list } = makeI18nModule('publicOps', 'public', {
   depositLabel: { pt: 'Sinal (reserva)', en: 'Deposit', es: 'Señal (reserva)' },
   balanceLabel: { pt: 'Saldo', en: 'Balance', es: 'Saldo' },
   proposalAccepted: {
-    pt: 'Proposta aceita. Obrigado! Em breve entraremos em contato sobre o sinal e a agenda.',
-    en: 'Proposal accepted. Thank you! We will contact you shortly about the deposit and schedule.',
-    es: 'Propuesta aceptada. ¡Gracias! Pronto nos pondremos en contacto sobre la señal y la agenda.',
+    pt: 'Proposta aceita. Obrigado! Escolha abaixo como deseja pagar.',
+    en: 'Proposal accepted. Thank you! Choose how you would like to pay below.',
+    es: 'Propuesta aceptada. ¡Gracias! Elija abajo cómo desea pagar.',
+  },
+  paymentTitle: { pt: 'Pagamento', en: 'Payment', es: 'Pago' },
+  paymentTotal: { pt: 'Valor total', en: 'Total amount', es: 'Importe total' },
+  chooseHowToPay: {
+    pt: 'Escolha como deseja pagar:',
+    en: 'Choose how you would like to pay:',
+    es: 'Elija cómo desea pagar:',
+  },
+  payDepositChoice: {
+    pt: 'Pagar sinal — {amount}',
+    en: 'Pay deposit — {amount}',
+    es: 'Pagar seña — {amount}',
+  },
+  payBalanceChoice: {
+    pt: 'Pagar saldo — {amount}',
+    en: 'Pay balance — {amount}',
+    es: 'Pagar saldo — {amount}',
+  },
+  payFullChoice: {
+    pt: 'Pagar tudo — {amount}',
+    en: 'Pay full amount — {amount}',
+    es: 'Pagar todo — {amount}',
+  },
+  paidLabel: { pt: 'PAGO', en: 'PAID', es: 'PAGADO' },
+  remainingFull: {
+    pt: 'Pagar tudo agora — {amount}',
+    en: 'Pay remaining total — {amount}',
+    es: 'Pagar el total restante — {amount}',
+  },
+  generatingPayment: {
+    pt: 'Gerando link seguro…',
+    en: 'Creating secure link…',
+    es: 'Creando enlace seguro…',
+  },
+  paymentUnavailable: {
+    pt: 'Pagamento ainda não disponível.',
+    en: 'Payment is not available yet.',
+    es: 'El pago todavía no está disponible.',
+  },
+  paymentError: {
+    pt: 'Não foi possível abrir o pagamento.',
+    en: 'Could not open payment.',
+    es: 'No fue posible abrir el pago.',
   },
   proposalRejected: {
     pt: 'Proposta recusada. Se quiser ajustar, fale conosco pelo WhatsApp.',

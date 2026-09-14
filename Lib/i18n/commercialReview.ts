@@ -217,10 +217,15 @@ const { t, list } = makeI18nModule('commercialReview', 'workspace', {
     en: 'PayPal Sandbox',
     es: 'PayPal Sandbox',
   },
+  awaitingCustomerAcceptance: {
+    pt: 'Aguardando aceite do cliente',
+    en: 'Awaiting customer acceptance',
+    es: 'Esperando aceptación del cliente',
+  },
   nextPaymentStep: {
-    pt: 'Próxima etapa: aceite → depósito → pagamento → reserva. Sem antecipar lógica não aprovada.',
-    en: 'Next step: acceptance → deposit → payment → reservation. No unapproved payment logic is added here.',
-    es: 'Siguiente paso: aceptación → depósito → pago → reserva. No se anticipa lógica de pago no aprobada.',
+    pt: 'Após o aceite do cliente: fatura original → escolha de pagamento → evento → fechamento. Sem antecipar lógica não aprovada.',
+    en: 'After customer acceptance: original invoice → payment choice → event → closeout. No unapproved payment logic is added here.',
+    es: 'Tras la aceptación del cliente: factura original → elección de pago → evento → cierre. No se anticipa lógica de pago no aprobada.',
   },
   stickyReview: { pt: 'Revisar', en: 'Review', es: 'Revisar' },
 })

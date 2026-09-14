@@ -30,7 +30,7 @@ type InvoiceSummary = {
   currency_code?: string | null
 }
 
-type SharePurpose = 'deposit' | 'balance'
+type SharePurpose = 'deposit' | 'balance' | 'full'
 
 type LastShare = {
   purpose: SharePurpose
@@ -74,13 +74,14 @@ export default function QuoteInvoicePanel({
   const phoneOk = Boolean(phoneDigits)
 
   useEffect(() => {
+    if (!quoteAccepted) return
     void fetch(`/api/quotes/${quoteId}/invoice`)
       .then((response) => response.json())
       .then((result) => {
         if (result?.data) setInvoice(result.data)
       })
       .catch(() => null)
-  }, [quoteId])
+  }, [quoteId, quoteAccepted])
 
   const invoiceOutstanding = invoice
     ? Number.isFinite(Number(invoice.full_due))
@@ -95,12 +96,28 @@ export default function QuoteInvoicePanel({
   )
 
   const shareAmounts = useMemo(() => {
-    if (!invoice) return { deposit: null, balance: null }
+    if (!invoice) return { deposit: null, balance: null, full: null }
     return {
       deposit: Number.isFinite(Number(invoice.deposit_due)) ? Number(invoice.deposit_due) : null,
       balance: Number.isFinite(Number(invoice.balance_due)) ? Number(invoice.balance_due) : null,
+      full: Number.isFinite(Number(invoice.full_due)) ? Number(invoice.full_due) : null,
     }
   }, [invoice])
+
+  if (!quoteAccepted) {
+    return (
+      <section
+        data-invoice-panel
+        data-testid="awaiting-customer-acceptance"
+        className="no-print liquid-glass-card mt-4 space-y-3 p-5"
+      >
+        <h2 className="text-lg font-bold text-cdl-fg">{tPayments(locale, 'invoiceTitle')}</h2>
+        <p className="text-sm font-semibold text-cdl-muted">
+          {tPayments(locale, 'awaitingCustomerAcceptance')}
+        </p>
+      </section>
+    )
+  }
 
   if (!canManage && !invoice) return null
 
@@ -157,7 +174,12 @@ export default function QuoteInvoicePanel({
       if (!response.ok) throw new Error(result.error || tPayments(locale, 'generateError'))
       const url = String(result.data?.url || '')
       const serverAmount = Number(result.data?.amount)
-      const fallbackAmount = purpose === 'deposit' ? shareAmounts.deposit : shareAmounts.balance
+      const fallbackAmount =
+        purpose === 'deposit'
+          ? shareAmounts.deposit
+          : purpose === 'balance'
+            ? shareAmounts.balance
+            : shareAmounts.full
       const amount = Number.isFinite(serverAmount) ? serverAmount : fallbackAmount
       if (amount == null || !Number.isFinite(amount)) {
         throw new Error(tPayments(locale, 'generateError'))
@@ -228,6 +250,9 @@ export default function QuoteInvoicePanel({
 
   const shareDisabled = busy || !invoice || invoice.status === 'paid' || invoice.status === 'canceled'
   const waDisabled = shareDisabled || !phoneOk
+  const depositDue = Number(shareAmounts.deposit ?? 0)
+  const balanceDue = Number(shareAmounts.balance ?? 0)
+  const fullDue = Number(shareAmounts.full ?? invoiceOutstanding)
 
   return (
     <section
@@ -294,7 +319,7 @@ export default function QuoteInvoicePanel({
                 <button
                   type="button"
                   data-testid="send-deposit-whatsapp"
-                  disabled={waDisabled}
+                  disabled={waDisabled || depositDue <= 0}
                   onClick={() => void sendWhatsApp('deposit')}
                   className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#128C7E] px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white disabled:opacity-40"
                 >
@@ -303,11 +328,20 @@ export default function QuoteInvoicePanel({
                 <button
                   type="button"
                   data-testid="send-balance-whatsapp"
-                  disabled={waDisabled}
+                  disabled={waDisabled || balanceDue <= 0}
                   onClick={() => void sendWhatsApp('balance')}
                   className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#128C7E] px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white disabled:opacity-40"
                 >
                   {tPayments(locale, 'sendBalanceWhatsApp')}
+                </button>
+                <button
+                  type="button"
+                  data-testid="send-full-whatsapp"
+                  disabled={waDisabled || fullDue <= 0}
+                  onClick={() => void sendWhatsApp('full')}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#128C7E] px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white disabled:opacity-40"
+                >
+                  {tPayments(locale, 'sendFullWhatsApp')}
                 </button>
                 <button
                   type="button"
@@ -333,7 +367,9 @@ export default function QuoteInvoicePanel({
                   <p className="text-xs font-semibold text-cdl-fg">
                     {lastShare.purpose === 'deposit'
                       ? tPayments(locale, 'lastShareDeposit')
-                      : tPayments(locale, 'lastShareBalance')}
+                      : lastShare.purpose === 'full'
+                        ? tPayments(locale, 'lastShareFull')
+                        : tPayments(locale, 'lastShareBalance')}
                   </p>
                   <pre
                     data-testid="payment-share-preview"

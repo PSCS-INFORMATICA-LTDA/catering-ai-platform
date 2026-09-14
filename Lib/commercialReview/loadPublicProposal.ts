@@ -255,7 +255,7 @@ export async function loadPublicProposalByToken(
     source,
     proposal_shared_version_id: sharedVersionId,
     company_name:
-      companyRes.data?.trade_name || companyRes.data?.name || 'BBQ At Home',
+      companyRes.data?.trade_name || companyRes.data?.name || 'Catering AI',
     proposal_response: row.proposal_response ?? 'pending',
     proposal_sent_at: row.proposal_sent_at,
     can_respond:
