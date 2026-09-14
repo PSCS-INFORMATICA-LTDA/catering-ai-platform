@@ -44,7 +44,7 @@ const PROPOSAL_COLUMNS =
   'proposal_token, proposal_sent_at, proposal_response, proposal_accepted_at, proposal_rejected_at, proposal_follow_up_count, proposal_last_follow_up_at'
 
 const WORKSPACE_COLUMNS =
-  'internal_notes, proposal_shared_version_id, proposal_shared_by'
+  'customer_id, internal_notes, proposal_shared_version_id, proposal_shared_by'
 
 const ORDER_COLUMNS = 'accepted_version_id, converted_service_order_id'
 
