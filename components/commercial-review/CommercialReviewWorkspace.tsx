@@ -19,6 +19,7 @@ import { readCouponFinancialStory, quoteShareBlockedByCoupon } from '@/Lib/coupo
 import { readCommercialFinancialSummary } from '@/Lib/commercialReview/financialSummary'
 import type { CommercialReviewExtras } from '@/Lib/commercialReview/loadWorkspaceExtras'
 import { getChargedMilesFromSnapshot, readQuoteSnapshot } from '@/Lib/readQuoteSnapshot'
+import { getCustomerDisplayNameFromQuote } from '@/Lib/getCustomerDisplayName'
 import { tCommercialReview } from '@/Lib/i18n/commercialReview'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
 import QuoteFlashBanner from '@/components/QuoteFlashBanner'
@@ -164,6 +165,10 @@ export default function CommercialReviewWorkspace({
               quote.quote_status === 'approved' ||
               quote.quote_status === 'converted'
             }
+            customerPhone={quote.phone}
+            customerName={getCustomerDisplayNameFromQuote(quote)}
+            quoteNumber={quote.quote_number}
+            currencyCode={quote.currency_code ?? 'USD'}
           />
         </ReviewCard>
         <CapacitySummary locale={lang} capacity={extras.capacity} />
