@@ -265,7 +265,7 @@ async function loadQuoteEvidence(db, quoteId) {
   const quote = await db
     .from('quotes')
     .select(
-      'id, quote_number, customer_id, event_id, quote_total, reservation_amount, deposit_amount, balance_due, discount_amount, pricing_breakdown, source, internal_notes, proposal_token, proposal_shared_version_id, proposal_shared_by, proposal_sent_at',
+      'id, quote_number, customer_id, event_id, quote_total, reservation_amount, deposit_amount, balance_due, discount_amount, pricing_breakdown, source, internal_notes, proposal_token, proposal_shared_version_id, proposal_shared_by, proposal_sent_at, proposal_response, accepted_version_id',
     )
     .eq('id', quoteId)
     .eq('company_id', COMPANY)
@@ -768,11 +768,34 @@ async function main() {
         `publicFound=${publicAfter.data?.found} pinnedHasRevisedNote=${containsSecret(pinnedAfter?.commercial_snapshot, revisedNote)}`,
       )
 
+      const accept = token
+        ? await jsonFetch(`/api/public/proposta/${token}`, {
+            method: 'POST',
+            body: { action: 'accept' },
+          })
+        : { response: { status: 0 }, data: null }
+      const afterAccept = await loadQuoteEvidence(db, quoteId)
+      record(
+        'E2E-customer-accept-uses-shared-version',
+        accept.response.status === 200 &&
+          afterAccept.quote?.proposal_response === 'accepted' &&
+          afterAccept.quote?.accepted_version_id === pinnedId &&
+          pinnedId !== currentAfter?.id,
+        JSON.stringify({
+          http: accept.response.status,
+          accepted: afterAccept.quote?.accepted_version_id,
+          pinned: pinnedId,
+          current: currentAfter?.id,
+          response: afterAccept.quote?.proposal_response,
+        }),
+      )
+
       evidence.pin = {
         quoteId,
         quoteNumber: afterRevision.quote?.quote_number,
         sharedVersionId: pinnedId,
         currentVersionAfterRevision: currentAfter?.id,
+        acceptedVersionId: afterAccept.quote?.accepted_version_id,
         proposalSharedBy: afterRevision.quote?.proposal_shared_by,
         actorId,
         token,
