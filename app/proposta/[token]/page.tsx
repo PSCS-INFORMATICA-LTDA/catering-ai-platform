@@ -21,6 +21,8 @@ export default async function PublicProposalPage({
     company_name?: string
     proposal_response?: string
     can_respond?: boolean
+    source?: 'shared_version' | 'legacy_live_quote'
+    proposal_shared_version_id?: string | null
     quote?: Record<string, unknown>
   }
 
@@ -48,6 +50,8 @@ export default async function PublicProposalPage({
       companyName={payload.company_name || 'BBQ At Home'}
       initialResponse={payload.proposal_response || 'pending'}
       canRespond={Boolean(payload.can_respond)}
+      source={payload.source || 'legacy_live_quote'}
+      sharedVersionId={payload.proposal_shared_version_id ?? null}
       quote={payload.quote as never}
     />
   )

@@ -98,6 +98,7 @@ export type OperationalAuditAction =
   | 'financial_closeout_saved'
   | 'financial_closeout_finalized'
   | 'proposal_shared'
+  | 'proposal_responded'
   | 'internal_notes_updated'
 
 export async function writeOperationalAudit(input: {

@@ -5,6 +5,7 @@ import {
 import { quoteHasPendingCoupon } from '@/Lib/coupons/resolveCoupon'
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 import { newProposalToken } from '@/Lib/quoteProposal'
+import { requireShareableQuoteVersion } from '@/Lib/commercialReview/sharedProposal'
 import { ensureCurrentQuoteVersion } from '@/Lib/quotes/versions'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
@@ -156,6 +157,13 @@ export async function POST(request: Request, { params }: Params) {
   const version = await ensureCurrentQuoteVersion(companyId, id, {
     createdBy: actorId,
   })
+  const pin = requireShareableQuoteVersion(version)
+  if (!pin.ok) {
+    return Response.json(
+      { error: pin.error, code: pin.code },
+      { status: 409 },
+    )
+  }
 
   const update: Record<string, unknown> = {
     proposal_token: token,
@@ -166,15 +174,13 @@ export async function POST(request: Request, { params }: Params) {
       : response === 'accepted'
         ? currentStatus
         : 'sent',
-  }
-  if (version.data?.id) {
-    update.proposal_shared_version_id = version.data.id
+    proposal_shared_version_id: pin.versionId,
   }
   if (actorId) {
     update.proposal_shared_by = actorId
   }
 
-  let { data, error } = await db
+  const { data, error } = await db
     .from('quotes')
     .update(update)
     .eq('id', id)
@@ -183,29 +189,6 @@ export async function POST(request: Request, { params }: Params) {
       'proposal_token, proposal_sent_at, proposal_response, proposal_follow_up_count, proposal_last_follow_up_at, quote_status, proposal_shared_version_id, proposal_shared_by',
     )
     .single()
-
-  if (error && /proposal_shared|column/i.test(error.message)) {
-    const fallback = await db
-      .from('quotes')
-      .update({
-        proposal_token: token,
-        proposal_sent_at: sentAt,
-        proposal_response: response,
-        quote_status: keepStatus
-          ? currentStatus
-          : response === 'accepted'
-            ? currentStatus
-            : 'sent',
-      })
-      .eq('id', id)
-      .eq('company_id', companyId)
-      .select(
-        'proposal_token, proposal_sent_at, proposal_response, proposal_follow_up_count, proposal_last_follow_up_at, quote_status',
-      )
-      .single()
-    data = fallback.data as typeof data
-    error = fallback.error
-  }
 
   if (error) {
     if (/proposal_token|column/i.test(error.message)) {
@@ -228,7 +211,7 @@ export async function POST(request: Request, { params }: Params) {
     action: 'proposal_shared',
     newData: {
       quote_id: id,
-      quote_version_id: version.data?.id ?? null,
+      quote_version_id: pin.versionId,
       proposal_sent_at: sentAt,
     },
   })

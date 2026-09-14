@@ -31,6 +31,8 @@ const { t, list } = makeI18nModule('publicOps', 'public', {
     en: 'Proposal declined. If you want to adjust it, contact us on WhatsApp.',
     es: 'Propuesta rechazada. Si desea ajustarla, hable con nosotros por WhatsApp.',
   },
+  downloadPdf: { pt: 'Baixar PDF', en: 'Download PDF', es: 'Descargar PDF' },
+  couponLabel: { pt: 'Cupom', en: 'Coupon', es: 'Cupón' },
   acceptProposal: { pt: 'Aceitar proposta', en: 'Accept proposal', es: 'Aceptar propuesta' },
   rejectProposal: { pt: 'Recusar proposta', en: 'Decline proposal', es: 'Rechazar propuesta' },
   respondError: { pt: 'Falha ao responder', en: 'Could not respond', es: 'No se pudo responder' },

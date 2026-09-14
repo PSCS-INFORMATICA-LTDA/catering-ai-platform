@@ -10,6 +10,7 @@ type PublicQuote = {
   quote_total?: number | null
   reservation_amount?: number | null
   balance_due?: number | null
+  discount_amount?: number | null
   currency_code?: string | null
   package_label?: string | null
   adult_count?: number | null
@@ -19,6 +20,11 @@ type PublicQuote = {
   event_name?: string | null
   event_date?: string | null
   language?: string | null
+  coupon?: {
+    code?: string | null
+    approval_status?: string | null
+    applied_discount_amount?: number | null
+  } | null
 }
 
 function money(value: number | null | undefined, currency = 'USD') {
@@ -38,12 +44,16 @@ export default function PublicProposalClient({
   companyName,
   initialResponse,
   canRespond,
+  source = 'legacy_live_quote',
+  sharedVersionId = null,
   quote,
 }: {
   token: string
   companyName: string
   initialResponse: string
   canRespond: boolean
+  source?: 'shared_version' | 'legacy_live_quote'
+  sharedVersionId?: string | null
   quote: PublicQuote
 }) {
   const lang = resolveDocumentLocale(quote.language)
@@ -95,6 +105,18 @@ export default function PublicProposalClient({
               number: quote.quote_number || '—',
             })}
           </p>
+          <p
+            data-testid="public-proposal-source"
+            className="mt-2 hidden"
+          >
+            {source}
+          </p>
+          <p
+            data-testid="public-proposal-version"
+            className="hidden"
+          >
+            {sharedVersionId || ''}
+          </p>
         </div>
 
         <dl className="grid gap-3 text-sm">
@@ -128,23 +150,56 @@ export default function PublicProposalClient({
           </div>
           <div>
             <dt className="text-cdl-muted">{tQuotesOrders(lang, 'total')}</dt>
-            <dd className="text-xl font-bold text-cdl-fg">
+            <dd
+              data-testid="public-proposal-total"
+              className="text-xl font-bold text-cdl-fg"
+            >
               {money(quote.quote_total, quote.currency_code ?? 'USD')}
             </dd>
           </div>
           <div>
             <dt className="text-cdl-muted">{tPublicOps(lang, 'depositLabel')}</dt>
-            <dd className="font-semibold">
+            <dd
+              data-testid="public-proposal-deposit"
+              className="font-semibold"
+            >
               {money(quote.reservation_amount, quote.currency_code ?? 'USD')}
             </dd>
           </div>
           <div>
             <dt className="text-cdl-muted">{tPublicOps(lang, 'balanceLabel')}</dt>
-            <dd className="font-semibold">
+            <dd
+              data-testid="public-proposal-balance"
+              className="font-semibold"
+            >
               {money(quote.balance_due, quote.currency_code ?? 'USD')}
             </dd>
           </div>
+          {quote.coupon?.code ? (
+            <div>
+              <dt className="text-cdl-muted">{tPublicOps(lang, 'couponLabel')}</dt>
+              <dd
+                data-testid="public-proposal-coupon"
+                className="font-semibold"
+              >
+                {quote.coupon.code}
+                {quote.coupon.applied_discount_amount
+                  ? ` · ${money(quote.coupon.applied_discount_amount, quote.currency_code ?? 'USD')}`
+                  : ''}
+              </dd>
+            </div>
+          ) : null}
         </dl>
+
+        {sharedVersionId ? (
+          <a
+            data-testid="public-proposal-pdf"
+            href={`/api/public/proposta/${token}/pdf`}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-cdl-border px-4 text-sm font-bold uppercase tracking-wider text-cdl-fg"
+          >
+            {tPublicOps(lang, 'downloadPdf')}
+          </a>
+        ) : null}
 
         {response === 'accepted' ? (
           <p className="rounded-xl border border-emerald-300/50 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
