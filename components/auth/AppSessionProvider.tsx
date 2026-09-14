@@ -27,6 +27,12 @@ export function AppSessionProvider({
   const [session, setSession] = useState<SafeAppSession | null>(
     initialSession ?? null,
   )
+  const [prevInitial, setPrevInitial] = useState(initialSession)
+
+  if (initialSession !== prevInitial) {
+    setPrevInitial(initialSession)
+    setSession(initialSession ?? null)
+  }
 
   const refresh = useCallback(async () => {
     const response = await fetch('/api/auth/me', { cache: 'no-store' })

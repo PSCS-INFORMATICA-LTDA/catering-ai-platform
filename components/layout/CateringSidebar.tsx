@@ -4,9 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { isBrasinhaDevNavVisible } from '@/Lib/brasinha/env'
-import { CATERING_NAV, isNavHrefActive } from '@/components/layout/navConfig'
+import { CATERING_NAV, canSeeNavChild, isNavHrefActive } from '@/components/layout/navConfig'
 import { useOptionalAppSession } from '@/components/auth/AppSessionProvider'
-import { hasPermission } from '@/Lib/auth/permissions'
 import {
   getChromeGroupLabel,
   getChromeNavLabel,
@@ -50,15 +49,8 @@ export function CateringSidebar({
   const session = useOptionalAppSession()
   const showBrasinhaDev = isBrasinhaDevNavVisible()
 
-  function canSeeNavChild(requiredPermission?: string, requiredAnyPermission?: string[]) {
-    const needed = [
-      ...(requiredPermission ? [requiredPermission] : []),
-      ...(requiredAnyPermission ?? []),
-    ]
-    if (needed.length === 0) return true
-    if (!session) return false
-    if (session.isPlatformAdmin) return true
-    return needed.some((permission) => hasPermission(session.permissions, permission))
+  function allowChild(child: (typeof CATERING_NAV)[number]['children'][number]) {
+    return canSeeNavChild(session, child)
   }
 
   return (
@@ -156,6 +148,10 @@ export function CateringSidebar({
 
           <nav className="flex-1 overflow-y-auto overscroll-contain px-2 py-3 [-webkit-overflow-scrolling:touch]">
             {CATERING_NAV.map((group) => {
+              const children = group.children
+                .filter((child) => !child.devOnly || showBrasinhaDev)
+                .filter((child) => allowChild(child))
+              if (children.length === 0) return null
               const groupLabel = getChromeGroupLabel(
                 locale,
                 group.id,
@@ -168,10 +164,7 @@ export function CateringSidebar({
                   aria-label={groupLabel}
                 >
                   <p className="catering-sidebar-group-label">{groupLabel}</p>
-                  {group.children
-                    .filter((child) => !child.devOnly || showBrasinhaDev)
-                    .filter((child) => canSeeNavChild(child.requiredPermission, child.requiredAnyPermission))
-                    .map((child) => {
+                  {children.map((child) => {
                     const label = getChromeNavLabel(
                       locale,
                       child.href,

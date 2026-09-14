@@ -1,3 +1,5 @@
+import { hasPermission } from '../../Lib/auth/permissions.ts'
+
 export type NavChild = {
   href: string
   label: string
@@ -5,6 +7,26 @@ export type NavChild = {
   devOnly?: boolean
   requiredPermission?: string
   requiredAnyPermission?: string[]
+}
+
+type NavSession = {
+  isPlatformAdmin?: boolean
+  permissions?: string[] | null
+} | null
+
+/**
+ * Implemented routes stay visible while the client session is hydrating.
+ * Middleware already gated the shell. A null session is not "no permission".
+ */
+export function canSeeNavChild(session: NavSession, child: NavChild): boolean {
+  const needed = [
+    ...(child.requiredPermission ? [child.requiredPermission] : []),
+    ...(child.requiredAnyPermission ?? []),
+  ]
+  if (needed.length === 0) return true
+  if (!session) return true
+  if (session.isPlatformAdmin) return true
+  return needed.some((permission) => hasPermission(session.permissions, permission))
 }
 
 export type NavGroupId =

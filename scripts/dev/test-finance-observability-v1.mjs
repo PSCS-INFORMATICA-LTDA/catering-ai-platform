@@ -78,9 +78,11 @@ test('RBAC requires finance.invoices.view for PayPal control', () => {
   const auth = read('Lib/payments/financeObservabilityAuth.ts')
   const page = read('app/payments/paypal-control/page.tsx')
   const sidebar = read('components/layout/CateringSidebar.tsx')
+  const nav = read('components/layout/navConfig.ts')
   assert.match(auth, /finance\.invoices\.view/)
   assert.match(page, /canViewFinanceObservability/)
-  assert.match(sidebar, /requiredPermission|requiredAnyPermission/)
+  assert.match(sidebar, /canSeeNavChild/)
+  assert.match(nav, /requiredPermission: 'finance\.invoices\.view'/)
 })
 
 test('token_hash and secrets never selected or rendered', () => {

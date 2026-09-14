@@ -98,7 +98,7 @@ export default function OrdersDashboard({
   }, [orders, query, statusFilter])
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5" data-testid="orders-dashboard">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-[var(--brand-primary)] sm:text-3xl">

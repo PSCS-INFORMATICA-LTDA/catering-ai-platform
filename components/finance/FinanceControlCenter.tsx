@@ -125,7 +125,7 @@ export default function FinanceControlCenter() {
   const companyName = overview?.company_name || tenantName
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5" data-finance-home>
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5" data-finance-home data-testid="finance-control-center">
       <header className="liquid-glass-card space-y-4 p-5 sm:p-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>

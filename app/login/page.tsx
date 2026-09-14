@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FormEvent, Suspense, useState } from 'react'
+import { useAppSession } from '@/components/auth/AppSessionProvider'
 import { AuthGlassShell } from '@/components/auth/AuthGlassShell'
 import { safeInternalNext } from '@/Lib/auth/safeNext'
 import { glassField } from '@/Lib/liquidGlass'
@@ -11,6 +12,7 @@ import { resolveAuthLocale, tAuth, type AuthLocale } from '@/Lib/i18n/authUsers'
 
 function LoginForm() {
   const router = useRouter()
+  const { refresh } = useAppSession()
   const params = useSearchParams()
   const next = safeInternalNext(params.get('next'), '/quotes')
   const ssoDenied = params.get('pscs_one') === 'denied'
@@ -38,6 +40,7 @@ function LoginForm() {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem('catering.auth.locale', locale)
     }
+    await refresh()
     router.replace(next)
     router.refresh()
   }
