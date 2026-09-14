@@ -11,27 +11,10 @@ export const dynamic = 'force-dynamic'
 
 const SIZE = { width: 1200, height: 630 }
 
-function ogWords(text: string, fontSize: number, extra: Record<string, string | number> = {}) {
-  const parts = String(text || '')
-    .split(/\s+/)
-    .filter(Boolean)
+function ogLine(text: string, fontSize: number, extra: Record<string, string | number> = {}) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        gap: Math.max(8, Math.round(fontSize * 0.28)),
-        fontSize,
-        ...extra,
-      }}
-    >
-      {parts.map((word, index) => (
-        <div key={`${index}-${word}`} style={{ display: 'flex' }}>
-          {word}
-        </div>
-      ))}
+    <div style={{ display: 'flex', fontSize, whiteSpace: 'pre-wrap', ...extra }}>
+      {text}
     </div>
   )
 }
@@ -111,9 +94,9 @@ export async function GET(
             </div>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 760 }}>
-            {ogWords('Catering AI', 22, { opacity: 0.7 })}
-            {ogWords(brand.displayName, 52, { fontWeight: 800, marginTop: 12 })}
-            {ogWords(brand.description, 28, { marginTop: 20, opacity: 0.85 })}
+            {ogLine('Catering AI', 22, { opacity: 0.7 })}
+            {ogLine(brand.displayName, 52, { fontWeight: 800, marginTop: 12 })}
+            {ogLine(brand.description, 28, { marginTop: 20, opacity: 0.85 })}
           </div>
         </div>
       </div>
