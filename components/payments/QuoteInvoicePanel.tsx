@@ -24,6 +24,9 @@ type InvoiceSummary = {
   deposit_amount: number
   balance_amount: number
   paid_total: number
+  deposit_due?: number
+  balance_due?: number
+  full_due?: number
   currency_code?: string | null
 }
 
@@ -80,7 +83,9 @@ export default function QuoteInvoicePanel({
   }, [quoteId])
 
   const invoiceOutstanding = invoice
-    ? Math.max(0, Math.round((invoice.total - invoice.paid_total) * 100) / 100)
+    ? Number.isFinite(Number(invoice.full_due))
+      ? Number(invoice.full_due)
+      : Math.max(0, Math.round((invoice.total - invoice.paid_total) * 100) / 100)
     : 0
   const displayCurrency = invoice?.currency_code || currencyCode || 'USD'
   const firstName = customerFirstNameFromDisplayName(
@@ -90,16 +95,12 @@ export default function QuoteInvoicePanel({
   )
 
   const shareAmounts = useMemo(() => {
-    if (!invoice) return { deposit: 0, balance: 0 }
-    const remainingDeposit = Math.max(
-      0,
-      Math.round((invoice.deposit_amount - invoice.paid_total) * 100) / 100,
-    )
+    if (!invoice) return { deposit: null, balance: null }
     return {
-      deposit: Math.min(remainingDeposit, invoiceOutstanding),
-      balance: invoiceOutstanding,
+      deposit: Number.isFinite(Number(invoice.deposit_due)) ? Number(invoice.deposit_due) : null,
+      balance: Number.isFinite(Number(invoice.balance_due)) ? Number(invoice.balance_due) : null,
     }
-  }, [invoice, invoiceOutstanding])
+  }, [invoice])
 
   if (!canManage && !invoice) return null
 
@@ -122,8 +123,7 @@ export default function QuoteInvoicePanel({
     }
   }
 
-  function buildShare(purpose: SharePurpose, url: string): LastShare {
-    const amount = purpose === 'deposit' ? shareAmounts.deposit : shareAmounts.balance
+  function buildShare(purpose: SharePurpose, url: string, amount: number): LastShare {
     const text = buildPaymentShareMessage({
       locale,
       companyDisplayName,
@@ -156,7 +156,25 @@ export default function QuoteInvoicePanel({
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || tPayments(locale, 'generateError'))
       const url = String(result.data?.url || '')
-      const share = buildShare(purpose, url)
+      const serverAmount = Number(result.data?.amount)
+      const fallbackAmount = purpose === 'deposit' ? shareAmounts.deposit : shareAmounts.balance
+      const amount = Number.isFinite(serverAmount) ? serverAmount : fallbackAmount
+      if (amount == null || !Number.isFinite(amount)) {
+        throw new Error(tPayments(locale, 'generateError'))
+      }
+      if (result.data?.deposit_due != null || result.data?.balance_due != null) {
+        setInvoice((current) =>
+          current
+            ? {
+                ...current,
+                deposit_due: Number(result.data.deposit_due ?? current.deposit_due),
+                balance_due: Number(result.data.balance_due ?? current.balance_due),
+                full_due: Number(result.data.full_due ?? current.full_due),
+              }
+            : current,
+        )
+      }
+      const share = buildShare(purpose, url, amount)
       setLastShare(share)
       return share
     } catch (err) {
@@ -233,6 +251,13 @@ export default function QuoteInvoicePanel({
             {tPayments(locale, 'paid')}: {displayCurrency} {invoice.paid_total.toFixed(2)} ·{' '}
             {tPayments(locale, 'invoiceOutstanding')}: {displayCurrency} {invoiceOutstanding.toFixed(2)}
           </p>
+          {shareAmounts.deposit != null && shareAmounts.balance != null ? (
+            <p data-testid="invoice-purpose-dues">
+              {tPayments(locale, 'deposit')} {tPayments(locale, 'amountDue')}: {displayCurrency}{' '}
+              {shareAmounts.deposit.toFixed(2)} · {tPayments(locale, 'originalBalance')}{' '}
+              {tPayments(locale, 'amountDue')}: {displayCurrency} {shareAmounts.balance.toFixed(2)}
+            </p>
+          ) : null}
           <div className="flex flex-wrap gap-2">
             <Link
               href={`/invoices/${invoice.id}`}

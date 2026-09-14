@@ -2,7 +2,7 @@ import 'server-only'
 
 import { confirmQuoteDepositAndReserveSchedule } from '@/Lib/quotes/confirmQuoteDepositAndReserveSchedule'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
-import { resolveAmountDue } from './amountDue'
+import { invoiceAmountContext, resolveServerAmountDue } from './loadInvoiceAmountDue'
 import { toInvoice } from './createInvoiceFromQuote'
 import { deriveInvoiceStatus, isDepositSatisfied } from './invoiceStatus'
 import type {
@@ -174,12 +174,10 @@ export async function recordPaymentAttempt(
     return { ok: false, status: 409, error: 'invoice_already_paid' }
   }
 
-  const due = resolveAmountDue({
-    total: invoice.total,
-    depositAmount: invoice.deposit_amount,
-    paidTotal: invoice.paid_total,
-    purpose: existingByOrder?.purpose ?? input.purpose,
-  })
+  const due = await resolveServerAmountDue(
+    invoiceAmountContext(invoice),
+    existingByOrder?.purpose ?? input.purpose,
+  )
   if (input.status === 'completed' && due.amount <= 0) {
     return { ok: false, status: 409, error: due.reason }
   }

@@ -4,6 +4,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 import { confirmQuoteDepositAndReserveSchedule } from '@/Lib/quotes/confirmQuoteDepositAndReserveSchedule'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
+import { resolveServerAmountDue } from './loadInvoiceAmountDue'
 import type { PaymentPurpose } from './types'
 
 export type ManualPaymentProvider = 'zelle' | 'bank_transfer'
@@ -109,9 +110,8 @@ export async function reconcileInvoiceLedger(companyId: string, invoiceId: strin
 
 /**
  * Confirms an externally verified Zelle/bank receipt.
- * Amount and ledger mutation are server-owned and committed atomically in Postgres.
- * Reservation sync runs afterwards and is idempotent; a scheduling failure never
- * rolls back evidence that money was already received.
+ * Amount is server-owned via resolveAmountDue + invoice_payments.purpose.
+ * Ledger paid_total is reconciled after insert. Reservation sync is idempotent.
  */
 export async function recordManualPayment(input: {
   companyId: string
@@ -128,6 +128,9 @@ export async function recordManualPayment(input: {
   }
   const purpose = normalizePurpose(input.purpose)
   if (!purpose) return { ok: false as const, status: 400, error: 'invalid_purpose' }
+  if (!input.actorUserId) {
+    return { ok: false as const, status: 400, error: 'actor_required' }
+  }
 
   const referenceHash = createHash('sha256')
     .update(`${input.provider}|${reference.toLowerCase()}`)
@@ -136,28 +139,120 @@ export async function recordManualPayment(input: {
   const idempotencyKey = `manual:${input.invoiceId}:${referenceHash}`
   const db = getSupabaseServerClient()
 
-  const { data, error } = await db.rpc('record_manual_invoice_payment', {
-    p_company_id: input.companyId,
-    p_invoice_id: input.invoiceId,
-    p_provider: input.provider,
-    p_purpose: purpose,
-    p_confirmation_reference: reference,
-    p_confirmation_note: input.confirmationNote?.trim() || null,
-    p_actor_user_id: input.actorUserId,
-    p_idempotency_key: idempotencyKey,
-  })
+  const { data: invoice, error: invoiceError } = await db
+    .from('invoices')
+    .select('id, quote_id, status, total, deposit_amount, balance_amount, paid_total, currency_code')
+    .eq('company_id', input.companyId)
+    .eq('id', input.invoiceId)
+    .maybeSingle()
 
-  if (error) {
-    const code = rpcErrorCode(error.message)
-    return { ok: false as const, status: rpcErrorStatus(code), error: code }
+  if (invoiceError || !invoice) {
+    return { ok: false as const, status: 404, error: 'invoice_not_found' }
+  }
+  if (invoice.status === 'canceled') {
+    return { ok: false as const, status: 409, error: 'invoice_canceled' }
   }
 
-  const result = rpcJson(data)
-  const paymentId = typeof result.payment_id === 'string' ? result.payment_id : input.invoiceId
-  const quoteId = typeof result.quote_id === 'string' ? result.quote_id : null
-  const paidTotal = money(result.paid_total)
-  const depositAmount = money(result.deposit_amount)
-  const duplicate = result.duplicate === true
+  const { data: pendingCancellation } = await db
+    .from('invoice_cancellations')
+    .select('id')
+    .eq('company_id', input.companyId)
+    .eq('invoice_id', input.invoiceId)
+    .in('status', ['requested', 'pending_refund'])
+    .maybeSingle()
+  if (pendingCancellation) {
+    return { ok: false as const, status: 409, error: 'invoice_cancellation_pending' }
+  }
+
+  const { data: existing } = await db
+    .from('invoice_payments')
+    .select('id, amount')
+    .eq('company_id', input.companyId)
+    .eq('idempotency_key', idempotencyKey)
+    .maybeSingle()
+
+  let paymentId = existing ? String(existing.id) : ''
+  let recordedAmount = existing ? money(existing.amount) : 0
+  let duplicate = Boolean(existing)
+
+  if (!existing) {
+    const due = await resolveServerAmountDue(
+      {
+        companyId: input.companyId,
+        invoiceId: input.invoiceId,
+        total: money(invoice.total),
+        depositAmount: money(invoice.deposit_amount),
+        balanceAmount: money(invoice.balance_amount),
+        paidTotal: money(invoice.paid_total),
+      },
+      purpose,
+    )
+    if (due.amount <= 0) {
+      return {
+        ok: false as const,
+        status: 409,
+        error: due.reason === 'deposit_already_paid' ? 'deposit_already_paid' : 'already_paid',
+      }
+    }
+
+    const now = new Date().toISOString()
+    const inserted = await db
+      .from('invoice_payments')
+      .insert({
+        company_id: input.companyId,
+        invoice_id: input.invoiceId,
+        provider: input.provider,
+        purpose,
+        amount: due.amount,
+        currency_code: String(invoice.currency_code || 'USD'),
+        status: 'completed',
+        idempotency_key: idempotencyKey,
+        confirmation_reference: reference,
+        confirmation_note: input.confirmationNote?.trim() || null,
+        confirmed_by: input.actorUserId,
+        confirmed_at: now,
+        captured_at: now,
+        metadata: {
+          manual_reconciliation: true,
+          evidence_type: 'external_reference',
+          amount_source: 'resolveAmountDue',
+        },
+      })
+      .select('id, amount')
+      .single()
+
+    if (inserted.error || !inserted.data) {
+      const raced = await db
+        .from('invoice_payments')
+        .select('id, amount')
+        .eq('company_id', input.companyId)
+        .eq('idempotency_key', idempotencyKey)
+        .maybeSingle()
+      if (!raced.data) {
+        return {
+          ok: false as const,
+          status: 500,
+          error: inserted.error?.message || 'finance_rpc_failed',
+        }
+      }
+      paymentId = String(raced.data.id)
+      recordedAmount = money(raced.data.amount)
+      duplicate = true
+    } else {
+      paymentId = String(inserted.data.id)
+      recordedAmount = money(inserted.data.amount)
+      duplicate = false
+    }
+  }
+
+  const reconciled = await reconcileInvoiceLedger(input.companyId, input.invoiceId)
+  if (!reconciled.ok) {
+    return { ok: false as const, status: rpcErrorStatus(reconciled.error), error: reconciled.error }
+  }
+
+  const quoteId = typeof reconciled.invoice.quote_id === 'string' ? reconciled.invoice.quote_id : null
+  const paidTotal = money(reconciled.invoice.paid_total)
+  const depositAmount = money(reconciled.invoice.deposit_amount)
 
   let reservation: unknown = null
   if (quoteId && depositAmount > 0 && paidTotal + 0.009 >= depositAmount) {
@@ -181,7 +276,7 @@ export async function recordManualPayment(input: {
       invoice_id: input.invoiceId,
       provider: input.provider,
       purpose,
-      amount: money(result.amount),
+      amount: recordedAmount,
       confirmation_reference: reference,
       duplicate,
       reservation,
@@ -192,11 +287,11 @@ export async function recordManualPayment(input: {
     ok: true as const,
     duplicate,
     paymentId,
-    amount: money(result.amount),
+    amount: recordedAmount,
     invoice: {
       id: input.invoiceId,
       quote_id: quoteId,
-      status: String(result.invoice_status || ''),
+      status: String(reconciled.invoice.status || ''),
       paid_total: paidTotal,
       deposit_amount: depositAmount,
     },

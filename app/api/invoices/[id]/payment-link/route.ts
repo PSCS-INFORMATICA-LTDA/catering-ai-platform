@@ -10,6 +10,7 @@ import {
   hashPaymentLinkToken,
   isPaymentPurpose,
 } from '@/Lib/payments/paymentLinks'
+import { invoiceAmountContext, resolveServerPurposeAmounts } from '@/Lib/payments/loadInvoiceAmountDue'
 import { createInvoicePaymentLink } from '@/Lib/payments/resolvePaymentLink'
 
 export const dynamic = 'force-dynamic'
@@ -63,6 +64,13 @@ export async function POST(request: Request, { params }: Params) {
     return Response.json({ error: created.error }, { status: 500 })
   }
 
+  const amounts = await resolveServerPurposeAmounts(invoiceAmountContext(invoice))
+  const amount =
+    purpose === 'deposit'
+      ? amounts.depositDue
+      : purpose === 'balance'
+        ? amounts.balanceDue
+        : amounts.fullDue
   const origin = new URL(request.url).origin
   return Response.json({
     data: {
@@ -70,6 +78,11 @@ export async function POST(request: Request, { params }: Params) {
       purpose,
       url: `${origin}/pay/${rawToken}`,
       token: rawToken,
+      amount,
+      currency: invoice.currency_code,
+      deposit_due: amounts.depositDue,
+      balance_due: amounts.balanceDue,
+      full_due: amounts.fullDue,
     },
   })
 }

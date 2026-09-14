@@ -5,6 +5,7 @@ import {
 } from '@/Lib/auth/requireApi'
 import { createInvoiceFromQuote } from '@/Lib/payments/createInvoiceFromQuote'
 import { ensureOfflineMethods } from '@/Lib/payments/companyProviders'
+import { invoiceAmountContext, loadInvoiceDueApiFields } from '@/Lib/payments/loadInvoiceAmountDue'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -35,6 +36,7 @@ export async function POST(_request: Request, { params }: Params) {
     return Response.json({ error: result.error }, { status: result.status })
   }
 
+  const due = await loadInvoiceDueApiFields(invoiceAmountContext(result.invoice))
   return Response.json({
     data: {
       id: result.invoice.id,
@@ -45,6 +47,7 @@ export async function POST(_request: Request, { params }: Params) {
       balance_amount: result.invoice.balance_amount,
       paid_total: result.invoice.paid_total,
       already_existed: result.alreadyExisted,
+      ...due,
     },
   })
 }
@@ -67,5 +70,21 @@ export async function GET(_request: Request, { params }: Params) {
     .neq('status', 'canceled')
     .maybeSingle()
 
-  return Response.json({ data: data ?? null })
+  if (!data) return Response.json({ data: null })
+
+  const due = await loadInvoiceDueApiFields({
+    companyId,
+    invoiceId: String(data.id),
+    total: Number(data.total),
+    depositAmount: Number(data.deposit_amount),
+    balanceAmount: Number(data.balance_amount),
+    paidTotal: Number(data.paid_total),
+  })
+
+  return Response.json({
+    data: {
+      ...data,
+      ...due,
+    },
+  })
 }

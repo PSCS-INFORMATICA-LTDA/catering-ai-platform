@@ -125,7 +125,7 @@ export default function InvoiceDetailView({
         <h2 className="text-sm font-black uppercase tracking-wider text-neutral-800">
           {tPayments(locale, 'financialSummary')}
         </h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <FinancialValue
             label={tPayments(locale, 'total')}
             value={formatMoney(invoice.total, invoice.currency_code, locale)}
@@ -141,6 +141,18 @@ export default function InvoiceDetailView({
           <FinancialValue
             label={tPayments(locale, 'paid')}
             value={formatMoney(invoice.paid_total, invoice.currency_code, locale)}
+          />
+          <FinancialValue
+            label={`${paymentPurposeLabel('deposit', locale)} — ${tPayments(locale, 'amountDue')}`}
+            value={formatMoney(invoice.deposit_due, invoice.currency_code, locale)}
+          />
+          <FinancialValue
+            label={`${paymentPurposeLabel('balance', locale)} — ${tPayments(locale, 'amountDue')}`}
+            value={formatMoney(invoice.balance_due, invoice.currency_code, locale)}
+          />
+          <FinancialValue
+            label={`${paymentPurposeLabel('full', locale)} — ${tPayments(locale, 'amountDue')}`}
+            value={formatMoney(invoice.full_due, invoice.currency_code, locale)}
           />
           <FinancialValue
             label={tPayments(locale, 'invoiceOutstanding')}

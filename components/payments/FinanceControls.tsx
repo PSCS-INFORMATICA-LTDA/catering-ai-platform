@@ -254,6 +254,17 @@ export default function FinanceControls({
                   <option value="full">{tFinanceControls(locale, 'full')}</option>
                 </select>
               </label>
+              <p data-testid="manual-purpose-amount" className="text-sm font-bold text-neutral-900">
+                {formatMoney(
+                  purpose === 'deposit'
+                    ? invoice.deposit_due
+                    : purpose === 'balance'
+                      ? invoice.balance_due
+                      : invoice.full_due,
+                  invoice.currency_code,
+                  locale,
+                )}
+              </p>
               <label className="block text-xs font-bold text-neutral-600">
                 {tFinanceControls(locale, 'receiptReference')}
                 <input value={confirmationReference} onChange={(event) => setConfirmationReference(event.target.value)} required minLength={3} placeholder={tFinanceControls(locale, 'receiptReferenceHint')} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900" />
