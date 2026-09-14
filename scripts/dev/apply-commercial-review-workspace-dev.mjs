@@ -1,6 +1,8 @@
 /**
- * Apply 20260914120000_commercial_review_workspace_v1 on Catering DEV only.
- * Probe-first. Never apply to PROD.
+ * Probe-first helper for commercial-review-workspace-v1 on Catering DEV only.
+ * Git filename matches DEV history: 20260914111651_commercial_review_workspace_v1.
+ * Do not reapply SQL when the columns already exist. Never apply to PROD.
+ * See docs/qa/commercial-review-migration-reconciliation.md
  */
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -14,7 +16,7 @@ const sqlPath = join(
   root,
   'supabase',
   'migrations',
-  '20260914120000_commercial_review_workspace_v1.sql',
+  '20260914111651_commercial_review_workspace_v1.sql',
 )
 
 function parseEnvFile(path) {

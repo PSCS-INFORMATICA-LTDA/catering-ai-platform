@@ -47,6 +47,10 @@ After #48 is validated/merged, retarget/rebase this branch carefully. Do not rew
 
 No second pricing engine. No second coupon RPC. No second share system. No PSCS One FK.
 
+## Migration history
+
+DEV applied this schema as `20260914111651_commercial_review_workspace_v1`. Git previously stored the same SQL as `20260914120000_…`. The file was renamed only. See `docs/qa/commercial-review-migration-reconciliation.md`. Do not reapply. Do not edit `schema_migrations`.
+
 ## Financial source of truth
 
 `readCommercialFinancialSummary()` only reads `pricing_breakdown` (fallback: persisted quote columns). It never invents a payable total.
