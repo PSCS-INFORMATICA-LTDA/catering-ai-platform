@@ -1,5 +1,5 @@
 /**
- * Probe-first helper for 20260914183400_deprecate_get_public_quote_proposal.
+ * Probe-first helper for 20260914185622_deprecate_get_public_quote_proposal.
  * Catering DEV only (yasprgtlqclwsjcshtls). Never apply to PROD.
  * Does not DROP the function. Does not rewrite the function body.
  * Does not edit schema_migrations.
@@ -16,7 +16,7 @@ import { classifyProposalRpcCall } from './publicProposalRpcHardening.mjs'
 
 const API_BASE = 'https://api.supabase.com'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
-const MIGRATION = '20260914183400_deprecate_get_public_quote_proposal.sql'
+const MIGRATION = '20260914185622_deprecate_get_public_quote_proposal.sql'
 const sqlPath = join(root, 'supabase', 'migrations', MIGRATION)
 const DUMMY_TOKEN = 'qa-rpc-hardening-probe-token-32chars-min'
 

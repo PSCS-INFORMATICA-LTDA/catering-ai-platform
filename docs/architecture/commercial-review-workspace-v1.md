@@ -76,7 +76,7 @@ Legacy proposals with `proposal_shared_version_id` NULL keep a documented live-q
 
 Customer accept/reject records `accepted_version_id = proposal_shared_version_id` on accept. No second proposal model.
 
-The SQL RPC `get_public_quote_proposal(text)` is kept in the database but is **no longer part of the public API**. Incremental DEV migration `20260914183400_deprecate_get_public_quote_proposal` revokes `EXECUTE` from `PUBLIC`, `anon`, `authenticated`, and `service_role`. The function is not dropped and its body is not rewritten. There is no second snapshot engine in PL/pgSQL.
+The SQL RPC `get_public_quote_proposal(text)` is kept in the database but is **no longer part of the public API**. Incremental DEV migration `20260914185622_deprecate_get_public_quote_proposal` revokes `EXECUTE` from `PUBLIC`, `anon`, `authenticated`, and `service_role`. The function is not dropped and its body is not rewritten. There is no second snapshot engine in PL/pgSQL. Git filename matches DEV history. See `docs/qa/public-proposal-rpc-hardening-reconciliation.md`.
 
 The Next.js public surface is the only reconstruction path. See `docs/qa/public-proposal-rpc-hardening.md`.
 

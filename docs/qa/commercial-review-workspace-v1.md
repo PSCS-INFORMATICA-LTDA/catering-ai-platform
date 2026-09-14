@@ -42,7 +42,7 @@
 
 Migration filename on Git must match DEV history: `20260914111651_commercial_review_workspace_v1.sql`. See `docs/qa/commercial-review-migration-reconciliation.md`.
 
-Legacy public RPC hardening: `20260914183400_deprecate_get_public_quote_proposal.sql`. See `docs/qa/public-proposal-rpc-hardening.md`. Do not DROP the function. Do not rebuild it in SQL.
+Legacy public RPC hardening: `20260914185622_deprecate_get_public_quote_proposal.sql`. See `docs/qa/public-proposal-rpc-hardening.md` and `docs/qa/public-proposal-rpc-hardening-reconciliation.md`. Do not DROP the function. Do not rebuild it in SQL. Do not reapply.
 
 ## Commands
 

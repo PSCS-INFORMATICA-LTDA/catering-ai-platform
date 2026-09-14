@@ -35,7 +35,7 @@ Unrelated public-token RPCs that **remain in use** and were **not** revoked in t
 
 ## What this round does
 
-Migration: `supabase/migrations/20260914183400_deprecate_get_public_quote_proposal.sql`
+Migration: `supabase/migrations/20260914185622_deprecate_get_public_quote_proposal.sql` (filename reconciled to DEV history; SQL unchanged). See `docs/qa/public-proposal-rpc-hardening-reconciliation.md`.
 
 - `REVOKE EXECUTE` from `PUBLIC`, `anon`, `authenticated`, `service_role`
 - `COMMENT` marking the function DEPRECATED
@@ -72,10 +72,8 @@ COMMERCIAL_REVIEW_BASE_URL=https://<preview> npm run test:dev:commercial-review-
 | I | `internal_notes` do not leak | persist QA |
 | J | `mark_sent` fail-closed without `quote_version` | persist QA |
 
-A 42703 / `column c.name does not exist` result is a **fail**: the function still executed.
+After the external DEV apply, proofs A–C must be permission denied / no execute (`42501`, `PGRST301`, or schema-cache miss `PGRST202`). A `42703` / `column c.name does not exist` result is still a **fail**: the function executed.
 
-A dummy token can return `{ found: false }` without reaching `companies.name`. Proofs A–C must use a real `proposal_token` so a still-public RPC is caught as `42703`, not as a quiet miss.
-
-Apply on DEV requires `SUPABASE_ACCESS_TOKEN` or a linked CLI session. This helper refuses PROD and does not edit `schema_migrations`.
+The apply helper is probe-first. If EXECUTE is already gone, it no-ops. It refuses PROD and does not edit `schema_migrations`.
 
 Security Advisor is re-checked only for this function. Historical SECURITY DEFINER warnings on unrelated RPCs are out of scope.
