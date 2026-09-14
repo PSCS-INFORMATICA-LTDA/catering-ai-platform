@@ -494,8 +494,9 @@ async function main() {
   )
   record(
     'T62-company-branding',
-    /CDL|Catering AI/i.test(htmlAfter) && !htmlAfter.includes('>CDL BBQ AT HOME<'),
-    'brand present',
+    /CDL/i.test(String(publicAfter.data?.company_name || htmlAfter)) &&
+      !htmlAfter.includes('>CDL BBQ AT HOME<'),
+    publicAfter.data?.company_name || 'missing-company',
   )
 
   const forged = await jsonFetch(`/api/public/proposta/${token}/payment-link`, {

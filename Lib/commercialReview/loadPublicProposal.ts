@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
+import { resolveTenantCompanyDisplayName } from '@/Lib/tenant/companyDisplayName'
 import type { QuoteDetail } from '@/app/quotes/[id]/quoteDetailTypes'
 import { fetchQuoteDetail } from '@/Lib/fetchQuoteDetail'
 import {
@@ -223,7 +224,7 @@ export async function loadPublicProposalByToken(
   const [companyRes, customerRes, eventRes, packageInfo] = await Promise.all([
     db
       .from('companies')
-      .select('name, trade_name')
+      .select('id, company_name, trade_name, legal_name')
       .eq('id', row.company_id)
       .maybeSingle(),
     row.customer_id
@@ -256,7 +257,7 @@ export async function loadPublicProposalByToken(
     source,
     proposal_shared_version_id: sharedVersionId,
     company_name:
-      companyRes.data?.trade_name || companyRes.data?.name || 'Catering AI',
+      resolveTenantCompanyDisplayName(companyRes.data) || 'Catering AI',
     proposal_response: row.proposal_response ?? 'pending',
     proposal_sent_at: row.proposal_sent_at,
     can_respond:
