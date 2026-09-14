@@ -51,16 +51,26 @@ async function columnsExist(url, service) {
   const db = createClient(url, service, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
-  const { error } = await db
-    .from('quotes')
-    .select('id, internal_notes, proposal_shared_version_id, proposal_shared_by')
-    .limit(1)
-  if (!error) return { ok: true, via: 'select' }
-  const text = [error.message, error.code].filter(Boolean).join(' ')
-  if (/column|internal_notes|proposal_shared/i.test(text)) {
-    return { ok: false, via: 'missing', text }
+  const wanted = [
+    'internal_notes',
+    'proposal_shared_version_id',
+    'proposal_shared_by',
+  ]
+  const present = []
+  const missing = []
+  for (const column of wanted) {
+    const { error } = await db.from('quotes').select(column).limit(1)
+    if (!error) present.push(column)
+    else missing.push(column)
   }
-  return { ok: false, via: 'other', text }
+  if (missing.length === 0) return { ok: true, via: 'select', present, missing }
+  return {
+    ok: false,
+    via: 'missing',
+    present,
+    missing,
+    text: missing.join(','),
+  }
 }
 
 async function main() {
@@ -74,6 +84,7 @@ async function main() {
         target_project_ref: DEV_REF,
         applied: false,
         already_present: true,
+        present: already.present,
         prod_untouched: true,
       }),
     )
@@ -86,6 +97,8 @@ async function main() {
         target_project_ref: DEV_REF,
         applied: false,
         already_present: false,
+        present: already.present,
+        missing: already.missing,
         blocked: 'missing_supabase_access_token',
         prod_untouched: true,
       }),

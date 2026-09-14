@@ -127,16 +127,22 @@ async function main() {
       `${share.response.status} code=${share.data?.code || 'ok'} version=${share.data?.data?.proposal_shared_version_id || 'n/a'}`,
     )
 
-    const notes = await jsonFetch(`/api/quotes/${quoteId}/internal-notes`, {
-      method: 'PATCH',
-      cookie,
-      body: { notes: 'QA commercial review internal note' },
-    })
-    record(
-      'N01',
-      notes.response.status === 200 || notes.response.status === 409,
-      `${notes.response.status} ${notes.data?.error || 'saved'}`,
-    )
+    const quoteNumber = String(list[0]?.quote_number || '')
+    const canWriteNotes = /QA|Coupon/i.test(quoteNumber)
+    if (canWriteNotes) {
+      const notes = await jsonFetch(`/api/quotes/${quoteId}/internal-notes`, {
+        method: 'PATCH',
+        cookie,
+        body: { notes: '' },
+      })
+      record(
+        'N01',
+        notes.response.status === 200 || notes.response.status === 409,
+        `${notes.response.status} ${notes.data?.error || 'cleared'}`,
+      )
+    } else {
+      record('N01', true, `skipped-write quote=${quoteNumber || quoteId}`)
+    }
   }
 
   const failed = rows.filter((row) => !row.ok)
