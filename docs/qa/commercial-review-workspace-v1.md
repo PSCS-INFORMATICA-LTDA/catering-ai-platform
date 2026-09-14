@@ -37,8 +37,12 @@
 | Z | Public proposal stays on pinned version | After V2, same token still returns V1 totals/coupon |
 | AA | Public/shared PDF stays on V1 | `/api/public/proposta/{token}/pdf` and workspace PDF |
 | AB | Fail-closed share | No `quote_version` → 409 `quote_version_required`; `proposal_sent_at` unchanged |
+| AC | Customer accept uses shared pin | Public POST accept writes `accepted_version_id = proposal_shared_version_id` even after live V2 |
+| AD | Legacy public RPC revoked | `get_public_quote_proposal` has no EXECUTE for anon / authenticated / service_role |
 
 Migration filename on Git must match DEV history: `20260914111651_commercial_review_workspace_v1.sql`. See `docs/qa/commercial-review-migration-reconciliation.md`.
+
+Legacy public RPC hardening: `20260914183400_deprecate_get_public_quote_proposal.sql`. See `docs/qa/public-proposal-rpc-hardening.md`. Do not DROP the function. Do not rebuild it in SQL.
 
 ## Commands
 
@@ -48,6 +52,8 @@ npm run typecheck
 npx eslint Lib/commercialReview components/commercial-review app/quotes/[id]/page.tsx app/api/quotes/[id]/proposal/route.ts app/api/quotes/[id]/internal-notes/route.ts Lib/i18n/commercialReview.ts
 npm run build
 node scripts/dev/apply-commercial-review-workspace-dev.mjs
+node scripts/dev/apply-deprecate-public-quote-proposal-dev.mjs
+node scripts/dev/test-public-proposal-rpc-hardening.mjs
 COMMERCIAL_REVIEW_BASE_URL=https://<preview> node scripts/dev/test-commercial-review-http.mjs
 COMMERCIAL_REVIEW_BASE_URL=https://<preview> npm run test:dev:commercial-review-persist-qa
 npm run test:dev:coupon-persist-qa
