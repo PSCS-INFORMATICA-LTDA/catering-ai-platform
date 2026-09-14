@@ -188,6 +188,35 @@ export async function getCurrentQuoteVersionNumber(quoteId: string): Promise<num
   return (data?.version_number as number | undefined) ?? 0
 }
 
+export async function getCurrentQuoteVersion(
+  companyId: string,
+  quoteId: string,
+): Promise<{ data: QuoteVersionRow | null; error: { message: string } | null }> {
+  const supabase = getSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('quote_versions')
+    .select('*')
+    .eq('company_id', companyId)
+    .eq('quote_id', quoteId)
+    .eq('is_current', true)
+    .maybeSingle()
+  if (error) return { data: null, error: { message: error.message } }
+  return { data: (data as QuoteVersionRow | null) ?? null, error: null }
+}
+
+export async function ensureCurrentQuoteVersion(
+  companyId: string,
+  quoteId: string,
+  options: { createdBy?: string | null } = {},
+): Promise<{ data: QuoteVersionRow | null; error: { message: string } | null }> {
+  const existing = await getCurrentQuoteVersion(companyId, quoteId)
+  if (existing.error) return existing
+  if (existing.data) return existing
+  return createQuoteVersion(companyId, quoteId, {
+    createdBy: options.createdBy ?? null,
+  })
+}
+
 export type CreateQuoteVersionOptions = {
   createdBy?: string | null
   markAccepted?: boolean

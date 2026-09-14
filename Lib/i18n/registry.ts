@@ -4,6 +4,7 @@ import { listChromeI18nEntries } from './chrome.ts'
 import { listCommercialRulesI18nEntries } from './commercialRules.ts'
 import { listCommonI18nEntries } from './common.ts'
 import { listCompanySettingsI18nEntries } from './companySettings.ts'
+import { listCommercialReviewI18nEntries } from './commercialReview.ts'
 import { listCouponsI18nEntries } from './coupons.ts'
 import { listCustomersI18nEntries } from './customers.ts'
 import { listDictionaryUiI18nEntries } from './dictionaryUi.ts'
@@ -47,6 +48,7 @@ export function buildTranslationRegistry(): TranslationRegistryEntry[] {
     ...listPackagesI18nEntries(),
     ...listCommercialRulesI18nEntries(),
     ...listCouponsI18nEntries(),
+    ...listCommercialReviewI18nEntries(),
     ...listInventoryUiI18nEntries(),
     ...listMediaI18nEntries(),
     ...listCompanySettingsI18nEntries(),
