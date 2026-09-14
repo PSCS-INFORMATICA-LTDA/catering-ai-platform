@@ -60,7 +60,27 @@ async function snapshot(page, id) {
 
 async function clickNav(page, href) {
   await page.waitForSelector(`a.catering-sidebar-nav-btn[href="${href}"]`, { timeout: 8000 })
-  await page.click(`a.catering-sidebar-nav-btn[href="${href}"]`)
+  const clicked = await page.evaluate((h) => {
+    const links = [...document.querySelectorAll(`a.catering-sidebar-nav-btn[href="${h}"]`)]
+    const el =
+      links.find((a) => {
+        const style = window.getComputedStyle(a)
+        return style.visibility !== 'hidden' && a.getClientRects().length > 0
+      }) || links[0]
+    if (!el) return false
+    el.scrollIntoView({ block: 'center', inline: 'nearest' })
+    el.click()
+    return true
+  }, href)
+  if (!clicked) throw new Error(`nav link ${href} not found`)
+  await page.waitForFunction(
+    (h) => {
+      if (h === '/quotes') return location.pathname === '/quotes'
+      return location.pathname === h || location.pathname.startsWith(`${h}/`)
+    },
+    { timeout: 15000 },
+    href,
+  )
   await waitQuiet(page)
 }
 
@@ -129,7 +149,17 @@ try {
     return link ? link.getAttribute('href') : null
   })
   if (quoteHref) {
-    await page.click(`a[href="${quoteHref}"]`)
+    await page.evaluate((href) => {
+      const link = document.querySelector(`a[href="${href}"]`)
+      link?.scrollIntoView({ block: 'center' })
+      link?.click()
+    }, quoteHref)
+    await page.waitForFunction(
+      () =>
+        /\/quotes\/[^/]+$/.test(location.pathname) &&
+        Boolean(document.querySelector('[data-testid="commercial-review-workspace"]')),
+      { timeout: 20000 },
+    )
     await waitQuiet(page)
     const detail = await page.evaluate(() => ({
       url: location.pathname,
@@ -142,7 +172,7 @@ try {
         finance: /financeiro|finance|dep[oó]sito|deposit/i.test(document.body.innerText),
         coupon: /cupom|coupon/i.test(document.body.innerText),
         capacity: /capacidade|capacity/i.test(document.body.innerText),
-        notes: /notas internas|internal notes/i.test(document.body.innerText),
+        notes: /observa[cç][oõ]es internas|internal notes|notas internas/i.test(document.body.innerText),
         proposal: /proposta|proposal|pdf|share|compartilhar/i.test(document.body.innerText),
         history: /hist[oó]rico|history/i.test(document.body.innerText),
       },
@@ -194,7 +224,14 @@ try {
   record('N08-refresh-same', refresh.url === '/coupons' && refresh.page, JSON.stringify(refresh))
   await snapshot(page, '08-refresh-coupons')
 
-  await page.goBack({ waitUntil: 'networkidle2' })
+  await page.goBack()
+  await page.waitForFunction(
+    () =>
+      location.pathname.startsWith('/packages') &&
+      Boolean(document.querySelector('[data-testid="packages-dashboard"]')),
+    { timeout: 15000 },
+  )
+  await waitQuiet(page)
   const back = await page.evaluate(() => ({
     url: location.pathname,
     page: Boolean(document.querySelector('[data-testid="packages-dashboard"]')),
@@ -202,7 +239,14 @@ try {
   record('N09-back', back.url.startsWith('/packages') && back.page, JSON.stringify(back))
   await snapshot(page, '09-back-packages')
 
-  await page.goForward({ waitUntil: 'networkidle2' })
+  await page.goForward()
+  await page.waitForFunction(
+    () =>
+      location.pathname === '/coupons' &&
+      Boolean(document.querySelector('[data-testid="coupons-dashboard"]')),
+    { timeout: 15000 },
+  )
+  await waitQuiet(page)
   const forward = await page.evaluate(() => ({
     url: location.pathname,
     page: Boolean(document.querySelector('[data-testid="coupons-dashboard"]')),

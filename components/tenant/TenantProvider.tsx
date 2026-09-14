@@ -108,11 +108,18 @@ export function TenantProvider({
     localeRef.current = locale
   }, [locale])
 
-  useEffect(() => {
-    if (publicRoute || !initialTenantContext) return
+  const [appliedInitial, setAppliedInitial] = useState(initialTenantContext)
+  if (!publicRoute && initialTenantContext && initialTenantContext !== appliedInitial) {
+    setAppliedInitial(initialTenantContext)
     const resolved = applyStoredBranch(initialTenantContext)
+    setCompanyId(initialTenantContext.companyId)
+    setCompany(initialTenantContext.company)
+    setBranches(initialTenantContext.branches)
+    setRole(initialTenantContext.role)
+    setFeatureFlags(initialTenantContext.featureFlags)
     setBranchIdState(resolved.branchId)
-  }, [publicRoute, initialTenantContext])
+    if (initialTenantContext.company) setLoading(false)
+  }
 
   const retriedMissingCompany = useRef(false)
   useEffect(() => {

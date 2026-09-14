@@ -281,7 +281,11 @@ export default function QuotesDashboard({
     const next = params.toString()
     const current = window.location.search.replace(/^\?/, '')
     if (next !== current) {
-      window.history.replaceState(null, '', next ? `/quotes?${next}` : '/quotes')
+      window.history.replaceState(
+        window.history.state,
+        '',
+        next ? `/quotes?${next}` : '/quotes',
+      )
     }
     if (skipFirstEmptyRefresh.current && isDefaultFilters(filters)) {
       skipFirstEmptyRefresh.current = false
