@@ -1,89 +1,39 @@
-import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
 import { ImageResponse } from 'next/og'
-import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { loadCompanyOgBrand } from '@/Lib/payments/loadPaymentOgBrand'
 import {
-  companyLogoStoragePath,
-  isAppPublicLogoPath,
   isCompanyOgId,
   paymentOgDescription,
+  resolveOgLogoSrc,
 } from '@/Lib/payments/paymentOgCopy'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const SIZE = { width: 1200, height: 630 }
-const MAX_LOGO_BYTES = 1_500_000
-const ALLOWED_LOGO_MIME = /^(image\/png|image\/jpeg|image\/jpg|image\/webp|image\/gif)/i
-
-async function asDataUri(buffer: Buffer, mime: string): Promise<string | null> {
-  if (!ALLOWED_LOGO_MIME.test(mime) || buffer.length > MAX_LOGO_BYTES) return null
-  return `data:${mime};base64,${buffer.toString('base64')}`
-}
-
-function mimeFromPath(path: string): string {
-  if (/\.webp$/i.test(path)) return 'image/webp'
-  if (/\.jpe?g$/i.test(path)) return 'image/jpeg'
-  if (/\.gif$/i.test(path)) return 'image/gif'
-  return 'image/png'
-}
 
 function ogWords(text: string, fontSize: number, extra: Record<string, string | number> = {}) {
   const parts = String(text || '')
     .split(/\s+/)
     .filter(Boolean)
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', fontSize, ...extra }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: Math.max(8, Math.round(fontSize * 0.28)),
+        fontSize,
+        ...extra,
+      }}
+    >
       {parts.map((word, index) => (
-        <span
-          key={`${index}-${word}`}
-          style={{ marginRight: index === parts.length - 1 ? 0 : Math.round(fontSize * 0.22) }}
-        >
+        <div key={`${index}-${word}`} style={{ display: 'flex' }}>
           {word}
-        </span>
+        </div>
       ))}
     </div>
   )
-}
-
-async function loadLogoDataUri(
-  logoUrl: string | null,
-  requestOrigin: string,
-): Promise<string | null> {
-  if (!logoUrl) return null
-  try {
-    const storagePath = companyLogoStoragePath(logoUrl)
-    if (storagePath) {
-      const { data, error } = await getSupabaseServerClient()
-        .storage.from('company-logos')
-        .download(storagePath)
-      if (error || !data) return null
-      const buffer = Buffer.from(await data.arrayBuffer())
-      return asDataUri(buffer, data.type || 'image/png')
-    }
-    if (isAppPublicLogoPath(logoUrl)) {
-      try {
-        const filePath = join(process.cwd(), 'public', logoUrl.replace(/^\//, ''))
-        const buffer = await readFile(filePath)
-        return asDataUri(buffer, mimeFromPath(filePath))
-      } catch {
-        const response = await fetch(`${requestOrigin}${logoUrl}`, { cache: 'no-store' })
-        if (!response.ok) return null
-        const buffer = Buffer.from(await response.arrayBuffer())
-        const mime = response.headers.get('content-type') || mimeFromPath(logoUrl)
-        return asDataUri(buffer, mime)
-      }
-    }
-    if (!/^https:\/\/[a-z0-9-]+\.supabase\.co\//i.test(logoUrl)) return null
-    const response = await fetch(logoUrl, { cache: 'no-store' })
-    if (!response.ok) return null
-    const buffer = Buffer.from(await response.arrayBuffer())
-    const mime = response.headers.get('content-type') || 'image/png'
-    return asDataUri(buffer, mime)
-  } catch {
-    return null
-  }
 }
 
 export async function GET(
@@ -91,6 +41,7 @@ export async function GET(
   { params }: { params: Promise<{ companyId: string }> },
 ) {
   const { companyId } = await params
+  const origin = new URL(request.url).origin
   const brand = isCompanyOgId(companyId)
     ? await loadCompanyOgBrand(companyId)
     : {
@@ -100,7 +51,7 @@ export async function GET(
         locale: 'pt' as const,
         description: paymentOgDescription('pt'),
       }
-  const logoSrc = await loadLogoDataUri(brand.logoUrl, new URL(request.url).origin)
+  const logoSrc = resolveOgLogoSrc(brand.logoUrl, origin)
   const initials =
     brand.displayName
       .split(/\s+/)
@@ -125,27 +76,27 @@ export async function GET(
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
           {logoSrc ? (
-            // ImageResponse requires a raw img; next/image is not available here.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={logoSrc}
-              alt=""
-              width={180}
-              height={180}
+            <div
               style={{
-                width: 180,
-                height: 180,
-                objectFit: 'contain',
+                width: 196,
+                height: 196,
                 borderRadius: 28,
                 background: '#ffffff',
-                padding: 16,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 12,
               }}
-            />
+            >
+              {/* ImageResponse requires a raw img; next/image is not available here. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoSrc} alt="" width={172} height={172} />
+            </div>
           ) : (
             <div
               style={{
-                width: 180,
-                height: 180,
+                width: 196,
+                height: 196,
                 borderRadius: 28,
                 background: '#f59e0b',
                 color: '#111827',
@@ -160,16 +111,8 @@ export async function GET(
             </div>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 760 }}>
-            {ogWords('Catering AI', 22, {
-              letterSpacing: 4,
-              textTransform: 'uppercase',
-              opacity: 0.7,
-            })}
-            {ogWords(brand.displayName, 58, {
-              fontWeight: 800,
-              lineHeight: 1.1,
-              marginTop: 12,
-            })}
+            {ogWords('Catering AI', 22, { opacity: 0.7 })}
+            {ogWords(brand.displayName, 52, { fontWeight: 800, marginTop: 12 })}
             {ogWords(brand.description, 28, { marginTop: 20, opacity: 0.85 })}
           </div>
         </div>

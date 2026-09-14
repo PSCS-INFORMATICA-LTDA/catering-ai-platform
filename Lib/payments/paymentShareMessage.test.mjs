@@ -15,6 +15,7 @@ import {
   isCompanyOgId,
   paymentOgDescription,
   paymentOgMetadataIsSafe,
+  resolveOgLogoSrc,
   resolvePaymentOgOrigin,
 } from './paymentOgCopy.ts'
 
@@ -188,6 +189,11 @@ test('registered public logo paths stay readable without a second company table'
   assert.equal(isAppPublicLogoPath('/brand/catering-logo-dark.png'), true)
   assert.equal(isAppPublicLogoPath('/api/public/company-brand/x/og'), false)
   assert.equal(isAppPublicLogoPath('../secret.png'), false)
+  assert.equal(
+    resolveOgLogoSrc('/cdl/logo.png', 'https://preview.example'),
+    'https://preview.example/cdl/logo.png',
+  )
+  assert.equal(resolveOgLogoSrc(null, 'https://preview.example'), null)
 })
 
 test('i18n payment share keys exist in PT/EN/ES', () => {

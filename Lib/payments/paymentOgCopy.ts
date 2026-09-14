@@ -15,6 +15,18 @@ export function isCompanyOgId(value: string | null | undefined): boolean {
   return COMPANY_OG_ID_RE.test(String(value || '').trim())
 }
 
+export function resolveOgLogoSrc(
+  logoUrl: string | null | undefined,
+  requestOrigin: string,
+): string | null {
+  const value = String(logoUrl || '').trim()
+  if (!value) return null
+  if (isAppPublicLogoPath(value)) return `${requestOrigin.replace(/\/$/, '')}${value}`
+  if (companyLogoStoragePath(value) && /^https:\/\//i.test(value)) return value
+  if (/^https:\/\/[a-z0-9-]+\.supabase\.co\//i.test(value)) return value
+  return null
+}
+
 export function isAppPublicLogoPath(logoUrl: string | null | undefined): boolean {
   const value = String(logoUrl || '').trim()
   if (!value.startsWith('/') || value.startsWith('//') || value.includes('..')) return false
