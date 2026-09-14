@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { decideCouponApplicationClient } from '@/Lib/coupons/decideCouponApplicationClient'
 import { tCoupons } from '@/Lib/i18n/coupons'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 
@@ -425,13 +426,8 @@ export default function CouponsDashboard() {
     setSaving(true)
     setError(null)
     try {
-      const response = await fetch('/api/coupons/applications', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, action }),
-      })
-      const result = (await response.json().catch(() => ({}))) as { error?: string }
-      if (!response.ok) throw new Error(result.error || tCoupons(locale, 'decideError'))
+      const result = await decideCouponApplicationClient(id, action)
+      if (!result.ok) throw new Error(result.data.error || tCoupons(locale, 'decideError'))
       await load()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : tCoupons(locale, 'decideError'))

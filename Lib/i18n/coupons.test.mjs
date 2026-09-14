@@ -16,6 +16,12 @@ describe('coupon i18n', () => {
     assert.doesNotMatch(tCoupons('pt', 'placeholder'), /CDL10|WELCOME/i)
     assert.doesNotMatch(tCoupons('en', 'placeholder'), /CDL10|WELCOME/i)
     assert.doesNotMatch(tCoupons('es', 'placeholder'), /CDL10|WELCOME/i)
+    assert.equal(
+      tCoupons('pt', 'shareBlockedPending'),
+      'Decida o cupom pendente antes de compartilhar a proposta.',
+    )
+    assert.match(tCoupons('en', 'shareBlockedPending'), /before sharing the proposal/i)
+    assert.match(tCoupons('es', 'shareBlockedPending'), /antes de compartir la propuesta/i)
   })
 
   it('maps internal reasons to commercial copy without leaking postgres text', () => {

@@ -370,6 +370,21 @@ const { t, list } = makeI18nModule('coupons', 'commercial', {
     en: 'A coupon is pending approval on this quote.',
     es: 'Hay un cupón pendiente de aprobación en esta cotización.',
   },
+  shareBlockedPending: {
+    pt: 'Decida o cupom pendente antes de compartilhar a proposta.',
+    en: 'Decide the pending coupon before sharing the proposal.',
+    es: 'Decida el cupón pendiente antes de compartir la propuesta.',
+  },
+  quoteReviewDecisionTitle: {
+    pt: 'Cupom desta cotação',
+    en: 'Coupon on this quote',
+    es: 'Cupón de esta cotización',
+  },
+  quoteReviewReadOnly: {
+    pt: 'Somente quem gerencia cupons pode aprovar ou rejeitar.',
+    en: 'Only coupon managers can approve or reject.',
+    es: 'Solo quien gestiona cupones puede aprobar o rechazar.',
+  },
   customerFallback: { pt: 'Cliente', en: 'Customer', es: 'Cliente' },
   quoteFallback: { pt: 'Cotação', en: 'Quote', es: 'Cotización' },
   packageFallback: { pt: 'Pacote', en: 'Package', es: 'Paquete' },

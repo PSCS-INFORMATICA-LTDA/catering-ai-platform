@@ -2,6 +2,7 @@ import {
   requireApiPermission,
   resolveAuthorizedCompanyId,
 } from '@/Lib/auth/requireApi'
+import { quoteHasPendingCoupon } from '@/Lib/coupons/resolveCoupon'
 import { newProposalToken } from '@/Lib/quoteProposal'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
@@ -67,6 +68,17 @@ export async function POST(request: Request, { params }: Params) {
   }
   if (!quote || quote.active === false) {
     return Response.json({ error: 'Cotação não encontrada' }, { status: 404 })
+  }
+
+  const pendingCoupon = await quoteHasPendingCoupon(companyId, id)
+  if (!pendingCoupon.ok) {
+    return Response.json({ error: pendingCoupon.error }, { status: 500 })
+  }
+  if (pendingCoupon.pending) {
+    return Response.json({
+      error: 'Decida o cupom pendente antes de compartilhar a proposta.',
+      code: 'coupon_approval_pending',
+    }, { status: 409 })
   }
 
   const db = getSupabaseServerClient()

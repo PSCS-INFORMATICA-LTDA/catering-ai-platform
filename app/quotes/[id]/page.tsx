@@ -53,12 +53,16 @@ export default async function QuoteDetailPage({
       (hasPermission(session?.permissions, 'quotes.manage') &&
         hasPermission(session?.permissions, 'finance.invoices.view')),
   )
+  const canManageCoupons = Boolean(
+    session?.isPlatformAdmin || hasPermission(session?.permissions, 'commercial.coupons.manage'),
+  )
 
   return (
     <QuoteDetailView
       quote={data as QuoteDetail}
       canConvert={canConvert}
       canManageInvoice={canManageInvoice}
+      canManageCoupons={canManageCoupons}
       uiLocale={uiLocale}
     />
   )

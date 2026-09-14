@@ -19,6 +19,7 @@ import {
   normalizeWhatsAppPhone,
 } from '@/Lib/whatsapp'
 import { glassAction, glassBtn } from '@/Lib/liquidGlass'
+import { tCoupons } from '@/Lib/i18n/coupons'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
 import { tCommon } from '@/Lib/i18n/common'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
@@ -74,6 +75,7 @@ export default function QuoteProposalSharePanel({
   minimumOrderAdjustment,
   minimumOrderAmount,
   commercialReason,
+  pendingManualCoupon = false,
   initial,
   uiLocale: uiLocaleProp,
 }: {
@@ -131,6 +133,7 @@ export default function QuoteProposalSharePanel({
     | 'us_holiday'
     | 'none'
     | null
+  pendingManualCoupon?: boolean
   initial?: Partial<ProposalState> | null
   uiLocale?: string | null
 }) {
@@ -298,6 +301,10 @@ export default function QuoteProposalSharePanel({
 
   const markSent = useCallback(
     async (action: 'mark_sent' | 'follow_up' | 'ensure_token' = 'mark_sent') => {
+      if (pendingManualCoupon) {
+        setError(tCoupons(uiLocale, 'shareBlockedPending'))
+        return null
+      }
       setBusy(true)
       setError(null)
       try {
@@ -345,7 +352,7 @@ export default function QuoteProposalSharePanel({
         setBusy(false)
       }
     },
-    [quoteId, uiLocale],
+    [pendingManualCoupon, quoteId, uiLocale],
   )
 
   async function ensureReady() {
@@ -394,7 +401,15 @@ export default function QuoteProposalSharePanel({
         </span>
       </div>
 
-      {publicUrl ? (
+      {pendingManualCoupon ? (
+        <p
+          role="alert"
+          data-testid="coupon-share-blocked"
+          className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950"
+        >
+          {tCoupons(uiLocale, 'shareBlockedPending')}
+        </p>
+      ) : publicUrl ? (
         <p className="break-all rounded-xl border border-cdl-border bg-cdl-inset px-3 py-2 text-xs text-cdl-fg">
           {publicUrl}
         </p>
@@ -410,7 +425,7 @@ export default function QuoteProposalSharePanel({
         <button
           type="button"
           className={glassBtn('primary')}
-          disabled={busy}
+          disabled={busy || pendingManualCoupon}
           onClick={() => void markSent('mark_sent')}
         >
           {state.proposal_sent_at
@@ -420,14 +435,14 @@ export default function QuoteProposalSharePanel({
         <button
           type="button"
           className={glassBtn('secondary')}
-          disabled={busy}
+          disabled={busy || pendingManualCoupon}
           onClick={() => void copyLink()}
         >
           {tQuotesOrders(uiLocale, 'copyPublicLink')}
         </button>
       </div>
 
-      {publicUrl ? (
+      {publicUrl && !pendingManualCoupon ? (
         <label className="block space-y-1">
           <span className="text-xs font-medium text-cdl-muted">
             {tQuotesOrders(uiLocale, 'editableMessageLabel')} ·{' '}
@@ -454,7 +469,7 @@ export default function QuoteProposalSharePanel({
           message={message}
           editable
           onMessageChange={setMessage}
-          disabled={busy || !publicUrl}
+          disabled={busy || pendingManualCoupon || !publicUrl}
           className={SHARE_ICON}
           title={
             phoneOk
@@ -469,7 +484,7 @@ export default function QuoteProposalSharePanel({
           }
         />
 
-        {smsHref ? (
+        {smsHref && !pendingManualCoupon ? (
           <SmsShareAnchor
             href={smsHref}
             message={message}
@@ -495,7 +510,7 @@ export default function QuoteProposalSharePanel({
           </button>
         )}
 
-        {mailHref ? (
+        {mailHref && !pendingManualCoupon ? (
           <a
             href={mailHref}
             className={`${glassAction('sky', true)} ${SHARE_ICON}`}

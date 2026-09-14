@@ -79,3 +79,9 @@ export function readCouponFinancialStory(
 
   return null
 }
+
+export function quoteShareBlockedByCoupon(
+  breakdown: Pick<PricingBreakdown, 'total' | 'coupon'> | null | undefined,
+) {
+  return readCouponFinancialStory(breakdown)?.kind === 'pending'
+}

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { readCouponFinancialStory } from './couponFinancialStory.ts'
+import { readCouponFinancialStory, quoteShareBlockedByCoupon } from './couponFinancialStory.ts'
 
 describe('readCouponFinancialStory', () => {
   it('keeps the payable total unchanged for a pending coupon', () => {
@@ -78,5 +78,44 @@ describe('readCouponFinancialStory', () => {
       assert.equal('requestedDiscount' in rejected, false)
       assert.equal('projectedTotal' in rejected, false)
     }
+  })
+
+  it('blocks share only while a manual coupon is pending', () => {
+    assert.equal(
+      quoteShareBlockedByCoupon({
+        total: 2820,
+        coupon: {
+          code: 'CDL10',
+          campaign_name: 'Manual',
+          approval_status: 'pending',
+          potential_discount_amount: 141,
+          applied_discount_amount: 0,
+        },
+      }),
+      true,
+    )
+    assert.equal(
+      quoteShareBlockedByCoupon({
+        total: 2720,
+        coupon: {
+          code: 'WELCOME',
+          approval_status: 'applied',
+          applied_discount_amount: 100,
+        },
+      }),
+      false,
+    )
+    assert.equal(
+      quoteShareBlockedByCoupon({
+        total: 2820,
+        coupon: {
+          code: 'CDL10',
+          approval_status: 'rejected',
+          potential_discount_amount: 141,
+          applied_discount_amount: 0,
+        },
+      }),
+      false,
+    )
   })
 })
