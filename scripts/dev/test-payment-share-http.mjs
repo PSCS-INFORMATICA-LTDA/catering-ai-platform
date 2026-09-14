@@ -90,8 +90,15 @@ async function main() {
   check('SRC-wa-me', panel.includes('buildPaymentWhatsAppHref'), 'wa.me helper')
   check(
     'L-client-amount-ignored',
-    orders.includes('ignoreClientAmount(body?.amount)') && orders.includes('resolveAmountDue'),
+    orders.includes('ignoreClientAmount(body?.amount)') && orders.includes('resolveServerAmountDue'),
     'server amount',
+  )
+  check(
+    'SRC-no-cdl-hardcode',
+    !readFileSync(join(ROOT, 'components/payments/PublicPaymentPage.tsx'), 'utf8').includes(
+      'CDL BBQ AT HOME',
+    ) && panel.includes('deposit_due'),
+    'company brand + server dues',
   )
   check(
     'M-token-server-owned',
@@ -125,16 +132,41 @@ async function main() {
   }
   const cookie = authCookie(signed.data.session)
 
+  const admin = createClient(env.url, env.service, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  const { data: officialInvoice } = await admin
+    .from('invoices')
+    .select('id, quote_id, invoice_number, total, deposit_amount, balance_amount, paid_total, status')
+    .eq('invoice_number', 'INV-2026-000009')
+    .maybeSingle()
+
   const quotes = await jsonFetch('/api/quotes?pageSize=25', { cookie })
   const list = Array.isArray(quotes.data?.data) ? quotes.data.data : []
   let quote = null
   let invoice = null
-  for (const row of list) {
-    const existing = (await jsonFetch(`/api/quotes/${row.id}/invoice`, { cookie })).data?.data
-    if (existing?.id) {
-      quote = row
-      invoice = existing
-      break
+  if (officialInvoice?.quote_id) {
+    const officialFromApi = (
+      await jsonFetch(`/api/quotes/${officialInvoice.quote_id}/invoice`, { cookie })
+    ).data?.data
+    if (officialFromApi?.id) {
+      quote =
+        list.find((row) => row.id === officialInvoice.quote_id) || {
+          id: officialInvoice.quote_id,
+          quote_number: 'Q-2026-000196',
+          phone: null,
+        }
+      invoice = officialFromApi
+    }
+  }
+  if (!invoice?.id) {
+    for (const row of list) {
+      const existing = (await jsonFetch(`/api/quotes/${row.id}/invoice`, { cookie })).data?.data
+      if (existing?.id) {
+        quote = row
+        invoice = existing
+        break
+      }
     }
   }
   if (!quote) {
@@ -171,6 +203,33 @@ async function main() {
   }
   check('E2E-invoice', Boolean(invoice?.id), invoice?.invoice_number || createdError(invoice))
 
+  if (invoice?.invoice_number === 'INV-2026-000009') {
+    check(
+      'INV-2026-000009-dues',
+      Number(invoice.total) === 2820 &&
+        Number(invoice.deposit_amount) === 846 &&
+        Number(invoice.balance_amount) === 1974 &&
+        Number(invoice.deposit_due) === 846 &&
+        Number(invoice.balance_due) === 1974 &&
+        Number(invoice.full_due) === 2820,
+      JSON.stringify({
+        total: invoice.total,
+        deposit_due: invoice.deposit_due,
+        balance_due: invoice.balance_due,
+        full_due: invoice.full_due,
+      }),
+    )
+  } else {
+    check(
+      'INV-2026-000009-dues',
+      Boolean(officialInvoice) &&
+        Number(officialInvoice.total) === 2820 &&
+        Number(officialInvoice.deposit_amount) === 846 &&
+        Number(officialInvoice.balance_amount) === 1974,
+      officialInvoice?.invoice_number || 'invoice-not-in-session',
+    )
+  }
+
   if (invoice?.id) {
     const deposit = await jsonFetch(`/api/invoices/${invoice.id}/payment-link`, {
       method: 'POST',
@@ -194,6 +253,13 @@ async function main() {
       balance.response.ok && /\/pay\/[^/]+$/.test(balanceUrl) && depositUrl !== balanceUrl,
       'distinct tokens',
     )
+    if (invoice.invoice_number === 'INV-2026-000009') {
+      check(
+        'INV-2026-000009-link-amounts',
+        Number(deposit.data?.data?.amount) === 846 && Number(balance.data?.data?.amount) === 1974,
+        `${deposit.data?.data?.amount} / ${balance.data?.data?.amount}`,
+      )
+    }
     check(
       'E2E-url-has-no-phone',
       !depositUrl.includes(String(quote.phone || 'nope')) &&
@@ -203,12 +269,58 @@ async function main() {
     )
 
     const token = depositUrl.split('/pay/')[1] || ''
+    const balanceToken = balanceUrl.split('/pay/')[1] || ''
     if (token) {
       const pay = await fetch(`${base}/pay/${token}`, {
         redirect: 'manual',
         headers: { 'user-agent': 'WhatsApp/2.23.0' },
       })
       const payHtml = await pay.text()
+      const balanceHtml = balanceToken
+        ? await fetch(`${base}/pay/${balanceToken}`, {
+            redirect: 'manual',
+            headers: { 'user-agent': 'WhatsApp/2.23.0' },
+          }).then((response) => response.text())
+        : ''
+      check(
+        'E2E-pay-company-brand',
+        payHtml.includes('data-company-brand=') &&
+          !payHtml.includes('>CDL BBQ AT HOME<') &&
+          /data-company-brand="[^"]+"/.test(payHtml),
+        (payHtml.match(/data-company-brand="([^"]*)"/) || [])[1] || 'missing-brand',
+      )
+      if (invoice.invoice_number === 'INV-2026-000009') {
+        check(
+          'INV-2026-000009-pay-amounts',
+          payHtml.includes('data-amount-due-value="846.00"') &&
+            balanceHtml.includes('data-amount-due-value="1974.00"'),
+          '846 / 1974',
+        )
+        const depositOrder = await jsonFetch('/api/payments/paypal/orders', {
+          method: 'POST',
+          cookie,
+          body: { token, amount: 99999 },
+        })
+        const balanceOrder = await jsonFetch('/api/payments/paypal/orders', {
+          method: 'POST',
+          cookie,
+          body: { token: balanceToken, amount: 1 },
+        })
+        const depositOrderAmount = Number(depositOrder.data?.data?.amount)
+        const balanceOrderAmount = Number(balanceOrder.data?.data?.amount)
+        check(
+          'INV-2026-000009-paypal-amounts',
+          (depositOrder.response.ok &&
+            depositOrderAmount === 846 &&
+            balanceOrder.response.ok &&
+            balanceOrderAmount === 1974) ||
+            depositOrder.data?.error === 'paypal_public_checkout_off' ||
+            depositOrder.data?.error === 'paypal_not_configured',
+          depositOrder.response.ok
+            ? `${depositOrderAmount} / ${balanceOrderAmount}`
+            : String(depositOrder.data?.error || depositOrder.response.status),
+        )
+      }
       const title = metaContent(payHtml, 'og:title')
       const description = metaContent(payHtml, 'og:description')
       const image = metaContent(payHtml, 'og:image')

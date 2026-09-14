@@ -6,7 +6,7 @@ import {
   paymentStatusLabel,
   tPayments,
 } from '@/Lib/i18n/payments'
-import { resolveAmountDue } from '@/Lib/payments/amountDue'
+import { isAppPublicLogoPath } from '@/Lib/payments/paymentOgCopy'
 import type { InvoiceRecord, PaymentPurpose } from '@/Lib/payments/types'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
@@ -14,9 +14,15 @@ function money(value: number, currency = 'USD') {
   return `${currency} ${Number(value || 0).toFixed(2)}`
 }
 
+const FALLBACK_COMPANY = 'Catering AI'
+
 export default function PublicPaymentPage({
   invoice,
   purpose,
+  amountDue,
+  invoiceOutstanding,
+  companyDisplayName,
+  companyLogoSrc,
   publicCheckout,
   paypalClientId,
   paymentToken,
@@ -24,6 +30,10 @@ export default function PublicPaymentPage({
 }: {
   invoice: InvoiceRecord
   purpose: PaymentPurpose
+  amountDue: number
+  invoiceOutstanding: number
+  companyDisplayName: string
+  companyLogoSrc?: string | null
   publicCheckout: boolean
   paypalClientId: string | null
   paymentToken: string
@@ -32,17 +42,9 @@ export default function PublicPaymentPage({
   const lang: QuoteLanguage = locale === 'en' || locale === 'es' ? locale : invoice.locale
   const snap = invoice.snapshot
   const adjustment = snap.adjustment
-  const due = resolveAmountDue({
-    total: invoice.total,
-    depositAmount: invoice.deposit_amount,
-    paidTotal: invoice.paid_total,
-    purpose,
-  })
-  const invoiceOutstanding = Math.max(
-    0,
-    Math.round((Number(invoice.total || 0) - Number(invoice.paid_total || 0)) * 100) / 100,
-  )
-  const paypalReady = publicCheckout && Boolean(paypalClientId) && due.amount > 0
+  const brandName = companyDisplayName.trim() || FALLBACK_COMPANY
+  const logoSrc = isAppPublicLogoPath(companyLogoSrc) ? companyLogoSrc : null
+  const paypalReady = publicCheckout && Boolean(paypalClientId) && amountDue > 0
 
   return (
     <main
@@ -50,11 +52,22 @@ export default function PublicPaymentPage({
       data-paypal-public-checkout={publicCheckout ? 'on' : 'off'}
       data-invoice-number={invoice.invoice_number}
       data-invoice-kind={invoice.invoice_kind}
+      data-company-brand={brandName}
+      data-amount-due-value={amountDue.toFixed(2)}
       className="min-h-screen bg-[#f6f1ea] px-4 py-8 text-[#1b1b1b]"
     >
       <div className="mx-auto w-full max-w-lg space-y-5">
         <header>
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#c1121f]">CDL BBQ AT HOME</p>
+          {logoSrc ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoSrc} alt="" className="mb-3 h-10 w-auto" />
+          ) : null}
+          <p
+            data-testid="payment-company-brand"
+            className="text-xs font-black uppercase tracking-[0.2em] text-[#c1121f]"
+          >
+            {brandName}
+          </p>
           <h1 className="mt-2 text-3xl font-black">{tPayments(lang, 'publicPayTitle')}</h1>
           <p className="mt-1 text-sm text-[#6b6560]">
             {tPayments(lang, 'invoiceNumber', { number: invoice.invoice_number })}
@@ -119,7 +132,7 @@ export default function PublicPaymentPage({
             )}
             <div className="flex justify-between"><dt>{tPayments(lang, 'paid')}</dt><dd>{money(invoice.paid_total, invoice.currency_code)}</dd></div>
             <div className="flex justify-between font-bold"><dt>{tPayments(lang, 'invoiceOutstanding')}</dt><dd data-invoice-outstanding>{money(invoiceOutstanding, invoice.currency_code)}</dd></div>
-            <div className="flex justify-between"><dt>{paymentPurposeLabel(purpose, lang)} — {tPayments(lang, 'amountDue')}</dt><dd data-amount-due>{money(due.amount, invoice.currency_code)}</dd></div>
+            <div className="flex justify-between"><dt>{paymentPurposeLabel(purpose, lang)} — {tPayments(lang, 'amountDue')}</dt><dd data-amount-due>{money(amountDue, invoice.currency_code)}</dd></div>
             <div className="flex justify-between text-[#6b6560]"><dt>{tPayments(lang, 'paymentStatus')}</dt><dd data-invoice-status>{invoiceStatusLabel(invoice.status, lang)}</dd></div>
           </dl>
           {adjustment?.notes ? <p className="mt-3 text-xs text-[#6b6560]">{adjustment.notes}</p> : null}
@@ -139,7 +152,7 @@ export default function PublicPaymentPage({
             <p data-method-zelle className="text-sm">{tPayments(lang, 'zelle')}</p>
             <p data-method-bank-transfer className="text-sm">{tPayments(lang, 'bankTransfer')}</p>
             <p data-method-paypal-off className="text-sm text-[#6b6560]">
-              {due.amount <= 0
+              {amountDue <= 0
                 ? invoice.status === 'paid'
                   ? tPayments(lang, 'alreadyPaid')
                   : `${paymentPurposeLabel(purpose, lang)}: ${paymentStatusLabel('completed', lang)}`

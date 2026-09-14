@@ -2,8 +2,10 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import PublicPaymentPage from '@/components/payments/PublicPaymentPage'
 import { tPayments } from '@/Lib/i18n/payments'
+import { invoiceAmountContext, resolveServerPurposeAmounts } from '@/Lib/payments/loadInvoiceAmountDue'
 import { loadPaymentOgBrandFromToken } from '@/Lib/payments/loadPaymentOgBrand'
 import {
+  isAppPublicLogoPath,
   isCompanyOgId,
   PAYMENT_OG_FALLBACK_IMAGE_PATH,
   paymentOgMetadataIsSafe,
@@ -101,11 +103,25 @@ export default async function PublicPayPage({
     query.lang === 'en' || query.lang === 'es' || query.lang === 'pt'
       ? query.lang
       : resolved.invoice.locale
+  const [brand, amounts] = await Promise.all([
+    loadPaymentOgBrandFromToken(token, locale),
+    resolveServerPurposeAmounts(invoiceAmountContext(resolved.invoice)),
+  ])
+  const amountDue =
+    resolved.link.purpose === 'deposit'
+      ? amounts.depositDue
+      : resolved.link.purpose === 'balance'
+        ? amounts.balanceDue
+        : amounts.fullDue
 
   return (
     <PublicPaymentPage
       invoice={resolved.invoice}
       purpose={resolved.link.purpose}
+      amountDue={amountDue}
+      invoiceOutstanding={amounts.fullDue}
+      companyDisplayName={brand.displayName}
+      companyLogoSrc={isAppPublicLogoPath(brand.logoUrl) ? brand.logoUrl : null}
       publicCheckout={readiness.ready}
       paypalClientId={readiness.clientId}
       paymentToken={token}
