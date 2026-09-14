@@ -127,6 +127,7 @@ function legacyFacts(quote: QuoteTokenRow): FrozenCommercialFacts {
     language: quote.language,
     currency_code: quote.currency_code ?? 'USD',
     event_date: null,
+    event_name: null,
     start_time: null,
     end_time: null,
     venue_name: null,
@@ -268,7 +269,7 @@ export async function loadPublicProposalByToken(
       customerName,
       customerPhone: customer?.phone ?? null,
       customerEmail: customer?.email ?? null,
-      eventName: eventRes.data?.event_name ?? null,
+      eventName: facts.event_name ?? eventRes.data?.event_name ?? null,
       facts: {
         ...facts,
         event_date: facts.event_date ?? eventRes.data?.event_date ?? null,

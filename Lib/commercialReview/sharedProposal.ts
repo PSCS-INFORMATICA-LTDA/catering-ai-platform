@@ -45,6 +45,7 @@ export type FrozenCommercialFacts = {
   billable_guest_count: number | null
   language: string | null
   currency_code: string | null
+  event_name: string | null
   event_date: string | null
   start_time: string | null
   end_time: string | null
@@ -128,6 +129,22 @@ function mapSnapshotAdditionals(value: unknown): QuoteAdditionalItem[] | null {
   })
 }
 
+function firstNumber(...values: unknown[]) {
+  for (const value of values) {
+    const next = asNumber(value)
+    if (next != null) return next
+  }
+  return null
+}
+
+function firstText(...values: unknown[]) {
+  for (const value of values) {
+    const next = asText(value)
+    if (next) return next
+  }
+  return null
+}
+
 export function readFrozenCommercialFacts(
   version: SharedVersionRow,
 ): FrozenCommercialFacts {
@@ -137,53 +154,136 @@ export function readFrozenCommercialFacts(
   const reservation = asRecord(snapshot.reservation)
   const mileage = asRecord(snapshot.mileage)
   const event = asRecord(snapshot.event)
+  const totals = asRecord(snapshot.totals)
+  const selection = asRecord(snapshot.selection)
+  const address = asRecord(event.address)
   const breakdownRaw = snapshot.pricing_breakdown
   const pricing_breakdown =
     breakdownRaw && typeof breakdownRaw === 'object' && !Array.isArray(breakdownRaw)
       ? (breakdownRaw as Record<string, unknown>)
       : null
+  const breakdownGuests = asRecord(pricing_breakdown?.guest_counts)
+  const topCoupon = asRecord(snapshot.coupon)
+  const coupon =
+    readCoupon(pricing_breakdown) ||
+    (topCoupon.code || topCoupon.approval_status
+      ? {
+          code: asText(topCoupon.code),
+          approval_status: asText(topCoupon.approval_status),
+          applied_discount_amount: asNumber(topCoupon.applied_discount_amount),
+        }
+      : null)
 
   return {
     source: 'shared_version',
     versionId: version.id,
-    quote_total: asNumber(version.quote_total ?? snapshot.quote_total),
-    reservation_amount: asNumber(
-      version.reservation_amount ?? reservation.amount,
+    quote_total: firstNumber(
+      version.quote_total,
+      snapshot.quote_total,
+      totals.quoteTotal,
+      pricing_breakdown?.total,
     ),
-    balance_due: asNumber(version.balance_due ?? snapshot.balance_due),
-    discount_amount: asNumber(
-      version.discount_amount ?? snapshot.discount_amount,
+    reservation_amount: firstNumber(
+      version.reservation_amount,
+      reservation.amount,
+      totals.reservationAmount,
+      pricing_breakdown?.deposit,
     ),
-    package_total: asNumber(version.package_total ?? pkg.total),
-    additional_total: asNumber(
-      version.additional_total ?? snapshot.additional_total,
+    balance_due: firstNumber(
+      version.balance_due,
+      snapshot.balance_due,
+      totals.balanceDue,
+      pricing_breakdown?.balance,
     ),
-    mileage_fee: asNumber(version.mileage_fee ?? mileage.fee),
-    mileage_distance: asNumber(mileage.distance ?? snapshot.mileage_distance),
-    mileage_free_limit: asNumber(mileage.free_limit),
-    mileage_rate: asNumber(mileage.rate),
-    mileage_base_location: asText(mileage.base_location),
-    reservation_percentage: asNumber(reservation.percentage),
-    package_id: asText(pkg.id),
-    package_price_per_person: asNumber(pkg.price_per_person),
-    adult_count: asNumber(guests.adult_count),
-    children_under_3_count: asNumber(guests.children_under_3_count),
-    children_4_to_12_count: asNumber(guests.children_4_to_12_count),
-    physical_guest_count: asNumber(guests.physical_guest_count),
-    billable_guest_count: asNumber(guests.billable_guest_count),
+    discount_amount: firstNumber(
+      version.discount_amount,
+      snapshot.discount_amount,
+      coupon?.applied_discount_amount,
+    ),
+    package_total: firstNumber(
+      version.package_total,
+      pkg.total,
+      totals.packageTotal,
+    ),
+    additional_total: firstNumber(
+      version.additional_total,
+      snapshot.additional_total,
+      totals.additionalTotal,
+    ),
+    mileage_fee: firstNumber(version.mileage_fee, mileage.fee, totals.mileageFee),
+    mileage_distance: firstNumber(mileage.distance, snapshot.mileage_distance),
+    mileage_free_limit: firstNumber(
+      mileage.free_limit,
+      totals.mileageFreeLimit,
+    ),
+    mileage_rate: firstNumber(mileage.rate, totals.mileageRate),
+    mileage_base_location: firstText(
+      mileage.base_location,
+      totals.mileageBaseLocation,
+    ),
+    reservation_percentage: firstNumber(
+      reservation.percentage,
+      totals.reservationPercentage,
+    ),
+    package_id: firstText(pkg.id, selection.packageId),
+    package_price_per_person: firstNumber(
+      pkg.price_per_person,
+      totals.packageUnitPrice,
+    ),
+    adult_count: firstNumber(
+      guests.adult_count,
+      guests.adultCount,
+      breakdownGuests.adult_count,
+      breakdownGuests.adultCount,
+      event.adultCount,
+      totals.billableAdults,
+    ),
+    children_under_3_count: firstNumber(
+      guests.children_under_3_count,
+      guests.childrenUnder3Count,
+      breakdownGuests.children_under_3_count,
+      breakdownGuests.childrenUnder3Count,
+      event.childrenUnder3Count,
+    ),
+    children_4_to_12_count: firstNumber(
+      guests.children_4_to_12_count,
+      guests.children4To12Count,
+      breakdownGuests.children_4_to_12_count,
+      breakdownGuests.children4To12Count,
+      event.children4To12Count,
+    ),
+    physical_guest_count: firstNumber(
+      guests.physical_guest_count,
+      guests.physicalGuestCount,
+      breakdownGuests.physical_guest_count,
+      totals.physicalGuestCount,
+    ),
+    billable_guest_count: firstNumber(
+      guests.billable_guest_count,
+      guests.billableGuestCount,
+      breakdownGuests.billable_guest_count,
+      totals.billableGuestCount,
+    ),
     language: asText(snapshot.language),
-    currency_code: asText(snapshot.currency_code) ?? 'USD',
-    event_date: asText(event.event_date),
-    start_time: asText(event.start_time),
-    end_time: asText(event.end_time),
-    venue_name: asText(event.venue_name),
-    address_line: asText(event.address_line),
-    city: asText(event.city),
-    state: asText(event.state),
-    postal_code: asText(event.postal_code),
+    currency_code: firstText(snapshot.currency_code, totals.currency) ?? 'USD',
+    event_name: firstText(event.event_name, event.eventName),
+    event_date: firstText(event.event_date, event.eventDate),
+    start_time: firstText(event.start_time, event.startTime),
+    end_time: firstText(event.end_time, event.endTime),
+    venue_name: firstText(event.venue_name),
+    address_line: firstText(
+      event.address_line,
+      address.formattedAddress,
+      [address.route, address.number].filter(Boolean).join(', ') || null,
+    ),
+    city: firstText(event.city, address.city),
+    state: firstText(event.state, address.region),
+    postal_code: firstText(event.postal_code, address.postalCode),
     pricing_breakdown,
-    additional_items: mapSnapshotAdditionals(snapshot.additional_items),
-    coupon: readCoupon(pricing_breakdown),
+    additional_items: mapSnapshotAdditionals(
+      snapshot.additional_items ?? selection.additionals,
+    ),
+    coupon,
   }
 }
 
@@ -223,6 +323,7 @@ export function applySharedVersionToQuoteDetail(
     billable_guest_count: facts.billable_guest_count,
     language: facts.language ?? quote.language,
     currency_code: facts.currency_code ?? quote.currency_code,
+    event_name: facts.event_name ?? quote.event_name,
     event_date: facts.event_date ?? quote.event_date,
     start_time: facts.start_time ?? quote.start_time,
     end_time: facts.end_time ?? quote.end_time,

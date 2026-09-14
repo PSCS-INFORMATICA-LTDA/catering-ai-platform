@@ -116,6 +116,47 @@ describe('shared proposal pin', () => {
     assert.notEqual(publicQuote.quote_total, live.quote_total)
   })
 
+  it('reads the public-intake snapshot shape used on DEV quotes', () => {
+    const facts = readFrozenCommercialFacts({
+      id: 'version-intake',
+      quote_total: 2720,
+      reservation_amount: 846,
+      balance_due: 1874,
+      discount_amount: 100,
+      commercial_snapshot: {
+        coupon: { code: 'WELCOME', approval_status: 'applied', applied_discount_amount: 100 },
+        totals: {
+          quoteTotal: 2720,
+          reservationAmount: 846,
+          balanceDue: 1874,
+          packageUnitPrice: 68,
+          physicalGuestCount: 40,
+          billableGuestCount: 40,
+        },
+        event: {
+          eventDate: '2026-10-18',
+          startTime: '12:00',
+          endTime: '16:00',
+          eventName: 'QA event',
+          adultCount: 40,
+        },
+        selection: { packageId: 'pkg-public' },
+        pricing_breakdown: {
+          total: 2720,
+          deposit: 846,
+          balance: 1874,
+          guest_counts: { adultCount: 40, billable_guest_count: 40, physical_guest_count: 40 },
+          coupon: { code: 'WELCOME', approval_status: 'applied', applied_discount_amount: 100 },
+        },
+      },
+    })
+    assert.equal(facts.adult_count, 40)
+    assert.equal(facts.package_id, 'pkg-public')
+    assert.equal(facts.event_date, '2026-10-18')
+    assert.equal(facts.event_name, 'QA event')
+    assert.equal(facts.coupon?.code, 'WELCOME')
+  })
+
   it('strips internal_notes from any public payload tree', () => {
     const payload = stripInternalNotesFromPublicPayload({
       found: true,

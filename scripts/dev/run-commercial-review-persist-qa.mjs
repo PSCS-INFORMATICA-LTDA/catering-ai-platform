@@ -6,7 +6,10 @@
  *
  *   COMMERCIAL_REVIEW_BASE_URL=https://... node scripts/dev/run-commercial-review-persist-qa.mjs
  */
+import { execFileSync } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
+import { writeFileSync, unlinkSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
@@ -91,6 +94,45 @@ function containsSecret(value, secret) {
     return JSON.stringify(value).includes(secret)
   } catch {
     return false
+  }
+}
+
+function extractPdfText(bytes) {
+  const tmp = join(tmpdir(), `commercial-review-pdf-${randomUUID()}.pdf`)
+  writeFileSync(tmp, bytes)
+  try {
+    return execFileSync(
+      'python3',
+      [
+        '-c',
+        'from pypdf import PdfReader; import sys; r=PdfReader(sys.argv[1]); print("\\n".join((p.extract_text() or "") for p in r.pages))',
+        tmp,
+      ],
+      { encoding: 'utf8' },
+    )
+  } catch (error) {
+    try {
+      execFileSync('python3', ['-m', 'pip', 'install', '--user', 'pypdf'], {
+        encoding: 'utf8',
+      })
+      return execFileSync(
+        'python3',
+        [
+          '-c',
+          'from pypdf import PdfReader; import sys; r=PdfReader(sys.argv[1]); print("\\n".join((p.extract_text() or "") for p in r.pages))',
+          tmp,
+        ],
+        { encoding: 'utf8' },
+      )
+    } catch (retry) {
+      return `${bytes.toString('latin1')}\n${error instanceof Error ? error.message : ''}\n${retry instanceof Error ? retry.message : ''}`
+    }
+  } finally {
+    try {
+      unlinkSync(tmp)
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -693,7 +735,7 @@ async function main() {
           })
         : { ok: false, status: 0, arrayBuffer: async () => new ArrayBuffer(0) }
       const publicPdfBytes = Buffer.from(await publicPdf.arrayBuffer())
-      const publicPdfText = publicPdfBytes.toString('latin1')
+      const publicPdfText = extractPdfText(publicPdfBytes)
       const v1Money = `$${v1Total.toFixed(2)}`
       const liveMoney = `$${liveTotal.toFixed(2)}`
       record(
@@ -703,19 +745,20 @@ async function main() {
           !publicPdfText.includes(liveMoney) &&
           !publicPdfText.includes(secret) &&
           !publicPdfText.includes('LIVEFAKE'),
-        `${publicPdf.status} bytes=${publicPdfBytes.length} v1=${v1Money}`,
+        `${publicPdf.status} bytes=${publicPdfBytes.length} v1=${publicPdfText.includes(v1Money)} live=${publicPdfText.includes(liveMoney)}`,
       )
       const internalPdf = await fetch(`${BASE}/api/quotes/${quoteId}/pdf`, {
         headers: { cookie: adminCookie, 'user-agent': QA_UA },
       })
-      const internalPdfText = Buffer.from(await internalPdf.arrayBuffer()).toString('latin1')
+      const internalPdfBytes = Buffer.from(await internalPdf.arrayBuffer())
+      const internalPdfText = extractPdfText(internalPdfBytes)
       record(
         'E2E-shared-internal-pdf-stays-v1',
         internalPdf.ok &&
           internalPdfText.includes(v1Money) &&
           !internalPdfText.includes(liveMoney) &&
           !internalPdfText.includes(secret),
-        `${internalPdf.status} v1=${internalPdfText.includes(v1Money)}`,
+        `${internalPdf.status} v1=${internalPdfText.includes(v1Money)} live=${internalPdfText.includes(liveMoney)}`,
       )
       record(
         'E2E-historical-not-rebuilt-from-live-notes',
