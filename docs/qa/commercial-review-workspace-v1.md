@@ -26,6 +26,16 @@
 | O | Tenant isolation | Other company 404 / unauth 307 |
 | P | Mobile | Cards + sticky actions, 390px |
 | Q | PT/EN/ES | `Lib/i18n/commercialReview.ts` |
+| R | Internal note persist | Persist QA PATCH + reload |
+| S | Notes do not leak | Public proposal + PDF + `commercial_snapshot` |
+| T | Proposal version pin | `mark_sent` stamps `proposal_shared_version_id` |
+| U | `proposal_shared_by` | Actor = `app_users.id` |
+| V | Pin stability | Later current version does not move the pin |
+| W | Pending share block | `409 coupon_approval_pending` |
+| X | Approve → share | Same coupon PATCH + `mark_sent` |
+| Y | Reject → share | Same coupon PATCH + `mark_sent` |
+
+Migration filename on Git must match DEV history: `20260914111651_commercial_review_workspace_v1.sql`. See `docs/qa/commercial-review-migration-reconciliation.md`.
 
 ## Commands
 
@@ -36,5 +46,6 @@ npx eslint Lib/commercialReview components/commercial-review app/quotes/[id]/pag
 npm run build
 node scripts/dev/apply-commercial-review-workspace-dev.mjs
 COMMERCIAL_REVIEW_BASE_URL=https://<preview> node scripts/dev/test-commercial-review-http.mjs
+COMMERCIAL_REVIEW_BASE_URL=https://<preview> npm run test:dev:commercial-review-persist-qa
 npm run test:dev:coupon-persist-qa
 ```

@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test Lib/auth/acceptInviteCore.test.mjs Lib/auth/appOrigin.test.mjs Lib/auth/inviteSendCore.test.mjs Lib/auth/resendInviteCore.test.mjs Lib/auth/resendInvite.test.mjs Lib/auth/usersDirectoryView.test.mjs Lib/coupons/couponMath.test.mjs Lib/coupons/couponPersistError.test.mjs Lib/coupons/couponFinancialStory.test.mjs Lib/coupons/couponSnapshot.test.mjs Lib/i18n/coupons.test.mjs Lib/i18n/commercialReview.test.mjs Lib/commercialReview/financialSummary.test.mjs Lib/commercialReview/capacityOccupancy.test.mjs Lib/commercialReview/internalNotes.test.mjs Lib/payments/financeObservability.test.mjs Lib/payments/financeControlCenter.test.mjs Lib/payments/invoiceWorkspace.test.mjs scripts/test-invite-acceptance-matrix.mjs scripts/test-resend-invite-matrix.mjs scripts/dev/test-finance-observability-v1.mjs scripts/dev/test-finance-control-center-v2.mjs scripts/dev/test-invoice-workspace-v3.mjs",
     "test:dev:commercial-review-http": "node --experimental-strip-types scripts/dev/test-commercial-review-http.mjs",
+    "test:dev:commercial-review-persist-qa": "node --experimental-strip-types scripts/dev/run-commercial-review-persist-qa.mjs",
     "apply:dev:commercial-review-workspace": "node scripts/dev/apply-commercial-review-workspace-dev.mjs",
     "test:dev:coupon-concurrency": "node --experimental-strip-types scripts/dev/test-coupon-concurrency.mjs",
     "test:dev:coupon-persist-qa": "node --experimental-strip-types scripts/dev/run-coupon-dev-qa.mjs",
