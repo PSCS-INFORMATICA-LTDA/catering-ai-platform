@@ -162,6 +162,40 @@ test('first name ignores email and empty labels', () => {
   assert.equal(customerFirstNameFromDisplayName('Cliente sem nome'), '')
 })
 
+test('full payment share is distinct from deposit and balance', () => {
+  const pt = buildPaymentShareMessage({
+    locale: 'pt',
+    companyDisplayName: company,
+    customerFirstName: 'Philippe',
+    quoteNumber: 'Q-2026-000187',
+    purpose: 'full',
+    amount: 2820,
+    currency: 'USD',
+    paymentUrl: 'https://catering-ai-agenda-dev.vercel.app/pay/full',
+  }).text
+  const en = buildPaymentShareMessage({
+    locale: 'en',
+    companyDisplayName: company,
+    purpose: 'full',
+    amount: 2820,
+    currency: 'USD',
+    paymentUrl: 'https://example.test/pay/full',
+  }).text
+  const es = buildPaymentShareMessage({
+    locale: 'es',
+    companyDisplayName: company,
+    purpose: 'full',
+    amount: 2820,
+    currency: 'USD',
+    paymentUrl: 'https://example.test/pay/full',
+  }).text
+  assert.match(pt, /pagamento total/)
+  assert.match(en, /full amount/)
+  assert.match(es, /importe total/)
+  assert.doesNotMatch(pt, /sinal da sua cotação/)
+  assert.doesNotMatch(en, /Deposit amount/)
+})
+
 test('L: client amount is ignored by the payment charge path', () => {
   assert.equal(ignoreClientAmount(9999), null)
   assert.equal(ignoreClientAmount('846'), null)

@@ -23,5 +23,17 @@ describe('commercial review i18n', () => {
     assert.equal(tCommercialReview('en', 'capacityAttention'), 'Attention')
     assert.equal(tCommercialReview('es', 'capacityBlocked'), 'Bloqueado')
     assert.doesNotMatch(tCommercialReview('pt', 'notesPlaceholder'), /CDL10|WELCOME/i)
+    assert.equal(
+      tCommercialReview('pt', 'awaitingCustomerAcceptance'),
+      'Aguardando aceite do cliente',
+    )
+    assert.equal(
+      tCommercialReview('en', 'awaitingCustomerAcceptance'),
+      'Awaiting customer acceptance',
+    )
+    assert.equal(
+      tCommercialReview('es', 'awaitingCustomerAcceptance'),
+      'Esperando aceptación del cliente',
+    )
   })
 })
