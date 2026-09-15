@@ -1,3 +1,4 @@
+import InvoiceFinancialBreakdown from '@/components/payments/InvoiceFinancialBreakdown'
 import PaypalSandboxCheckout from '@/components/payments/PaypalSandboxCheckout'
 import { tEventFinancialCloseout } from '@/Lib/i18n/eventFinancialCloseout'
 import {
@@ -6,6 +7,7 @@ import {
   paymentStatusLabel,
   tPayments,
 } from '@/Lib/i18n/payments'
+import { buildInvoiceFinancialPresentation } from '@/Lib/payments/invoiceFinancialPresentation'
 import { isAppPublicLogoPath } from '@/Lib/payments/paymentOgCopy'
 import type { InvoiceRecord, PaymentPurpose } from '@/Lib/payments/types'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
@@ -27,6 +29,8 @@ export default function PublicPaymentPage({
   paypalClientId,
   paymentToken,
   locale,
+  purposeAvailable = true,
+  purposeAvailableAt = null,
 }: {
   invoice: InvoiceRecord
   purpose: PaymentPurpose
@@ -38,13 +42,32 @@ export default function PublicPaymentPage({
   paypalClientId: string | null
   paymentToken: string
   locale?: string | null
+  purposeAvailable?: boolean
+  purposeAvailableAt?: string | null
 }) {
   const lang: QuoteLanguage = locale === 'en' || locale === 'es' ? locale : invoice.locale
   const snap = invoice.snapshot
   const adjustment = snap.adjustment
   const brandName = companyDisplayName.trim() || FALLBACK_COMPANY
   const logoSrc = isAppPublicLogoPath(companyLogoSrc) ? companyLogoSrc : null
-  const paypalReady = publicCheckout && Boolean(paypalClientId) && amountDue > 0
+  const paypalReady =
+    publicCheckout && Boolean(paypalClientId) && amountDue > 0 && purposeAvailable
+  const presentation = buildInvoiceFinancialPresentation({
+    snapshot: snap,
+    invoiceKind: invoice.invoice_kind,
+    subtotal: invoice.subtotal,
+    total: invoice.total,
+    depositAmount: invoice.deposit_amount,
+    balanceAmount: invoice.balance_amount,
+    paidTotal: invoice.paid_total,
+    currency: invoice.currency_code,
+  })
+  const lockedWhen = purposeAvailableAt
+    ? new Date(purposeAvailableAt).toLocaleString(
+        lang === 'pt' ? 'pt-BR' : lang === 'es' ? 'es-ES' : 'en-US',
+        { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/New_York' },
+      )
+    : null
 
   return (
     <main
@@ -84,53 +107,15 @@ export default function PublicPaymentPage({
           <p className="mt-3 font-semibold">{snap.customer.name}</p>
           <p className="text-sm text-[#6b6560]">{tPayments(lang, 'eventDate')}: {snap.event.date || '—'}</p>
           <p className="text-sm text-[#6b6560]">{tPayments(lang, 'eventAddress')}: {snap.event.address || '—'}</p>
-          {!adjustment ? (
-            <p className="mt-2 text-sm font-medium">{tPayments(lang, 'packageLine')}: {snap.package.name || snap.package.key}</p>
-          ) : (
+          {adjustment ? (
             <p className="mt-2 text-sm font-medium">
               {tEventFinancialCloseout(lang, 'detailedAdjustment')} · OS {adjustment.serviceOrderNumber}
             </p>
-          )}
-          <p className="text-sm text-[#6b6560]">
-            {tPayments(lang, 'guests')}: {snap.guests.adults} {tPayments(lang, 'adults')} ·{' '}
-            {snap.guests.childrenUnder3 + snap.guests.children4To12} {tPayments(lang, 'children')}
-          </p>
-          {!adjustment && snap.garnishes?.included ? (
-            <p className="text-sm text-[#6b6560]">{tPayments(lang, 'garnishes')}: {money(snap.garnishes.total, invoice.currency_code)}</p>
           ) : null}
-          {snap.additionals.length > 0 ? (
-            <ul className="mt-3 space-y-2 rounded-xl bg-[#faf7f2] p-3 text-sm text-[#504b47]">
-              {snap.additionals.map((line) => (
-                <li key={line.itemId} className="flex items-start justify-between gap-3">
-                  <span>{line.label} × {line.quantity}</span>
-                  <strong>{money(line.total, invoice.currency_code)}</strong>
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          <div className="mt-4">
+            <InvoiceFinancialBreakdown presentation={presentation} locale={lang} />
+          </div>
           <dl className="mt-4 space-y-2 text-sm">
-            {!adjustment ? (
-              <>
-                <div className="flex justify-between"><dt>{tPayments(lang, 'mileage')}</dt><dd>{money(snap.mileage.fee || 0, invoice.currency_code)}</dd></div>
-                <div className="flex justify-between"><dt>{tPayments(lang, 'grill')}</dt><dd>{money(snap.grill.total, invoice.currency_code)}</dd></div>
-                {snap.commercial.discount > 0 ? <div className="flex justify-between"><dt>{tPayments(lang, 'discount')}</dt><dd>-{money(snap.commercial.discount, invoice.currency_code)}</dd></div> : null}
-                {snap.commercial.holidaySurcharge > 0 ? <div className="flex justify-between"><dt>{tPayments(lang, 'seasonalSurcharge')}</dt><dd>{money(snap.commercial.holidaySurcharge, invoice.currency_code)}</dd></div> : null}
-              </>
-            ) : null}
-            <div className="flex justify-between"><dt>{tPayments(lang, 'subtotal')}</dt><dd>{money(invoice.subtotal, invoice.currency_code)}</dd></div>
-            <div className="flex justify-between font-bold"><dt>{adjustment ? tEventFinancialCloseout(lang, 'adjustmentTotal') : tPayments(lang, 'total')}</dt><dd>{money(invoice.total, invoice.currency_code)}</dd></div>
-            {adjustment ? (
-              <>
-                <div className="flex justify-between"><dt>{tEventFinancialCloseout(lang, 'originalTotal')}</dt><dd>{money(adjustment.originalInvoiceTotal, invoice.currency_code)}</dd></div>
-                <div className="flex justify-between font-black"><dt>{tEventFinancialCloseout(lang, 'finalEventTotal')}</dt><dd>{money(adjustment.finalEventTotal, invoice.currency_code)}</dd></div>
-              </>
-            ) : (
-              <>
-                <div className="flex justify-between"><dt>{tPayments(lang, 'deposit')}</dt><dd>{money(invoice.deposit_amount, invoice.currency_code)}</dd></div>
-                <div className="flex justify-between"><dt>{tPayments(lang, 'originalBalance')}</dt><dd>{money(invoice.balance_amount, invoice.currency_code)}</dd></div>
-              </>
-            )}
-            <div className="flex justify-between"><dt>{tPayments(lang, 'paid')}</dt><dd>{money(invoice.paid_total, invoice.currency_code)}</dd></div>
             <div className="flex justify-between font-bold"><dt>{tPayments(lang, 'invoiceOutstanding')}</dt><dd data-invoice-outstanding>{money(invoiceOutstanding, invoice.currency_code)}</dd></div>
             <div className="flex justify-between"><dt>{paymentPurposeLabel(purpose, lang)} — {tPayments(lang, 'amountDue')}</dt><dd data-amount-due>{money(amountDue, invoice.currency_code)}</dd></div>
             <div className="flex justify-between text-[#6b6560]"><dt>{tPayments(lang, 'paymentStatus')}</dt><dd data-invoice-status>{invoiceStatusLabel(invoice.status, lang)}</dd></div>
@@ -138,6 +123,18 @@ export default function PublicPaymentPage({
           {adjustment?.notes ? <p className="mt-3 text-xs text-[#6b6560]">{adjustment.notes}</p> : null}
           <p className="mt-3 text-xs text-[#6b6560]">{tPayments(lang, 'noTax')}</p>
         </section>
+
+        {!purposeAvailable ? (
+          <section
+            data-testid="balance-locked"
+            className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+          >
+            <p className="font-bold">{tPayments(lang, 'balanceNotAvailableYet')}</p>
+            {lockedWhen ? (
+              <p className="mt-1">{tPayments(lang, 'balanceLockedUntil', { when: lockedWhen })}</p>
+            ) : null}
+          </section>
+        ) : null}
 
         {paypalReady && paypalClientId ? (
           <PaypalSandboxCheckout

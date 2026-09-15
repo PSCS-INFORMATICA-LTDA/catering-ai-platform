@@ -3,6 +3,11 @@ import { headers } from 'next/headers'
 import PublicPaymentPage from '@/components/payments/PublicPaymentPage'
 import { tPayments } from '@/Lib/i18n/payments'
 import { invoiceAmountContext, resolveServerPurposeAmounts } from '@/Lib/payments/loadInvoiceAmountDue'
+import { loadCompanyTimezone } from '@/Lib/payments/loadCompanyTimezone'
+import {
+  availabilityFromInvoiceSnapshot,
+  isPurposeAvailable,
+} from '@/Lib/payments/paymentPurposeAvailability'
 import { loadPaymentOgBrandFromToken } from '@/Lib/payments/loadPaymentOgBrand'
 import {
   isAppPublicLogoPath,
@@ -103,9 +108,10 @@ export default async function PublicPayPage({
     query.lang === 'en' || query.lang === 'es' || query.lang === 'pt'
       ? query.lang
       : resolved.invoice.locale
-  const [brand, amounts] = await Promise.all([
+  const [brand, amounts, timezone] = await Promise.all([
     loadPaymentOgBrandFromToken(token, locale),
     resolveServerPurposeAmounts(invoiceAmountContext(resolved.invoice)),
+    loadCompanyTimezone(resolved.invoice.company_id),
   ])
   const amountDue =
     resolved.link.purpose === 'deposit'
@@ -113,6 +119,16 @@ export default async function PublicPayPage({
       : resolved.link.purpose === 'balance'
         ? amounts.balanceDue
         : amounts.fullDue
+  const availability = availabilityFromInvoiceSnapshot({
+    snapshot: resolved.invoice.snapshot,
+    invoiceKind: resolved.invoice.invoice_kind,
+    invoiceStatus: resolved.invoice.status,
+    depositDue: amounts.depositDue,
+    balanceDue: amounts.balanceDue,
+    fullDue: amounts.fullDue,
+    companyTimezone: timezone,
+  })
+  const purposeAvailable = isPurposeAvailable(availability, resolved.link.purpose)
 
   return (
     <PublicPaymentPage
@@ -122,10 +138,12 @@ export default async function PublicPayPage({
       invoiceOutstanding={amounts.fullDue}
       companyDisplayName={brand.displayName}
       companyLogoSrc={isAppPublicLogoPath(brand.logoUrl) ? brand.logoUrl : null}
-      publicCheckout={readiness.ready}
+      publicCheckout={readiness.ready && purposeAvailable}
       paypalClientId={readiness.clientId}
       paymentToken={token}
       locale={locale}
+      purposeAvailable={purposeAvailable}
+      purposeAvailableAt={availability.balanceAvailableAt}
     />
   )
 }

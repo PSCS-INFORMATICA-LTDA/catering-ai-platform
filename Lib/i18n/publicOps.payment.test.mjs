@@ -16,6 +16,12 @@ describe('final payment flow i18n', () => {
     assert.equal(tPublicOps('es', 'paidLabel'), 'PAGADO')
     assert.doesNotMatch(tPublicOps('pt', 'payDepositChoice', { amount: 'X' }), /30%/)
     assert.doesNotMatch(tPublicOps('en', 'payBalanceChoice', { amount: 'X' }), /70%/)
+    assert.match(tPublicOps('pt', 'balanceNotAvailableYet'), /início do evento/)
+    assert.match(tPublicOps('en', 'balanceLockedUntil', { when: '30 Sep' }), /Balance available from/)
+    assert.match(tPublicOps('es', 'balanceNotAvailableYet'), /inicio del evento/)
+    assert.equal(tPayments('pt', 'children4To12'), 'Crianças 4–12')
+    assert.equal(tPayments('en', 'childrenUnder3'), 'Children 0–3')
+    assert.equal(tPayments('es', 'billableGuests'), 'Equivalente facturable')
   })
 
   it('operator waiting and full-share copy exists in PT EN ES', () => {

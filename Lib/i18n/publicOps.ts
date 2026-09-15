@@ -64,6 +64,16 @@ const { t, list } = makeI18nModule('publicOps', 'public', {
     en: 'Payment is not available yet.',
     es: 'El pago todavía no está disponible.',
   },
+  balanceLockedUntil: {
+    pt: 'Saldo disponível a partir de {when}',
+    en: 'Balance available from {when}',
+    es: 'Saldo disponible a partir de {when}',
+  },
+  balanceNotAvailableYet: {
+    pt: 'O saldo contratual só é liberado no início do evento.',
+    en: 'The contractual balance is released at event start.',
+    es: 'El saldo contractual se libera al inicio del evento.',
+  },
   paymentError: {
     pt: 'Não foi possível abrir o pagamento.',
     en: 'Could not open payment.',

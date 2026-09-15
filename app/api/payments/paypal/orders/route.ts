@@ -1,6 +1,12 @@
 import { requireApiPermission, resolveAuthorizedCompanyId } from '@/Lib/auth/requireApi'
 import { ignoreClientAmount } from '@/Lib/payments/amountDue'
-import { resolveServerAmountDue } from '@/Lib/payments/loadInvoiceAmountDue'
+import { resolveServerAmountDue, resolveServerPurposeAmounts } from '@/Lib/payments/loadInvoiceAmountDue'
+import { loadCompanyTimezone } from '@/Lib/payments/loadCompanyTimezone'
+import {
+  availabilityFromInvoiceSnapshot,
+  isPurposeAvailable,
+} from '@/Lib/payments/paymentPurposeAvailability'
+import type { InvoiceSnapshot } from '@/Lib/payments/types'
 import { assertCompanyPaypalEligible } from '@/Lib/payments/companyProviders'
 import { loadCompanyPaypalCredentials } from '@/Lib/payments/companyPaypal'
 import { assertInvoiceAcceptsPayment } from '@/Lib/payments/invoiceCancellation'
@@ -35,6 +41,8 @@ export async function POST(request: Request) {
   let companyId = ''
   let invoiceId = ''
   let invoiceKind: InvoiceKind = 'original'
+  let invoiceStatus = ''
+  let invoiceSnapshot: InvoiceSnapshot | null = null
   let purpose = isPaymentPurpose(body?.purpose) ? body.purpose : 'deposit'
   let invoiceNumber = ''
   let currency = 'USD'
@@ -56,6 +64,8 @@ export async function POST(request: Request) {
     companyId = resolved.invoice.company_id
     invoiceId = resolved.invoice.id
     invoiceKind = resolved.invoice.invoice_kind
+    invoiceStatus = resolved.invoice.status
+    invoiceSnapshot = resolved.invoice.snapshot
     purpose = resolved.link.purpose
     invoiceNumber = resolved.invoice.invoice_number
     currency = resolved.invoice.currency_code
@@ -79,6 +89,8 @@ export async function POST(request: Request) {
     }
     invoiceId = invoice.id
     invoiceKind = invoice.invoice_kind
+    invoiceStatus = invoice.status
+    invoiceSnapshot = invoice.snapshot
     invoiceNumber = invoice.invoice_number
     currency = invoice.currency_code
     total = invoice.total
@@ -111,6 +123,34 @@ export async function POST(request: Request) {
   )
   if (due.amount <= 0) {
     return Response.json({ error: due.reason }, { status: 409 })
+  }
+
+  const timezone = await loadCompanyTimezone(companyId)
+  const purposeAmounts = await resolveServerPurposeAmounts({
+    companyId,
+    invoiceId,
+    total,
+    depositAmount,
+    balanceAmount,
+    paidTotal,
+  })
+  const availability = availabilityFromInvoiceSnapshot({
+    snapshot: invoiceSnapshot,
+    invoiceKind,
+    invoiceStatus,
+    depositDue: purposeAmounts.depositDue,
+    balanceDue: purposeAmounts.balanceDue,
+    fullDue: purposeAmounts.fullDue,
+    companyTimezone: timezone,
+  })
+  if (!isPurposeAvailable(availability, purpose)) {
+    return Response.json(
+      {
+        error: availability.reason || 'balance_not_available_yet',
+        available_at: availability.balanceAvailableAt,
+      },
+      { status: 409 },
+    )
   }
 
   const companyPaypal = await loadCompanyPaypalCredentials(companyId)

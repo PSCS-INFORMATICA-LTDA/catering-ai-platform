@@ -10,6 +10,8 @@ import {
 } from '@/Lib/i18n/payments'
 import { formatUiDate, toBcp47Locale } from '@/Lib/i18n/locales'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
+import InvoiceFinancialBreakdown from '@/components/payments/InvoiceFinancialBreakdown'
+import { buildInvoiceFinancialPresentation } from '@/Lib/payments/invoiceFinancialPresentation'
 import type { InvoiceBackofficeDetail } from '@/Lib/payments/fetchInvoiceBackoffice'
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
@@ -67,6 +69,18 @@ export default function InvoiceDetailView({
 }) {
   const locale = useAuthLocaleFromMe()
   const snapshot = invoice.snapshot
+  const presentation = snapshot
+    ? buildInvoiceFinancialPresentation({
+        snapshot,
+        invoiceKind: invoice.invoice_kind,
+        subtotal: invoice.subtotal,
+        total: invoice.total,
+        depositAmount: invoice.deposit_amount,
+        balanceAmount: invoice.balance_amount,
+        paidTotal: invoice.paid_total,
+        currency: invoice.currency_code,
+      })
+    : null
   const eventAddress = snapshot
     ? [
         snapshot.event.address,
@@ -161,6 +175,12 @@ export default function InvoiceDetailView({
           />
         </div>
       </section>
+
+      {presentation ? (
+        <section className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+          <InvoiceFinancialBreakdown presentation={presentation} locale={locale} />
+        </section>
+      ) : null}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">

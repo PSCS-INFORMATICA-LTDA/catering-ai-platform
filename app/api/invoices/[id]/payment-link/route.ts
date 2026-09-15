@@ -55,6 +55,7 @@ export async function POST(request: Request, { params }: Params) {
         deposit_due: created.deposit_due,
         balance_due: created.balance_due,
         full_due: created.full_due,
+        available_at: created.available_at ?? null,
       },
       { status: created.status },
     )

@@ -211,6 +211,35 @@ test('T01/T02/T09/T27: public payment gate is fail-closed', () => {
   )
 })
 
+test('balance is locked in the public snapshot until event start', () => {
+  const snapshot = buildPublicPaymentSnapshot({
+    available: true,
+    currency_code: 'USD',
+    total: 3047.9,
+    paid_total: 0,
+    deposit_amount: 958.86,
+    balance_amount: 2089.04,
+    invoice_number: 'INV-2026-000010',
+    depositDue: 958.86,
+    balanceDue: 2089.04,
+    fullDue: 3047.9,
+    depositAvailable: true,
+    balanceAvailable: false,
+    fullAvailable: true,
+    balanceAvailableAt: '2026-09-30T15:00:00.000Z',
+    balanceLockReason: 'balance_not_available_yet',
+  })
+  const byPurpose = Object.fromEntries(
+    snapshot.choices.map((choice) => [choice.purpose, choice]),
+  )
+  assert.equal(byPurpose.deposit.payable, true)
+  assert.equal(byPurpose.full.payable, true)
+  assert.equal(byPurpose.balance.payable, false)
+  assert.equal(byPurpose.balance.locked, true)
+  assert.equal(byPurpose.balance.reason, 'balance_not_available_yet')
+  assert.equal(byPurpose.balance.amount, 2089.04)
+})
+
 test('unavailable snapshot has no payable choices', () => {
   const snapshot = emptyPublicPaymentSnapshot('awaiting_acceptance')
   assert.equal(snapshot.available, false)

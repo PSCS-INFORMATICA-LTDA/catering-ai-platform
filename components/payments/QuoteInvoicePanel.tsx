@@ -27,6 +27,10 @@ type InvoiceSummary = {
   deposit_due?: number
   balance_due?: number
   full_due?: number
+  deposit_available?: boolean
+  balance_available?: boolean
+  full_available?: boolean
+  balance_available_at?: string | null
   currency_code?: string | null
 }
 
@@ -253,6 +257,9 @@ export default function QuoteInvoicePanel({
   const depositDue = Number(shareAmounts.deposit ?? 0)
   const balanceDue = Number(shareAmounts.balance ?? 0)
   const fullDue = Number(shareAmounts.full ?? invoiceOutstanding)
+  const balanceAvailable = invoice?.balance_available !== false
+  const depositAvailable = invoice?.deposit_available !== false
+  const fullAvailable = invoice?.full_available !== false
 
   return (
     <section
@@ -281,6 +288,19 @@ export default function QuoteInvoicePanel({
               {tPayments(locale, 'deposit')} {tPayments(locale, 'amountDue')}: {displayCurrency}{' '}
               {shareAmounts.deposit.toFixed(2)} · {tPayments(locale, 'originalBalance')}{' '}
               {tPayments(locale, 'amountDue')}: {displayCurrency} {shareAmounts.balance.toFixed(2)}
+            </p>
+          ) : null}
+          {invoice && !balanceAvailable && balanceDue > 0 ? (
+            <p data-testid="balance-locked" className="text-sm font-semibold text-amber-800">
+              {tPayments(locale, 'balanceNotAvailableYet')}
+              {invoice.balance_available_at
+                ? ` ${tPayments(locale, 'balanceLockedUntil', {
+                    when: new Date(invoice.balance_available_at).toLocaleString(
+                      locale === 'pt' ? 'pt-BR' : locale === 'es' ? 'es-ES' : 'en-US',
+                      { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/New_York' },
+                    ),
+                  })}`
+                : ''}
             </p>
           ) : null}
           <div className="flex flex-wrap gap-2">
@@ -319,7 +339,7 @@ export default function QuoteInvoicePanel({
                 <button
                   type="button"
                   data-testid="send-deposit-whatsapp"
-                  disabled={waDisabled || depositDue <= 0}
+                  disabled={waDisabled || depositDue <= 0 || !depositAvailable}
                   onClick={() => void sendWhatsApp('deposit')}
                   className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#128C7E] px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white disabled:opacity-40"
                 >
@@ -328,7 +348,7 @@ export default function QuoteInvoicePanel({
                 <button
                   type="button"
                   data-testid="send-balance-whatsapp"
-                  disabled={waDisabled || balanceDue <= 0}
+                  disabled={waDisabled || balanceDue <= 0 || !balanceAvailable}
                   onClick={() => void sendWhatsApp('balance')}
                   className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#128C7E] px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white disabled:opacity-40"
                 >
@@ -337,7 +357,7 @@ export default function QuoteInvoicePanel({
                 <button
                   type="button"
                   data-testid="send-full-whatsapp"
-                  disabled={waDisabled || fullDue <= 0}
+                  disabled={waDisabled || fullDue <= 0 || !fullAvailable}
                   onClick={() => void sendWhatsApp('full')}
                   className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#128C7E] px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white disabled:opacity-40"
                 >

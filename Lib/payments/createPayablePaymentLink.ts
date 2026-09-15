@@ -7,6 +7,8 @@ import {
   defaultPaymentLinkExpiry,
   hashPaymentLinkToken,
 } from './paymentLinks'
+import { loadCompanyTimezone } from './loadCompanyTimezone'
+import { isPurposeAvailable, availabilityFromInvoiceSnapshot } from './paymentPurposeAvailability'
 import { paymentLinkBlockReason } from './publicPaymentSnapshot'
 import { createInvoicePaymentLink } from './resolvePaymentLink'
 import type { PaymentPurpose } from './types'
@@ -31,6 +33,7 @@ export type PayablePaymentLinkResult =
       deposit_due?: number
       balance_due?: number
       full_due?: number
+      available_at?: string | null
     }
 
 export async function createPayablePaymentLink(input: {
@@ -57,6 +60,28 @@ export async function createPayablePaymentLink(input: {
       deposit_due: amounts.depositDue,
       balance_due: amounts.balanceDue,
       full_due: amounts.fullDue,
+    }
+  }
+
+  const timezone = await loadCompanyTimezone(input.companyId)
+  const availability = availabilityFromInvoiceSnapshot({
+    snapshot: invoice.snapshot,
+    invoiceKind: invoice.invoice_kind,
+    invoiceStatus: invoice.status,
+    depositDue: amounts.depositDue,
+    balanceDue: amounts.balanceDue,
+    fullDue: amounts.fullDue,
+    companyTimezone: timezone,
+  })
+  if (!isPurposeAvailable(availability, input.purpose)) {
+    return {
+      ok: false,
+      status: 409,
+      error: availability.reason || 'balance_not_available_yet',
+      deposit_due: amounts.depositDue,
+      balance_due: amounts.balanceDue,
+      full_due: amounts.fullDue,
+      available_at: availability.balanceAvailableAt,
     }
   }
 

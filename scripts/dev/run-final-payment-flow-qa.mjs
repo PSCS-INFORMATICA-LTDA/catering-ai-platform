@@ -6,6 +6,10 @@
  *   COMMERCIAL_REVIEW_BASE_URL=https://... node scripts/dev/run-final-payment-flow-qa.mjs
  */
 import { createHash, randomUUID } from 'node:crypto'
+import {
+  buildInvoiceFinancialPresentation,
+  explainDepositFromCanonical,
+} from '../../Lib/payments/invoiceFinancialPresentation.ts'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
@@ -462,8 +466,9 @@ async function main() {
   record(
     'T11-balance-option',
     Number(choice(payment, 'balance')?.amount) === Number(invoice?.balance_amount) &&
-      choice(payment, 'balance')?.payable === true,
-    `balance=${choice(payment, 'balance')?.amount} invoice=${invoice?.balance_amount}`,
+      choice(payment, 'balance')?.payable === false &&
+      choice(payment, 'balance')?.locked === true,
+    `balance=${choice(payment, 'balance')?.amount} locked=${choice(payment, 'balance')?.locked} payable=${choice(payment, 'balance')?.payable}`,
   )
   record(
     'T12-full-option',
@@ -483,8 +488,11 @@ async function main() {
 
   record(
     'T56-pt-public-copy',
-    htmlAfter.includes('Pagamento') && htmlAfter.includes('Pagar sinal') && htmlAfter.includes('Pagar saldo'),
-    `pt=${htmlAfter.includes('Pagamento')}`,
+    htmlAfter.includes('Pagamento') &&
+      htmlAfter.includes('Pagar sinal') &&
+      htmlAfter.includes('Pagar tudo') &&
+      htmlAfter.includes('data-testid="balance-locked"'),
+    `pt=${htmlAfter.includes('Pagamento')} locked=${htmlAfter.includes('data-testid="balance-locked"')}`,
   )
   record(
     'T61-no-reload-required',
@@ -497,6 +505,26 @@ async function main() {
     /CDL/i.test(String(publicAfter.data?.company_name || htmlAfter)) &&
       !htmlAfter.includes('>CDL BBQ AT HOME<'),
     publicAfter.data?.company_name || 'missing-company',
+  )
+
+  const earlyBalance = await jsonFetch(`/api/public/proposta/${token}/payment-link`, {
+    method: 'POST',
+    body: { purpose: 'balance' },
+  })
+  record(
+    'T-balance-blocked-before-event',
+    earlyBalance.response.status === 409 &&
+      earlyBalance.data?.error === 'balance_not_available_yet',
+    `${earlyBalance.response.status} ${earlyBalance.data?.error}`,
+  )
+  const earlyFull = await jsonFetch(`/api/public/proposta/${token}/payment-link`, {
+    method: 'POST',
+    body: { purpose: 'full' },
+  })
+  record(
+    'T-full-available-after-accept',
+    earlyFull.response.ok && Number(earlyFull.data?.data?.amount) === Number(invoice.total),
+    `${earlyFull.response.status} amount=${earlyFull.data?.data?.amount}`,
   )
 
   const forged = await jsonFetch(`/api/public/proposta/${token}/payment-link`, {
@@ -538,15 +566,15 @@ async function main() {
   )
 
   const [doubleA, doubleB] = await Promise.all([
-    jsonFetch(`/api/public/proposta/${token}/payment-link`, { method: 'POST', body: { purpose: 'balance' } }),
-    jsonFetch(`/api/public/proposta/${token}/payment-link`, { method: 'POST', body: { purpose: 'balance' } }),
+    jsonFetch(`/api/public/proposta/${token}/payment-link`, { method: 'POST', body: { purpose: 'deposit' } }),
+    jsonFetch(`/api/public/proposta/${token}/payment-link`, { method: 'POST', body: { purpose: 'deposit' } }),
   ])
   record(
     'T30-double-click-payment-cta',
     doubleA.response.ok &&
       doubleB.response.ok &&
       doubleA.data?.data?.token !== doubleB.data?.data?.token &&
-      Number(doubleA.data?.data?.amount) === Number(invoice.balance_amount),
+      Number(doubleA.data?.data?.amount) === Number(invoice.deposit_amount),
     `tokensDistinct=${doubleA.data?.data?.token !== doubleB.data?.data?.token}`,
   )
 
@@ -1102,6 +1130,107 @@ async function main() {
     'T37-T43-post-event-model-preserved',
     true,
     `completedOrders=${(completedOrders.data || []).length} closeouts=${(closeouts.data || []).length}`,
+  )
+
+  const screenshotInvoice = await db
+    .from('invoices')
+    .select('invoice_number, subtotal, total, deposit_amount, balance_amount, paid_total, snapshot')
+    .eq('company_id', COMPANY)
+    .eq('invoice_number', 'INV-2026-000010')
+    .maybeSingle()
+  if (screenshotInvoice.data?.snapshot) {
+    const presented = buildInvoiceFinancialPresentation({
+      snapshot: screenshotInvoice.data.snapshot,
+      invoiceKind: 'original',
+      subtotal: screenshotInvoice.data.subtotal,
+      total: screenshotInvoice.data.total,
+      depositAmount: screenshotInvoice.data.deposit_amount,
+      balanceAmount: screenshotInvoice.data.balance_amount,
+      paidTotal: screenshotInvoice.data.paid_total,
+    })
+    const why = explainDepositFromCanonical(presented)
+    record(
+      'T-screenshot-invoice-reconciles',
+      presented.reconcilesToCent &&
+        presented.depositPlusBalanceMatchesTotal &&
+        why.matchesBaseTimesPercent &&
+        why.applyToDeposit === false &&
+        Number(presented.finalContractTotal) === 3047.9 &&
+        Number(presented.depositAmount) === 958.86,
+      JSON.stringify({
+        base: why.baseBeforeDiscount,
+        expectedDeposit: why.expectedDepositFromBase,
+        applyToDeposit: why.applyToDeposit,
+        allocatedToBalance: why.allocatedToBalance,
+      }),
+    )
+  } else {
+    record('T-screenshot-invoice-reconciles', false, 'INV-2026-000010 missing')
+  }
+
+  function calendarDateInTimeZone(timeZone = 'America/New_York', now = new Date()) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(now)
+    const year = parts.find((part) => part.type === 'year')?.value
+    const month = parts.find((part) => part.type === 'month')?.value
+    const day = parts.find((part) => part.type === 'day')?.value
+    return `${year}-${month}-${day}`
+  }
+
+  const startedPhone = await unusedPhone(db, '140755568')
+  const startedPayload = draft({
+    locale: 'en',
+    firstName: 'QA',
+    lastName: 'EventStart',
+    phone: startedPhone,
+    email: 'qa.final.eventstart@example.invalid',
+    eventName: `${TAG} event start balance`,
+  })
+  startedPayload.event.eventDate = calendarDateInTimeZone('America/New_York')
+  startedPayload.event.startTime = '00:00'
+  startedPayload.selection.packageSelections = selections
+  const startedSession = await startSession('en')
+  const startedSaved = await saveDraft(startedSession.cookie, startedPayload)
+  const startedSubmitted = await submitQuote(
+    startedSaved.cookie,
+    startedPayload,
+    settings.data.consent_version,
+  )
+  const startedQuoteId = startedSubmitted.data?.quote?.id || ''
+  await jsonFetch(`/api/quotes/${startedQuoteId}/proposal`, {
+    method: 'POST',
+    cookie: adminCookie,
+    body: { action: 'mark_sent' },
+  })
+  const startedQuote = await db
+    .from('quotes')
+    .select('proposal_token')
+    .eq('id', startedQuoteId)
+    .single()
+  const startedToken = startedQuote.data?.proposal_token
+  await jsonFetch(`/api/public/proposta/${startedToken}`, {
+    method: 'POST',
+    body: { action: 'accept' },
+  })
+  const startedPublic = await jsonFetch(`/api/public/proposta/${startedToken}`)
+  const startedBalanceChoice = choice(startedPublic.data?.payment, 'balance')
+  record(
+    'T-balance-available-at-event-start',
+    startedBalanceChoice?.payable === true && Number(startedBalanceChoice?.amount) > 0,
+    JSON.stringify(startedBalanceChoice),
+  )
+  const startedBalanceLink = await jsonFetch(`/api/public/proposta/${startedToken}/payment-link`, {
+    method: 'POST',
+    body: { purpose: 'balance' },
+  })
+  record(
+    'T-balance-link-after-event-start',
+    startedBalanceLink.response.ok && Number(startedBalanceLink.data?.data?.amount) > 0,
+    `${startedBalanceLink.response.status} ${startedBalanceLink.data?.error || startedBalanceLink.data?.data?.amount}`,
   )
 
   const failed = rows.filter((row) => !row.ok)

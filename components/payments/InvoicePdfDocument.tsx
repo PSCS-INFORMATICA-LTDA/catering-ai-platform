@@ -3,6 +3,7 @@ import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/render
 import type { PdfLogoSource } from '@/Lib/cdlLogo'
 import { tEventFinancialCloseout } from '@/Lib/i18n/eventFinancialCloseout'
 import { tPayments } from '@/Lib/i18n/payments'
+import { buildInvoiceFinancialPresentation } from '@/Lib/payments/invoiceFinancialPresentation'
 import type { InvoiceRecord } from '@/Lib/payments/types'
 
 const colors = {
@@ -73,6 +74,16 @@ export function InvoicePdfDocument({
   const snap = invoice.snapshot
   const lang = invoice.locale
   const adjustment = snap.adjustment
+  const presentation = buildInvoiceFinancialPresentation({
+    snapshot: snap,
+    invoiceKind: invoice.invoice_kind,
+    subtotal: invoice.subtotal,
+    total: invoice.total,
+    depositAmount: invoice.deposit_amount,
+    balanceAmount: invoice.balance_amount,
+    paidTotal: invoice.paid_total,
+    currency: invoice.currency_code,
+  })
 
   return (
     <Document>
@@ -123,11 +134,15 @@ export function InvoicePdfDocument({
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.heading}>{snap.package.name || snap.package.key}</Text>
+          <Text style={styles.heading}>{presentation.packageName || snap.package.key}</Text>
           <Text>
-            {tPayments(lang, 'guests')}: {snap.guests.adults} {tPayments(lang, 'adults')} /{' '}
-            {snap.guests.childrenUnder3 + snap.guests.children4To12}{' '}
-            {tPayments(lang, 'children')}
+            {tPayments(lang, 'adults')}: {presentation.guests.adults} ·{' '}
+            {tPayments(lang, 'children4To12')}: {presentation.guests.children4To12} ·{' '}
+            {tPayments(lang, 'childrenUnder3')}: {presentation.guests.childrenUnder3}
+          </Text>
+          <Text style={styles.muted}>
+            {tPayments(lang, 'billableGuests')}: {presentation.guests.billableGuestCount} ·{' '}
+            {tPayments(lang, 'physicalGuests')}: {presentation.guests.physicalGuestCount}
           </Text>
           <Text style={styles.muted}>
             {tPayments(lang, 'eventDate')}: {snap.event.date || '—'}
@@ -138,90 +153,34 @@ export function InvoicePdfDocument({
         </View>
 
         <View style={styles.box}>
-          {!adjustment ? (
-            <View style={styles.row}>
-              <Text>{tPayments(lang, 'packageLine')}</Text>
-              <Text>{money(snap.package.total || 0, invoice.currency_code)}</Text>
-            </View>
-          ) : null}
-          {!adjustment && snap.garnishes?.included ? (
-            <View style={styles.row}>
-              <Text>
-                {tPayments(lang, 'garnishes')}
-                {snap.garnishes.description ? ` — ${snap.garnishes.description}` : ''}
+          {presentation.chargeRows
+            .filter((row) => row.amount != null)
+            .map((row) => (
+              <View key={row.id} style={styles.row}>
+                <Text>
+                  {row.labelText || tPayments(lang, row.labelKey as Parameters<typeof tPayments>[1])}
+                  {row.formula ? ` (${row.formula})` : ''}
+                  {row.included ? ` — ${tPayments(lang, 'included')}` : ''}
+                </Text>
+                <Text>
+                  {row.included ? tPayments(lang, 'included') : money(Number(row.amount), invoice.currency_code)}
+                </Text>
+              </View>
+            ))}
+          {[...presentation.reconcileRows, ...presentation.reservationRows, ...presentation.paidRows, ...presentation.adjustmentRows].map((row) => (
+            <View key={row.id} style={styles.row}>
+              <Text style={row.emphasize ? styles.total : undefined}>
+                {tPayments(lang, row.labelKey as Parameters<typeof tPayments>[1])}
               </Text>
-              <Text>{money(snap.garnishes.total, invoice.currency_code)}</Text>
-            </View>
-          ) : null}
-          {snap.additionals.map((line) => (
-            <View key={line.itemId} style={styles.row}>
-              <Text>
-                {line.label} × {line.quantity}
+              <Text style={row.emphasize ? styles.total : undefined}>
+                {row.amount == null
+                  ? row.quantity != null
+                    ? String(row.quantity)
+                    : '—'
+                  : money(row.amount, invoice.currency_code)}
               </Text>
-              <Text>{money(line.total, invoice.currency_code)}</Text>
             </View>
           ))}
-          {!adjustment ? (
-            <>
-              <View style={styles.row}>
-                <Text>{tPayments(lang, 'mileage')}</Text>
-                <Text>{money(snap.mileage.fee || 0, invoice.currency_code)}</Text>
-              </View>
-              <View style={styles.row}>
-                <Text>{tPayments(lang, 'grill')}</Text>
-                <Text>{money(snap.grill.total, invoice.currency_code)}</Text>
-              </View>
-              {snap.commercial.discount > 0 ? (
-                <View style={styles.row}>
-                  <Text>{tPayments(lang, 'discount')}</Text>
-                  <Text>-{money(snap.commercial.discount, invoice.currency_code)}</Text>
-                </View>
-              ) : null}
-              {snap.commercial.holidaySurcharge > 0 ? (
-                <View style={styles.row}>
-                  <Text>{tPayments(lang, 'seasonalSurcharge')}</Text>
-                  <Text>{money(snap.commercial.holidaySurcharge, invoice.currency_code)}</Text>
-                </View>
-              ) : null}
-            </>
-          ) : null}
-          <View style={styles.row}>
-            <Text>{tPayments(lang, 'subtotal')}</Text>
-            <Text>{money(invoice.subtotal, invoice.currency_code)}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.total}>
-              {adjustment ? tEventFinancialCloseout(lang, 'adjustmentTotal') : tPayments(lang, 'total')}
-            </Text>
-            <Text style={styles.total}>{money(invoice.total, invoice.currency_code)}</Text>
-          </View>
-          {adjustment ? (
-            <>
-              <View style={styles.row}>
-                <Text>{tEventFinancialCloseout(lang, 'originalTotal')}</Text>
-                <Text>{money(adjustment.originalInvoiceTotal, invoice.currency_code)}</Text>
-              </View>
-              <View style={styles.row}>
-                <Text style={styles.total}>{tEventFinancialCloseout(lang, 'finalEventTotal')}</Text>
-                <Text style={styles.total}>{money(adjustment.finalEventTotal, invoice.currency_code)}</Text>
-              </View>
-            </>
-          ) : (
-            <>
-              <View style={styles.row}>
-                <Text>{tPayments(lang, 'deposit')}</Text>
-                <Text>{money(invoice.deposit_amount, invoice.currency_code)}</Text>
-              </View>
-              <View style={styles.row}>
-                <Text>{tPayments(lang, 'balance')}</Text>
-                <Text>{money(invoice.balance_amount, invoice.currency_code)}</Text>
-              </View>
-            </>
-          )}
-          <View style={styles.row}>
-            <Text>{tPayments(lang, 'paid')}</Text>
-            <Text>{money(invoice.paid_total, invoice.currency_code)}</Text>
-          </View>
         </View>
         {adjustment?.notes ? <Text style={[styles.muted, { marginTop: 8 }]}>{adjustment.notes}</Text> : null}
         <Text style={[styles.muted, { marginTop: 10 }]}>{tPayments(lang, 'noTax')}</Text>

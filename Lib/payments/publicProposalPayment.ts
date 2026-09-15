@@ -4,6 +4,8 @@ import { quoteHasPendingCoupon } from '@/Lib/coupons/resolveCoupon'
 import { normalizeQuoteStatus } from '@/Lib/quotes/statusMachine'
 import { createInvoiceFromQuote } from './createInvoiceFromQuote'
 import { invoiceAmountContext, resolveServerPurposeAmounts } from './loadInvoiceAmountDue'
+import { loadCompanyTimezone } from './loadCompanyTimezone'
+import { availabilityFromInvoiceSnapshot } from './paymentPurposeAvailability'
 import {
   buildPublicPaymentSnapshot,
   emptyPublicPaymentSnapshot,
@@ -46,6 +48,16 @@ export async function loadPublicProposalPaymentSnapshot(input: {
   }
 
   const amounts = await resolveServerPurposeAmounts(invoiceAmountContext(created.invoice))
+  const timezone = await loadCompanyTimezone(input.companyId)
+  const availability = availabilityFromInvoiceSnapshot({
+    snapshot: created.invoice.snapshot,
+    invoiceKind: created.invoice.invoice_kind,
+    invoiceStatus: created.invoice.status,
+    depositDue: amounts.depositDue,
+    balanceDue: amounts.balanceDue,
+    fullDue: amounts.fullDue,
+    companyTimezone: timezone,
+  })
   return buildPublicPaymentSnapshot({
     available: true,
     currency_code: created.invoice.currency_code,
@@ -57,6 +69,11 @@ export async function loadPublicProposalPaymentSnapshot(input: {
     depositDue: amounts.depositDue,
     balanceDue: amounts.balanceDue,
     fullDue: amounts.fullDue,
+    depositAvailable: availability.depositAvailable,
+    balanceAvailable: availability.balanceAvailable,
+    fullAvailable: availability.fullAvailable,
+    balanceAvailableAt: availability.balanceAvailableAt,
+    balanceLockReason: availability.reason,
   })
 }
 

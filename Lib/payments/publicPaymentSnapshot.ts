@@ -5,6 +5,9 @@ export type PublicPaymentChoice = {
   amount: number
   payable: boolean
   percent: number
+  locked?: boolean
+  available_at?: string | null
+  reason?: string | null
 }
 
 export type PublicPaymentSnapshot = {
@@ -16,6 +19,8 @@ export type PublicPaymentSnapshot = {
   invoice_number?: string
   deposit_percent: number
   balance_percent: number
+  balance_available?: boolean
+  balance_available_at?: string | null
   choices: PublicPaymentChoice[]
 }
 
@@ -86,6 +91,11 @@ export function buildPublicPaymentSnapshot(input: {
   depositDue: number
   balanceDue: number
   fullDue: number
+  depositAvailable?: boolean
+  balanceAvailable?: boolean
+  fullAvailable?: boolean
+  balanceAvailableAt?: string | null
+  balanceLockReason?: string | null
 }): PublicPaymentSnapshot {
   if (!input.available) {
     return emptyPublicPaymentSnapshot(input.reason || 'unavailable', input.currency_code)
@@ -99,6 +109,10 @@ export function buildPublicPaymentSnapshot(input: {
   const depositDue = roundMoney(input.depositDue)
   const balanceDue = roundMoney(input.balanceDue)
   const fullDue = roundMoney(input.fullDue)
+  const depositAvailable = input.depositAvailable !== false
+  const balanceAvailable = input.balanceAvailable !== false
+  const fullAvailable = input.fullAvailable !== false
+  const balanceLocked = balanceDue > 0 && !balanceAvailable
 
   return {
     available: true,
@@ -108,23 +122,28 @@ export function buildPublicPaymentSnapshot(input: {
     invoice_number: input.invoice_number || undefined,
     deposit_percent: percents.deposit_percent,
     balance_percent: percents.balance_percent,
+    balance_available: balanceAvailable,
+    balance_available_at: input.balanceAvailableAt ?? null,
     choices: [
       {
         purpose: 'deposit',
         amount: depositDue,
-        payable: depositDue > 0,
+        payable: depositDue > 0 && depositAvailable,
         percent: percents.deposit_percent,
       },
       {
         purpose: 'balance',
         amount: balanceDue,
-        payable: balanceDue > 0,
+        payable: balanceDue > 0 && balanceAvailable,
         percent: percents.balance_percent,
+        locked: balanceLocked,
+        available_at: balanceLocked ? input.balanceAvailableAt ?? null : null,
+        reason: balanceLocked ? input.balanceLockReason || 'balance_not_available_yet' : null,
       },
       {
         purpose: 'full',
         amount: fullDue,
-        payable: fullDue > 0,
+        payable: fullDue > 0 && fullAvailable,
         percent: 100,
       },
     ],

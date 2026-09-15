@@ -32,6 +32,9 @@ type PaymentChoice = {
   amount: number
   payable: boolean
   percent: number
+  locked?: boolean
+  available_at?: string | null
+  reason?: string | null
 }
 
 type PublicPaymentSnapshot = {
@@ -43,6 +46,8 @@ type PublicPaymentSnapshot = {
   invoice_number?: string
   deposit_percent?: number
   balance_percent?: number
+  balance_available?: boolean
+  balance_available_at?: string | null
   choices?: PaymentChoice[]
 }
 
@@ -340,6 +345,21 @@ export default function PublicProposalClient({
                         amount: money(balance.amount, currency, lang),
                       })}
                 </button>
+              ) : balance?.locked ? (
+                <p
+                  data-testid="balance-locked"
+                  className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950"
+                >
+                  {tPublicOps(lang, 'balanceNotAvailableYet')}
+                  {balance.available_at
+                    ? ` ${tPublicOps(lang, 'balanceLockedUntil', {
+                        when: new Date(balance.available_at).toLocaleString(
+                          lang === 'pt' ? 'pt-BR' : lang === 'es' ? 'es-ES' : 'en-US',
+                          { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/New_York' },
+                        ),
+                      })}`
+                    : ''}
+                </p>
               ) : (
                 <p data-testid="balance-paid" className="text-sm font-bold text-emerald-700">
                   {tPublicOps(lang, 'balanceLabel')}: {tPublicOps(lang, 'paidLabel')}
