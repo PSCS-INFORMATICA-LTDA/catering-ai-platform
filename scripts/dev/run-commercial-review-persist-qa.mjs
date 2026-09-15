@@ -156,6 +156,41 @@ async function unusedPhone(db, prefix) {
   throw new Error('no unused QA phone')
 }
 
+async function unusedEventWindow(db) {
+  const nowIso = new Date().toISOString()
+  for (let offset = 0; offset < 80; offset += 1) {
+    const cursor = new Date(Date.UTC(2028, 0, 15 + offset))
+    const eventDate = cursor.toISOString().slice(0, 10)
+    const prev = new Date(`${eventDate}T12:00:00`)
+    prev.setDate(prev.getDate() - 1)
+    const next = new Date(`${eventDate}T12:00:00`)
+    next.setDate(next.getDate() + 1)
+    const from = prev.toISOString().slice(0, 10)
+    const to = next.toISOString().slice(0, 10)
+    const [agenda, holds] = await Promise.all([
+      db
+        .from('agenda_events')
+        .select('id')
+        .eq('company_id', COMPANY)
+        .gte('event_date', from)
+        .lte('event_date', to)
+        .in('status', ['reserved', 'scheduled', 'completed'])
+        .limit(1),
+      db
+        .from('payment_schedule_holds')
+        .select('id, event_date')
+        .eq('company_id', COMPANY)
+        .eq('status', 'active')
+        .gt('expires_at', nowIso)
+        .gte('event_date', from)
+        .lte('event_date', to)
+        .limit(1),
+    ])
+    if (!agenda.data?.length && !holds.data?.length) return eventDate
+  }
+  throw new Error('no unused QA event window')
+}
+
 async function packageSelections(db, packageId) {
   const groups = await db
     .from('package_option_groups')
@@ -180,13 +215,13 @@ async function packageSelections(db, packageId) {
   return selections
 }
 
-function draft({ locale, firstName, lastName, phone, email, eventName }) {
+function draft({ locale, firstName, lastName, phone, email, eventName, eventDate }) {
   return {
     locale,
     contact: { firstName, lastName, phone, email },
     event: {
       eventName,
-      eventDate: '2026-10-18',
+      eventDate,
       startTime: '12:00',
       endTime: '16:00',
       adultCount: 40,
@@ -396,6 +431,7 @@ async function main() {
     throw new Error('public quote is not enabled on DEV')
   }
   const selections = await packageSelections(db, PACKAGE_ID)
+  const isolatedEventDate = await unusedEventWindow(db)
   const evidence = {
     base: BASE,
     actorId,
@@ -427,6 +463,7 @@ async function main() {
       phone,
       email: 'qa.commercial.review.pin@example.invalid',
       eventName: `${TAG} WELCOME pin`,
+      eventDate: isolatedEventDate,
     })
     payload.selection.packageSelections = selections
     const started = await startSession('en')
@@ -479,7 +516,7 @@ async function main() {
       record(
         'E2E-capacity-zero-literal',
         reservedValue === '0' && /^\d+$/.test(configuredValue),
-        `reserved=${reservedValue || 'missing'} configured=${configuredValue || 'missing'}`,
+        `reserved=${reservedValue || 'missing'} configured=${configuredValue || 'missing'} eventDate=${isolatedEventDate}`,
       )
 
       const secret = `QAINTNOTE${randomUUID().replace(/-/g, '').slice(0, 20)}`
@@ -820,6 +857,7 @@ async function main() {
       phone,
       email: 'qa.commercial.review.failclosed@example.invalid',
       eventName: `${TAG} fail-closed share`,
+      eventDate: isolatedEventDate,
     })
     payload.selection.packageSelections = selections
     const started = await startSession('en')
@@ -885,6 +923,7 @@ async function main() {
       phone,
       email: 'qa.commercial.review.approve@example.invalid',
       eventName: `${TAG} CDL10 approve share`,
+      eventDate: isolatedEventDate,
     })
     payload.selection.packageSelections = selections
     const started = await startSession('pt')
@@ -965,6 +1004,7 @@ async function main() {
       phone,
       email: 'qa.commercial.review.reject@example.invalid',
       eventName: `${TAG} CDL10 reject share`,
+      eventDate: isolatedEventDate,
     })
     payload.selection.packageSelections = selections
     const started = await startSession('en')
