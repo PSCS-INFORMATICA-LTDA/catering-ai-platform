@@ -1,4 +1,5 @@
-import { requireApiPermission } from '@/Lib/auth/requireApi'
+import { requireApiPermission, resolveAuthorizedCompanyId } from '@/Lib/auth/requireApi'
+import { loadFrozenQuoteDetailForProposal } from '@/Lib/commercialReview/loadPublicProposal'
 import { fetchQuoteDetail } from '@/Lib/fetchQuoteDetail'
 import {
   generateQuotePdfBuffer,
@@ -16,8 +17,8 @@ export async function GET(
   if (!auth.ok) return auth.response
 
   const { id } = await params
-
-  const { data, error } = await fetchQuoteDetail(id)
+  const companyId = resolveAuthorizedCompanyId(auth.session)
+  const { data, error } = await fetchQuoteDetail(id, null, { companyId })
 
   if (error || !data) {
     return Response.json(
@@ -30,9 +31,25 @@ export async function GET(
     )
   }
 
+  let quote = data as QuoteDetail
+  if (quote.proposal_shared_version_id) {
+    const frozen = await loadFrozenQuoteDetailForProposal({
+      quoteId: id,
+      companyId,
+      sharedVersionId: quote.proposal_shared_version_id,
+    })
+    if (!frozen.ok) {
+      return Response.json(
+        { error: frozen.code, message: frozen.error },
+        { status: 409 },
+      )
+    }
+    quote = frozen.quote
+  }
+
   try {
-    const buffer = await generateQuotePdfBuffer(data as QuoteDetail)
-    const headers = getQuotePdfResponseHeaders(data as QuoteDetail)
+    const buffer = await generateQuotePdfBuffer(quote)
+    const headers = getQuotePdfResponseHeaders(quote)
 
     return new Response(new Uint8Array(buffer), { headers })
   } catch (pdfError) {

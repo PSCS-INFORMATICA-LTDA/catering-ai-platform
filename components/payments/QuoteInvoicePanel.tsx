@@ -1,8 +1,20 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { tPayments } from '@/Lib/i18n/payments'
+import { tCommon } from '@/Lib/i18n/common'
+import { CUSTOMER_DISPLAY_NAME_EMPTY } from '@/Lib/getCustomerDisplayName'
+import {
+  buildPaymentShareMessage,
+  buildPaymentWhatsAppHref,
+  customerFirstNameFromDisplayName,
+  paymentSharePhoneDigits,
+} from '@/Lib/payments/paymentShareMessage'
+import { copyWhatsAppMessageSync, formatWhatsAppPhoneDisplay } from '@/Lib/whatsapp'
+import { resolveTenantCompanyDisplayName } from '@/Lib/tenant/companyDisplayName'
+import { useTenant } from '@/components/tenant/TenantProvider'
+import { resolveInvoiceDocumentLocale } from '@/Lib/payments/invoiceDocumentLocale'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 type InvoiceSummary = {
@@ -13,6 +25,24 @@ type InvoiceSummary = {
   deposit_amount: number
   balance_amount: number
   paid_total: number
+  deposit_due?: number
+  balance_due?: number
+  full_due?: number
+  deposit_available?: boolean
+  balance_available?: boolean
+  full_available?: boolean
+  balance_available_at?: string | null
+  currency_code?: string | null
+  locale?: string | null
+}
+
+type SharePurpose = 'deposit' | 'balance' | 'full'
+
+type LastShare = {
+  purpose: SharePurpose
+  url: string
+  text: string
+  waHref: string | null
 }
 
 export default function QuoteInvoicePanel({
@@ -20,26 +50,83 @@ export default function QuoteInvoicePanel({
   canManage,
   language,
   quoteAccepted,
+  customerPhone,
+  customerName,
+  quoteNumber,
+  currencyCode,
 }: {
   quoteId: string
   canManage: boolean
   language?: string | null
   quoteAccepted: boolean
+  customerPhone?: string | null
+  customerName?: string | null
+  quoteNumber?: string | null
+  currencyCode?: string | null
 }) {
-  const locale: QuoteLanguage = language === 'en' || language === 'es' ? language : 'pt'
+  const quoteLanguage: QuoteLanguage = resolveInvoiceDocumentLocale(language)
+  const { company } = useTenant()
+  const companyDisplayName =
+    resolveTenantCompanyDisplayName(company) || 'Catering AI'
   const [invoice, setInvoice] = useState<InvoiceSummary | null>(null)
   const [busy, setBusy] = useState(false)
+  const locale: QuoteLanguage = resolveInvoiceDocumentLocale(
+    invoice?.locale || quoteLanguage,
+  )
   const [error, setError] = useState<string | null>(null)
-  const [link, setLink] = useState<string | null>(null)
+  const [lastShare, setLastShare] = useState<LastShare | null>(null)
+  const [copied, setCopied] = useState<string | null>(null)
+  const [showUrl, setShowUrl] = useState(false)
+
+  const phoneDigits = paymentSharePhoneDigits(customerPhone)
+  const phoneLabel = formatWhatsAppPhoneDisplay(customerPhone)
+  const phoneOk = Boolean(phoneDigits)
 
   useEffect(() => {
+    if (!quoteAccepted) return
     void fetch(`/api/quotes/${quoteId}/invoice`)
       .then((response) => response.json())
       .then((result) => {
         if (result?.data) setInvoice(result.data)
       })
       .catch(() => null)
-  }, [quoteId])
+  }, [quoteId, quoteAccepted])
+
+  const invoiceOutstanding = invoice
+    ? Number.isFinite(Number(invoice.full_due))
+      ? Number(invoice.full_due)
+      : Math.max(0, Math.round((invoice.total - invoice.paid_total) * 100) / 100)
+    : 0
+  const displayCurrency = invoice?.currency_code || currencyCode || 'USD'
+  const firstName = customerFirstNameFromDisplayName(
+    customerName && customerName !== CUSTOMER_DISPLAY_NAME_EMPTY
+      ? customerName
+      : '',
+  )
+
+  const shareAmounts = useMemo(() => {
+    if (!invoice) return { deposit: null, balance: null, full: null }
+    return {
+      deposit: Number.isFinite(Number(invoice.deposit_due)) ? Number(invoice.deposit_due) : null,
+      balance: Number.isFinite(Number(invoice.balance_due)) ? Number(invoice.balance_due) : null,
+      full: Number.isFinite(Number(invoice.full_due)) ? Number(invoice.full_due) : null,
+    }
+  }, [invoice])
+
+  if (!quoteAccepted) {
+    return (
+      <section
+        data-invoice-panel
+        data-testid="awaiting-customer-acceptance"
+        className="no-print liquid-glass-card mt-4 space-y-3 p-5"
+      >
+        <h2 className="text-lg font-bold text-cdl-fg">{tPayments(locale, 'invoiceTitle')}</h2>
+        <p className="text-sm font-semibold text-cdl-muted">
+          {tPayments(locale, 'awaitingCustomerAcceptance')}
+        </p>
+      </section>
+    )
+  }
 
   if (!canManage && !invoice) return null
 
@@ -62,8 +149,28 @@ export default function QuoteInvoicePanel({
     }
   }
 
-  async function createLink(purpose: 'deposit' | 'balance') {
-    if (!invoice) return
+  function buildShare(purpose: SharePurpose, url: string, amount: number): LastShare {
+    const text = buildPaymentShareMessage({
+      locale,
+      companyDisplayName,
+      customerFirstName: firstName,
+      quoteNumber: quoteNumber || invoice?.invoice_number,
+      invoiceNumber: invoice?.invoice_number,
+      purpose,
+      amount,
+      currency: displayCurrency,
+      paymentUrl: url,
+    }).text
+    return {
+      purpose,
+      url,
+      text,
+      waHref: buildPaymentWhatsAppHref(customerPhone, text),
+    }
+  }
+
+  async function createShare(purpose: SharePurpose): Promise<LastShare | null> {
+    if (!invoice) return null
     setBusy(true)
     setError(null)
     try {
@@ -74,12 +181,71 @@ export default function QuoteInvoicePanel({
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || tPayments(locale, 'generateError'))
-      setLink(result.data.url)
+      const url = String(result.data?.url || '')
+      const serverAmount = Number(result.data?.amount)
+      const fallbackAmount =
+        purpose === 'deposit'
+          ? shareAmounts.deposit
+          : purpose === 'balance'
+            ? shareAmounts.balance
+            : shareAmounts.full
+      const amount = Number.isFinite(serverAmount) ? serverAmount : fallbackAmount
+      if (amount == null || !Number.isFinite(amount)) {
+        throw new Error(tPayments(locale, 'generateError'))
+      }
+      if (result.data?.deposit_due != null || result.data?.balance_due != null) {
+        setInvoice((current) =>
+          current
+            ? {
+                ...current,
+                deposit_due: Number(result.data.deposit_due ?? current.deposit_due),
+                balance_due: Number(result.data.balance_due ?? current.balance_due),
+                full_due: Number(result.data.full_due ?? current.full_due),
+              }
+            : current,
+        )
+      }
+      const share = buildShare(purpose, url, amount)
+      setLastShare(share)
+      return share
     } catch (err) {
       setError(err instanceof Error ? err.message : tPayments(locale, 'generateError'))
+      return null
     } finally {
       setBusy(false)
     }
+  }
+
+  async function sendWhatsApp(purpose: SharePurpose) {
+    if (!phoneOk) return
+    const share = await createShare(purpose)
+    if (!share?.waHref) return
+    const opened = window.open(share.waHref, '_blank', 'noopener,noreferrer')
+    if (!opened) window.location.assign(share.waHref)
+  }
+
+  async function copyMessage() {
+    const share = lastShare || (await createShare('deposit'))
+    if (!share) {
+      setCopied(tPayments(locale, 'generateShareFirst'))
+      return
+    }
+    const ok =
+      copyWhatsAppMessageSync(share.text) ||
+      (await navigator.clipboard.writeText(share.text).then(() => true).catch(() => false))
+    setCopied(ok ? tPayments(locale, 'paymentMessageCopied') : tCommon(locale, 'errorGeneric'))
+  }
+
+  async function copyLink() {
+    const share = lastShare || (await createShare('deposit'))
+    if (!share) {
+      setCopied(tPayments(locale, 'generateShareFirst'))
+      return
+    }
+    const ok =
+      copyWhatsAppMessageSync(share.url) ||
+      (await navigator.clipboard.writeText(share.url).then(() => true).catch(() => false))
+    setCopied(ok ? tPayments(locale, 'paymentLinkCopied') : tCommon(locale, 'errorGeneric'))
   }
 
   const statusLabel =
@@ -91,18 +257,25 @@ export default function QuoteInvoicePanel({
           ? tPayments(locale, 'statusCanceled')
           : tPayments(locale, 'statusAwaitingDeposit')
 
-  const invoiceOutstanding = invoice
-    ? Math.max(0, Math.round((invoice.total - invoice.paid_total) * 100) / 100)
-    : 0
+  const shareDisabled = busy || !invoice || invoice.status === 'paid' || invoice.status === 'canceled'
+  const waDisabled = shareDisabled || !phoneOk
+  const depositDue = Number(shareAmounts.deposit ?? 0)
+  const balanceDue = Number(shareAmounts.balance ?? 0)
+  const fullDue = Number(shareAmounts.full ?? invoiceOutstanding)
+  const balanceAvailable = invoice?.balance_available !== false
+  const depositAvailable = invoice?.deposit_available !== false
+  const fullAvailable = invoice?.full_available !== false
 
   return (
     <section
       data-invoice-panel
-      className="no-print liquid-glass-card mt-4 space-y-3 p-5"
+      data-last-wa-href={lastShare?.waHref || ''}
+      data-last-payment-url={lastShare?.url || ''}
+      className="no-print liquid-glass-card mt-4 space-y-4 p-5"
     >
       <h2 className="text-lg font-bold text-cdl-fg">{tPayments(locale, 'invoiceTitle')}</h2>
       {invoice ? (
-        <div className="space-y-2 text-sm text-cdl-muted">
+        <div className="space-y-3 text-sm text-cdl-muted">
           <p data-invoice-number>
             {tPayments(locale, 'invoiceNumber', { number: invoice.invoice_number })}
           </p>
@@ -110,49 +283,147 @@ export default function QuoteInvoicePanel({
             {tPayments(locale, 'paymentStatus')}: {statusLabel}
           </p>
           <p>
-            {tPayments(locale, 'total')}: US${invoice.total.toFixed(2)} ·{' '}
-            {tPayments(locale, 'deposit')}: US${invoice.deposit_amount.toFixed(2)} ·{' '}
-            {tPayments(locale, 'paid')}: US${invoice.paid_total.toFixed(2)} ·{' '}
-            {tPayments(locale, 'invoiceOutstanding')}: US${invoiceOutstanding.toFixed(2)}
+            {tPayments(locale, 'total')}: {displayCurrency} {invoice.total.toFixed(2)} ·{' '}
+            {tPayments(locale, 'deposit')}: {displayCurrency} {invoice.deposit_amount.toFixed(2)} ·{' '}
+            {tPayments(locale, 'paid')}: {displayCurrency} {invoice.paid_total.toFixed(2)} ·{' '}
+            {tPayments(locale, 'invoiceOutstanding')}: {displayCurrency} {invoiceOutstanding.toFixed(2)}
           </p>
+          {shareAmounts.deposit != null && shareAmounts.balance != null ? (
+            <p data-testid="invoice-purpose-dues">
+              {tPayments(locale, 'deposit')} {tPayments(locale, 'amountDue')}: {displayCurrency}{' '}
+              {shareAmounts.deposit.toFixed(2)} · {tPayments(locale, 'originalBalance')}{' '}
+              {tPayments(locale, 'amountDue')}: {displayCurrency} {shareAmounts.balance.toFixed(2)}
+            </p>
+          ) : null}
+          {invoice && !balanceAvailable && balanceDue > 0 ? (
+            <p data-testid="balance-locked" className="text-sm font-semibold text-amber-800">
+              {tPayments(locale, 'balanceNotAvailableYet')}
+              {invoice.balance_available_at
+                ? ` ${tPayments(locale, 'balanceLockedUntil', {
+                    when: new Date(invoice.balance_available_at).toLocaleString(
+                      locale === 'pt' ? 'pt-BR' : locale === 'es' ? 'es-ES' : 'en-US',
+                      { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/New_York' },
+                    ),
+                  })}`
+                : ''}
+            </p>
+          ) : null}
           <div className="flex flex-wrap gap-2">
             <Link
               href={`/invoices/${invoice.id}`}
-              className="rounded-xl border border-cdl-border bg-cdl-surface px-4 py-2 text-xs font-bold uppercase"
+              className="inline-flex min-h-11 items-center rounded-xl border border-cdl-border bg-cdl-surface px-4 py-2 text-xs font-bold uppercase"
             >
               {tPayments(locale, 'view')} {tPayments(locale, 'invoiceTitle')}
             </Link>
             <a
               href={`/api/invoices/${invoice.id}/pdf`}
-              className="rounded-xl border border-cdl-border bg-cdl-surface px-4 py-2 text-xs font-bold uppercase"
+              className="inline-flex min-h-11 items-center rounded-xl border border-cdl-border bg-cdl-surface px-4 py-2 text-xs font-bold uppercase"
             >
               {tPayments(locale, 'downloadPdf')}
             </a>
-            {canManage && invoice.status !== 'paid' ? (
-              <>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void createLink('deposit')}
-                  className="rounded-xl border border-cdl-border bg-cdl-surface px-4 py-2 text-xs font-bold uppercase"
-                >
-                  {tPayments(locale, 'payDeposit')}
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void createLink('balance')}
-                  className="rounded-xl border border-cdl-border bg-cdl-surface px-4 py-2 text-xs font-bold uppercase"
-                >
-                  {tPayments(locale, 'payBalance')}
-                </button>
-              </>
-            ) : null}
           </div>
-          {link ? (
-            <p className="break-all text-xs">
-              {tPayments(locale, 'copyLink')}: {link}
-            </p>
+
+          {canManage ? (
+            <div
+              data-testid="quote-invoice-whatsapp"
+              className="space-y-3 rounded-2xl border border-cdl-border bg-cdl-inset/40 p-4"
+            >
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-cdl-muted">
+                {tPayments(locale, 'customerWhatsApp')}
+              </p>
+              {phoneOk ? (
+                <p data-testid="customer-whatsapp-number" className="text-base font-bold text-cdl-fg">
+                  {phoneLabel || `+${phoneDigits}`}
+                </p>
+              ) : (
+                <p data-testid="customer-whatsapp-missing" className="text-sm font-semibold text-amber-700">
+                  {tPayments(locale, 'missingCustomerWhatsApp')}
+                </p>
+              )}
+              <div className="grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  data-testid="send-deposit-whatsapp"
+                  disabled={waDisabled || depositDue <= 0 || !depositAvailable}
+                  onClick={() => void sendWhatsApp('deposit')}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#128C7E] px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white disabled:opacity-40"
+                >
+                  {tPayments(locale, 'sendDepositWhatsApp')}
+                </button>
+                <button
+                  type="button"
+                  data-testid="send-balance-whatsapp"
+                  disabled={waDisabled || balanceDue <= 0 || !balanceAvailable}
+                  onClick={() => void sendWhatsApp('balance')}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#128C7E] px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white disabled:opacity-40"
+                >
+                  {tPayments(locale, 'sendBalanceWhatsApp')}
+                </button>
+                <button
+                  type="button"
+                  data-testid="send-full-whatsapp"
+                  disabled={waDisabled || fullDue <= 0 || !fullAvailable}
+                  onClick={() => void sendWhatsApp('full')}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#128C7E] px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white disabled:opacity-40"
+                >
+                  {tPayments(locale, 'sendFullWhatsApp')}
+                </button>
+                <button
+                  type="button"
+                  data-testid="copy-payment-message"
+                  disabled={shareDisabled}
+                  onClick={() => void copyMessage()}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-cdl-border bg-cdl-surface px-4 py-2.5 text-xs font-bold uppercase"
+                >
+                  {tPayments(locale, 'copyPaymentMessage')}
+                </button>
+                <button
+                  type="button"
+                  data-testid="copy-payment-link"
+                  disabled={shareDisabled}
+                  onClick={() => void copyLink()}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-cdl-border bg-cdl-surface px-4 py-2.5 text-xs font-bold uppercase"
+                >
+                  {tPayments(locale, 'copyLink')}
+                </button>
+              </div>
+              {lastShare ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-cdl-fg">
+                    {lastShare.purpose === 'deposit'
+                      ? tPayments(locale, 'lastShareDeposit')
+                      : lastShare.purpose === 'full'
+                        ? tPayments(locale, 'lastShareFull')
+                        : tPayments(locale, 'lastShareBalance')}
+                  </p>
+                  <pre
+                    data-testid="payment-share-preview"
+                    className="max-h-40 overflow-auto whitespace-pre-wrap rounded-xl bg-cdl-surface px-3 py-2 text-xs text-cdl-fg"
+                  >
+                    {lastShare.text}
+                  </pre>
+                  <button
+                    type="button"
+                    className="text-xs font-bold uppercase text-cdl-muted underline"
+                    onClick={() => setShowUrl((current) => !current)}
+                  >
+                    {showUrl
+                      ? tPayments(locale, 'hidePaymentUrl')
+                      : tPayments(locale, 'showPaymentUrl')}
+                  </button>
+                  {showUrl ? (
+                    <p data-testid="payment-share-url" className="break-all text-xs text-cdl-muted">
+                      {lastShare.url}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+              {copied ? (
+                <p className="text-xs font-semibold text-emerald-700" role="status">
+                  {copied}
+                </p>
+              ) : null}
+            </div>
           ) : null}
         </div>
       ) : canManage ? (
@@ -160,7 +431,7 @@ export default function QuoteInvoicePanel({
           type="button"
           disabled={busy}
           onClick={() => void generate()}
-          className="rounded-xl bg-[var(--brand-primary-2,#1e3a5f)] px-4 py-2 text-xs font-bold uppercase text-white disabled:opacity-40"
+          className="inline-flex min-h-11 items-center rounded-xl bg-[var(--brand-primary-2,#1e3a5f)] px-4 py-2 text-xs font-bold uppercase text-white disabled:opacity-40"
         >
           {tPayments(locale, 'generateInvoice')}
         </button>

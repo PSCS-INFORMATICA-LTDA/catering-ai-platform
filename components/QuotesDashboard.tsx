@@ -281,7 +281,11 @@ export default function QuotesDashboard({
     const next = params.toString()
     const current = window.location.search.replace(/^\?/, '')
     if (next !== current) {
-      window.history.replaceState(null, '', next ? `/quotes?${next}` : '/quotes')
+      window.history.replaceState(
+        window.history.state,
+        '',
+        next ? `/quotes?${next}` : '/quotes',
+      )
     }
     if (skipFirstEmptyRefresh.current && isDefaultFilters(filters)) {
       skipFirstEmptyRefresh.current = false
@@ -367,7 +371,7 @@ export default function QuotesDashboard({
   )
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5" data-testid="quotes-dashboard">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-[var(--brand-primary)] sm:text-3xl">

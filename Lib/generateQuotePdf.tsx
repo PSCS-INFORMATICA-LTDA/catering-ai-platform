@@ -1,6 +1,7 @@
 import { renderToBuffer } from '@react-pdf/renderer'
 import { QuotePdfDocument } from '@/app/quotes/[id]/QuotePdfDocument'
 import type { QuoteDetail } from '@/app/quotes/[id]/quoteDetailTypes'
+import { omitInternalNotes } from '@/Lib/commercialReview/internalNotes'
 import {
   resolveCdlLogoForPdf,
   resolvePublicImageForPdf,
@@ -9,12 +10,13 @@ import { resolveRemoteImageForPdf } from '@/Lib/packageImageForPdf'
 import { getQuotePdfContentDisposition } from '@/Lib/quotePdfFilename'
 
 export async function generateQuotePdfBuffer(quote: QuoteDetail) {
+  const publicQuote = omitInternalNotes(quote as QuoteDetail & Record<string, unknown>) as QuoteDetail
   const logo = resolveCdlLogoForPdf()
   const pscs = resolvePublicImageForPdf('brand/pscs-one.png')
-  const packageImageSrc = await resolveRemoteImageForPdf(quote.package_image_url)
+  const packageImageSrc = await resolveRemoteImageForPdf(publicQuote.package_image_url)
   return renderToBuffer(
     <QuotePdfDocument
-      quote={quote}
+      quote={publicQuote}
       logo={logo}
       pscs={pscs}
       packageImageSrc={packageImageSrc}

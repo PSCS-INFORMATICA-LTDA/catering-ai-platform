@@ -1,5 +1,5 @@
 import { fetchQuoteDetail } from '../../../Lib/fetchQuoteDetail'
-import QuoteDetailView from './QuoteDetailView'
+import CommercialReviewWorkspace from '@/components/commercial-review/CommercialReviewWorkspace'
 import type { QuoteDetail } from './quoteDetailTypes'
 import { getAuthSession } from '@/Lib/auth/session'
 import { hasPermission } from '@/Lib/auth/permissions'
@@ -7,6 +7,7 @@ import { resolveAuthorizedCompanyId } from '@/Lib/auth/requireApi'
 import { resolveAuthLocale } from '@/Lib/i18n/authUsers'
 import { logDevServerTiming } from '@/Lib/observability/serverTiming'
 import { tw } from '@/Lib/quoteTranslations'
+import { loadCommercialReviewExtras } from '@/Lib/commercialReview/loadWorkspaceExtras'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -45,6 +46,22 @@ export default async function QuoteDetailPage({
     )
   }
 
+  const extras = companyId
+    ? await loadCommercialReviewExtras({ companyId, quote: data as QuoteDetail })
+    : {
+        currentVersion: null,
+        sharedVersionId: null,
+        sharedBy: null,
+        capacity: {
+          state: 'unknown' as const,
+          capacity: 1,
+          reservedCount: 0,
+          thisQuoteReserved: false,
+          hasEventWindow: false,
+        },
+        history: [],
+      }
+
   const canConvert = Boolean(
     session?.isPlatformAdmin || hasPermission(session?.permissions, 'quotes.convert'),
   )
@@ -56,13 +73,18 @@ export default async function QuoteDetailPage({
   const canManageCoupons = Boolean(
     session?.isPlatformAdmin || hasPermission(session?.permissions, 'commercial.coupons.manage'),
   )
+  const canManageNotes = Boolean(
+    session?.isPlatformAdmin || hasPermission(session?.permissions, 'quotes.manage'),
+  )
 
   return (
-    <QuoteDetailView
+    <CommercialReviewWorkspace
       quote={data as QuoteDetail}
+      extras={extras}
       canConvert={canConvert}
       canManageInvoice={canManageInvoice}
       canManageCoupons={canManageCoupons}
+      canManageNotes={canManageNotes}
       uiLocale={uiLocale}
     />
   )

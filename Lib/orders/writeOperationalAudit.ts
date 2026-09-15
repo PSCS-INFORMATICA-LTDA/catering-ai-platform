@@ -33,6 +33,7 @@ export type OperationalAuditEntityType =
   | 'invoice_refund'
   | 'invoice_cancellation'
   | 'event_financial_closeout'
+  | 'quote_proposal'
 
 export type OperationalAuditAction =
   | 'quote_version_created'
@@ -96,6 +97,9 @@ export type OperationalAuditAction =
   | 'invoice_cancellation_requested'
   | 'financial_closeout_saved'
   | 'financial_closeout_finalized'
+  | 'proposal_shared'
+  | 'proposal_responded'
+  | 'internal_notes_updated'
 
 export async function writeOperationalAudit(input: {
   companyId: string

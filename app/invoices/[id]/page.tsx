@@ -1,6 +1,7 @@
 import { FinanceBackLink, FinanceBreadcrumb } from '@/components/finance/FinanceChrome'
 import FinanceControls from '@/components/payments/FinanceControls'
 import InvoiceAdjustmentSummary from '@/components/payments/InvoiceAdjustmentSummary'
+import InvoiceDetailView from '@/components/payments/InvoiceDetailView'
 import InvoiceObservabilityPanels from '@/components/payments/InvoiceObservabilityPanels'
 import Link from 'next/link'
 import { hasPermission } from '@/Lib/auth/permissions'
@@ -90,6 +91,9 @@ export default async function InvoiceDetailPage({
         </div>
       )}
       <InvoiceAdjustmentSummary invoice={detail.data} />
+      <div className="mx-auto w-full max-w-6xl">
+        <InvoiceDetailView invoice={detail.data} />
+      </div>
       <div className="mx-auto w-full max-w-6xl">
         <FinanceControls
           invoice={detail.data}

@@ -1,3 +1,7 @@
+import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
+import { loadPublicProposalByToken } from '@/Lib/commercialReview/loadPublicProposal'
+import { quoteHasPendingCoupon } from '@/Lib/coupons/resolveCoupon'
+import { loadPublicProposalPaymentSnapshot } from '@/Lib/payments/publicProposalPayment'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
@@ -9,108 +13,27 @@ function invalidToken(token: string) {
   return !token || token.trim().length < 32
 }
 
+async function withPayment(
+  loaded: Awaited<ReturnType<typeof loadPublicProposalByToken>>,
+) {
+  if (!loaded.ok) return loaded.payload
+  const quote = loaded.payload.quote as
+    | { quote_status?: string | null }
+    | undefined
+  const payment = await loadPublicProposalPaymentSnapshot({
+    companyId: loaded.companyId,
+    quoteId: loaded.quoteId,
+    proposalResponse: String(loaded.payload.proposal_response || 'pending'),
+    quoteStatus: quote?.quote_status ?? null,
+  })
+  return { ...loaded.payload, payment }
+}
+
 export async function GET(_request: Request, { params }: Params) {
   const { token } = await params
-  if (invalidToken(token)) {
-    return Response.json({ found: false })
-  }
-
-  const db = getSupabaseServerClient()
-
-  // Prefer RPC (Logistics pattern) when available
-  const rpc = await db.rpc('get_public_quote_proposal', {
-    p_token: token.trim(),
-  })
-  if (!rpc.error && rpc.data) {
-    return Response.json(rpc.data)
-  }
-
-  const { data: quote, error } = await db
-    .from('quotes')
-    .select(
-      'id, company_id, quote_number, quote_status, quote_total, reservation_amount, balance_due, currency_code, language, adult_count, children_under_3_count, children_4_to_12_count, physical_guest_count, billable_guest_count, proposal_response, proposal_sent_at, customer_id, package_id, event_id, active',
-    )
-    .eq('proposal_token', token.trim())
-    .eq('active', true)
-    .maybeSingle()
-
-  if (error) {
-    if (/proposal_token|column/i.test(error.message)) {
-      return Response.json({ found: false, error: 'migration_required' })
-    }
-    return Response.json({ found: false, error: error.message }, { status: 500 })
-  }
-  if (!quote) return Response.json({ found: false })
-
-  const [companyRes, customerRes, eventRes, packageRes] = await Promise.all([
-    db
-      .from('companies')
-      .select('name, trade_name')
-      .eq('id', quote.company_id)
-      .maybeSingle(),
-    quote.customer_id
-      ? db
-          .from('customers')
-          .select('full_name, ab_name, contact_name, company_name, phone, email')
-          .eq('id', quote.customer_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    quote.event_id
-      ? db
-          .from('events')
-          .select('event_date, event_name')
-          .eq('id', quote.event_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    quote.package_id
-      ? db
-          .from('packages')
-          .select('label_pt, package_key')
-          .eq('id', quote.package_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-  ])
-
-  const customer = customerRes.data
-  const customerName =
-    customer?.full_name ||
-    customer?.ab_name ||
-    customer?.contact_name ||
-    customer?.company_name ||
-    null
-
-  return Response.json({
-    found: true,
-    company_name:
-      companyRes.data?.trade_name || companyRes.data?.name || 'BBQ At Home',
-    proposal_response: quote.proposal_response ?? 'pending',
-    proposal_sent_at: quote.proposal_sent_at,
-    can_respond:
-      (quote.proposal_response ?? 'pending') === 'pending' &&
-      Boolean(quote.proposal_sent_at),
-    quote: {
-      id: quote.id,
-      quote_number: quote.quote_number,
-      quote_status: quote.quote_status,
-      quote_total: quote.quote_total,
-      reservation_amount: quote.reservation_amount,
-      balance_due: quote.balance_due,
-      currency_code: quote.currency_code ?? 'USD',
-      package_label:
-        packageRes.data?.label_pt || packageRes.data?.package_key || null,
-      adult_count: quote.adult_count,
-      children_under_3_count: quote.children_under_3_count,
-      children_4_to_12_count: quote.children_4_to_12_count,
-      physical_guest_count: quote.physical_guest_count,
-      billable_guest_count: quote.billable_guest_count,
-      customer_name: customerName,
-      customer_phone: customer?.phone ?? null,
-      customer_email: customer?.email ?? null,
-      event_name: eventRes.data?.event_name ?? null,
-      event_date: eventRes.data?.event_date ?? null,
-      language: quote.language ?? 'pt',
-    },
-  })
+  const loaded = await loadPublicProposalByToken(token)
+  const payload = await withPayment(loaded)
+  return Response.json(payload, { status: loaded.status })
 }
 
 export async function POST(request: Request, { params }: Params) {
@@ -127,20 +50,13 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   const db = getSupabaseServerClient()
-  const rpc = await db.rpc('respond_to_quote_proposal', {
-    p_token: token.trim(),
-    p_action: body.action,
-  })
-  if (!rpc.error && rpc.data) {
-    return Response.json({ data: rpc.data })
-  }
-
+  const trimmed = token.trim()
   const { data: quote, error } = await db
     .from('quotes')
     .select(
-      'id, proposal_sent_at, proposal_response, quote_status, active',
+      'id, company_id, proposal_sent_at, proposal_response, quote_status, active, proposal_shared_version_id, accepted_version_id',
     )
-    .eq('proposal_token', token.trim())
+    .eq('proposal_token', trimmed)
     .eq('active', true)
     .maybeSingle()
 
@@ -156,17 +72,51 @@ export async function POST(request: Request, { params }: Params) {
       { status: 409 },
     )
   }
+
+  const alreadyAccepted = quote.proposal_response === 'accepted'
+  if (alreadyAccepted && body.action === 'accept') {
+    const payment = await loadPublicProposalPaymentSnapshot({
+      companyId: quote.company_id,
+      quoteId: quote.id,
+      proposalResponse: 'accepted',
+      quoteStatus: quote.quote_status,
+    })
+    return Response.json({
+      data: {
+        proposal_response: 'accepted',
+        quote_status: quote.quote_status,
+        proposal_shared_version_id: quote.proposal_shared_version_id,
+        accepted_version_id: quote.accepted_version_id,
+        already_accepted: true,
+        payment,
+      },
+    })
+  }
+
   if (quote.proposal_response !== 'pending') {
     return Response.json({ error: 'Proposta já respondida' }, { status: 409 })
   }
 
+  if (body.action === 'accept') {
+    const pendingCoupon = await quoteHasPendingCoupon(quote.company_id, quote.id)
+    if (!pendingCoupon.ok) {
+      return Response.json({ error: 'coupon_approval_check_failed' }, { status: 500 })
+    }
+    if (pendingCoupon.pending) {
+      return Response.json({ error: 'coupon_approval_pending' }, { status: 409 })
+    }
+  }
+
   const now = new Date().toISOString()
-  const patch =
+  const sharedVersionId =
+    (quote.proposal_shared_version_id as string | null) ?? null
+  const patch: Record<string, unknown> =
     body.action === 'accept'
       ? {
           proposal_response: 'accepted',
           proposal_accepted_at: now,
           quote_status: 'approved',
+          ...(sharedVersionId ? { accepted_version_id: sharedVersionId } : {}),
         }
       : {
           proposal_response: 'rejected',
@@ -178,12 +128,59 @@ export async function POST(request: Request, { params }: Params) {
     .from('quotes')
     .update(patch)
     .eq('id', quote.id)
-    .select('proposal_response, quote_status')
+    .select(
+      'proposal_response, quote_status, proposal_shared_version_id, accepted_version_id',
+    )
     .single()
 
   if (updErr) {
     return Response.json({ error: updErr.message }, { status: 500 })
   }
 
-  return Response.json({ data })
+  await writeOperationalAudit({
+    companyId: quote.company_id,
+    actorUserId: null,
+    entityType: 'quote_proposal',
+    entityId: quote.id,
+    action: 'proposal_responded',
+    newData: {
+      quote_id: quote.id,
+      action: body.action,
+      proposal_shared_version_id: sharedVersionId,
+      accepted_version_id:
+        body.action === 'accept' ? sharedVersionId : null,
+    },
+  })
+
+  const payment =
+    body.action === 'accept'
+      ? await loadPublicProposalPaymentSnapshot({
+          companyId: quote.company_id,
+          quoteId: quote.id,
+          proposalResponse: 'accepted',
+          quoteStatus: data?.quote_status ?? 'approved',
+        })
+      : emptyRejectedPayment()
+
+  return Response.json({
+    data: {
+      ...data,
+      proposal_shared_version_id:
+        data?.proposal_shared_version_id ?? sharedVersionId,
+      payment,
+    },
+  })
+}
+
+function emptyRejectedPayment() {
+  return {
+    available: false,
+    reason: 'proposal_rejected',
+    currency_code: 'USD',
+    total: 0,
+    paid_total: 0,
+    deposit_percent: 0,
+    balance_percent: 0,
+    choices: [],
+  }
 }

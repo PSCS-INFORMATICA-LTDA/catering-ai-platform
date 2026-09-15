@@ -35,6 +35,7 @@ import {
 } from '@/Lib/grillPhotoStatus'
 import { getCustomerDisplayNameFromQuote } from '@/Lib/getCustomerDisplayName'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import { tPayments } from '@/Lib/i18n/payments'
 import {
   getPackagePerPersonUnitLabel,
   getPackagePriceLineLabel,
@@ -974,10 +975,12 @@ export function QuotePdfDocument({
               }
             />
             <InfoCell
-              label={t('docMileageIncluded')}
+              label={tPayments(lang, 'mileageIncluded')}
               value={
                 snapshot.mileageFreeLimit != null
-                  ? `${formatMileageQuantity(snapshot.mileageFreeLimit)} mi`
+                  ? tPayments(lang, 'mileageCourtesyValue', {
+                      n: formatMileageQuantity(snapshot.mileageFreeLimit),
+                    })
                   : '—'
               }
             />

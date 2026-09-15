@@ -10,6 +10,9 @@ import {
 } from '@/Lib/i18n/payments'
 import { formatUiDate, toBcp47Locale } from '@/Lib/i18n/locales'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
+import InvoiceFinancialBreakdown from '@/components/payments/InvoiceFinancialBreakdown'
+import { resolveInvoiceDocumentLocale } from '@/Lib/payments/invoiceDocumentLocale'
+import { buildInvoiceFinancialPresentation } from '@/Lib/payments/invoiceFinancialPresentation'
 import type { InvoiceBackofficeDetail } from '@/Lib/payments/fetchInvoiceBackoffice'
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
@@ -67,6 +70,19 @@ export default function InvoiceDetailView({
 }) {
   const locale = useAuthLocaleFromMe()
   const snapshot = invoice.snapshot
+  const documentLocale = resolveInvoiceDocumentLocale(invoice.locale || snapshot?.locale)
+  const presentation = snapshot
+    ? buildInvoiceFinancialPresentation({
+        snapshot,
+        invoiceKind: invoice.invoice_kind,
+        subtotal: invoice.subtotal,
+        total: invoice.total,
+        depositAmount: invoice.deposit_amount,
+        balanceAmount: invoice.balance_amount,
+        paidTotal: invoice.paid_total,
+        currency: invoice.currency_code,
+      })
+    : null
   const eventAddress = snapshot
     ? [
         snapshot.event.address,
@@ -125,7 +141,7 @@ export default function InvoiceDetailView({
         <h2 className="text-sm font-black uppercase tracking-wider text-neutral-800">
           {tPayments(locale, 'financialSummary')}
         </h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <FinancialValue
             label={tPayments(locale, 'total')}
             value={formatMoney(invoice.total, invoice.currency_code, locale)}
@@ -143,12 +159,30 @@ export default function InvoiceDetailView({
             value={formatMoney(invoice.paid_total, invoice.currency_code, locale)}
           />
           <FinancialValue
+            label={`${paymentPurposeLabel('deposit', locale)} — ${tPayments(locale, 'amountDue')}`}
+            value={formatMoney(invoice.deposit_due, invoice.currency_code, locale)}
+          />
+          <FinancialValue
+            label={`${paymentPurposeLabel('balance', locale)} — ${tPayments(locale, 'amountDue')}`}
+            value={formatMoney(invoice.balance_due, invoice.currency_code, locale)}
+          />
+          <FinancialValue
+            label={`${paymentPurposeLabel('full', locale)} — ${tPayments(locale, 'amountDue')}`}
+            value={formatMoney(invoice.full_due, invoice.currency_code, locale)}
+          />
+          <FinancialValue
             label={tPayments(locale, 'invoiceOutstanding')}
             value={formatMoney(invoice.outstanding_amount, invoice.currency_code, locale)}
             strong
           />
         </div>
       </section>
+
+      {presentation ? (
+        <section className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+          <InvoiceFinancialBreakdown presentation={presentation} locale={documentLocale} />
+        </section>
+      ) : null}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">

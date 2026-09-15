@@ -19,6 +19,11 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingIncludes: {
     "/api/quotes/[id]/pdf": ["./public/cdl/logo.png"],
+    "/api/public/company-brand/[companyId]/og": [
+      "./public/cdl/logo.png",
+      "./public/cdl/logo-cdl.png",
+      "./public/brand/catering-logo-dark.png",
+    ],
   },
 };
 

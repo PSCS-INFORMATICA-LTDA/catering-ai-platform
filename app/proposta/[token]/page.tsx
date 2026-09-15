@@ -21,7 +21,25 @@ export default async function PublicProposalPage({
     company_name?: string
     proposal_response?: string
     can_respond?: boolean
+    source?: 'shared_version' | 'legacy_live_quote'
+    proposal_shared_version_id?: string | null
     quote?: Record<string, unknown>
+    payment?: {
+      available?: boolean
+      reason?: string
+      currency_code?: string
+      total?: number
+      paid_total?: number
+      invoice_number?: string
+      deposit_percent?: number
+      balance_percent?: number
+      choices?: Array<{
+        purpose: 'deposit' | 'balance' | 'full'
+        amount: number
+        payable: boolean
+        percent: number
+      }>
+    } | null
   }
 
   if (!payload.found || !payload.quote) {
@@ -45,10 +63,13 @@ export default async function PublicProposalPage({
   return (
     <PublicProposalClient
       token={token}
-      companyName={payload.company_name || 'BBQ At Home'}
+      companyName={payload.company_name || 'Catering AI'}
       initialResponse={payload.proposal_response || 'pending'}
       canRespond={Boolean(payload.can_respond)}
+      source={payload.source || 'legacy_live_quote'}
+      sharedVersionId={payload.proposal_shared_version_id ?? null}
       quote={payload.quote as never}
+      initialPayment={payload.payment ?? null}
     />
   )
 }

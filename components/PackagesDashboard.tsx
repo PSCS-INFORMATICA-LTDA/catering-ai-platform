@@ -262,6 +262,7 @@ export default function PackagesDashboard({
       : null
 
   return (
+    <div data-testid="packages-dashboard">
     <BackofficeTableShell
       title={tPackages(locale, 'title')}
       subtitle={tPackages(locale, 'subtitle')}
@@ -386,5 +387,6 @@ export default function PackagesDashboard({
         )}
       </div>
     </BackofficeTableShell>
+    </div>
   )
 }

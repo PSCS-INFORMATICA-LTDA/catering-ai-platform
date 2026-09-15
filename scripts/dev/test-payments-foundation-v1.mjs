@@ -18,13 +18,25 @@ function roundMoney(value) {
   return Math.round(Math.max(0, Number(value) || 0) * 100) / 100
 }
 
-function resolveAmountDue({ total, depositAmount, paidTotal, purpose }) {
+function resolveAmountDue({ total, depositAmount, balanceAmount, paidTotal, purpose }) {
   const remaining = roundMoney(total - paidTotal)
   if (remaining <= 0) return { amount: 0, reason: 'already_paid' }
+  const deposit = roundMoney(depositAmount)
+  const balance = roundMoney(
+    balanceAmount == null ? Math.max(0, total - deposit) : balanceAmount,
+  )
+  const paidDeposit = Math.min(paidTotal, deposit)
+  const paidBalance = Math.min(Math.max(0, paidTotal - deposit), balance)
   if (purpose === 'deposit') {
-    const depositRemaining = roundMoney(depositAmount - paidTotal)
+    const depositRemaining = roundMoney(deposit - paidDeposit)
     if (depositRemaining <= 0) return { amount: 0, reason: 'deposit_already_paid' }
     return { amount: Math.min(depositRemaining, remaining), reason: 'deposit' }
+  }
+  if (purpose === 'balance') {
+    return {
+      amount: Math.min(roundMoney(Math.max(0, balance - paidBalance)), remaining),
+      reason: 'balance',
+    }
   }
   return { amount: remaining, reason: purpose }
 }
@@ -72,7 +84,7 @@ const spike = read('Lib/payments/paypal/invoicingSpike.ts')
 
 test('PAYMENT_SERVER_AMOUNT_SOURCE', () => {
   assert.match(ordersRoute, /ignoreClientAmount\(body\?\.amount\)/)
-  assert.match(ordersRoute, /resolveAmountDue/)
+  assert.match(ordersRoute, /resolveServerAmountDue/)
   assert.match(amountSrc, /Browser-supplied amounts must be discarded/)
 })
 
@@ -106,6 +118,34 @@ test('BALANCE_SUPPORTED', () => {
     purpose: 'balance',
   })
   assert.equal(due.amount, 700)
+})
+
+test('INV-2026-000009 SEMANTICS 2820/846/1974', () => {
+  const deposit = resolveAmountDue({
+    total: 2820,
+    depositAmount: 846,
+    balanceAmount: 1974,
+    paidTotal: 0,
+    purpose: 'deposit',
+  })
+  const balance = resolveAmountDue({
+    total: 2820,
+    depositAmount: 846,
+    balanceAmount: 1974,
+    paidTotal: 0,
+    purpose: 'balance',
+  })
+  const full = resolveAmountDue({
+    total: 2820,
+    depositAmount: 846,
+    balanceAmount: 1974,
+    paidTotal: 0,
+    purpose: 'full',
+  })
+  assert.equal(deposit.amount, 846)
+  assert.equal(balance.amount, 1974)
+  assert.equal(full.amount, 2820)
+  assert.notEqual(balance.amount, full.amount)
 })
 
 test('DOUBLE_CAPTURE_BLOCKED', () => {
@@ -195,7 +235,7 @@ test('PAYPAL INVOICING SPIKE RECORDED', () => {
 
 test('OPERATOR PANEL EXISTS', () => {
   assert.match(panel, /data-invoice-panel/)
-  assert.match(read('app/quotes/[id]/QuoteDetailView.tsx'), /QuoteInvoicePanel/)
+  assert.match(read('components/commercial-review/CommercialReviewWorkspace.tsx'), /QuoteInvoicePanel/)
 })
 
 test('WEBHOOK REJECTS UNSIGNED PAYLOAD', () => {

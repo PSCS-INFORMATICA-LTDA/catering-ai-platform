@@ -27,6 +27,7 @@ import { IconCalendar, IconClock, IconLocation } from './QuoteReviewIcons'
 import type { QuoteReviewAdditional, QuoteReviewData } from './quoteReviewTypes'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
+import { tPayments } from '@/Lib/i18n/payments'
 import { formatDistanceForDisplay, formatMileageQuantity } from '@/Lib/units'
 import {
   formatEventAddressLines,
@@ -498,12 +499,15 @@ function ConfirmationProposalBody({
               </div>
               <div className="quote-proposal-info-cell">
                 <span className="quote-proposal-label">
-                  {tw(lang, 'mileageIncluded')}
+                  {tPayments(lang, 'mileageIncluded')}
                 </span>
                 <p className="quote-proposal-value">
-                  {mileageMetadata?.free_limit != null
-                    ? `${formatMileageQuantity(Number(mileageMetadata.free_limit))} mi`
-                    : `${formatMileageQuantity(breakdown.rules_applied.mileageFreeLimit)} mi`}
+                  {tPayments(lang, 'mileageCourtesyValue', {
+                    n:
+                      mileageMetadata?.free_limit != null
+                        ? formatMileageQuantity(Number(mileageMetadata.free_limit))
+                        : formatMileageQuantity(breakdown.rules_applied.mileageFreeLimit),
+                  })}
                 </p>
               </div>
               <div className="quote-proposal-info-cell">

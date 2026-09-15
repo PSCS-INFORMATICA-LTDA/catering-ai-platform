@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
+import { paidByPurposeFromLedger, resolvePurposeAmounts } from './amountDue'
 import type {
   InvoiceKind,
   InvoiceSnapshot,
@@ -85,6 +86,9 @@ export type InvoiceBackofficeDetail = InvoiceBackofficeListItem & {
   locale: string
   subtotal: number
   balance_amount: number
+  deposit_due: number
+  balance_due: number
+  full_due: number
   snapshot: InvoiceSnapshot | null
   parent_invoice_number: string | null
   supplemental_invoices: Array<{
@@ -300,6 +304,13 @@ export async function fetchInvoiceBackofficeDetail(
       completed_at: cancellation.completed_at ?? null,
     }),
   )
+  const dues = resolvePurposeAmounts({
+    total: base.total,
+    depositAmount: base.deposit_amount,
+    balanceAmount: money(invoiceRow.balance_amount),
+    paidTotal: base.paid_total,
+    paidByPurpose: paidByPurposeFromLedger(payments, refunds),
+  })
 
   return {
     data: {
@@ -307,6 +318,9 @@ export async function fetchInvoiceBackofficeDetail(
       locale: String(invoiceRow.locale || 'pt'),
       subtotal: money(invoiceRow.subtotal),
       balance_amount: money(invoiceRow.balance_amount),
+      deposit_due: dues.depositDue,
+      balance_due: dues.balanceDue,
+      full_due: dues.fullDue,
       snapshot: snapshotFrom(invoiceRow),
       parent_invoice_number: parentResult.data?.invoice_number ? String(parentResult.data.invoice_number) : null,
       supplemental_invoices: (supplementsResult.data ?? []).map((child) => ({

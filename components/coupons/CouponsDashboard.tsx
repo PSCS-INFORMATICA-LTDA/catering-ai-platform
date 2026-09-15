@@ -437,7 +437,7 @@ export default function CouponsDashboard() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+    <main className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8" data-testid="coupons-dashboard">
       <section className="overflow-hidden rounded-3xl border border-cdl-border bg-cdl-surface shadow-cdl">
         <div className="bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.28),transparent_38%),linear-gradient(135deg,#111827,#050505)] px-5 py-7 text-white sm:px-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
