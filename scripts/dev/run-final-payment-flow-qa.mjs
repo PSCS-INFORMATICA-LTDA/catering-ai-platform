@@ -562,9 +562,12 @@ async function main() {
       'T-locale-pt-payment-page',
       payHtml.includes('data-document-locale="pt"') &&
         payHtml.includes('Distância considerada') &&
+        payHtml.includes('Limite de cortesia') &&
+        payHtml.includes('até 20 mi') &&
         payHtml.includes('Distância faturável do trajeto') &&
         payHtml.includes('Detalhamento financeiro') &&
-        !payHtml.includes('Financial breakdown'),
+        !payHtml.includes('Financial breakdown') &&
+        !payHtml.includes('Franquia incluída'),
       `locale=${/data-document-locale="([^"]+)"/.exec(payHtml)?.[1] || 'missing'}`,
     )
   } else {
@@ -776,9 +779,12 @@ async function main() {
       'T-locale-en-payment-page',
       enHtml.includes('data-document-locale="en"') &&
         enHtml.includes('Distance considered') &&
+        enHtml.includes('Courtesy threshold') &&
+        enHtml.includes('up to 20 mi') &&
         enHtml.includes('Billable trip distance') &&
         enHtml.includes('Financial breakdown') &&
-        enMsg.includes('Deposit amount'),
+        enMsg.includes('Deposit amount') &&
+        !enHtml.includes('Included allowance'),
       `locale=${/data-document-locale="([^"]+)"/.exec(enHtml)?.[1] || 'missing'}`,
     )
   } else {
@@ -871,9 +877,12 @@ async function main() {
       'T-locale-es-payment-page',
       esHtml.includes('data-document-locale="es"') &&
         esHtml.includes('Distancia considerada') &&
+        esHtml.includes('Límite de cortesía') &&
+        esHtml.includes('hasta 20 mi') &&
         esHtml.includes('Distancia facturable del trayecto') &&
         esHtml.includes('Desglose financiero') &&
-        esMsg.includes('importe total'),
+        esMsg.includes('importe total') &&
+        !esHtml.includes('Franquicia incluida'),
       `locale=${/data-document-locale="([^"]+)"/.exec(esHtml)?.[1] || 'missing'}`,
     )
   } else {

@@ -237,9 +237,19 @@ const { t, list } = makeI18nModule('payments', 'billing', {
     es: 'Distancia considerada',
   },
   mileageIncluded: {
-    pt: 'Franquia incluída',
-    en: 'Included allowance',
-    es: 'Franquicia incluida',
+    pt: 'Limite de cortesia',
+    en: 'Courtesy threshold',
+    es: 'Límite de cortesía',
+  },
+  mileageCourtesyValue: {
+    pt: 'até {n} mi',
+    en: 'up to {n} mi',
+    es: 'hasta {n} mi',
+  },
+  mileageCourtesyHelp: {
+    pt: 'Até {n} mi, não há cobrança de quilometragem. Acima desse limite, a distância total considerada do trajeto é faturada.',
+    en: 'Up to {n} mi, there is no mileage charge. Above that threshold, the full considered trip distance is billed.',
+    es: 'Hasta {n} mi no se cobra kilometraje. Por encima de ese límite, se factura la distancia total considerada del trayecto.',
   },
   mileageChargeable: {
     pt: 'Distância faturável do trajeto',
@@ -257,9 +267,9 @@ const { t, list } = makeI18nModule('payments', 'billing', {
     es: 'Total de millas',
   },
   mileageFullTrip: {
-    pt: 'A distância faturável já representa o trajeto completo (ida e volta). A franquia não é descontada da quilometragem cobrada.',
-    en: 'The billable distance already represents the full trip (round trip). The allowance is not subtracted from the billed mileage.',
-    es: 'La distancia facturable ya representa el trayecto completo (ida y vuelta). La franquicia no se resta del kilometraje cobrado.',
+    pt: 'A distância faturável já representa o trajeto completo (ida e volta). O limite de cortesia não é subtraído da quilometragem cobrada.',
+    en: 'The billable distance already represents the full trip (round trip). The courtesy threshold is not subtracted from the billed mileage.',
+    es: 'La distancia facturable ya representa el trayecto completo (ida y vuelta). El límite de cortesía no se resta del kilometraje cobrado.',
   },
   grill: { pt: 'Grill', en: 'Grill', es: 'Parrilla' },
   minimumAdjustment: {

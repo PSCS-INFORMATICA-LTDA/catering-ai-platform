@@ -148,6 +148,10 @@ describe('invoice document locale + mileage explanation', () => {
     const payPage = readFileSync(join(ROOT, 'app/pay/[token]/page.tsx'), 'utf8')
     const pdf = readFileSync(join(ROOT, 'components/payments/InvoicePdfDocument.tsx'), 'utf8')
     const detail = readFileSync(join(ROOT, 'components/payments/InvoiceDetailView.tsx'), 'utf8')
+    const breakdown = readFileSync(
+      join(ROOT, 'components/payments/InvoiceFinancialBreakdown.tsx'),
+      'utf8',
+    )
     const workspace = readFileSync(
       join(ROOT, 'components/commercial-review/CommercialReviewWorkspace.tsx'),
       'utf8',
@@ -157,8 +161,12 @@ describe('invoice document locale + mileage explanation', () => {
     assert.match(payPage, /invoiceLocale: resolved\.invoice\.locale/)
     assert.match(pdf, /const lang = invoice\.locale/)
     assert.match(pdf, /mileageFullTrip/)
+    assert.match(pdf, /mileageCourtesyHelp/)
+    assert.match(pdf, /mileageCourtesyValue/)
     assert.match(detail, /resolveInvoiceDocumentLocale\(invoice\.locale/)
     assert.match(detail, /locale=\{documentLocale\}/)
+    assert.match(breakdown, /mileageCourtesyHelp/)
+    assert.match(breakdown, /invoice-mileage-courtesy-help/)
     assert.match(workspace, /language=\{quote\.language \?\? 'pt'\}/)
     assert.match(panel, /invoice\?\.locale \|\| quoteLanguage/)
   })
@@ -170,9 +178,21 @@ describe('invoice document locale + mileage explanation', () => {
     assert.equal(tPayments('pt', 'mileageChargeable'), 'Distância faturável do trajeto')
     assert.equal(tPayments('en', 'mileageChargeable'), 'Billable trip distance')
     assert.equal(tPayments('es', 'mileageChargeable'), 'Distancia facturable del trayecto')
+    assert.equal(tPayments('pt', 'mileageIncluded'), 'Limite de cortesia')
+    assert.equal(tPayments('en', 'mileageIncluded'), 'Courtesy threshold')
+    assert.equal(tPayments('es', 'mileageIncluded'), 'Límite de cortesía')
+    assert.equal(tPayments('pt', 'mileageCourtesyValue', { n: 20 }), 'até 20 mi')
+    assert.equal(tPayments('en', 'mileageCourtesyValue', { n: 20 }), 'up to 20 mi')
+    assert.equal(tPayments('es', 'mileageCourtesyValue', { n: 20 }), 'hasta 20 mi')
+    assert.match(tPayments('pt', 'mileageCourtesyHelp', { n: 20 }), /Até 20 mi, não há cobrança/)
+    assert.match(tPayments('en', 'mileageCourtesyHelp', { n: 20 }), /Up to 20 mi, there is no mileage charge/)
+    assert.match(tPayments('es', 'mileageCourtesyHelp', { n: 20 }), /Hasta 20 mi no se cobra kilometraje/)
     assert.match(tPayments('pt', 'mileageFullTrip'), /trajeto completo/)
     assert.match(tPayments('en', 'mileageFullTrip'), /full trip/)
     assert.match(tPayments('es', 'mileageFullTrip'), /trayecto completo/)
+    assert.doesNotMatch(tPayments('pt', 'mileageIncluded'), /Franquia/)
+    assert.doesNotMatch(tPayments('en', 'mileageIncluded'), /allowance/i)
+    assert.doesNotMatch(tPayments('es', 'mileageIncluded'), /Franquicia/)
     assert.equal(tPayments('pt', 'mileageTotal'), 'Total de quilometragem')
     assert.equal(tPayments('en', 'mileageTotal'), 'Mileage total')
     assert.equal(tPayments('es', 'mileageTotal'), 'Total de millas')

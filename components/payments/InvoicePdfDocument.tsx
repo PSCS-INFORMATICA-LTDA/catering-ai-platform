@@ -174,7 +174,10 @@ export function InvoicePdfDocument({
                 {tPayments(lang, 'mileageDistance')}: {presentation.mileage.distance ?? '—'} mi
               </Text>
               <Text>
-                {tPayments(lang, 'mileageIncluded')}: {presentation.mileage.freeLimit ?? '—'} mi
+                {tPayments(lang, 'mileageIncluded')}:{' '}
+                {presentation.mileage.freeLimit == null
+                  ? '—'
+                  : tPayments(lang, 'mileageCourtesyValue', { n: presentation.mileage.freeLimit })}
               </Text>
               <Text>
                 {tPayments(lang, 'mileageChargeable')}: {presentation.mileage.chargeable ?? '—'} mi
@@ -184,6 +187,11 @@ export function InvoicePdfDocument({
               </Text>
               <Text>
                 {tPayments(lang, 'mileageTotal')}: {money(presentation.mileage.fee, invoice.currency_code)}
+              </Text>
+              <Text style={styles.muted}>
+                {tPayments(lang, 'mileageCourtesyHelp', {
+                  n: presentation.mileage.freeLimit ?? 20,
+                })}
               </Text>
               {presentation.mileage.fullTrip ? (
                 <Text style={styles.muted}>{tPayments(lang, 'mileageFullTrip')}</Text>

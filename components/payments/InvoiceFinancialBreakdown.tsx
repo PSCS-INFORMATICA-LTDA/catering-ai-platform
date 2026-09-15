@@ -98,7 +98,10 @@ export default function InvoiceFinancialBreakdown({
             {tPayments(lang, 'mileageDistance')}: {presentation.mileage.distance ?? '—'} mi
           </p>
           <p data-testid="invoice-mileage-included">
-            {tPayments(lang, 'mileageIncluded')}: {presentation.mileage.freeLimit ?? '—'} mi
+            {tPayments(lang, 'mileageIncluded')}:{' '}
+            {presentation.mileage.freeLimit == null
+              ? '—'
+              : tPayments(lang, 'mileageCourtesyValue', { n: presentation.mileage.freeLimit })}
           </p>
           <p data-testid="invoice-mileage-chargeable">
             {tPayments(lang, 'mileageChargeable')}: {presentation.mileage.chargeable ?? '—'} mi
@@ -108,6 +111,11 @@ export default function InvoiceFinancialBreakdown({
           </p>
           <p data-testid="invoice-mileage-total" className="font-semibold">
             {tPayments(lang, 'mileageTotal')}: {money(presentation.mileage.fee, currency)}
+          </p>
+          <p data-testid="invoice-mileage-courtesy-help" className="text-[#6b6560]">
+            {tPayments(lang, 'mileageCourtesyHelp', {
+              n: presentation.mileage.freeLimit ?? 20,
+            })}
           </p>
           {presentation.mileage.fullTrip ? (
             <p data-testid="invoice-mileage-full-trip" className="font-semibold text-[#504b47]">
