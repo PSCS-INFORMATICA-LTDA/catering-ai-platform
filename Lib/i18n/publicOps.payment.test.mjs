@@ -25,6 +25,12 @@ describe('final payment flow i18n', () => {
     assert.match(tPayments('pt', 'couponDoesNotApplyToDeposit'), /não reduz o sinal/)
     assert.match(tPayments('en', 'couponDoesNotApplyToDeposit'), /does not reduce the deposit/)
     assert.match(tPayments('es', 'couponDoesNotApplyToDeposit'), /no reduce la seña/)
+    assert.equal(tPayments('pt', 'mileageDistance'), 'Distância considerada')
+    assert.equal(tPayments('en', 'mileageChargeable'), 'Billable trip distance')
+    assert.equal(tPayments('es', 'mileageTotal'), 'Total de millas')
+    assert.match(tPayments('pt', 'mileageFullTrip'), /ida e volta/)
+    assert.match(tPayments('en', 'mileageFullTrip'), /round trip/)
+    assert.match(tPayments('es', 'mileageFullTrip'), /ida y vuelta/)
   })
 
   it('operator waiting and full-share copy exists in PT EN ES', () => {

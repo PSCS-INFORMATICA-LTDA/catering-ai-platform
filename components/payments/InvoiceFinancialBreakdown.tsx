@@ -94,18 +94,26 @@ export default function InvoiceFinancialBreakdown({
 
       {presentation.mileage.visible ? (
         <section data-testid="invoice-mileage-calc" className="space-y-1 rounded-xl bg-[#faf7f2] p-3 text-xs text-[#504b47]">
-          <p>
+          <p data-testid="invoice-mileage-distance">
             {tPayments(lang, 'mileageDistance')}: {presentation.mileage.distance ?? '—'} mi
           </p>
-          <p>
+          <p data-testid="invoice-mileage-included">
             {tPayments(lang, 'mileageIncluded')}: {presentation.mileage.freeLimit ?? '—'} mi
           </p>
-          <p>
+          <p data-testid="invoice-mileage-chargeable">
             {tPayments(lang, 'mileageChargeable')}: {presentation.mileage.chargeable ?? '—'} mi
           </p>
-          <p>
+          <p data-testid="invoice-mileage-rate">
             {tPayments(lang, 'mileageRate')}: {money(presentation.mileage.rate, currency)} / mi
           </p>
+          <p data-testid="invoice-mileage-total" className="font-semibold">
+            {tPayments(lang, 'mileageTotal')}: {money(presentation.mileage.fee, currency)}
+          </p>
+          {presentation.mileage.fullTrip ? (
+            <p data-testid="invoice-mileage-full-trip" className="font-semibold text-[#504b47]">
+              {tPayments(lang, 'mileageFullTrip')}
+            </p>
+          ) : null}
         </section>
       ) : null}
 

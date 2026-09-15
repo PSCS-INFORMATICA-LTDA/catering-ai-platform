@@ -158,7 +158,7 @@ export default function CommercialReviewWorkspace({
           <QuoteInvoicePanel
             quoteId={quote.id}
             canManage={canManageInvoice}
-            language={lang}
+            language={quote.language ?? 'pt'}
             quoteAccepted={
               quote.proposal_response === 'accepted' ||
               quote.quote_status === 'accepted' ||

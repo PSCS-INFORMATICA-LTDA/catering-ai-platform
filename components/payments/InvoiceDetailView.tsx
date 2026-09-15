@@ -11,6 +11,7 @@ import {
 import { formatUiDate, toBcp47Locale } from '@/Lib/i18n/locales'
 import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import InvoiceFinancialBreakdown from '@/components/payments/InvoiceFinancialBreakdown'
+import { resolveInvoiceDocumentLocale } from '@/Lib/payments/invoiceDocumentLocale'
 import { buildInvoiceFinancialPresentation } from '@/Lib/payments/invoiceFinancialPresentation'
 import type { InvoiceBackofficeDetail } from '@/Lib/payments/fetchInvoiceBackoffice'
 
@@ -69,6 +70,7 @@ export default function InvoiceDetailView({
 }) {
   const locale = useAuthLocaleFromMe()
   const snapshot = invoice.snapshot
+  const documentLocale = resolveInvoiceDocumentLocale(invoice.locale || snapshot?.locale)
   const presentation = snapshot
     ? buildInvoiceFinancialPresentation({
         snapshot,
@@ -178,7 +180,7 @@ export default function InvoiceDetailView({
 
       {presentation ? (
         <section className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-          <InvoiceFinancialBreakdown presentation={presentation} locale={locale} />
+          <InvoiceFinancialBreakdown presentation={presentation} locale={documentLocale} />
         </section>
       ) : null}
 

@@ -79,7 +79,7 @@ export async function GET(_request: Request, { params }: Params) {
   const { data } = await getSupabaseServerClient()
     .from('invoices')
     .select(
-      'id, invoice_number, status, invoice_kind, total, deposit_amount, balance_amount, paid_total, currency_code, created_at, snapshot',
+      'id, invoice_number, status, invoice_kind, locale, total, deposit_amount, balance_amount, paid_total, currency_code, created_at, snapshot',
     )
     .eq('company_id', companyId)
     .eq('quote_id', id)

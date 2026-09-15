@@ -14,6 +14,7 @@ import {
 import { copyWhatsAppMessageSync, formatWhatsAppPhoneDisplay } from '@/Lib/whatsapp'
 import { resolveTenantCompanyDisplayName } from '@/Lib/tenant/companyDisplayName'
 import { useTenant } from '@/components/tenant/TenantProvider'
+import { resolveInvoiceDocumentLocale } from '@/Lib/payments/invoiceDocumentLocale'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
 type InvoiceSummary = {
@@ -32,6 +33,7 @@ type InvoiceSummary = {
   full_available?: boolean
   balance_available_at?: string | null
   currency_code?: string | null
+  locale?: string | null
 }
 
 type SharePurpose = 'deposit' | 'balance' | 'full'
@@ -62,12 +64,15 @@ export default function QuoteInvoicePanel({
   quoteNumber?: string | null
   currencyCode?: string | null
 }) {
-  const locale: QuoteLanguage = language === 'en' || language === 'es' ? language : 'pt'
+  const quoteLanguage: QuoteLanguage = resolveInvoiceDocumentLocale(language)
   const { company } = useTenant()
   const companyDisplayName =
     resolveTenantCompanyDisplayName(company) || 'Catering AI'
   const [invoice, setInvoice] = useState<InvoiceSummary | null>(null)
   const [busy, setBusy] = useState(false)
+  const locale: QuoteLanguage = resolveInvoiceDocumentLocale(
+    invoice?.locale || quoteLanguage,
+  )
   const [error, setError] = useState<string | null>(null)
   const [lastShare, setLastShare] = useState<LastShare | null>(null)
   const [copied, setCopied] = useState<string | null>(null)

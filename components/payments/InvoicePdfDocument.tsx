@@ -167,6 +167,29 @@ export function InvoicePdfDocument({
                 </Text>
               </View>
             ))}
+          {presentation.mileage.visible ? (
+            <View style={[styles.box, { marginTop: 8 }]}>
+              <Text style={styles.heading}>{tPayments(lang, 'mileage')}</Text>
+              <Text>
+                {tPayments(lang, 'mileageDistance')}: {presentation.mileage.distance ?? '—'} mi
+              </Text>
+              <Text>
+                {tPayments(lang, 'mileageIncluded')}: {presentation.mileage.freeLimit ?? '—'} mi
+              </Text>
+              <Text>
+                {tPayments(lang, 'mileageChargeable')}: {presentation.mileage.chargeable ?? '—'} mi
+              </Text>
+              <Text>
+                {tPayments(lang, 'mileageRate')}: {money(Number(presentation.mileage.rate), invoice.currency_code)} / mi
+              </Text>
+              <Text>
+                {tPayments(lang, 'mileageTotal')}: {money(presentation.mileage.fee, invoice.currency_code)}
+              </Text>
+              {presentation.mileage.fullTrip ? (
+                <Text style={styles.muted}>{tPayments(lang, 'mileageFullTrip')}</Text>
+              ) : null}
+            </View>
+          ) : null}
           {[...presentation.reconcileRows, ...presentation.reservationRows, ...presentation.paidRows, ...presentation.adjustmentRows].map((row) => (
             <View key={row.id} style={styles.row}>
               <Text style={row.emphasize ? styles.total : undefined}>

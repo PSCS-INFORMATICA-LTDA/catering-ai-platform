@@ -210,6 +210,8 @@ describe('invoice financial presentation — INV-2026-000010 shape', () => {
     assert.equal(presentation.mileage.rate, 2)
     assert.equal(presentation.mileage.fee, 230.2)
     assert.equal(presentation.mileage.fullTrip, true)
+    assert.notEqual(presentation.mileage.chargeable, 95.1)
+    assert.equal(Math.round(presentation.mileage.chargeable * presentation.mileage.rate * 100) / 100, 230.2)
   })
 
   it('shows grill and coupon allocation without inventing new math', () => {

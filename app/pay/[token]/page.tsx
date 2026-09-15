@@ -17,6 +17,7 @@ import {
   resolvePaymentOgOrigin,
 } from '@/Lib/payments/paymentOgCopy'
 import { resolvePublicPaypalCheckoutReadiness } from '@/Lib/payments/paypal/publicCheckout'
+import { resolvePublicPaymentLocale } from '@/Lib/payments/invoiceDocumentLocale'
 import { resolvePaymentLink } from '@/Lib/payments/resolvePaymentLink'
 
 export const dynamic = 'force-dynamic'
@@ -104,10 +105,10 @@ export default async function PublicPayPage({
   }
 
   const readiness = await resolvePublicPaypalCheckoutReadiness(resolved.invoice.company_id)
-  const locale =
-    query.lang === 'en' || query.lang === 'es' || query.lang === 'pt'
-      ? query.lang
-      : resolved.invoice.locale
+  const locale = resolvePublicPaymentLocale({
+    invoiceLocale: resolved.invoice.locale,
+    previewLang: query.lang,
+  })
   const [brand, amounts, timezone] = await Promise.all([
     loadPaymentOgBrandFromToken(token, locale),
     resolveServerPurposeAmounts(invoiceAmountContext(resolved.invoice)),

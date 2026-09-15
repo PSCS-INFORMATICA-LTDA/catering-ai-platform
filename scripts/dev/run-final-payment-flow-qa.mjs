@@ -10,6 +10,7 @@ import {
   buildInvoiceFinancialPresentation,
   explainDepositFromCanonical,
 } from '../../Lib/payments/invoiceFinancialPresentation.ts'
+import { buildPaymentShareMessage } from '../../Lib/payments/paymentShareMessage.ts'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
@@ -212,7 +213,7 @@ function choice(payment, purpose) {
 async function originalInvoices(db, quoteId) {
   return db
     .from('invoices')
-    .select('id, invoice_number, invoice_kind, status, total, deposit_amount, balance_amount, paid_total, snapshot')
+    .select('id, invoice_number, invoice_kind, status, locale, total, deposit_amount, balance_amount, paid_total, snapshot')
     .eq('company_id', COMPANY)
     .eq('quote_id', quoteId)
     .eq('invoice_kind', 'original')
@@ -554,6 +555,21 @@ async function main() {
     forged.response.ok && forged.data?.data?.url?.includes('/pay/'),
     forged.data?.data?.url ? 'token url' : forged.data?.error,
   )
+  if (forged.data?.data?.url) {
+    const payPage = await fetch(forged.data.data.url, { headers: { 'user-agent': QA_UA } })
+    const payHtml = await payPage.text()
+    record(
+      'T-locale-pt-payment-page',
+      payHtml.includes('data-document-locale="pt"') &&
+        payHtml.includes('Distância considerada') &&
+        payHtml.includes('Distância faturável do trajeto') &&
+        payHtml.includes('Detalhamento financeiro') &&
+        !payHtml.includes('Financial breakdown'),
+      `locale=${/data-document-locale="([^"]+)"/.exec(payHtml)?.[1] || 'missing'}`,
+    )
+  } else {
+    record('T-locale-pt-payment-page', false, 'no deposit url')
+  }
 
   const wrongToken = await jsonFetch('/api/public/proposta/this-token-is-not-valid-and-is-long-enough-xx/payment-link', {
     method: 'POST',
@@ -734,6 +750,40 @@ async function main() {
   await jsonFetch(`/api/public/proposta/${balanceToken}`, { method: 'POST', body: { action: 'accept' } })
   const balanceInvoices = await originalInvoices(db, balanceQuoteId)
   const balanceInvoice = (balanceInvoices.data || [])[0]
+  record(
+    'T-locale-en-invoice',
+    balanceInvoice?.locale === 'en',
+    `locale=${balanceInvoice?.locale || 'missing'}`,
+  )
+  const enDeposit = await jsonFetch(`/api/public/proposta/${balanceToken}/payment-link`, {
+    method: 'POST',
+    body: { purpose: 'deposit' },
+  })
+  if (enDeposit.data?.data?.url) {
+    const enPay = await fetch(enDeposit.data.data.url, { headers: { 'user-agent': QA_UA } })
+    const enHtml = await enPay.text()
+    const enMsg = buildPaymentShareMessage({
+      locale: balanceInvoice?.locale,
+      companyDisplayName: 'CDL',
+      customerFirstName: 'QA',
+      quoteNumber: 'Q-EN',
+      purpose: 'deposit',
+      amount: Number(balanceInvoice?.deposit_amount || 0),
+      currency: 'USD',
+      paymentUrl: enDeposit.data.data.url,
+    }).text
+    record(
+      'T-locale-en-payment-page',
+      enHtml.includes('data-document-locale="en"') &&
+        enHtml.includes('Distance considered') &&
+        enHtml.includes('Billable trip distance') &&
+        enHtml.includes('Financial breakdown') &&
+        enMsg.includes('Deposit amount'),
+      `locale=${/data-document-locale="([^"]+)"/.exec(enHtml)?.[1] || 'missing'}`,
+    )
+  } else {
+    record('T-locale-en-payment-page', false, enDeposit.data?.error || 'no url')
+  }
   const paidBalance = balanceInvoice
     ? await insertCompletedPayment(db, balanceInvoice, 'balance', Number(balanceInvoice.balance_amount))
     : { ok: false, error: 'no invoice' }
@@ -795,6 +845,40 @@ async function main() {
   )
   const fullInvoices = await originalInvoices(db, fullQuoteId)
   const fullInvoice = (fullInvoices.data || [])[0]
+  record(
+    'T-locale-es-invoice',
+    fullInvoice?.locale === 'es',
+    `locale=${fullInvoice?.locale || 'missing'}`,
+  )
+  const esLink = await jsonFetch(`/api/public/proposta/${fullToken}/payment-link`, {
+    method: 'POST',
+    body: { purpose: 'full' },
+  })
+  if (esLink.data?.data?.url) {
+    const esPay = await fetch(esLink.data.data.url, { headers: { 'user-agent': QA_UA } })
+    const esHtml = await esPay.text()
+    const esMsg = buildPaymentShareMessage({
+      locale: fullInvoice?.locale,
+      companyDisplayName: 'CDL',
+      customerFirstName: 'QA',
+      quoteNumber: 'Q-ES',
+      purpose: 'full',
+      amount: Number(fullInvoice?.total || 0),
+      currency: 'USD',
+      paymentUrl: esLink.data.data.url,
+    }).text
+    record(
+      'T-locale-es-payment-page',
+      esHtml.includes('data-document-locale="es"') &&
+        esHtml.includes('Distancia considerada') &&
+        esHtml.includes('Distancia facturable del trayecto') &&
+        esHtml.includes('Desglose financiero') &&
+        esMsg.includes('importe total'),
+      `locale=${/data-document-locale="([^"]+)"/.exec(esHtml)?.[1] || 'missing'}`,
+    )
+  } else {
+    record('T-locale-es-payment-page', false, esLink.data?.error || 'no url')
+  }
   const paidFull = fullInvoice
     ? await insertCompletedPayment(db, fullInvoice, 'full', Number(fullInvoice.total))
     : { ok: false, error: 'no invoice' }
@@ -1162,6 +1246,21 @@ async function main() {
         expectedDeposit: why.expectedDepositFromBase,
         applyToDeposit: why.applyToDeposit,
         allocatedToBalance: why.allocatedToBalance,
+      }),
+    )
+    record(
+      'T-mileage-amount-unchanged',
+      presented.mileage.distance === 115.1 &&
+        presented.mileage.freeLimit === 20 &&
+        presented.mileage.chargeable === 115.1 &&
+        presented.mileage.fee === 230.2 &&
+        presented.mileage.fullTrip === true &&
+        presented.mileage.chargeable !== 95.1,
+      JSON.stringify({
+        distance: presented.mileage.distance,
+        chargeable: presented.mileage.chargeable,
+        fee: presented.mileage.fee,
+        fullTrip: presented.mileage.fullTrip,
       }),
     )
   } else {

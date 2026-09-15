@@ -232,9 +232,9 @@ const { t, list } = makeI18nModule('payments', 'billing', {
   included: { pt: 'Incluído', en: 'Included', es: 'Incluido' },
   mileage: { pt: 'Quilometragem', en: 'Mileage', es: 'Millas' },
   mileageDistance: {
-    pt: 'Distância total',
-    en: 'Total distance',
-    es: 'Distancia total',
+    pt: 'Distância considerada',
+    en: 'Distance considered',
+    es: 'Distancia considerada',
   },
   mileageIncluded: {
     pt: 'Franquia incluída',
@@ -242,14 +242,24 @@ const { t, list } = makeI18nModule('payments', 'billing', {
     es: 'Franquicia incluida',
   },
   mileageChargeable: {
-    pt: 'Distância cobrada',
-    en: 'Chargeable distance',
-    es: 'Distancia cobrada',
+    pt: 'Distância faturável do trajeto',
+    en: 'Billable trip distance',
+    es: 'Distancia facturable del trayecto',
   },
   mileageRate: {
-    pt: 'Tarifa por milha',
-    en: 'Rate per mile',
-    es: 'Tarifa por milla',
+    pt: 'Tarifa',
+    en: 'Rate',
+    es: 'Tarifa',
+  },
+  mileageTotal: {
+    pt: 'Total de quilometragem',
+    en: 'Mileage total',
+    es: 'Total de millas',
+  },
+  mileageFullTrip: {
+    pt: 'A distância faturável já representa o trajeto completo (ida e volta). A franquia não é descontada da quilometragem cobrada.',
+    en: 'The billable distance already represents the full trip (round trip). The allowance is not subtracted from the billed mileage.',
+    es: 'La distancia facturable ya representa el trayecto completo (ida y vuelta). La franquicia no se resta del kilometraje cobrado.',
   },
   grill: { pt: 'Grill', en: 'Grill', es: 'Parrilla' },
   minimumAdjustment: {

@@ -83,6 +83,12 @@ async function main() {
 
   check('SRC-reuse-quote-phone', workspace.includes('customerPhone={quote.phone}'), 'quote.phone')
   check(
+    'SRC-invoice-panel-uses-quote-language',
+    workspace.includes("language={quote.language ?? 'pt'}") &&
+      panel.includes('invoice?.locale || quoteLanguage'),
+    'customer document locale',
+  )
+  check(
     'SRC-no-second-phone-model',
     !panel.includes('from(\'customer_phones\')') && panel.includes('paymentSharePhoneDigits'),
     'canonical phone',

@@ -7,6 +7,7 @@ import {
   paymentStatusLabel,
   tPayments,
 } from '@/Lib/i18n/payments'
+import { resolvePublicPaymentLocale } from '@/Lib/payments/invoiceDocumentLocale'
 import { buildInvoiceFinancialPresentation } from '@/Lib/payments/invoiceFinancialPresentation'
 import { isAppPublicLogoPath } from '@/Lib/payments/paymentOgCopy'
 import type { InvoiceRecord, PaymentPurpose } from '@/Lib/payments/types'
@@ -45,7 +46,10 @@ export default function PublicPaymentPage({
   purposeAvailable?: boolean
   purposeAvailableAt?: string | null
 }) {
-  const lang: QuoteLanguage = locale === 'en' || locale === 'es' ? locale : invoice.locale
+  const lang: QuoteLanguage = resolvePublicPaymentLocale({
+    invoiceLocale: invoice.locale,
+    previewLang: locale,
+  })
   const snap = invoice.snapshot
   const adjustment = snap.adjustment
   const brandName = companyDisplayName.trim() || FALLBACK_COMPANY
@@ -77,6 +81,7 @@ export default function PublicPaymentPage({
       data-invoice-kind={invoice.invoice_kind}
       data-company-brand={brandName}
       data-amount-due-value={amountDue.toFixed(2)}
+      data-document-locale={lang}
       className="min-h-screen bg-[#f6f1ea] px-4 py-8 text-[#1b1b1b]"
     >
       <div className="mx-auto w-full max-w-lg space-y-5">
