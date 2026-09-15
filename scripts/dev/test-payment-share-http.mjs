@@ -250,14 +250,17 @@ async function main() {
     )
     check(
       'E2E-balance-link',
-      balance.response.ok && /\/pay\/[^/]+$/.test(balanceUrl) && depositUrl !== balanceUrl,
-      'distinct tokens',
+      balance.response.status === 409 &&
+        balance.data?.error === 'balance_not_available_yet',
+      `${balance.response.status} ${balance.data?.error}`,
     )
     if (invoice.invoice_number === 'INV-2026-000009') {
       check(
         'INV-2026-000009-link-amounts',
-        Number(deposit.data?.data?.amount) === 846 && Number(balance.data?.data?.amount) === 1974,
-        `${deposit.data?.data?.amount} / ${balance.data?.data?.amount}`,
+        Number(deposit.data?.data?.amount) === 846 &&
+          balance.response.status === 409 &&
+          balance.data?.error === 'balance_not_available_yet',
+        `${deposit.data?.data?.amount} / ${balance.data?.error}`,
       )
     }
     check(
@@ -269,19 +272,12 @@ async function main() {
     )
 
     const token = depositUrl.split('/pay/')[1] || ''
-    const balanceToken = balanceUrl.split('/pay/')[1] || ''
     if (token) {
       const pay = await fetch(`${base}/pay/${token}`, {
         redirect: 'manual',
         headers: { 'user-agent': 'WhatsApp/2.23.0' },
       })
       const payHtml = await pay.text()
-      const balanceHtml = balanceToken
-        ? await fetch(`${base}/pay/${balanceToken}`, {
-            redirect: 'manual',
-            headers: { 'user-agent': 'WhatsApp/2.23.0' },
-          }).then((response) => response.text())
-        : ''
       check(
         'E2E-pay-company-brand',
         payHtml.includes('data-company-brand=') &&
@@ -293,31 +289,23 @@ async function main() {
         check(
           'INV-2026-000009-pay-amounts',
           payHtml.includes('data-amount-due-value="846.00"') &&
-            balanceHtml.includes('data-amount-due-value="1974.00"'),
-          '846 / 1974',
+            payHtml.includes('data-testid="invoice-adults"') &&
+            payHtml.includes('data-testid="invoice-children-4-12"'),
+          payHtml.includes('data-amount-due-value="846.00"') ? '846 + breakdown' : 'missing-846',
         )
         const depositOrder = await jsonFetch('/api/payments/paypal/orders', {
           method: 'POST',
           cookie,
           body: { token, amount: 99999 },
         })
-        const balanceOrder = await jsonFetch('/api/payments/paypal/orders', {
-          method: 'POST',
-          cookie,
-          body: { token: balanceToken, amount: 1 },
-        })
         const depositOrderAmount = Number(depositOrder.data?.data?.amount)
-        const balanceOrderAmount = Number(balanceOrder.data?.data?.amount)
         check(
           'INV-2026-000009-paypal-amounts',
-          (depositOrder.response.ok &&
-            depositOrderAmount === 846 &&
-            balanceOrder.response.ok &&
-            balanceOrderAmount === 1974) ||
+          (depositOrder.response.ok && depositOrderAmount === 846) ||
             depositOrder.data?.error === 'paypal_public_checkout_off' ||
             depositOrder.data?.error === 'paypal_not_configured',
           depositOrder.response.ok
-            ? `${depositOrderAmount} / ${balanceOrderAmount}`
+            ? String(depositOrderAmount)
             : String(depositOrder.data?.error || depositOrder.response.status),
         )
       }
