@@ -122,6 +122,15 @@ export default function InvoiceFinancialBreakdown({
           <p data-testid="invoice-discount-amount">
             {tPayments(lang, 'discount')}: -{money(coupon.discountAmount, currency)}
           </p>
+          {coupon.applyToDeposit === false ? (
+            <p data-testid="invoice-coupon-skips-deposit" className="text-xs font-semibold text-[#504b47]">
+              {tPayments(lang, 'couponDoesNotApplyToDeposit')}
+            </p>
+          ) : coupon.applyToDeposit === true ? (
+            <p data-testid="invoice-coupon-applies-to-deposit" className="text-xs font-semibold text-[#504b47]">
+              {tPayments(lang, 'couponAppliesToDeposit')}
+            </p>
+          ) : null}
         </section>
       ) : null}
 

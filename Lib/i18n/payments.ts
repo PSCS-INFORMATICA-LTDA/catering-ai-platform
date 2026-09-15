@@ -289,6 +289,16 @@ const { t, list } = makeI18nModule('payments', 'billing', {
     en: 'Discount allocated to balance',
     es: 'Descuento asignado al saldo',
   },
+  couponDoesNotApplyToDeposit: {
+    pt: 'Este cupom não reduz o sinal. O desconto permanece no saldo contratual.',
+    en: 'This coupon does not reduce the deposit. The discount stays on the contract balance.',
+    es: 'Este cupón no reduce la seña. El descuento permanece en el saldo contractual.',
+  },
+  couponAppliesToDeposit: {
+    pt: 'Este cupom também se aplica ao sinal.',
+    en: 'This coupon also applies to the deposit.',
+    es: 'Este cupón también se aplica a la seña.',
+  },
   originalContract: {
     pt: 'Contrato original',
     en: 'Original contract',

@@ -22,6 +22,9 @@ describe('final payment flow i18n', () => {
     assert.equal(tPayments('pt', 'children4To12'), 'Crianças 4–12')
     assert.equal(tPayments('en', 'childrenUnder3'), 'Children 0–3')
     assert.equal(tPayments('es', 'billableGuests'), 'Equivalente facturable')
+    assert.match(tPayments('pt', 'couponDoesNotApplyToDeposit'), /não reduz o sinal/)
+    assert.match(tPayments('en', 'couponDoesNotApplyToDeposit'), /does not reduce the deposit/)
+    assert.match(tPayments('es', 'couponDoesNotApplyToDeposit'), /no reduce la seña/)
   })
 
   it('operator waiting and full-share copy exists in PT EN ES', () => {
