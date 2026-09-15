@@ -187,6 +187,9 @@ describe('invoice financial presentation — INV-2026-000010 shape', () => {
     assert.equal(presentation.packageUnitPrice, 45)
     assert.equal(presentation.packageTotal, 2452.5)
     assert.equal(900 + 1552.5 + 0, 2452.5)
+    const childRow = presentation.chargeRows.find((row) => row.id === 'children-4-12')
+    assert.match(childRow.formula, /69 × 50% × 45\.00 = 1552\.50/)
+    assert.doesNotMatch(childRow.formula, /69 × 45\.00 = 1552/)
   })
 
   it('shows additional unit prices from the frozen breakdown', () => {
