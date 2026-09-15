@@ -319,7 +319,9 @@ export function buildInvoiceFinancialPresentation(input: {
     unitPrice: packageUnitPrice,
     amount: adultAmount,
     formula:
-      packageUnitPrice != null ? `${guests.adults} × ${packageUnitPrice.toFixed(2)}` : null,
+      packageUnitPrice != null && adultAmount != null
+        ? `${guests.adults} × ${packageUnitPrice.toFixed(2)} = ${adultAmount.toFixed(2)}`
+        : null,
   })
   chargeRows.push({
     id: 'children-4-12',
@@ -330,8 +332,8 @@ export function buildInvoiceFinancialPresentation(input: {
     unitPrice: packageUnitPrice,
     amount: children4To12Amount,
     formula:
-      packageUnitPrice != null
-        ? `${guests.children4To12} × 50% × ${packageUnitPrice.toFixed(2)}`
+      packageUnitPrice != null && children4To12Amount != null
+        ? `${guests.children4To12} × 50% × ${packageUnitPrice.toFixed(2)} = ${children4To12Amount.toFixed(2)}`
         : null,
   })
   chargeRows.push({
@@ -342,7 +344,7 @@ export function buildInvoiceFinancialPresentation(input: {
     quantity: guests.childrenUnder3,
     unitPrice: 0,
     amount: 0,
-    formula: `${guests.childrenUnder3} × 0.00`,
+    formula: `${guests.childrenUnder3} × 0.00 = 0.00`,
   })
   chargeRows.push({
     id: 'billable-guests',

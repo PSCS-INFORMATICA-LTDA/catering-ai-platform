@@ -45,7 +45,11 @@ function Row({
             {tPayments(lang, 'included')}
           </p>
         ) : null}
-        {row.quantity != null && row.unitPrice != null && row.amount != null && !row.included ? (
+        {row.quantity != null &&
+        row.unitPrice != null &&
+        row.amount != null &&
+        !row.included &&
+        !row.formula ? (
           <p className="mt-0.5 text-xs text-[#6b6560]">
             {row.quantity} × {money(row.unitPrice, currency)} = {money(row.amount, currency)}
           </p>
