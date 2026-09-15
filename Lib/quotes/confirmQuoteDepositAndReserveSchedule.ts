@@ -7,6 +7,7 @@
  *
  * Idempotente: re-confirmar devolve o mesmo agenda_event.
  */
+import { quoteHasPendingCoupon } from '@/Lib/coupons/resolveCoupon'
 import { loadScheduleTurnaroundConfig } from '@/Lib/agenda/loadScheduleTurnaroundConfig'
 import { logScheduleConflictAudit } from '@/Lib/agenda/logScheduleConflictAudit'
 import { canScheduleNextEvent } from '@/Lib/agenda/scheduleTurnaround'
@@ -398,6 +399,14 @@ export async function confirmQuoteDepositAndReserveSchedule(input: {
 
   if (error) return { ok: false, error: error.message, status: 500 }
   if (!quote) return { ok: false, error: 'Cotação não encontrada', status: 404 }
+
+  const pendingCoupon = await quoteHasPendingCoupon(companyId, quoteId)
+  if (!pendingCoupon.ok) {
+    return { ok: false, error: 'Falha ao validar cupom pendente.', status: 500 }
+  }
+  if (pendingCoupon.pending) {
+    return { ok: false, error: 'coupon_approval_pending', status: 409 }
+  }
 
   const accepted =
     quote.proposal_response === 'accepted' ||

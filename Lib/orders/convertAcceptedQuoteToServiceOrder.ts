@@ -1,3 +1,4 @@
+import { quoteHasPendingCoupon } from '@/Lib/coupons/resolveCoupon'
 import { generateOrderMaterialsFromBom } from '@/Lib/orders/generateOrderMaterialsFromBom'
 import {
   ensureAgendaEventForOrder,
@@ -401,6 +402,14 @@ export async function convertAcceptedQuoteToServiceOrder(input: {
     return { data: { ...existingByVersion, already_existed: true }, error: null }
   }
 
+  const pendingCoupon = await quoteHasPendingCoupon(companyId, quoteId)
+  if (!pendingCoupon.ok) {
+    return { data: null, error: { message: 'Falha ao validar cupom pendente.', status: 500 } }
+  }
+  if (pendingCoupon.pending) {
+    return { data: null, error: { message: 'coupon_approval_pending', status: 409 } }
+  }
+
   const { number: serviceOrderNumber, error: numberError } =
     await getNextServiceOrderNumber(companyId)
   if (numberError || !serviceOrderNumber) {
@@ -453,6 +462,9 @@ export async function convertAcceptedQuoteToServiceOrder(input: {
     .single()
 
   if (insertError) {
+    if (/coupon_approval_pending/i.test(insertError.message)) {
+      return { data: null, error: { message: 'coupon_approval_pending', status: 409 } }
+    }
     // Corrida: outra requisição converteu a mesma versão simultaneamente.
     if (/duplicate key|unique constraint/i.test(insertError.message)) {
       const { data: raceExisting } = await findExistingServiceOrder(companyId, version.id)

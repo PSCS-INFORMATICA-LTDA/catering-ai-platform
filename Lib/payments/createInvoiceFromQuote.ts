@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { quoteHasPendingCoupon } from '@/Lib/coupons/resolveCoupon'
 import { fetchQuoteDetail } from '@/Lib/fetchQuoteDetail'
 import { getNextInvoiceNumber } from '@/Lib/getNextDocumentNumber'
 import { isQuoteAccepted, isQuoteConverted } from '@/Lib/quotes/statusMachine'
@@ -83,6 +84,14 @@ export async function createInvoiceFromQuote(input: {
     return { ok: false, status: 409, error: 'quote_not_accepted' }
   }
 
+  const pendingCoupon = await quoteHasPendingCoupon(input.companyId, input.quoteId)
+  if (!pendingCoupon.ok) {
+    return { ok: false, status: 500, error: 'coupon_approval_check_failed' }
+  }
+  if (pendingCoupon.pending) {
+    return { ok: false, status: 409, error: 'coupon_approval_pending' }
+  }
+
   const snapshot = buildInvoiceSnapshot(quote)
   if (snapshot.totals.total <= 0) {
     return { ok: false, status: 409, error: 'invoice_total_invalid' }
@@ -127,7 +136,10 @@ export async function createInvoiceFromQuote(input: {
     if (race.data) {
       return { ok: true, invoice: toInvoice(race.data), alreadyExisted: true }
     }
-    return { ok: false, status: 500, error: inserted.error?.message || 'invoice_insert_failed' }
+    if (/coupon_approval_pending/i.test(inserted.error?.message || '')) {
+      return { ok: false, status: 409, error: 'coupon_approval_pending' }
+    }
+    return { ok: false, status: 500, error: 'invoice_insert_failed' }
   }
 
   return { ok: true, invoice: toInvoice(inserted.data), alreadyExisted: false }

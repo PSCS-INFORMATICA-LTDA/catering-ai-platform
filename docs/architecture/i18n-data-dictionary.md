@@ -28,7 +28,7 @@ Fontes versionadas (não movidas para banco):
 | `Lib/i18n/chrome.ts` | shell: grupos do menu, itens, EMPRESA, tema |
 | `Lib/i18n/common.ts` | verbos/labels compartilhados |
 | `Lib/i18n/customers.ts` / `teams.ts` / `agenda.ts` | Pessoas, Equipes, Agenda |
-| `Lib/i18n/packages.ts` / `commercialRules.ts` | Pacotes, itens, regras |
+| `Lib/i18n/packages.ts` / `commercialRules.ts` / `coupons.ts` | Pacotes, itens, regras, cupons |
 | `Lib/i18n/inventoryUi.ts` | Labels de estoque (sem campos JDE) |
 | `Lib/i18n/companySettings.ts` / `help.ts` / `share.ts` | Empresa, ajuda, WhatsApp |
 | `Lib/i18n/publicOps.ts` | Páginas públicas (token) |

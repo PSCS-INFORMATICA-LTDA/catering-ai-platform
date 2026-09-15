@@ -189,6 +189,7 @@ function ConfirmationProposalBody({
   groupedAdditionals,
   mileageEditor,
   publicReviewFooter = false,
+  afterPricing,
 }: {
   data: QuoteReviewData
   breakdown: PricingBreakdown
@@ -201,6 +202,7 @@ function ConfirmationProposalBody({
   }>
   mileageEditor?: ReactNode
   publicReviewFooter?: boolean
+  afterPricing?: ReactNode
 }) {
   const lang = data.language ?? 'pt'
   const t = getQuoteStrings(lang)
@@ -562,6 +564,7 @@ function ConfirmationProposalBody({
           showDeposit={false}
           variant="confirmation"
         />
+        {afterPricing}
       </section>
 
       <QuoteReservationPaymentCard
@@ -1050,6 +1053,7 @@ export default function QuoteReviewLayout({
   breakdown = null,
   mileageEditor,
   publicReviewFooter = false,
+  afterPricing,
 }: {
   data: QuoteReviewData
   rulesVariant?: 'summary' | 'pdf'
@@ -1060,6 +1064,7 @@ export default function QuoteReviewLayout({
   breakdown?: PricingBreakdown | null
   mileageEditor?: ReactNode
   publicReviewFooter?: boolean
+  afterPricing?: ReactNode
 }) {
   const lang = data.language ?? 'pt'
   const t = getQuoteStrings(lang)
@@ -1273,6 +1278,7 @@ export default function QuoteReviewLayout({
             groupedAdditionals={groupedAdditionals}
             mileageEditor={mileageEditor}
             publicReviewFooter={publicReviewFooter}
+            afterPricing={afterPricing}
           />
         ) : (
           <DefaultProposalBody

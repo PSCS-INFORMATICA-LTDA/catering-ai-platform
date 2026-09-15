@@ -215,9 +215,15 @@ export function buildPricingBreakdown(
     adjustments,
     subtotal,
     total,
-    deposit: totals.reservationAmount,
+    deposit:
+      discountAmount > 0 && total < totals.reservationAmount
+        ? total
+        : totals.reservationAmount,
     balance: discountAmount > 0
-      ? roundMoney(total - totals.reservationAmount)
+      ? roundMoney(
+          total -
+            (total < totals.reservationAmount ? total : totals.reservationAmount),
+        )
       : totals.balanceDue,
     rules_applied: rules,
     guest_counts: {

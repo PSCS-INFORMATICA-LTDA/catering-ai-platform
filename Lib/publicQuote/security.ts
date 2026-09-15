@@ -26,6 +26,7 @@ export class PublicQuoteHttpError extends Error {
       | 'rate_limited'
       | 'already_submitted'
       | 'conflict'
+      | 'usage_limit_reached'
       | 'server_error',
     message = code,
   ) {

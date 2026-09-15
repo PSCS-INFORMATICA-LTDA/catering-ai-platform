@@ -19,7 +19,9 @@ import {
   readQuoteSnapshot,
 } from '../../../Lib/readQuoteSnapshot'
 import QuoteConvertPanel from '@/components/quotes/QuoteConvertPanel'
+import QuoteCouponDecisionCard from '@/components/quotes/QuoteCouponDecisionCard'
 import { QuoteSecondaryPanels } from '@/components/quotes/QuoteSecondaryPanels'
+import { readCouponFinancialStory } from '@/Lib/coupons/couponFinancialStory'
 import QuoteDetailToolbar from './QuoteDetailToolbar'
 import QuoteFlashBanner from '@/components/QuoteFlashBanner'
 import QuoteDebugPanel from './QuoteDebugPanel'
@@ -56,11 +58,13 @@ export default function QuoteDetailView({
   quote,
   canConvert = false,
   canManageInvoice = false,
+  canManageCoupons = false,
   uiLocale,
 }: {
   quote: QuoteDetail
   canConvert?: boolean
   canManageInvoice?: boolean
+  canManageCoupons?: boolean
   uiLocale?: string | null
 }) {
   const lang = uiLocale === 'en' || uiLocale === 'es' || uiLocale === 'pt'
@@ -78,6 +82,8 @@ export default function QuoteDetailView({
   )
   const reviewData = mapQuoteDetailToQuoteReview(quote, lang)
   const breakdown = buildSavedQuotePresentationBreakdown(quote)
+  const couponStory = readCouponFinancialStory(breakdown)
+  const pendingManualCoupon = couponStory?.kind === 'pending'
   const packageHasGarnish = getPackageHasGarnish({
     package_key: quote.package_key,
   })
@@ -137,6 +143,16 @@ export default function QuoteDetailView({
               convertedServiceOrderId={quote.converted_service_order_id}
               canConvert={canConvert}
             />
+            {couponStory?.kind === 'pending' ? (
+              <div className="mt-4">
+                <QuoteCouponDecisionCard
+                  quoteId={quote.id}
+                  locale={lang}
+                  canManage={canManageCoupons}
+                  story={couponStory}
+                />
+              </div>
+            ) : null}
             <QuoteSecondaryPanels label={tQuotesOrders(lang, 'openShare')}>
             <QuoteProposalSharePanel
               uiLocale={lang}
@@ -197,6 +213,7 @@ export default function QuoteDetailView({
               minimumOrderAdjustment={minimumAdjustment}
               minimumOrderAmount={minimumOrderAmount}
               commercialReason={holidaySurcharge > 0 ? 'cdl_holiday' : undefined}
+              pendingManualCoupon={pendingManualCoupon}
               initial={{
                 proposal_token: quote.proposal_token ?? null,
                 proposal_sent_at: quote.proposal_sent_at ?? null,
