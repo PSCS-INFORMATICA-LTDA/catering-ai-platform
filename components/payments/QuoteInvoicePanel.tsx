@@ -11,6 +11,10 @@ import {
   customerFirstNameFromDisplayName,
   paymentSharePhoneDigits,
 } from '@/Lib/payments/paymentShareMessage'
+import {
+  buildPaymentWhatsAppBusinessHref,
+  openPaymentWhatsAppShare,
+} from '@/Lib/payments/whatsappBusinessOpen'
 import { copyWhatsAppMessageSync, formatWhatsAppPhoneDisplay } from '@/Lib/whatsapp'
 import { resolveTenantCompanyDisplayName } from '@/Lib/tenant/companyDisplayName'
 import { useTenant } from '@/components/tenant/TenantProvider'
@@ -219,9 +223,12 @@ export default function QuoteInvoicePanel({
   async function sendWhatsApp(purpose: SharePurpose) {
     if (!phoneOk) return
     const share = await createShare(purpose)
-    if (!share?.waHref) return
-    const opened = window.open(share.waHref, '_blank', 'noopener,noreferrer')
-    if (!opened) window.location.assign(share.waHref)
+    if (!share) return
+    const opened = openPaymentWhatsAppShare({
+      phone: customerPhone,
+      text: share.text,
+    })
+    if (!opened.ok) return
   }
 
   async function copyMessage() {
@@ -270,6 +277,9 @@ export default function QuoteInvoicePanel({
     <section
       data-invoice-panel
       data-last-wa-href={lastShare?.waHref || ''}
+      data-last-wa-business-href={
+        lastShare ? buildPaymentWhatsAppBusinessHref(customerPhone, lastShare.text) || '' : ''
+      }
       data-last-payment-url={lastShare?.url || ''}
       className="no-print liquid-glass-card mt-4 space-y-4 p-5"
     >
@@ -330,6 +340,9 @@ export default function QuoteInvoicePanel({
             >
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-cdl-muted">
                 {tPayments(locale, 'customerWhatsApp')}
+              </p>
+              <p data-testid="whatsapp-business-ios-hint" className="text-xs text-cdl-muted">
+                {tPayments(locale, 'whatsappBusinessIosHint')}
               </p>
               {phoneOk ? (
                 <p data-testid="customer-whatsapp-number" className="text-base font-bold text-cdl-fg">

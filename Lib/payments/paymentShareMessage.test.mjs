@@ -235,7 +235,9 @@ test('i18n payment share keys exist in PT/EN/ES', () => {
     tPayments('pt', 'missingCustomerWhatsApp'),
     'Cliente sem WhatsApp válido cadastrado.',
   )
-  assert.equal(tPayments('en', 'sendDepositWhatsApp'), 'Send deposit on WhatsApp')
+  assert.equal(tPayments('en', 'sendDepositWhatsApp'), 'Send deposit on WhatsApp Business')
+  assert.match(tPayments('pt', 'whatsappBusinessIosHint'), /WhatsApp Business/)
+  assert.match(tPayments('pt', 'paypalSandboxBuyerNotice'), /conta de comprador Sandbox/)
   assert.equal(tPayments('es', 'copyPaymentMessage'), 'Copiar mensaje')
 })
 

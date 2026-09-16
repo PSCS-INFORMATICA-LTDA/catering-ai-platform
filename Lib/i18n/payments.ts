@@ -38,19 +38,24 @@ const { t, list } = makeI18nModule('payments', 'billing', {
     es: 'WhatsApp del cliente',
   },
   sendDepositWhatsApp: {
-    pt: 'Enviar sinal no WhatsApp',
-    en: 'Send deposit on WhatsApp',
-    es: 'Enviar depósito por WhatsApp',
+    pt: 'Enviar sinal no WhatsApp Business',
+    en: 'Send deposit on WhatsApp Business',
+    es: 'Enviar depósito por WhatsApp Business',
   },
   sendBalanceWhatsApp: {
-    pt: 'Enviar saldo no WhatsApp',
-    en: 'Send balance on WhatsApp',
-    es: 'Enviar saldo por WhatsApp',
+    pt: 'Enviar saldo no WhatsApp Business',
+    en: 'Send balance on WhatsApp Business',
+    es: 'Enviar saldo por WhatsApp Business',
   },
   sendFullWhatsApp: {
-    pt: 'Enviar pagamento total',
-    en: 'Send full payment',
-    es: 'Enviar pago total',
+    pt: 'Enviar pagamento total no WhatsApp Business',
+    en: 'Send full payment on WhatsApp Business',
+    es: 'Enviar pago total por WhatsApp Business',
+  },
+  whatsappBusinessIosHint: {
+    pt: 'No iPhone tentamos abrir o WhatsApp Business. Se o app não abrir, usamos o WhatsApp padrão (wa.me). A mensagem nunca é enviada automaticamente.',
+    en: 'On iPhone we try WhatsApp Business first. If it cannot open, we fall back to standard WhatsApp (wa.me). The message is never sent automatically.',
+    es: 'En iPhone intentamos abrir WhatsApp Business. Si no abre, usamos WhatsApp estándar (wa.me). El mensaje nunca se envía automáticamente.',
   },
   awaitingCustomerAcceptance: {
     pt: 'Aguardando aceite do cliente',
@@ -177,6 +182,16 @@ const { t, list } = makeI18nModule('payments', 'billing', {
     pt: 'PayPal Sandbox (homologação interna)',
     en: 'PayPal Sandbox (internal homologation)',
     es: 'PayPal Sandbox (homologación interna)',
+  },
+  paypalSandboxBuyerNotice: {
+    pt: 'PayPal Sandbox — use uma conta de comprador Sandbox. Credenciais PayPal reais não funcionam neste ambiente.',
+    en: 'PayPal Sandbox — use a Sandbox buyer account. Real PayPal credentials do not work in this environment.',
+    es: 'PayPal Sandbox — use una cuenta de comprador Sandbox. Las credenciales reales de PayPal no funcionan en este entorno.',
+  },
+  paypalSandboxCancelled: {
+    pt: 'Pagamento Sandbox cancelado. Você pode tentar de novo.',
+    en: 'Sandbox payment cancelled. You can try again.',
+    es: 'Pago Sandbox cancelado. Puede intentarlo de nuevo.',
   },
   linkInvalid: {
     pt: 'Este link de pagamento não é válido.',

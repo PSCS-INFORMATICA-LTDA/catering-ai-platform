@@ -95,6 +95,13 @@ async function main() {
   )
   check('SRC-wa-me', panel.includes('buildPaymentWhatsAppHref'), 'wa.me helper')
   check(
+    'SRC-wa-business',
+    panel.includes('openPaymentWhatsAppShare') &&
+      panel.includes('whatsappBusinessIosHint') &&
+      !panel.includes('from(\'customer_phones\')'),
+    'business opener + canonical phone',
+  )
+  check(
     'L-client-amount-ignored',
     orders.includes('ignoreClientAmount(body?.amount)') && orders.includes('resolveServerAmountDue'),
     'server amount',
