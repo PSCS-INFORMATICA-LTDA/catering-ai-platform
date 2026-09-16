@@ -5,6 +5,7 @@ import { confirmPaidDepositReservation } from '@/Lib/payments/confirmPaidDeposit
 import { recordPaymentAttempt } from '@/Lib/payments/recordPayment'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { webhookEventId } from './webhook'
+import { logPaypalSandbox } from './sandboxLog'
 
 function cents(value: unknown) {
   return Math.round((Number(value) || 0) * 100)
@@ -199,6 +200,15 @@ export async function processVerifiedPaypalCapture(input: {
       providerOrderId: orderId,
       providerCaptureId: captureId,
     })
+    logPaypalSandbox({
+      action: 'webhook_capture',
+      invoiceId: String(payment.invoice_id),
+      purpose: String(payment.purpose || ''),
+      orderId,
+      environment: 'sandbox',
+      captureStatus: 'COMPLETED',
+      result: 'duplicate',
+    })
     return Response.json({ data: { duplicate: true, eventId, reservation } })
   }
 
@@ -225,6 +235,16 @@ export async function processVerifiedPaypalCapture(input: {
     source: 'paypal_webhook',
     providerOrderId: orderId,
     providerCaptureId: captureId,
+  })
+
+  logPaypalSandbox({
+    action: 'webhook_capture',
+    invoiceId: String(payment.invoice_id),
+    purpose: String(payment.purpose || ''),
+    orderId,
+    environment: 'sandbox',
+    captureStatus: 'COMPLETED',
+    result: recorded.duplicate ? 'duplicate' : 'completed',
   })
 
   return Response.json({

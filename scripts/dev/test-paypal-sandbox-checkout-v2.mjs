@@ -33,6 +33,18 @@ assert.match(publicPage, /resolvePublicPaypalCheckoutReadiness/)
 assert.match(client, /body: JSON\.stringify\(\{ token \}\)/)
 assert.doesNotMatch(client, /clientSecret|amount:/)
 assert.doesNotMatch(client, /invoiceId/)
+assert.match(client, /paypal-sandbox-buyer-notice/)
+assert.match(client, /conta de comprador Sandbox/)
+assert.doesNotMatch(client, /@|password|senha/)
+assert.match(client, /inflightRef/)
+assert.match(capture, /logPaypalSandbox/)
+assert.match(capture, /alreadyCaptured/)
+assert.match(capture, /issueFromUnknownCaptureError/)
+assert.match(orders, /logPaypalSandbox/)
+assert.match(orders, /environment: 'sandbox'/)
+assert.doesNotMatch(capture, /PAYPAL_CLIENT_SECRET|access_token/)
+assert.doesNotMatch(orders, /access_token|PAYPAL_CLIENT_SECRET/)
+assert.doesNotMatch(client, /clientSecret|access_token|PAYPAL_CLIENT_SECRET/)
 
 // Schedule safety: a public payment cannot start/capture without an atomic,
 // company-scoped availability recheck. Links do not reserve capacity by themselves.

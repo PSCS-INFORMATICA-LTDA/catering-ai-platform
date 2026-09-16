@@ -7,6 +7,11 @@ import {
   readPaypalRuntimeConfig,
   type PaypalRuntimeConfig,
 } from './config'
+import {
+  PaypalSandboxRequestError,
+  parsePaypalSandboxError,
+  readPaypalDebugIdHeader,
+} from './sandboxError'
 
 export type PaypalCreateOrderInput = {
   companyId: string
@@ -32,6 +37,15 @@ export type PaypalCaptureResult = PaypalOrderResult & {
   currency: string
 }
 
+export type PaypalOrderLookup = {
+  orderId: string
+  status: string
+  captureId: string | null
+  captureStatus: string | null
+  amount: number | null
+  currency: string | null
+}
+
 export type PaypalRefundResult = {
   provider: 'paypal'
   environment: 'sandbox'
@@ -49,6 +63,7 @@ export interface PaypalOrdersAdapter {
     orderId: string
     requestId: string
   }): Promise<PaypalCaptureResult>
+  getOrder(orderId: string): Promise<PaypalOrderLookup | null>
   refundCapture(input: {
     captureId: string
     amount: number
@@ -93,6 +108,19 @@ export class MockPaypalAdapter implements PaypalOrdersAdapter {
     }
   }
 
+  async getOrder(orderId: string): Promise<PaypalOrderLookup | null> {
+    const created = mockOrders.get(orderId)
+    if (!created) return null
+    return {
+      orderId,
+      status: 'CREATED',
+      captureId: null,
+      captureStatus: null,
+      amount: created.amount,
+      currency: created.currency,
+    }
+  }
+
   async refundCapture(input: {
     captureId: string
     amount: number
@@ -125,11 +153,55 @@ async function paypalAccessToken(clientId: string, secret: string) {
   })
   const data = (await response.json().catch(() => null)) as {
     access_token?: string
+    name?: string
+    error?: string
+    debug_id?: string
   } | null
   if (!response.ok || !data?.access_token) {
-    throw new Error('PAYPAL_AUTH_FAILED')
+    throw new PaypalSandboxRequestError(
+      parsePaypalSandboxError({
+        httpStatus: response.status,
+        debugIdHeader: readPaypalDebugIdHeader(response.headers),
+        body: data,
+        fallbackCode: 'PAYPAL_AUTH_FAILED',
+      }),
+    )
   }
   return data.access_token
+}
+
+type PaypalOrderBody = {
+  id?: string
+  status?: string
+  name?: string
+  error?: string
+  debug_id?: string
+  details?: Array<{ issue?: string }>
+  purchase_units?: Array<{
+    payments?: {
+      captures?: Array<{
+        id?: string
+        status?: string
+        amount?: { value?: string; currency_code?: string }
+      }>
+    }
+  }>
+}
+
+function lookupFromOrderBody(
+  data: PaypalOrderBody | null,
+  fallbackOrderId: string,
+): PaypalOrderLookup | null {
+  if (!data?.id && !fallbackOrderId) return null
+  const capture = data?.purchase_units?.[0]?.payments?.captures?.[0]
+  return {
+    orderId: data?.id || fallbackOrderId,
+    status: data?.status || 'UNKNOWN',
+    captureId: capture?.id || null,
+    captureStatus: capture?.status || null,
+    amount: capture?.amount?.value != null ? Number(capture.amount.value) : null,
+    currency: capture?.amount?.currency_code || null,
+  }
 }
 
 export class SandboxPaypalAdapter implements PaypalOrdersAdapter {
@@ -165,12 +237,16 @@ export class SandboxPaypalAdapter implements PaypalOrdersAdapter {
       }),
       cache: 'no-store',
     })
-    const data = (await response.json().catch(() => null)) as {
-      id?: string
-      status?: string
-    } | null
+    const data = (await response.json().catch(() => null)) as PaypalOrderBody | null
     if (!response.ok || !data?.id) {
-      throw new Error('PAYPAL_CREATE_ORDER_FAILED')
+      throw new PaypalSandboxRequestError(
+        parsePaypalSandboxError({
+          httpStatus: response.status,
+          debugIdHeader: readPaypalDebugIdHeader(response.headers),
+          body: data,
+          fallbackCode: 'PAYPAL_CREATE_ORDER_FAILED',
+        }),
+      )
     }
     return {
       provider: 'paypal',
@@ -200,21 +276,18 @@ export class SandboxPaypalAdapter implements PaypalOrdersAdapter {
         cache: 'no-store',
       },
     )
-    const data = (await response.json().catch(() => null)) as {
-      id?: string
-      status?: string
-      purchase_units?: Array<{
-        payments?: {
-          captures?: Array<{
-            id?: string
-            amount?: { value?: string; currency_code?: string }
-          }>
-        }
-      }>
-    } | null
+    const data = (await response.json().catch(() => null)) as PaypalOrderBody | null
     const capture = data?.purchase_units?.[0]?.payments?.captures?.[0]
     if (!response.ok || !data?.id || !capture?.id) {
-      throw new Error('PAYPAL_CAPTURE_FAILED')
+      throw new PaypalSandboxRequestError(
+        parsePaypalSandboxError({
+          httpStatus: response.status,
+          debugIdHeader: readPaypalDebugIdHeader(response.headers),
+          body: data,
+          fallbackCode: 'PAYPAL_CAPTURE_FAILED',
+          orderId: input.orderId,
+        }),
+      )
     }
     return {
       provider: 'paypal',
@@ -226,6 +299,35 @@ export class SandboxPaypalAdapter implements PaypalOrdersAdapter {
       currency: capture.amount?.currency_code || 'USD',
       mock: false,
     }
+  }
+
+  async getOrder(orderId: string): Promise<PaypalOrderLookup | null> {
+    assertSandboxOnly()
+    const token = await paypalAccessToken(this.clientId, this.secret)
+    const response = await fetch(
+      `${paypalApiBase('sandbox')}/v2/checkout/orders/${encodeURIComponent(orderId)}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
+      },
+    )
+    const data = (await response.json().catch(() => null)) as PaypalOrderBody | null
+    if (!response.ok) {
+      throw new PaypalSandboxRequestError(
+        parsePaypalSandboxError({
+          httpStatus: response.status,
+          debugIdHeader: readPaypalDebugIdHeader(response.headers),
+          body: data,
+          fallbackCode: 'PAYPAL_GET_ORDER_FAILED',
+          orderId,
+        }),
+      )
+    }
+    return lookupFromOrderBody(data, orderId)
   }
 
   async refundCapture(input: {
@@ -265,7 +367,14 @@ export class SandboxPaypalAdapter implements PaypalOrdersAdapter {
       amount?: { value?: string; currency_code?: string }
     } | null
     if (!response.ok || !data?.id) {
-      throw new Error('PAYPAL_REFUND_FAILED')
+      throw new PaypalSandboxRequestError(
+        parsePaypalSandboxError({
+          httpStatus: response.status,
+          debugIdHeader: readPaypalDebugIdHeader(response.headers),
+          body: data,
+          fallbackCode: 'PAYPAL_REFUND_FAILED',
+        }),
+      )
     }
     return {
       provider: 'paypal',

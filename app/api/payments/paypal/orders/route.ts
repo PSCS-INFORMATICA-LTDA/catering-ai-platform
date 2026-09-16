@@ -12,6 +12,8 @@ import { loadCompanyPaypalCredentials } from '@/Lib/payments/companyPaypal'
 import { assertInvoiceAcceptsPayment } from '@/Lib/payments/invoiceCancellation'
 import { createPaypalAdapter } from '@/Lib/payments/paypal/adapter'
 import { resolvePublicPaypalCheckoutReadiness } from '@/Lib/payments/paypal/publicCheckout'
+import { isPaypalSandboxRequestError } from '@/Lib/payments/paypal/sandboxError'
+import { logPaypalSandbox } from '@/Lib/payments/paypal/sandboxLog'
 import { isPaymentPurpose } from '@/Lib/payments/paymentLinks'
 import { recordPaymentAttempt } from '@/Lib/payments/recordPayment'
 import { resolvePaymentLink } from '@/Lib/payments/resolvePaymentLink'
@@ -236,6 +238,17 @@ export async function POST(request: Request) {
       return Response.json({ error: recorded.error }, { status: recorded.status })
     }
 
+    logPaypalSandbox({
+      action: 'create_order',
+      requestId,
+      invoiceId,
+      purpose,
+      orderId: order.orderId,
+      environment: 'sandbox',
+      httpStatus: 201,
+      result: recorded.duplicate ? 'duplicate' : 'created',
+    })
+
     return Response.json({
       data: {
         orderId: order.orderId,
@@ -247,9 +260,24 @@ export async function POST(request: Request) {
         publicCheckout: Boolean(body?.token),
         scheduleHoldExpiresAt: hold.expiresAt ?? null,
         scheduleHoldRequired: !postEventPayment,
+        requestId,
       },
     })
-  } catch {
+  } catch (error) {
+    const issue = isPaypalSandboxRequestError(error) ? error.issue : null
+    logPaypalSandbox({
+      action: 'create_order',
+      requestId,
+      invoiceId,
+      purpose,
+      orderId: issue?.orderId,
+      environment: 'sandbox',
+      httpStatus: issue?.httpStatus,
+      paypalName: issue?.paypalName,
+      debugId: issue?.debugId,
+      issue: issue?.issue,
+      result: 'failed',
+    })
     if (!postEventPayment) {
       await releasePaymentScheduleHold({
         companyId,
@@ -257,6 +285,6 @@ export async function POST(request: Request) {
         reason: 'paypal_order_create_failed',
       })
     }
-    return Response.json({ error: 'paypal_create_order_failed' }, { status: 502 })
+    return Response.json({ error: 'paypal_create_order_failed', requestId }, { status: 502 })
   }
 }
