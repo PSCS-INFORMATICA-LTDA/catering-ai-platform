@@ -2,6 +2,10 @@ import 'server-only'
 
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 import { confirmPaidDepositReservation } from '@/Lib/payments/confirmPaidDeposit'
+import {
+  isRetryableOperationalFailure,
+  paidContractEnsureFailedBody,
+} from '@/Lib/payments/paidContractAdvance'
 import { recordPaymentAttempt } from '@/Lib/payments/recordPayment'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { webhookEventId } from './webhook'
@@ -211,11 +215,23 @@ export async function processVerifiedPaypalCapture(input: {
     })
     if (!reservation.ok) {
       return Response.json(
-        { error: reservation.error || 'paid_contract_ensure_failed', reservation },
+        paidContractEnsureFailedBody({
+          operationalError: reservation.error,
+          reservation,
+        }),
         { status: 503 },
       )
     }
-    return Response.json({ data: { duplicate: true, eventId, reservation } })
+    return Response.json({
+      data: {
+        duplicate: true,
+        eventId,
+        financialCompleted: true,
+        operationalAdvanceCompleted: true,
+        operationalError: null,
+        reservation,
+      },
+    })
   }
 
   const recorded = await recordPaymentAttempt({
@@ -235,14 +251,6 @@ export async function processVerifiedPaypalCapture(input: {
     return Response.json({ error: recorded.error }, { status: recorded.status })
   }
 
-  const reservation = await confirmPaidDepositReservation({
-    companyId: String(payment.company_id),
-    invoiceId: String(payment.invoice_id),
-    source: 'paypal_webhook',
-    providerOrderId: orderId,
-    providerCaptureId: captureId,
-  })
-
   logPaypalSandbox({
     action: 'webhook_capture',
     invoiceId: String(payment.invoice_id),
@@ -250,16 +258,20 @@ export async function processVerifiedPaypalCapture(input: {
     orderId,
     environment: 'sandbox',
     captureStatus: 'COMPLETED',
-    result: !reservation.ok
+    result: isRetryableOperationalFailure(recorded)
       ? 'ensure_failed'
       : recorded.duplicate
         ? 'duplicate'
         : 'completed',
   })
 
-  if (!reservation.ok) {
+  if (isRetryableOperationalFailure(recorded)) {
     return Response.json(
-      { error: reservation.error || 'paid_contract_ensure_failed', reservation },
+      paidContractEnsureFailedBody({
+        operationalError: recorded.operationalError,
+        reservation: recorded.reservation,
+        financialCompleted: recorded.financialCompleted,
+      }),
       { status: 503 },
     )
   }
@@ -269,7 +281,10 @@ export async function processVerifiedPaypalCapture(input: {
       duplicate: recorded.duplicate,
       invoiceStatus: recorded.invoice.status,
       eventId,
-      reservation,
+      financialCompleted: recorded.financialCompleted,
+      operationalAdvanceCompleted: recorded.operationalAdvanceCompleted,
+      operationalError: recorded.operationalError,
+      reservation: recorded.reservation,
     },
   })
 }

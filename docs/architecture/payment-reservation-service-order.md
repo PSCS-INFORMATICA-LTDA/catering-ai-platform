@@ -36,8 +36,10 @@ An inactive quote returns `quote_inactive` and never creates an OS.
 - Agenda: unique active `(company_id, quote_id)`
 - OS: unique `(company_id, quote_version_id)` + `quotes.converted_service_order_id`
 - Refresh / webhook / retry / double-click return the same OS (`already_existed: true`)
-- `recordPaymentAttempt` calls `ensurePaidContractAdvance` on completed duplicates so a retry after a partial failure cannot skip OS creation
-- A failed OS/agenda returns `ok: false`. It does not swallow with `.catch(() => null)`
+- `recordPaymentAttempt` calls `ensurePaidContractAdvance` on every completed path (idempotency, provider-order, race after update/insert, normal complete) and returns `readRecordedPaymentClose`
+- Money can stay `financialCompleted=true` while OS/agenda is `operationalAdvanceCompleted=false`
+- A failed OS/agenda returns `paid_contract_ensure_failed`. It does not swallow with `.catch(() => null)` and never undoes the payment
+- Webhook returns `503` when `operationalAdvanceCompleted === false` so PayPal retries the same capture
 - Duplicate capture, webhook `503`, Zelle, and Commercial Review page load retry the same ensure
 
 At most one operational reservation and one canonical OS per contract.

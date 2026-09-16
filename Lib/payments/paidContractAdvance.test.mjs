@@ -4,7 +4,10 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  isRetryableOperationalFailure,
+  paidContractEnsureFailedBody,
   readContractLifecycle,
+  readRecordedPaymentClose,
   resolvePaidContractEnsureOutcome,
   shouldAdvancePaidContract,
   shouldRetryPaidContractEnsure,
@@ -243,6 +246,87 @@ test('reliability: swallow-null is gone and failed ensure is ok:false', () => {
   assert.match(confirm, /service_order_ensure_failed/)
   assert.match(extras, /shouldRetryPaidContractEnsure/)
   assert.match(extras, /ensurePaidContractAdvance/)
-  assert.match(webhook, /paid_contract_ensure_failed/)
+  assert.match(webhook, /paidContractEnsureFailedBody/)
   assert.match(webhook, /status: 503/)
+})
+
+test('1 payment completed + OS success is financial and operational success', () => {
+  const close = readRecordedPaymentClose({
+    paymentStatus: 'completed',
+    depositSatisfied: true,
+    operational: { ok: true, error: null },
+  })
+  assert.equal(close.financialCompleted, true)
+  assert.equal(close.operationalAdvanceCompleted, true)
+  assert.equal(close.operationalError, null)
+  assert.equal(isRetryableOperationalFailure({ ok: true, ...close }), false)
+})
+
+test('2 payment completed + OS failure keeps money completed', () => {
+  const close = readRecordedPaymentClose({
+    paymentStatus: 'completed',
+    depositSatisfied: true,
+    operational: { ok: false, error: 'coupon_approval_pending' },
+  })
+  assert.equal(close.financialCompleted, true)
+  assert.equal(close.operationalAdvanceCompleted, false)
+  assert.equal(close.operationalError, 'coupon_approval_pending')
+  assert.equal(isRetryableOperationalFailure({ ok: true, ...close }), true)
+  assert.equal(
+    paidContractEnsureFailedBody({ operationalError: close.operationalError }).error,
+    'coupon_approval_pending',
+  )
+})
+
+test('3 payment completed + agenda failure keeps money completed', () => {
+  const close = readRecordedPaymentClose({
+    paymentStatus: 'completed',
+    depositSatisfied: true,
+    operational: { ok: false, error: 'schedule_conflict' },
+  })
+  assert.equal(close.financialCompleted, true)
+  assert.equal(close.operationalAdvanceCompleted, false)
+  assert.equal(close.operationalError, 'schedule_conflict')
+})
+
+test('4-6 retry/duplicate/existing completed reuse the same completed closer', () => {
+  const record = read('Lib/payments/recordPayment.ts')
+  const webhook = read('Lib/payments/paypal/processWebhook.ts')
+  const capture = read('app/api/payments/paypal/capture/route.ts')
+  const closerHits = record.match(/return completedPaymentResult\(/g) || []
+  assert.equal(closerHits.length, 6)
+  assert.match(record, /existing\.status === 'completed'/)
+  assert.match(record, /existingByOrder\?\.status === 'completed'/)
+  assert.match(record, /raced\?\.status === 'completed'/)
+  assert.match(record, /raced\.status === 'completed'/)
+  assert.match(record, /byOrder\.status === 'completed'/)
+  assert.match(record, /input\.status === 'completed'/)
+  assert.match(record, /readRecordedPaymentClose/)
+  assert.match(record, /operationalAdvanceCompleted/)
+  assert.doesNotMatch(record, /await ensurePaidContract\([\s\S]{0,180}return \{\s*ok: true/)
+  assert.match(webhook, /isRetryableOperationalFailure\(recorded\)/)
+  assert.match(webhook, /recorded\.reservation/)
+  assert.match(capture, /recorded\.reservation/)
+  assert.match(capture, /existing\.status === 'completed'/)
+  assert.match(capture, /financialCompleted/)
+  assert.match(webhook, /financialCompleted/)
+})
+
+test('return propagation never reports operational close as payment success', () => {
+  const missingEnsure = readRecordedPaymentClose({
+    paymentStatus: 'completed',
+    depositSatisfied: true,
+    operational: null,
+  })
+  assert.equal(missingEnsure.financialCompleted, true)
+  assert.equal(missingEnsure.operationalAdvanceCompleted, false)
+  assert.equal(missingEnsure.operationalError, 'paid_contract_ensure_failed')
+
+  const pending = readRecordedPaymentClose({
+    paymentStatus: 'created',
+    depositSatisfied: false,
+    operational: null,
+  })
+  assert.equal(pending.financialCompleted, false)
+  assert.equal(pending.operationalAdvanceCompleted, true)
 })

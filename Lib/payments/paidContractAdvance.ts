@@ -141,3 +141,74 @@ export function resolvePaidContractEnsureOutcome(input: {
 export function shouldRetryPaidContractEnsure(lifecycle: ContractLifecycle): boolean {
   return lifecycle.serviceOrderPending
 }
+
+export type RecordedPaymentClose = {
+  financialCompleted: boolean
+  operationalAdvanceCompleted: boolean
+  operationalError: string | null
+}
+
+/**
+ * Money can be completed while the OS/agenda still failed.
+ * Callers must not treat that as a full operational close.
+ */
+export function readRecordedPaymentClose(input: {
+  paymentStatus: string
+  depositSatisfied: boolean
+  operational?: { ok: boolean; error?: string | null } | null
+}): RecordedPaymentClose {
+  const financialCompleted = input.paymentStatus === 'completed'
+  if (!financialCompleted) {
+    return {
+      financialCompleted: false,
+      operationalAdvanceCompleted: true,
+      operationalError: null,
+    }
+  }
+  if (!input.depositSatisfied) {
+    return {
+      financialCompleted: true,
+      operationalAdvanceCompleted: true,
+      operationalError: null,
+    }
+  }
+  if (!input.operational) {
+    return {
+      financialCompleted: true,
+      operationalAdvanceCompleted: false,
+      operationalError: 'paid_contract_ensure_failed',
+    }
+  }
+  if (input.operational.ok === false) {
+    return {
+      financialCompleted: true,
+      operationalAdvanceCompleted: false,
+      operationalError: input.operational.error || 'paid_contract_ensure_failed',
+    }
+  }
+  return {
+    financialCompleted: true,
+    operationalAdvanceCompleted: true,
+    operationalError: null,
+  }
+}
+
+export function isRetryableOperationalFailure(recorded: {
+  ok: boolean
+  operationalAdvanceCompleted?: boolean
+}): boolean {
+  return recorded.ok === true && recorded.operationalAdvanceCompleted === false
+}
+
+export function paidContractEnsureFailedBody(input: {
+  operationalError?: string | null
+  reservation?: unknown
+  financialCompleted?: boolean
+}) {
+  return {
+    error: input.operationalError || 'paid_contract_ensure_failed',
+    financialCompleted: input.financialCompleted !== false,
+    operationalAdvanceCompleted: false as const,
+    reservation: input.reservation ?? null,
+  }
+}

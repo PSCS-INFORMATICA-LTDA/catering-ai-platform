@@ -270,6 +270,13 @@ assert.equal(after.view.paidTotal, before.view.paidTotal)
 assert.equal(after.view.invoiceStatus, before.view.invoiceStatus)
 assert.equal(after.view.foreignOrders, 0)
 assert.ok(after.view.advance.advance, 'deposit should allow reservation+OS')
+assert.equal(after.view.invoiceStatus, 'partially_paid')
+assert.equal(after.view.total, 1850)
+assert.equal(after.view.paidTotal, 555)
+assert.equal(after.view.depositAmount, 555)
+assert.equal(after.view.serviceOrders[0]?.number, 'SO-2026-000007')
+assert.equal(after.view.agenda[0]?.code, 'EVT-0010')
+assert.equal(after.view.payments.filter((row) => row.status === 'completed').length, 1)
 
 if (APPLY) {
   assert.equal(after.view.serviceOrders.length, 1, 'exactly one OS')

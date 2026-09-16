@@ -1,7 +1,10 @@
 import { requireApiPermission, resolveAuthorizedCompanyId } from '@/Lib/auth/requireApi'
 import { assertCompanyPaypalEligible } from '@/Lib/payments/companyProviders'
 import { loadCompanyPaypalCredentials } from '@/Lib/payments/companyPaypal'
-import { confirmPaidDepositReservation } from '@/Lib/payments/confirmPaidDeposit'
+import {
+  confirmPaidDepositReservation,
+  type PaidContractEnsureResult,
+} from '@/Lib/payments/confirmPaidDeposit'
 import { assertInvoiceAcceptsPayment } from '@/Lib/payments/invoiceCancellation'
 import { createPaypalAdapter, type PaypalCaptureResult } from '@/Lib/payments/paypal/adapter'
 import { resolvePublicPaypalCheckoutReadiness } from '@/Lib/payments/paypal/publicCheckout'
@@ -23,6 +26,17 @@ function cents(value: number) {
 
 function paypalRequestId(parts: string[]) {
   return createHash('sha256').update(parts.join('|')).digest('hex')
+}
+
+function closeFromReservation(reservation: PaidContractEnsureResult) {
+  return {
+    financialCompleted: true as const,
+    operationalAdvanceCompleted: reservation.ok,
+    operationalError: reservation.ok
+      ? null
+      : reservation.error || 'paid_contract_ensure_failed',
+    reservation,
+  }
 }
 
 export async function POST(request: Request) {
@@ -84,7 +98,7 @@ export async function POST(request: Request) {
         duplicate: true,
         captureId: existing.provider_capture_id,
         paymentId: existing.id,
-        reservation,
+        ...closeFromReservation(reservation),
       },
     })
   }
@@ -241,14 +255,7 @@ export async function POST(request: Request) {
     return Response.json({ error: recorded.error }, { status: recorded.status })
   }
 
-  const reservation = await confirmPaidDepositReservation({
-    companyId,
-    invoiceId,
-    source: 'paypal_capture',
-    providerOrderId: captured.orderId,
-    providerCaptureId: captured.captureId,
-  })
-  if (reservation.ok) {
+  if (recorded.operationalAdvanceCompleted) {
     await consumePaymentScheduleHold({ companyId, invoiceId })
   }
 
@@ -258,7 +265,10 @@ export async function POST(request: Request) {
       duplicate: recorded.duplicate,
       invoiceStatus: recorded.invoice.status,
       paidTotal: recorded.invoice.paid_total,
-      reservation,
+      financialCompleted: recorded.financialCompleted,
+      operationalAdvanceCompleted: recorded.operationalAdvanceCompleted,
+      operationalError: recorded.operationalError,
+      reservation: recorded.reservation,
       mock: captured.mock,
     },
   })
