@@ -24,6 +24,7 @@ import { tCommercialReview } from '@/Lib/i18n/commercialReview'
 import { tQuotesOrders } from '@/Lib/i18n/quotesOrders'
 import QuoteFlashBanner from '@/components/QuoteFlashBanner'
 import { CommercialReviewHeader } from './CommercialReviewHeader'
+import { ContractLifecycleCard } from './ContractLifecycleCard'
 import { CustomerSummary } from './CustomerSummary'
 import { EventSummary } from './EventSummary'
 import { MenuSummary } from './MenuSummary'
@@ -131,6 +132,7 @@ export default function CommercialReviewWorkspace({
         <Suspense fallback={null}>
           <QuoteFlashBanner />
         </Suspense>
+        <ContractLifecycleCard locale={lang} lifecycle={extras.lifecycle} />
         <QuoteConvertPanel
           quoteId={quote.id}
           quoteNumber={quote.quote_number}

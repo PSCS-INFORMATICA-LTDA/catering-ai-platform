@@ -2,7 +2,7 @@ import 'server-only'
 
 import { createHash, randomUUID } from 'node:crypto'
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
-import { confirmQuoteDepositAndReserveSchedule } from '@/Lib/quotes/confirmQuoteDepositAndReserveSchedule'
+import { confirmPaidDepositReservation } from '@/Lib/payments/confirmPaidDeposit'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { resolveServerAmountDue } from './loadInvoiceAmountDue'
 import type { PaymentPurpose } from './types'
@@ -256,9 +256,10 @@ export async function recordManualPayment(input: {
 
   let reservation: unknown = null
   if (quoteId && depositAmount > 0 && paidTotal + 0.009 >= depositAmount) {
-    reservation = await confirmQuoteDepositAndReserveSchedule({
+    reservation = await confirmPaidDepositReservation({
       companyId: input.companyId,
-      quoteId,
+      invoiceId: input.invoiceId,
+      source: 'manual_payment',
       actorUserId: input.actorUserId,
     }).catch((err) => ({
       ok: false,

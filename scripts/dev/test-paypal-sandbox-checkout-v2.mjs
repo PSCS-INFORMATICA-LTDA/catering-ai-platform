@@ -57,6 +57,8 @@ assert.match(scheduleHold, /acquire_payment_schedule_hold/)
 assert.match(scheduleHold, /release_payment_schedule_hold/)
 assert.match(scheduleHold, /consume_payment_schedule_hold/)
 assert.match(paidDeposit, /consumePaymentScheduleHold/)
+assert.match(paidDeposit, /convertAcceptedQuoteToServiceOrder/)
+assert.match(paidDeposit, /PaidContractSource/)
 
 // DB enforcement is atomic with the scheduling writes, not just a UI check.
 assert.match(holdMigration, /pg_advisory_xact_lock/)

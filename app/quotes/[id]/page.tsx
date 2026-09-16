@@ -8,6 +8,7 @@ import { resolveAuthLocale } from '@/Lib/i18n/authUsers'
 import { logDevServerTiming } from '@/Lib/observability/serverTiming'
 import { tw } from '@/Lib/quoteTranslations'
 import { loadCommercialReviewExtras } from '@/Lib/commercialReview/loadWorkspaceExtras'
+import { readContractLifecycle } from '@/Lib/payments/paidContractAdvance'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -60,6 +61,7 @@ export default async function QuoteDetailPage({
           hasEventWindow: false,
         },
         history: [],
+        lifecycle: readContractLifecycle({ proposalAccepted: false }),
       }
 
   const canConvert = Boolean(

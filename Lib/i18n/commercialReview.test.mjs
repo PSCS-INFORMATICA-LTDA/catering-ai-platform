@@ -35,5 +35,9 @@ describe('commercial review i18n', () => {
       tCommercialReview('es', 'awaitingCustomerAcceptance'),
       'Esperando aceptación del cliente',
     )
+    assert.equal(tCommercialReview('pt', 'lifecycleAwaitingDeposit'), 'Aguardando sinal')
+    assert.equal(tCommercialReview('en', 'lifecycleDepositPaid'), 'Deposit paid')
+    assert.equal(tCommercialReview('es', 'lifecycleReservationConfirmed'), 'Reserva confirmada')
+    assert.match(tCommercialReview('pt', 'lifecycleServiceOrder', { number: 'OS-2026-000001' }), /OS-2026-000001/)
   })
 })

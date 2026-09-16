@@ -1,5 +1,6 @@
 import CommercialReviewWorkspace from '@/components/commercial-review/CommercialReviewWorkspace'
 import type { CommercialReviewExtras } from '@/Lib/commercialReview/loadWorkspaceExtras'
+import { readContractLifecycle } from '@/Lib/payments/paidContractAdvance'
 import type { QuoteDetail } from './quoteDetailTypes'
 
 const EMPTY_EXTRAS: CommercialReviewExtras = {
@@ -14,6 +15,7 @@ const EMPTY_EXTRAS: CommercialReviewExtras = {
     hasEventWindow: false,
   },
   history: [],
+  lifecycle: readContractLifecycle({ proposalAccepted: false }),
 }
 
 /** Compatibility wrapper. The quote detail route now renders Commercial Review. */

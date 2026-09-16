@@ -46,6 +46,8 @@ export type OperationalAuditAction =
   | 'team_assignment_substituted'
   | 'team_assignment_sent'
   | 'reservation_confirmed'
+  | 'payment_completed'
+  | 'service_order_created'
   | 'agenda_reserved_on_deposit'
   | 'agenda_reservation_cancelled'
   | 'agenda_linked_on_convert'

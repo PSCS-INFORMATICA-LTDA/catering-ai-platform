@@ -227,6 +227,48 @@ const { t, list } = makeI18nModule('commercialReview', 'workspace', {
     en: 'After customer acceptance: original invoice → payment choice → event → closeout. No unapproved payment logic is added here.',
     es: 'Tras la aceptación del cliente: factura original → elección de pago → evento → cierre. No se anticipa lógica de pago no aprobada.',
   },
+  lifecycleTitle: {
+    pt: 'Ciclo operacional',
+    en: 'Operational cycle',
+    es: 'Ciclo operacional',
+  },
+  lifecycleProposalAccepted: {
+    pt: 'Proposta aceita',
+    en: 'Proposal accepted',
+    es: 'Propuesta aceptada',
+  },
+  lifecycleAwaitingDeposit: {
+    pt: 'Aguardando sinal',
+    en: 'Awaiting deposit',
+    es: 'Esperando seña',
+  },
+  lifecycleDepositPaid: {
+    pt: 'Sinal pago',
+    en: 'Deposit paid',
+    es: 'Seña pagada',
+  },
+  lifecycleReservationConfirmed: {
+    pt: 'Reserva confirmada',
+    en: 'Reservation confirmed',
+    es: 'Reserva confirmada',
+  },
+  lifecycleServiceOrder: {
+    pt: 'Ordem de Serviço: {number}',
+    en: 'Service order: {number}',
+    es: 'Orden de servicio: {number}',
+  },
+  lifecycleAwaitingServiceOrder: {
+    pt: 'Ordem de Serviço pendente',
+    en: 'Service order pending',
+    es: 'Orden de servicio pendiente',
+  },
+  lifecyclePaidInFull: {
+    pt: 'Pagamento integral',
+    en: 'Paid in full',
+    es: 'Pago integral',
+  },
+  lifecycleDone: { pt: 'Confirmado', en: 'Confirmed', es: 'Confirmado' },
+  lifecycleWaiting: { pt: 'Pendente', en: 'Pending', es: 'Pendiente' },
   stickyReview: { pt: 'Revisar', en: 'Review', es: 'Revisar' },
 })
 
