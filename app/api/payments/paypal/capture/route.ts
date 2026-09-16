@@ -1,10 +1,15 @@
 import { requireApiPermission, resolveAuthorizedCompanyId } from '@/Lib/auth/requireApi'
 import { assertCompanyPaypalEligible } from '@/Lib/payments/companyProviders'
 import { loadCompanyPaypalCredentials } from '@/Lib/payments/companyPaypal'
-import { confirmPaidDepositReservation } from '@/Lib/payments/confirmPaidDeposit'
+import {
+  confirmPaidDepositReservation,
+  type PaidContractEnsureResult,
+} from '@/Lib/payments/confirmPaidDeposit'
 import { assertInvoiceAcceptsPayment } from '@/Lib/payments/invoiceCancellation'
-import { createPaypalAdapter } from '@/Lib/payments/paypal/adapter'
+import { createPaypalAdapter, type PaypalCaptureResult } from '@/Lib/payments/paypal/adapter'
 import { resolvePublicPaypalCheckoutReadiness } from '@/Lib/payments/paypal/publicCheckout'
+import { issueFromUnknownCaptureError } from '@/Lib/payments/paypal/sandboxError'
+import { logPaypalSandbox } from '@/Lib/payments/paypal/sandboxLog'
 import { findPaymentByProviderOrder, recordPaymentAttempt } from '@/Lib/payments/recordPayment'
 import { resolvePaymentLink } from '@/Lib/payments/resolvePaymentLink'
 import {
@@ -21,6 +26,17 @@ function cents(value: number) {
 
 function paypalRequestId(parts: string[]) {
   return createHash('sha256').update(parts.join('|')).digest('hex')
+}
+
+function closeFromReservation(reservation: PaidContractEnsureResult) {
+  return {
+    financialCompleted: true as const,
+    operationalAdvanceCompleted: reservation.ok,
+    operationalError: reservation.ok
+      ? null
+      : reservation.error || 'paid_contract_ensure_failed',
+    reservation,
+  }
 }
 
 export async function POST(request: Request) {
@@ -82,7 +98,7 @@ export async function POST(request: Request) {
         duplicate: true,
         captureId: existing.provider_capture_id,
         paymentId: existing.id,
-        reservation,
+        ...closeFromReservation(reservation),
       },
     })
   }
@@ -119,10 +135,91 @@ export async function POST(request: Request) {
     clientId: companyPaypal.clientId,
     clientSecret: companyPaypal.clientSecret,
   })
-  const captured = await adapter.captureOrder({
-    orderId: body.orderId,
-    requestId: paypalRequestId(['capture', companyId, invoiceId, body.orderId]),
-  })
+  const requestId = paypalRequestId(['capture', companyId, invoiceId, body.orderId])
+  let captured: PaypalCaptureResult
+  try {
+    captured = await adapter.captureOrder({
+      orderId: body.orderId,
+      requestId,
+    })
+    logPaypalSandbox({
+      action: 'capture',
+      requestId,
+      invoiceId,
+      purpose: existing.purpose,
+      orderId: captured.orderId,
+      environment: 'sandbox',
+      httpStatus: 201,
+      captureStatus: captured.status,
+      result: 'captured',
+    })
+  } catch (error) {
+    const issue = issueFromUnknownCaptureError(error, body.orderId)
+    logPaypalSandbox({
+      action: 'capture',
+      requestId,
+      invoiceId,
+      purpose: existing.purpose,
+      orderId: body.orderId,
+      environment: 'sandbox',
+      httpStatus: issue.httpStatus,
+      paypalName: issue.paypalName,
+      debugId: issue.debugId,
+      captureStatus: issue.captureStatus,
+      issue: issue.issue,
+      result: 'failed',
+    })
+    if (issue.alreadyCaptured) {
+      try {
+        const order = await adapter.getOrder(body.orderId)
+        if (
+          order?.captureId &&
+          (order.status === 'COMPLETED' || order.captureStatus === 'COMPLETED')
+        ) {
+          captured = {
+            provider: 'paypal',
+            environment: 'sandbox',
+            orderId: order.orderId,
+            captureId: order.captureId,
+            status: 'COMPLETED',
+            amount: Number(order.amount ?? existing.amount),
+            currency: order.currency || existing.currency_code,
+            mock: false,
+          }
+          logPaypalSandbox({
+            action: 'capture',
+            requestId,
+            invoiceId,
+            purpose: existing.purpose,
+            orderId: captured.orderId,
+            environment: 'sandbox',
+            captureStatus: captured.status,
+            issue: issue.issue,
+            result: 'already_captured',
+          })
+        } else {
+          return Response.json({ error: 'paypal_capture_failed', requestId }, { status: 502 })
+        }
+      } catch (lookupError) {
+        const lookupIssue = issueFromUnknownCaptureError(lookupError, body.orderId)
+        logPaypalSandbox({
+          action: 'get_order',
+          requestId,
+          invoiceId,
+          purpose: existing.purpose,
+          orderId: body.orderId,
+          environment: 'sandbox',
+          httpStatus: lookupIssue.httpStatus,
+          paypalName: lookupIssue.paypalName,
+          debugId: lookupIssue.debugId,
+          result: 'failed',
+        })
+        return Response.json({ error: 'paypal_capture_failed', requestId }, { status: 502 })
+      }
+    } else {
+      return Response.json({ error: 'paypal_capture_failed', requestId }, { status: 502 })
+    }
+  }
 
   if (captured.status !== 'COMPLETED') {
     return Response.json({ error: 'paypal_capture_not_completed' }, { status: 409 })
@@ -158,14 +255,7 @@ export async function POST(request: Request) {
     return Response.json({ error: recorded.error }, { status: recorded.status })
   }
 
-  const reservation = await confirmPaidDepositReservation({
-    companyId,
-    invoiceId,
-    source: 'paypal_capture',
-    providerOrderId: captured.orderId,
-    providerCaptureId: captured.captureId,
-  })
-  if (reservation.ok) {
+  if (recorded.operationalAdvanceCompleted) {
     await consumePaymentScheduleHold({ companyId, invoiceId })
   }
 
@@ -175,7 +265,10 @@ export async function POST(request: Request) {
       duplicate: recorded.duplicate,
       invoiceStatus: recorded.invoice.status,
       paidTotal: recorded.invoice.paid_total,
-      reservation,
+      financialCompleted: recorded.financialCompleted,
+      operationalAdvanceCompleted: recorded.operationalAdvanceCompleted,
+      operationalError: recorded.operationalError,
+      reservation: recorded.reservation,
       mock: captured.mock,
     },
   })

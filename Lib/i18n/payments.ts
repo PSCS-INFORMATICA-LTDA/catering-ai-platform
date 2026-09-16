@@ -48,9 +48,14 @@ const { t, list } = makeI18nModule('payments', 'billing', {
     es: 'Enviar saldo por WhatsApp',
   },
   sendFullWhatsApp: {
-    pt: 'Enviar pagamento total',
-    en: 'Send full payment',
-    es: 'Enviar pago total',
+    pt: 'Enviar pagamento total no WhatsApp',
+    en: 'Send full payment on WhatsApp',
+    es: 'Enviar pago total por WhatsApp',
+  },
+  whatsappShareHint: {
+    pt: 'Abriremos o WhatsApp disponível no seu dispositivo. A mensagem não é enviada automaticamente.',
+    en: 'We will open the WhatsApp available on your device. The message is not sent automatically.',
+    es: 'Abriremos el WhatsApp disponible en tu dispositivo. El mensaje no se envía automáticamente.',
   },
   awaitingCustomerAcceptance: {
     pt: 'Aguardando aceite do cliente',
@@ -177,6 +182,16 @@ const { t, list } = makeI18nModule('payments', 'billing', {
     pt: 'PayPal Sandbox (homologação interna)',
     en: 'PayPal Sandbox (internal homologation)',
     es: 'PayPal Sandbox (homologación interna)',
+  },
+  paypalSandboxBuyerNotice: {
+    pt: 'PayPal Sandbox — use uma conta de comprador Sandbox. Credenciais PayPal reais não funcionam neste ambiente.',
+    en: 'PayPal Sandbox — use a Sandbox buyer account. Real PayPal credentials do not work in this environment.',
+    es: 'PayPal Sandbox — use una cuenta de comprador Sandbox. Las credenciales reales de PayPal no funcionan en este entorno.',
+  },
+  paypalSandboxCancelled: {
+    pt: 'Pagamento Sandbox cancelado. Você pode tentar de novo.',
+    en: 'Sandbox payment cancelled. You can try again.',
+    es: 'Pago Sandbox cancelado. Puede intentarlo de nuevo.',
   },
   linkInvalid: {
     pt: 'Este link de pagamento não é válido.',

@@ -231,8 +231,8 @@ test('SETTINGS_UI_EXISTS', () => {
 })
 
 test('ORDERS_USE_COMPANY_CREDENTIALS', () => {
-  assert.match(orders, /createPaypalAdapter\(runtime, \{/)
-  assert.match(capture, /createPaypalAdapter\(runtime, \{/)
+  assert.match(orders, /createPaypalAdapter\(undefined, \{/)
+  assert.match(capture, /createPaypalAdapter\(undefined, \{/)
   assert.match(adapter, /company\.clientId/)
 })
 

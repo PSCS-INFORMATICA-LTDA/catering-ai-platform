@@ -1,10 +1,14 @@
 import 'server-only'
 
-import { confirmQuoteDepositAndReserveSchedule } from '@/Lib/quotes/confirmQuoteDepositAndReserveSchedule'
+import {
+  ensurePaidContractAdvance,
+  type PaidContractEnsureResult,
+} from '@/Lib/payments/confirmPaidDeposit'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { invoiceAmountContext, resolveServerAmountDue } from './loadInvoiceAmountDue'
 import { toInvoice } from './createInvoiceFromQuote'
 import { deriveInvoiceStatus, isDepositSatisfied } from './invoiceStatus'
+import { readRecordedPaymentClose } from './paidContractAdvance'
 import type {
   InvoicePaymentRecord,
   InvoiceRecord,
@@ -26,6 +30,89 @@ export type RecordPaymentInput = {
   idempotencyKey: string
   metadata?: Record<string, unknown>
   actorUserId?: string | null
+}
+
+export type RecordPaymentSuccess = {
+  ok: true
+  payment: InvoicePaymentRecord
+  invoice: InvoiceRecord
+  duplicate: boolean
+  financialCompleted: boolean
+  operationalAdvanceCompleted: boolean
+  operationalError: string | null
+  reservation: PaidContractEnsureResult | null
+}
+
+export type RecordPaymentFailure = {
+  ok: false
+  status: number
+  error: string
+}
+
+export type RecordPaymentResult = RecordPaymentSuccess | RecordPaymentFailure
+
+async function ensurePaidContract(
+  input: RecordPaymentInput,
+  invoice: InvoiceRecord,
+): Promise<PaidContractEnsureResult | null> {
+  if (
+    !isDepositSatisfied({
+      depositAmount: invoice.deposit_amount,
+      paidTotal: invoice.paid_total,
+    })
+  ) {
+    return null
+  }
+  return ensurePaidContractAdvance({
+    companyId: input.companyId,
+    invoiceId: invoice.id,
+    source: 'record_payment',
+    providerOrderId: input.providerOrderId ?? null,
+    providerCaptureId: input.providerCaptureId ?? null,
+    actorUserId: input.actorUserId ?? null,
+  })
+}
+
+function pendingPaymentResult(
+  payment: InvoicePaymentRecord,
+  invoice: InvoiceRecord,
+  duplicate: boolean,
+): RecordPaymentSuccess {
+  return {
+    ok: true,
+    payment,
+    invoice,
+    duplicate,
+    financialCompleted: false,
+    operationalAdvanceCompleted: true,
+    operationalError: null,
+    reservation: null,
+  }
+}
+
+async function completedPaymentResult(
+  input: RecordPaymentInput,
+  payment: InvoicePaymentRecord,
+  invoice: InvoiceRecord,
+  duplicate: boolean,
+): Promise<RecordPaymentSuccess> {
+  const reservation = await ensurePaidContract(input, invoice)
+  const close = readRecordedPaymentClose({
+    paymentStatus: payment.status,
+    depositSatisfied: isDepositSatisfied({
+      depositAmount: invoice.deposit_amount,
+      paidTotal: invoice.paid_total,
+    }),
+    operational: reservation,
+  })
+  return {
+    ok: true,
+    payment,
+    invoice,
+    duplicate,
+    ...close,
+    reservation,
+  }
 }
 
 function toPayment(row: Record<string, unknown>): InvoicePaymentRecord {
@@ -98,10 +185,7 @@ async function reconcileInvoicePaidTotal(
 
 export async function recordPaymentAttempt(
   input: RecordPaymentInput,
-): Promise<
-  | { ok: true; payment: InvoicePaymentRecord; invoice: InvoiceRecord; duplicate: boolean }
-  | { ok: false; status: number; error: string }
-> {
+): Promise<RecordPaymentResult> {
   const supabase = getSupabaseServerClient()
   const existing = await findPaymentByIdempotency(input.companyId, input.idempotencyKey)
   if (existing) {
@@ -112,12 +196,11 @@ export async function recordPaymentAttempt(
       .eq('company_id', input.companyId)
       .single()
     if (!invoice.data) return { ok: false, status: 404, error: 'invoice_not_found' }
-    return {
-      ok: true,
-      payment: existing,
-      invoice: toInvoice(invoice.data),
-      duplicate: true,
+    const nextInvoice = toInvoice(invoice.data)
+    if (existing.status === 'completed') {
+      return completedPaymentResult(input, existing, nextInvoice, true)
     }
+    return pendingPaymentResult(existing, nextInvoice, true)
   }
 
   let existingByOrder: InvoicePaymentRecord | null = null
@@ -135,12 +218,7 @@ export async function recordPaymentAttempt(
         .eq('company_id', input.companyId)
         .single()
       if (!invoice.data) return { ok: false, status: 404, error: 'invoice_not_found' }
-      return {
-        ok: true,
-        payment: existingByOrder,
-        invoice: toInvoice(invoice.data),
-        duplicate: true,
-      }
+      return completedPaymentResult(input, existingByOrder, toInvoice(invoice.data), true)
     }
     if (existingByOrder && input.status !== 'completed') {
       const invoice = await supabase
@@ -150,12 +228,7 @@ export async function recordPaymentAttempt(
         .eq('company_id', input.companyId)
         .single()
       if (!invoice.data) return { ok: false, status: 404, error: 'invoice_not_found' }
-      return {
-        ok: true,
-        payment: existingByOrder,
-        invoice: toInvoice(invoice.data),
-        duplicate: true,
-      }
+      return pendingPaymentResult(existingByOrder, toInvoice(invoice.data), true)
     }
   }
 
@@ -212,7 +285,7 @@ export async function recordPaymentAttempt(
       )
       if (raced?.status === 'completed') {
         const reconciled = await reconcileInvoicePaidTotal(input.companyId, raced.invoice_id)
-        return { ok: true, payment: raced, invoice: reconciled ?? invoice, duplicate: true }
+        return completedPaymentResult(input, raced, reconciled ?? invoice, true)
       }
       return { ok: false, status: 500, error: 'payment_complete_failed' }
     }
@@ -243,12 +316,11 @@ export async function recordPaymentAttempt(
         const reconciled = raced.status === 'completed'
           ? await reconcileInvoicePaidTotal(input.companyId, raced.invoice_id)
           : null
-        return {
-          ok: true,
-          payment: raced,
-          invoice: reconciled ?? invoice,
-          duplicate: true,
+        const nextInvoice = reconciled ?? invoice
+        if (raced.status === 'completed') {
+          return completedPaymentResult(input, raced, nextInvoice, true)
         }
+        return pendingPaymentResult(raced, nextInvoice, true)
       }
       if (input.providerOrderId) {
         const byOrder = await findPaymentByProviderOrder(
@@ -260,7 +332,11 @@ export async function recordPaymentAttempt(
           const reconciled = byOrder.status === 'completed'
             ? await reconcileInvoicePaidTotal(input.companyId, byOrder.invoice_id)
             : null
-          return { ok: true, payment: byOrder, invoice: reconciled ?? invoice, duplicate: true }
+          const nextInvoice = reconciled ?? invoice
+          if (byOrder.status === 'completed') {
+            return completedPaymentResult(input, byOrder, nextInvoice, true)
+          }
+          return pendingPaymentResult(byOrder, nextInvoice, true)
         }
       }
       return { ok: false, status: 500, error: inserted.error?.message || 'payment_insert_failed' }
@@ -296,26 +372,8 @@ export async function recordPaymentAttempt(
       nextInvoice = (await reconcileInvoicePaidTotal(input.companyId, invoice.id)) ?? invoice
     }
 
-    if (
-      isDepositSatisfied({
-        depositAmount: nextInvoice.deposit_amount,
-        paidTotal: nextInvoice.paid_total,
-      }) &&
-      typeof input.actorUserId === 'string' &&
-      input.actorUserId
-    ) {
-      await confirmQuoteDepositAndReserveSchedule({
-        companyId: input.companyId,
-        quoteId: nextInvoice.quote_id,
-        actorUserId: input.actorUserId,
-      }).catch(() => null)
-    }
+    return completedPaymentResult(input, paymentRow, nextInvoice, false)
   }
 
-  return {
-    ok: true,
-    payment: paymentRow,
-    invoice: nextInvoice,
-    duplicate: false,
-  }
+  return pendingPaymentResult(paymentRow, nextInvoice, false)
 }

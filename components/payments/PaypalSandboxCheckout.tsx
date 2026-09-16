@@ -23,7 +23,10 @@ declare global {
   }
 }
 
-function copy(locale: string, key: 'loading' | 'success' | 'error' | 'sandbox') {
+function copy(
+  locale: string,
+  key: 'loading' | 'success' | 'error' | 'sandbox' | 'buyer' | 'cancelled',
+) {
   const lang = locale === 'en' || locale === 'es' ? locale : 'pt'
   const values = {
     loading: {
@@ -46,6 +49,16 @@ function copy(locale: string, key: 'loading' | 'success' | 'error' | 'sandbox') 
       en: 'Internal Sandbox validation — no real money will move.',
       es: 'Validación interna Sandbox — no se moverá dinero real.',
     },
+    buyer: {
+      pt: 'PayPal Sandbox — use uma conta de comprador Sandbox. Credenciais PayPal reais não funcionam neste ambiente.',
+      en: 'PayPal Sandbox — use a Sandbox buyer account. Real PayPal credentials do not work in this environment.',
+      es: 'PayPal Sandbox — use una cuenta de comprador Sandbox. Las credenciales reales de PayPal no funcionan en este entorno.',
+    },
+    cancelled: {
+      pt: 'Pagamento Sandbox cancelado. Você pode tentar de novo.',
+      en: 'Sandbox payment cancelled. You can try again.',
+      es: 'Pago Sandbox cancelado. Puede intentarlo de nuevo.',
+    },
   } as const
   return values[key][lang]
 }
@@ -63,7 +76,10 @@ export default function PaypalSandboxCheckout({
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null)
   const renderedRef = useRef(false)
-  const [status, setStatus] = useState<'loading' | 'ready' | 'success' | 'error'>('loading')
+  const inflightRef = useRef(false)
+  const [status, setStatus] = useState<'loading' | 'ready' | 'success' | 'error' | 'cancelled'>(
+    'loading',
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -99,34 +115,51 @@ export default function PaypalSandboxCheckout({
         buttons = window.paypal.Buttons({
           style: { layout: 'vertical', shape: 'rect', label: 'paypal' },
           createOrder: async () => {
-            const response = await fetch('/api/payments/paypal/orders', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token }),
-            })
-            const payload = (await response.json().catch(() => null)) as
-              | { data?: { orderId?: string }; error?: string }
-              | null
-            if (!response.ok || !payload?.data?.orderId) {
-              throw new Error(payload?.error || 'paypal_order_failed')
+            if (inflightRef.current) throw new Error('paypal_in_flight')
+            inflightRef.current = true
+            try {
+              const response = await fetch('/api/payments/paypal/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token }),
+              })
+              const payload = (await response.json().catch(() => null)) as
+                | { data?: { orderId?: string }; error?: string }
+                | null
+              if (!response.ok || !payload?.data?.orderId) {
+                throw new Error(payload?.error || 'paypal_order_failed')
+              }
+              return payload.data.orderId
+            } catch (error) {
+              inflightRef.current = false
+              throw error
             }
-            return payload.data.orderId
           },
           onApprove: async ({ orderID }) => {
-            const response = await fetch('/api/payments/paypal/capture', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token, orderId: orderID }),
-            })
-            const payload = (await response.json().catch(() => null)) as
-              | { data?: { invoiceStatus?: string }; error?: string }
-              | null
-            if (!response.ok) throw new Error(payload?.error || 'paypal_capture_failed')
-            setStatus('success')
-            window.setTimeout(() => window.location.reload(), 900)
+            try {
+              const response = await fetch('/api/payments/paypal/capture', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, orderId: orderID }),
+              })
+              const payload = (await response.json().catch(() => null)) as
+                | { data?: { invoiceStatus?: string }; error?: string }
+                | null
+              if (!response.ok) throw new Error(payload?.error || 'paypal_capture_failed')
+              setStatus('success')
+              window.setTimeout(() => window.location.reload(), 900)
+            } finally {
+              inflightRef.current = false
+            }
           },
-          onCancel: () => setStatus('ready'),
-          onError: () => setStatus('error'),
+          onCancel: () => {
+            inflightRef.current = false
+            setStatus('cancelled')
+          },
+          onError: () => {
+            inflightRef.current = false
+            setStatus('error')
+          },
         })
         await buttons.render(hostRef.current)
         if (!cancelled) setStatus('ready')
@@ -143,15 +176,33 @@ export default function PaypalSandboxCheckout({
   }, [clientId, currency, token])
 
   return (
-    <section className="rounded-2xl border border-[#e8e2d9] bg-white p-5 shadow-sm" data-paypal-sandbox-checkout>
+    <section
+      className="rounded-2xl border border-[#e8e2d9] bg-white p-5 shadow-sm"
+      data-paypal-sandbox-checkout
+      data-paypal-environment="sandbox"
+    >
       <div className="mb-4">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#c1121f]">PayPal Sandbox</p>
         <p className="mt-1 text-sm text-[#6b6560]">{copy(locale, 'sandbox')}</p>
+        <p
+          data-testid="paypal-sandbox-buyer-notice"
+          className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950"
+        >
+          {copy(locale, 'buyer')}
+        </p>
       </div>
       {status === 'loading' ? <p className="text-sm text-[#6b6560]">{copy(locale, 'loading')}</p> : null}
       {status === 'success' ? (
         <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
           {copy(locale, 'success')}
+        </p>
+      ) : null}
+      {status === 'cancelled' ? (
+        <p
+          data-testid="paypal-sandbox-cancelled"
+          className="mb-3 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900"
+        >
+          {copy(locale, 'cancelled')}
         </p>
       ) : null}
       {status === 'error' ? (

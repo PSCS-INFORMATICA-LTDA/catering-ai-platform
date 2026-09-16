@@ -2,7 +2,11 @@ import 'server-only'
 
 import { createHash, randomUUID } from 'node:crypto'
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
-import { confirmQuoteDepositAndReserveSchedule } from '@/Lib/quotes/confirmQuoteDepositAndReserveSchedule'
+import {
+  ensurePaidContractAdvance,
+  type PaidContractEnsureResult,
+} from '@/Lib/payments/confirmPaidDeposit'
+import { readRecordedPaymentClose } from '@/Lib/payments/paidContractAdvance'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { resolveServerAmountDue } from './loadInvoiceAmountDue'
 import type { PaymentPurpose } from './types'
@@ -254,17 +258,21 @@ export async function recordManualPayment(input: {
   const paidTotal = money(reconciled.invoice.paid_total)
   const depositAmount = money(reconciled.invoice.deposit_amount)
 
-  let reservation: unknown = null
+  let reservation: PaidContractEnsureResult | null = null
   if (quoteId && depositAmount > 0 && paidTotal + 0.009 >= depositAmount) {
-    reservation = await confirmQuoteDepositAndReserveSchedule({
+    reservation = await ensurePaidContractAdvance({
       companyId: input.companyId,
-      quoteId,
+      invoiceId: input.invoiceId,
+      source: 'manual_payment',
       actorUserId: input.actorUserId,
-    }).catch((err) => ({
-      ok: false,
-      error: err instanceof Error ? err.message : 'reservation_sync_failed',
-    }))
+    })
   }
+
+  const close = readRecordedPaymentClose({
+    paymentStatus: 'completed',
+    depositSatisfied: depositAmount > 0 && paidTotal + 0.009 >= depositAmount,
+    operational: reservation,
+  })
 
   await writeOperationalAudit({
     companyId: input.companyId,
@@ -280,6 +288,9 @@ export async function recordManualPayment(input: {
       confirmation_reference: reference,
       duplicate,
       reservation,
+      financial_completed: close.financialCompleted,
+      operational_advance_completed: close.operationalAdvanceCompleted,
+      operational_error: close.operationalError,
     },
   })
 
@@ -295,6 +306,7 @@ export async function recordManualPayment(input: {
       paid_total: paidTotal,
       deposit_amount: depositAmount,
     },
+    ...close,
     reservation,
   }
 }

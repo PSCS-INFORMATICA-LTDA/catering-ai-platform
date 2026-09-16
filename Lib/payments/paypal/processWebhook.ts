@@ -2,9 +2,14 @@ import 'server-only'
 
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 import { confirmPaidDepositReservation } from '@/Lib/payments/confirmPaidDeposit'
+import {
+  isRetryableOperationalFailure,
+  paidContractEnsureFailedBody,
+} from '@/Lib/payments/paidContractAdvance'
 import { recordPaymentAttempt } from '@/Lib/payments/recordPayment'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { webhookEventId } from './webhook'
+import { logPaypalSandbox } from './sandboxLog'
 
 function cents(value: unknown) {
   return Math.round((Number(value) || 0) * 100)
@@ -199,7 +204,34 @@ export async function processVerifiedPaypalCapture(input: {
       providerOrderId: orderId,
       providerCaptureId: captureId,
     })
-    return Response.json({ data: { duplicate: true, eventId, reservation } })
+    logPaypalSandbox({
+      action: 'webhook_capture',
+      invoiceId: String(payment.invoice_id),
+      purpose: String(payment.purpose || ''),
+      orderId,
+      environment: 'sandbox',
+      captureStatus: 'COMPLETED',
+      result: reservation.ok ? 'duplicate' : 'ensure_failed',
+    })
+    if (!reservation.ok) {
+      return Response.json(
+        paidContractEnsureFailedBody({
+          operationalError: reservation.error,
+          reservation,
+        }),
+        { status: 503 },
+      )
+    }
+    return Response.json({
+      data: {
+        duplicate: true,
+        eventId,
+        financialCompleted: true,
+        operationalAdvanceCompleted: true,
+        operationalError: null,
+        reservation,
+      },
+    })
   }
 
   const recorded = await recordPaymentAttempt({
@@ -219,20 +251,40 @@ export async function processVerifiedPaypalCapture(input: {
     return Response.json({ error: recorded.error }, { status: recorded.status })
   }
 
-  const reservation = await confirmPaidDepositReservation({
-    companyId: String(payment.company_id),
+  logPaypalSandbox({
+    action: 'webhook_capture',
     invoiceId: String(payment.invoice_id),
-    source: 'paypal_webhook',
-    providerOrderId: orderId,
-    providerCaptureId: captureId,
+    purpose: String(payment.purpose || ''),
+    orderId,
+    environment: 'sandbox',
+    captureStatus: 'COMPLETED',
+    result: isRetryableOperationalFailure(recorded)
+      ? 'ensure_failed'
+      : recorded.duplicate
+        ? 'duplicate'
+        : 'completed',
   })
+
+  if (isRetryableOperationalFailure(recorded)) {
+    return Response.json(
+      paidContractEnsureFailedBody({
+        operationalError: recorded.operationalError,
+        reservation: recorded.reservation,
+        financialCompleted: recorded.financialCompleted,
+      }),
+      { status: 503 },
+    )
+  }
 
   return Response.json({
     data: {
       duplicate: recorded.duplicate,
       invoiceStatus: recorded.invoice.status,
       eventId,
-      reservation,
+      financialCompleted: recorded.financialCompleted,
+      operationalAdvanceCompleted: recorded.operationalAdvanceCompleted,
+      operationalError: recorded.operationalError,
+      reservation: recorded.reservation,
     },
   })
 }
