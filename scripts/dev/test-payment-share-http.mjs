@@ -95,11 +95,13 @@ async function main() {
   )
   check('SRC-wa-me', panel.includes('buildPaymentWhatsAppHref'), 'wa.me helper')
   check(
-    'SRC-wa-business',
+    'SRC-wa-canonical',
     panel.includes('openPaymentWhatsAppShare') &&
-      panel.includes('whatsappBusinessIosHint') &&
+      panel.includes('whatsappShareHint') &&
+      !panel.includes('whatsapp-business://') &&
+      !panel.includes('whatsappBusinessIosHint') &&
       !panel.includes('from(\'customer_phones\')'),
-    'business opener + canonical phone',
+    'canonical wa.me opener + canonical phone',
   )
   check(
     'L-client-amount-ignored',

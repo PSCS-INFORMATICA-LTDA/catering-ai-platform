@@ -1,19 +1,25 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import { buildPaymentShareMessage, buildPaymentWhatsAppHref } from './paymentShareMessage.ts'
 import {
-  WHATSAPP_BUSINESS_FALLBACK_MS,
-  buildPaymentWhatsAppBusinessAndroidIntent,
-  buildPaymentWhatsAppBusinessHref,
-  isLikelyAndroidWhatsAppHost,
-  isLikelyMobileWhatsAppHost,
   openPaymentWhatsAppShare,
   resolvePaymentWhatsAppOpenPlan,
 } from './whatsappBusinessOpen.ts'
 
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const company = 'CDL Services BBQ At Home DEV'
 const longUrl =
   'https://catering-ai-agenda-dev.vercel.app/pay/abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+const FORBIDDEN_SCHEME = 'whatsapp-business://'
+const EXECUTABLE_SHARE_SURFACE = [
+  'Lib/payments/whatsappBusinessOpen.ts',
+  'Lib/payments/paymentShareMessage.ts',
+  'components/payments/QuoteInvoicePanel.tsx',
+  'Lib/i18n/payments.ts',
+]
 
 function shareText(locale, extra = {}) {
   return buildPaymentShareMessage({
@@ -28,147 +34,104 @@ function shareText(locale, extra = {}) {
   }).text
 }
 
-test('mobile +1 prefers Business scheme and keeps wa.me fallback', () => {
+test('executable payment-share surface has no custom WhatsApp scheme', () => {
+  for (const rel of EXECUTABLE_SHARE_SURFACE) {
+    const source = readFileSync(join(ROOT, rel), 'utf8')
+    assert.doesNotMatch(
+      source,
+      /whatsapp-business:\/\//,
+      `${rel} must not contain ${FORBIDDEN_SCHEME}`,
+    )
+    assert.doesNotMatch(source, /intent:\/\/send/)
+    assert.doesNotMatch(source, /com\.whatsapp\.w4b/)
+    assert.doesNotMatch(source, /scheduleFallback|WHATSAPP_BUSINESS_FALLBACK_MS/)
+  }
+})
+
+test('mobile and desktop both resolve to canonical wa.me', () => {
   const text = shareText('pt')
   const plan = resolvePaymentWhatsAppOpenPlan({
     phone: '+1 (407) 555-1234',
     text,
-    isMobile: true,
   })
+  const expected = buildPaymentWhatsAppHref('+1 (407) 555-1234', text)
   assert.equal(plan.ok, true)
-  assert.equal(plan.mode, 'business')
+  assert.equal(plan.mode, 'wa.me')
   assert.equal(plan.phoneDigits, '14075551234')
-  assert.equal(
-    plan.businessHref,
-    `whatsapp-business://send?phone=14075551234&text=${encodeURIComponent(text)}`,
-  )
-  assert.equal(plan.fallbackHref, buildPaymentWhatsAppHref('+1 (407) 555-1234', text))
-  assert.ok(plan.fallbackHref?.startsWith('https://wa.me/14075551234?text='))
+  assert.equal(plan.href, expected)
+  assert.ok(plan.href?.startsWith('https://wa.me/14075551234?text='))
+  assert.doesNotMatch(plan.href || '', /whatsapp-business:\/\//)
 })
 
-test('mobile +55 uses E.164 digits and encodes PT/EN/ES text', () => {
+test('+55 uses E.164 digits and encodes PT/EN/ES text on wa.me', () => {
   for (const locale of ['pt', 'en', 'es']) {
     const text = shareText(locale, { customerFirstName: 'João' })
     const plan = resolvePaymentWhatsAppOpenPlan({
       phone: '+55 (11) 98348-1803',
       text,
-      isMobile: true,
     })
     assert.equal(plan.phoneDigits, '5511983481803')
-    assert.match(plan.businessHref || '', /whatsapp-business:\/\/send\?phone=5511983481803/)
-    assert.equal(
-      decodeURIComponent((plan.businessHref || '').split('text=')[1] || ''),
-      text,
-    )
-    assert.equal(
-      decodeURIComponent((plan.fallbackHref || '').split('text=')[1] || ''),
-      text,
-    )
+    assert.equal(plan.href, buildPaymentWhatsAppHref('+55 (11) 98348-1803', text))
+    assert.ok(plan.href?.startsWith('https://wa.me/5511983481803?text='))
+    assert.equal(decodeURIComponent((plan.href || '').split('text=')[1] || ''), text)
     assert.match(text, /João|Hi, João|¡Hola, João/)
+    assert.doesNotMatch(plan.href || '', /whatsapp-business:\/\//)
   }
-})
-
-test('desktop stays on wa.me and does not use the Business scheme', () => {
-  const text = shareText('en', { purpose: 'full', paymentUrl: longUrl })
-  const plan = resolvePaymentWhatsAppOpenPlan({
-    phone: '+14075551234',
-    text,
-    isMobile: false,
-  })
-  assert.equal(plan.mode, 'web')
-  assert.equal(plan.businessHref, null)
-  assert.equal(plan.androidIntentHref, null)
-  assert.ok(plan.fallbackHref?.startsWith('https://wa.me/14075551234?text='))
-  assert.match(plan.fallbackHref || '', /pay%2Fabcdefghijklmnopqrstuvwxyz/)
 })
 
 test('invalid or missing phone has no href and no auto-send path', () => {
   const text = shareText('pt')
   for (const phone of [null, '', '123', '4075551234']) {
-    const plan = resolvePaymentWhatsAppOpenPlan({ phone, text, isMobile: true })
+    const plan = resolvePaymentWhatsAppOpenPlan({ phone, text })
     assert.equal(plan.ok, false)
     assert.equal(plan.mode, 'invalid-phone')
-    assert.equal(plan.businessHref, null)
-    assert.equal(plan.fallbackHref, null)
+    assert.equal(plan.href, null)
   }
 })
 
-test('Android intent keeps Business package and wa.me fallback URL', () => {
-  const text = shareText('es')
-  const href = buildPaymentWhatsAppBusinessAndroidIntent('+1-407-555-1415', text)
-  assert.ok(href?.startsWith('intent://send?phone=14075551415'))
-  assert.match(href || '', /package=com\.whatsapp\.w4b/)
-  assert.match(href || '', /scheme=whatsapp-business/)
-  assert.match(href || '', /S\.browser_fallback_url=/)
-  assert.match(decodeURIComponent(href || ''), /https:\/\/wa\.me\/14075551415/)
+test('opener uses wa.me immediately on mobile and desktop and never auto-sends', () => {
+  const text = shareText('en', { purpose: 'full', paymentUrl: longUrl })
+  for (const label of ['mobile', 'desktop']) {
+    const opened = []
+    const assigned = []
+    const plan = openPaymentWhatsAppShare(
+      { phone: '+14075551234', text },
+      {
+        assign: (href) => assigned.push(href),
+        openBlank: (href) => {
+          opened.push(href)
+          return true
+        },
+      },
+    )
+    assert.equal(plan.mode, 'wa.me', label)
+    assert.equal(opened[0], buildPaymentWhatsAppHref('+14075551234', text), label)
+    assert.equal(assigned.length, 0, label)
+    assert.match(opened[0] || '', /pay%2Fabcdefghijklmnopqrstuvwxyz/)
+    assert.doesNotMatch(opened[0] || '', /whatsapp-business:\/\//)
+  }
 })
 
-test('UA helpers distinguish mobile, Android, and desktop', () => {
-  assert.equal(isLikelyMobileWhatsAppHost('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)'), true)
-  assert.equal(isLikelyMobileWhatsAppHost('Mozilla/5.0 (Linux; Android 14)'), true)
-  assert.equal(isLikelyAndroidWhatsAppHost('Mozilla/5.0 (Linux; Android 14)'), true)
-  assert.equal(isLikelyAndroidWhatsAppHost('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)'), false)
-  assert.equal(isLikelyMobileWhatsAppHost('Mozilla/5.0 (Windows NT 10.0; Win64; x64)'), false)
-})
-
-test('mobile opener tries Business first and falls back to wa.me if still visible', () => {
+test('popup-blocked opener falls back to same-window wa.me assign', () => {
   const text = shareText('pt')
   const assigned = []
-  const opened = []
-  let fallback = null
-  const plan = openPaymentWhatsAppShare(
-    { phone: '+14075551234', text },
-    {
-      isMobile: true,
-      isAndroid: false,
-      assign: (href) => assigned.push(href),
-      openBlank: (href) => {
-        opened.push(href)
-        return true
-      },
-      scheduleFallback: (fn) => {
-        fallback = fn
-      },
-      pageStillVisible: () => true,
-    },
-  )
-  assert.equal(plan.mode, 'business')
-  assert.equal(assigned[0], buildPaymentWhatsAppBusinessHref('+14075551234', text))
-  assert.equal(opened.length, 0)
-  fallback?.()
-  assert.equal(opened[0], buildPaymentWhatsAppHref('+14075551234', text))
-  assert.equal(WHATSAPP_BUSINESS_FALLBACK_MS, 1400)
-})
-
-test('desktop opener uses wa.me immediately', () => {
-  const text = shareText('en')
-  const opened = []
-  const plan = openPaymentWhatsAppShare(
+  openPaymentWhatsAppShare(
     { phone: '+5511983481803', text },
     {
-      isMobile: false,
-      assign: () => {
-        throw new Error('desktop must not assign custom schemes')
-      },
-      openBlank: (href) => {
-        opened.push(href)
-        return true
-      },
-      scheduleFallback: () => {
-        throw new Error('desktop must not schedule business fallback')
-      },
-      pageStillVisible: () => true,
+      assign: (href) => assigned.push(href),
+      openBlank: () => false,
     },
   )
-  assert.equal(plan.mode, 'web')
-  assert.equal(opened[0], buildPaymentWhatsAppHref('+5511983481803', text))
+  assert.equal(assigned[0], buildPaymentWhatsAppHref('+5511983481803', text))
+  assert.ok(assigned[0]?.startsWith('https://wa.me/5511983481803?text='))
 })
 
-test('Business href never uses the 500-char logistics truncator', () => {
+test('wa.me href never uses the 500-char logistics truncator', () => {
   const hugeUrl = `${longUrl}${'A'.repeat(400)}`
   const text = shareText('pt', { paymentUrl: hugeUrl })
-  const href = buildPaymentWhatsAppBusinessHref('+14075551234', text)
+  const href = buildPaymentWhatsAppHref('+14075551234', text)
   assert.ok((href?.split('text=')[1] || '').length > 500)
   assert.equal(decodeURIComponent(href.split('text=')[1]), text)
   assert.doesNotMatch(href, /…/)
+  assert.doesNotMatch(href, /whatsapp-business:\/\//)
 })

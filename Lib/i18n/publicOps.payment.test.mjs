@@ -47,8 +47,29 @@ describe('final payment flow i18n', () => {
     assert.equal(tPayments('pt', 'awaitingCustomerAcceptance'), 'Aguardando aceite do cliente')
     assert.equal(tPayments('en', 'awaitingCustomerAcceptance'), 'Awaiting customer acceptance')
     assert.equal(tPayments('es', 'awaitingCustomerAcceptance'), 'Esperando aceptación del cliente')
-    assert.equal(tPayments('pt', 'sendFullWhatsApp'), 'Enviar pagamento total no WhatsApp Business')
-    assert.equal(tPayments('en', 'sendFullWhatsApp'), 'Send full payment on WhatsApp Business')
-    assert.equal(tPayments('es', 'sendFullWhatsApp'), 'Enviar pago total por WhatsApp Business')
+    assert.equal(tPayments('pt', 'sendDepositWhatsApp'), 'Enviar sinal no WhatsApp')
+    assert.equal(tPayments('en', 'sendDepositWhatsApp'), 'Send deposit on WhatsApp')
+    assert.equal(tPayments('es', 'sendDepositWhatsApp'), 'Enviar depósito por WhatsApp')
+    assert.equal(tPayments('pt', 'sendBalanceWhatsApp'), 'Enviar saldo no WhatsApp')
+    assert.equal(tPayments('en', 'sendBalanceWhatsApp'), 'Send balance on WhatsApp')
+    assert.equal(tPayments('es', 'sendBalanceWhatsApp'), 'Enviar saldo por WhatsApp')
+    assert.equal(tPayments('pt', 'sendFullWhatsApp'), 'Enviar pagamento total no WhatsApp')
+    assert.equal(tPayments('en', 'sendFullWhatsApp'), 'Send full payment on WhatsApp')
+    assert.equal(tPayments('es', 'sendFullWhatsApp'), 'Enviar pago total por WhatsApp')
+    assert.equal(
+      tPayments('pt', 'whatsappShareHint'),
+      'Abriremos o WhatsApp disponível no seu dispositivo. A mensagem não é enviada automaticamente.',
+    )
+    assert.equal(
+      tPayments('en', 'whatsappShareHint'),
+      'We will open the WhatsApp available on your device. The message is not sent automatically.',
+    )
+    assert.equal(
+      tPayments('es', 'whatsappShareHint'),
+      'Abriremos el WhatsApp disponible en tu dispositivo. El mensaje no se envía automáticamente.',
+    )
+    assert.doesNotMatch(tPayments('pt', 'sendFullWhatsApp'), /Business/)
+    assert.doesNotMatch(tPayments('en', 'whatsappShareHint'), /Business/)
+    assert.doesNotMatch(tPayments('es', 'whatsappShareHint'), /Business/)
   })
 })

@@ -38,24 +38,24 @@ const { t, list } = makeI18nModule('payments', 'billing', {
     es: 'WhatsApp del cliente',
   },
   sendDepositWhatsApp: {
-    pt: 'Enviar sinal no WhatsApp Business',
-    en: 'Send deposit on WhatsApp Business',
-    es: 'Enviar depósito por WhatsApp Business',
+    pt: 'Enviar sinal no WhatsApp',
+    en: 'Send deposit on WhatsApp',
+    es: 'Enviar depósito por WhatsApp',
   },
   sendBalanceWhatsApp: {
-    pt: 'Enviar saldo no WhatsApp Business',
-    en: 'Send balance on WhatsApp Business',
-    es: 'Enviar saldo por WhatsApp Business',
+    pt: 'Enviar saldo no WhatsApp',
+    en: 'Send balance on WhatsApp',
+    es: 'Enviar saldo por WhatsApp',
   },
   sendFullWhatsApp: {
-    pt: 'Enviar pagamento total no WhatsApp Business',
-    en: 'Send full payment on WhatsApp Business',
-    es: 'Enviar pago total por WhatsApp Business',
+    pt: 'Enviar pagamento total no WhatsApp',
+    en: 'Send full payment on WhatsApp',
+    es: 'Enviar pago total por WhatsApp',
   },
-  whatsappBusinessIosHint: {
-    pt: 'No iPhone tentamos abrir o WhatsApp Business. Se o app não abrir, usamos o WhatsApp padrão (wa.me). A mensagem nunca é enviada automaticamente.',
-    en: 'On iPhone we try WhatsApp Business first. If it cannot open, we fall back to standard WhatsApp (wa.me). The message is never sent automatically.',
-    es: 'En iPhone intentamos abrir WhatsApp Business. Si no abre, usamos WhatsApp estándar (wa.me). El mensaje nunca se envía automáticamente.',
+  whatsappShareHint: {
+    pt: 'Abriremos o WhatsApp disponível no seu dispositivo. A mensagem não é enviada automaticamente.',
+    en: 'We will open the WhatsApp available on your device. The message is not sent automatically.',
+    es: 'Abriremos el WhatsApp disponible en tu dispositivo. El mensaje no se envía automáticamente.',
   },
   awaitingCustomerAcceptance: {
     pt: 'Aguardando aceite do cliente',
