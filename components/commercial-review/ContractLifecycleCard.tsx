@@ -39,7 +39,9 @@ export function ContractLifecycleCard({
     ? tCommercialReview(locale, 'lifecycleServiceOrder', {
         number: lifecycle.serviceOrderNumber,
       })
-    : tCommercialReview(locale, 'lifecycleAwaitingServiceOrder')
+    : lifecycle.serviceOrderPending
+      ? tCommercialReview(locale, 'lifecycleServiceOrderPendingGeneration')
+      : tCommercialReview(locale, 'lifecycleAwaitingServiceOrder')
 
   return (
     <ReviewCard
@@ -70,6 +72,7 @@ export function ContractLifecycleCard({
         <Step
           testId="lifecycle-service-order"
           done={lifecycle.serviceOrderPresent}
+          waiting={lifecycle.serviceOrderPending}
           label={serviceOrderLabel}
         />
         {lifecycle.paidInFull ? (
@@ -80,6 +83,14 @@ export function ContractLifecycleCard({
           />
         ) : null}
       </ol>
+      {lifecycle.serviceOrderPending ? (
+        <p
+          data-testid="lifecycle-service-order-attention"
+          className="mt-3 text-sm font-semibold text-amber-800"
+        >
+          {tCommercialReview(locale, 'lifecycleServiceOrderAttention')}
+        </p>
+      ) : null}
       {lifecycle.serviceOrderId ? (
         <Link
           href={`/orders/${lifecycle.serviceOrderId}`}

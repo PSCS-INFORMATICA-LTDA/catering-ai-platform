@@ -39,5 +39,11 @@ describe('commercial review i18n', () => {
     assert.equal(tCommercialReview('en', 'lifecycleDepositPaid'), 'Deposit paid')
     assert.equal(tCommercialReview('es', 'lifecycleReservationConfirmed'), 'Reserva confirmada')
     assert.match(tCommercialReview('pt', 'lifecycleServiceOrder', { number: 'OS-2026-000001' }), /OS-2026-000001/)
+    assert.equal(
+      tCommercialReview('pt', 'lifecycleServiceOrderPendingGeneration'),
+      'Ordem de Serviço pendente de geração',
+    )
+    assert.match(tCommercialReview('en', 'lifecycleServiceOrderAttention'), /Payment confirmed/)
+    assert.match(tCommercialReview('es', 'lifecycleServiceOrderPendingGeneration'), /pendiente/)
   })
 })

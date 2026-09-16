@@ -262,6 +262,16 @@ const { t, list } = makeI18nModule('commercialReview', 'workspace', {
     en: 'Service order pending',
     es: 'Orden de servicio pendiente',
   },
+  lifecycleServiceOrderPendingGeneration: {
+    pt: 'Ordem de Serviço pendente de geração',
+    en: 'Service order pending generation',
+    es: 'Orden de servicio pendiente de generación',
+  },
+  lifecycleServiceOrderAttention: {
+    pt: 'Pagamento confirmado. A Ordem de Serviço ainda não foi gerada.',
+    en: 'Payment confirmed. The service order has not been generated yet.',
+    es: 'Pago confirmado. La orden de servicio aún no fue generada.',
+  },
   lifecyclePaidInFull: {
     pt: 'Pagamento integral',
     en: 'Paid in full',

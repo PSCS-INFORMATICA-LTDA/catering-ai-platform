@@ -207,8 +207,14 @@ export async function processVerifiedPaypalCapture(input: {
       orderId,
       environment: 'sandbox',
       captureStatus: 'COMPLETED',
-      result: 'duplicate',
+      result: reservation.ok ? 'duplicate' : 'ensure_failed',
     })
+    if (!reservation.ok) {
+      return Response.json(
+        { error: reservation.error || 'paid_contract_ensure_failed', reservation },
+        { status: 503 },
+      )
+    }
     return Response.json({ data: { duplicate: true, eventId, reservation } })
   }
 
@@ -244,8 +250,19 @@ export async function processVerifiedPaypalCapture(input: {
     orderId,
     environment: 'sandbox',
     captureStatus: 'COMPLETED',
-    result: recorded.duplicate ? 'duplicate' : 'completed',
+    result: !reservation.ok
+      ? 'ensure_failed'
+      : recorded.duplicate
+        ? 'duplicate'
+        : 'completed',
   })
+
+  if (!reservation.ok) {
+    return Response.json(
+      { error: reservation.error || 'paid_contract_ensure_failed', reservation },
+      { status: 503 },
+    )
+  }
 
   return Response.json({
     data: {

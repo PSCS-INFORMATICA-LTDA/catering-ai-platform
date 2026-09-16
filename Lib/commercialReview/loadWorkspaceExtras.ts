@@ -1,7 +1,12 @@
 import type { QuoteDetail } from '@/app/quotes/[id]/quoteDetailTypes'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { getCurrentQuoteVersion, type QuoteVersionRow } from '@/Lib/quotes/versions'
-import { readContractLifecycle, type ContractLifecycle } from '@/Lib/payments/paidContractAdvance'
+import { ensurePaidContractAdvance } from '@/Lib/payments/confirmPaidDeposit'
+import {
+  readContractLifecycle,
+  shouldRetryPaidContractEnsure,
+  type ContractLifecycle,
+} from '@/Lib/payments/paidContractAdvance'
 import { isQuoteAccepted } from '@/Lib/quotes/statusMachine'
 import { loadCapacitySnapshot } from './loadCapacitySnapshot'
 import type { CapacityOccupancy } from './capacityOccupancy'
@@ -105,7 +110,7 @@ export async function loadCommercialReviewExtras(input: {
   const invoice = ((invoiceRes.data ?? []) as Array<Record<string, unknown>>).find(
     (row) => String(row.invoice_kind || '') !== 'post_event_adjustment',
   )
-  const lifecycle = readContractLifecycle({
+  const lifecycleInput = {
     proposalAccepted: isQuoteAccepted(input.quote),
     invoiceStatus: typeof invoice?.status === 'string' ? invoice.status : null,
     paidTotal: invoice ? Number(invoice.paid_total) : 0,
@@ -116,7 +121,25 @@ export async function loadCommercialReviewExtras(input: {
     reservationConfirmedAt: input.quote.reservation_confirmed_at ?? null,
     serviceOrderId: orderRes.data?.id ?? input.quote.converted_service_order_id ?? null,
     serviceOrderNumber: orderRes.data?.service_order_number ?? null,
-  })
+  }
+  let lifecycle = readContractLifecycle(lifecycleInput)
+
+  if (shouldRetryPaidContractEnsure(lifecycle) && typeof invoice?.id === 'string') {
+    const retried = await ensurePaidContractAdvance({
+      companyId: input.companyId,
+      invoiceId: invoice.id,
+      source: 'commercial_review',
+    })
+    if (retried.serviceOrderId) {
+      lifecycle = readContractLifecycle({
+        ...lifecycleInput,
+        reservationConfirmedAt:
+          retried.reservationConfirmedAt ?? lifecycleInput.reservationConfirmedAt,
+        serviceOrderId: retried.serviceOrderId,
+        serviceOrderNumber: retried.serviceOrderNumber ?? null,
+      })
+    }
+  }
 
   return {
     currentVersion: versionRes.data,

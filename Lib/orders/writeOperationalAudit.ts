@@ -48,6 +48,8 @@ export type OperationalAuditAction =
   | 'reservation_confirmed'
   | 'payment_completed'
   | 'service_order_created'
+  | 'service_order_ensure_failed'
+  | 'agenda_ensure_failed'
   | 'agenda_reserved_on_deposit'
   | 'agenda_reservation_cancelled'
   | 'agenda_linked_on_convert'

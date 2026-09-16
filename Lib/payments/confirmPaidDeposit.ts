@@ -5,10 +5,87 @@ import { syncReservedAgendaEventForQuote } from '@/Lib/quotes/confirmQuoteDeposi
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import {
+  resolvePaidContractEnsureOutcome,
   shouldAdvancePaidContract,
   type PaidContractSource,
 } from './paidContractAdvance'
 import { consumePaymentScheduleHold } from './scheduleHold'
+
+export type PaidContractEnsureResult = {
+  ok: boolean
+  error?: string | null
+  reason?: string
+  reservationRequired?: boolean
+  reservationConfirmedAt?: string | null
+  agendaEventId?: string | null
+  agendaStatus?: string | null
+  agendaOk?: boolean
+  serviceOrderId?: string | null
+  serviceOrderNumber?: string | null
+  serviceOrderAlreadyExisted?: boolean
+}
+
+async function auditEnsureFailure(input: {
+  companyId: string
+  actorUserId: string | null
+  invoiceId: string
+  quoteId: string
+  source: PaidContractSource
+  error: string
+  failedStep: 'service_order' | 'agenda'
+  reservationConfirmedAt?: string | null
+  serviceOrderId?: string | null
+}) {
+  await writeOperationalAudit({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId,
+    entityType: input.failedStep === 'agenda' ? 'agenda_event' : 'invoice_payment',
+    entityId: input.serviceOrderId || input.invoiceId,
+    action:
+      input.failedStep === 'agenda' ? 'agenda_ensure_failed' : 'service_order_ensure_failed',
+    newData: {
+      source: input.source,
+      invoice_id: input.invoiceId,
+      quote_id: input.quoteId,
+      error: input.error,
+      reservation_confirmed_at: input.reservationConfirmedAt ?? null,
+      service_order_id: input.serviceOrderId ?? null,
+    },
+  })
+}
+
+/**
+ * Same transition as confirmPaidDepositReservation, but unexpected throws are
+ * audited and returned as ok:false. Never swallows to null.
+ */
+export async function ensurePaidContractAdvance(input: {
+  companyId: string
+  invoiceId: string
+  source: PaidContractSource
+  providerOrderId?: string | null
+  providerCaptureId?: string | null
+  actorUserId?: string | null
+}): Promise<PaidContractEnsureResult> {
+  try {
+    return await confirmPaidDepositReservation(input)
+  } catch (err) {
+    const error = err instanceof Error ? err.message : 'service_order_ensure_failed'
+    await writeOperationalAudit({
+      companyId: input.companyId,
+      actorUserId: input.actorUserId ?? null,
+      entityType: 'invoice_payment',
+      entityId: input.invoiceId,
+      action: 'service_order_ensure_failed',
+      newData: {
+        source: input.source,
+        invoice_id: input.invoiceId,
+        error,
+        thrown: true,
+      },
+    })
+    return { ok: false, error }
+  }
+}
 
 /**
  * Provider-neutral post-payment transition:
@@ -152,16 +229,50 @@ export async function confirmPaidDepositReservation(input: {
     })
   }
 
+  const outcome = resolvePaidContractEnsureOutcome({
+    serviceOrderId: converted.data?.id ?? null,
+    convertError: converted.error?.message ?? null,
+    agendaOk: agenda.ok,
+    agendaError: agenda.ok ? null : agenda.error ?? 'agenda_ensure_failed',
+  })
+
+  const serviceOrder = converted.data
+  if (!outcome.ok || !serviceOrder) {
+    await auditEnsureFailure({
+      companyId: input.companyId,
+      actorUserId,
+      invoiceId: input.invoiceId,
+      quoteId: String(invoice.quote_id),
+      source: input.source,
+      error: outcome.error || 'service_order_ensure_failed',
+      failedStep: outcome.failedStep || 'service_order',
+      reservationConfirmedAt: confirmedAt,
+      serviceOrderId: serviceOrder?.id ?? null,
+    })
+    return {
+      ok: false as const,
+      error: outcome.error,
+      reservationRequired: true,
+      reservationConfirmedAt: confirmedAt,
+      agendaEventId: agenda.agenda_event_id ?? null,
+      agendaStatus: agenda.agenda_status ?? null,
+      agendaOk: agenda.ok,
+      serviceOrderId: serviceOrder?.id ?? null,
+      serviceOrderNumber: serviceOrder?.service_order_number ?? null,
+      serviceOrderAlreadyExisted: serviceOrder?.already_existed ?? false,
+    }
+  }
+
   return {
     ok: true as const,
     reservationRequired: true,
     reservationConfirmedAt: confirmedAt,
     agendaEventId: agenda.agenda_event_id ?? null,
     agendaStatus: agenda.agenda_status ?? null,
-    agendaOk: agenda.ok,
-    serviceOrderId: converted.data?.id ?? null,
-    serviceOrderNumber: converted.data?.service_order_number ?? null,
-    serviceOrderAlreadyExisted: converted.data?.already_existed ?? false,
-    error: converted.error?.message ?? (agenda.ok ? null : agenda.error) ?? null,
+    agendaOk: true as const,
+    serviceOrderId: serviceOrder.id,
+    serviceOrderNumber: serviceOrder.service_order_number ?? null,
+    serviceOrderAlreadyExisted: serviceOrder.already_existed ?? false,
+    error: null,
   }
 }

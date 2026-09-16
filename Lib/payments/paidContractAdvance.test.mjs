@@ -5,7 +5,9 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   readContractLifecycle,
+  resolvePaidContractEnsureOutcome,
   shouldAdvancePaidContract,
+  shouldRetryPaidContractEnsure,
 } from './paidContractAdvance.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -25,6 +27,7 @@ test('1 accepted + unpaid → awaiting payment, no reservation, no OS', () => {
   assert.equal(life.depositPaid, false)
   assert.equal(life.reservationConfirmed, false)
   assert.equal(life.serviceOrderPresent, false)
+  assert.equal(life.serviceOrderPending, false)
   assert.equal(life.financialStatus, 'awaiting_payment')
   assert.equal(shouldAdvancePaidContract({ depositAmount: 555, paidTotal: 0 }).advance, false)
 })
@@ -45,6 +48,7 @@ test('2 deposit completed → reservation + OS may advance', () => {
   assert.equal(life.depositPaid, true)
   assert.equal(life.reservationConfirmed, true)
   assert.equal(life.serviceOrderPresent, true)
+  assert.equal(life.serviceOrderPending, false)
   assert.equal(life.serviceOrderNumber, 'OS-2026-000001')
   assert.equal(life.paidInFull, false)
   assert.equal(life.financialStatus, 'partially_paid')
@@ -161,8 +165,57 @@ test('14 Commercial Review lifecycle keys exist in PT/EN/ES', () => {
   assert.match(i18n, /lifecycleReservationConfirmed/)
   assert.match(i18n, /lifecycleServiceOrder/)
   assert.match(i18n, /lifecyclePaidInFull/)
+  assert.match(i18n, /lifecycleServiceOrderPendingGeneration/)
+  assert.match(i18n, /lifecycleServiceOrderAttention/)
   const workspace = read('components/commercial-review/CommercialReviewWorkspace.tsx')
   assert.match(workspace, /ContractLifecycleCard/)
+})
+
+test('paid without OS is pending and must retry', () => {
+  const life = readContractLifecycle({
+    proposalAccepted: true,
+    invoiceStatus: 'partially_paid',
+    paidTotal: 555,
+    depositAmount: 555,
+    total: 1850,
+    reservationConfirmedAt: '2026-09-16T18:00:00.000Z',
+    serviceOrderId: null,
+  })
+  assert.equal(life.depositPaid, true)
+  assert.equal(life.reservationConfirmed, true)
+  assert.equal(life.serviceOrderPresent, false)
+  assert.equal(life.serviceOrderPending, true)
+  assert.equal(shouldRetryPaidContractEnsure(life), true)
+})
+
+test('OS failure is not a successful operational close', () => {
+  const failed = resolvePaidContractEnsureOutcome({
+    serviceOrderId: null,
+    convertError: 'coupon_approval_pending',
+    agendaOk: true,
+  })
+  assert.equal(failed.ok, false)
+  assert.equal(failed.failedStep, 'service_order')
+  assert.equal(failed.error, 'coupon_approval_pending')
+})
+
+test('agenda failure is not a successful operational close', () => {
+  const failed = resolvePaidContractEnsureOutcome({
+    serviceOrderId: 'os-1',
+    agendaOk: false,
+    agendaError: 'schedule_conflict',
+  })
+  assert.equal(failed.ok, false)
+  assert.equal(failed.failedStep, 'agenda')
+})
+
+test('OS + agenda success is the only successful close', () => {
+  const ok = resolvePaidContractEnsureOutcome({
+    serviceOrderId: 'os-1',
+    agendaOk: true,
+  })
+  assert.equal(ok.ok, true)
+  assert.equal(ok.error, null)
 })
 
 test('canonical conversion is reused, not duplicated', () => {
@@ -173,8 +226,23 @@ test('canonical conversion is reused, not duplicated', () => {
   assert.match(confirm, /from '@\/Lib\/orders\/convertAcceptedQuoteToServiceOrder'/)
   assert.match(convert, /uq_service_orders_company_quote_version|quote_version_id/)
   assert.match(convert, /already_existed: true/)
-  assert.match(record, /confirmPaidDepositReservation/)
+  assert.match(record, /ensurePaidContractAdvance/)
   assert.match(record, /ensurePaidContract/)
-  assert.match(manual, /confirmPaidDepositReservation/)
+  assert.match(manual, /ensurePaidContractAdvance/)
   assert.doesNotMatch(confirm, /from\('service_orders'\)\s*\.insert/)
+})
+
+test('reliability: swallow-null is gone and failed ensure is ok:false', () => {
+  const confirm = read('Lib/payments/confirmPaidDeposit.ts')
+  const record = read('Lib/payments/recordPayment.ts')
+  const extras = read('Lib/commercialReview/loadWorkspaceExtras.ts')
+  const webhook = read('Lib/payments/paypal/processWebhook.ts')
+  assert.doesNotMatch(record, /\.catch\(\(\) => null\)/)
+  assert.match(confirm, /resolvePaidContractEnsureOutcome/)
+  assert.match(confirm, /ok: false as const/)
+  assert.match(confirm, /service_order_ensure_failed/)
+  assert.match(extras, /shouldRetryPaidContractEnsure/)
+  assert.match(extras, /ensurePaidContractAdvance/)
+  assert.match(webhook, /paid_contract_ensure_failed/)
+  assert.match(webhook, /status: 503/)
 })

@@ -5,6 +5,7 @@ export type PaidContractSource =
   | 'paypal_webhook'
   | 'manual_payment'
   | 'record_payment'
+  | 'commercial_review'
 
 export type PaidContractAdvanceDecision = {
   advance: boolean
@@ -26,11 +27,18 @@ export type ContractLifecycle = {
   depositPaid: boolean
   reservationConfirmed: boolean
   serviceOrderPresent: boolean
+  serviceOrderPending: boolean
   serviceOrderId: string | null
   serviceOrderNumber: string | null
   paidInFull: boolean
   awaitingDeposit: boolean
   financialStatus: ContractFinancialStatus
+}
+
+export type PaidContractEnsureOutcome = {
+  ok: boolean
+  error: string | null
+  failedStep: 'service_order' | 'agenda' | null
 }
 
 /**
@@ -85,15 +93,51 @@ export function readContractLifecycle(input: {
   else if (depositPaid) financialStatus = 'partially_paid'
   else if (input.proposalAccepted) financialStatus = 'awaiting_payment'
 
+  const serviceOrderPresent = Boolean(serviceOrderId)
+  const serviceOrderPending = depositPaid && !serviceOrderPresent && !canceled
+
   return {
     proposalAccepted: Boolean(input.proposalAccepted),
     depositPaid,
     reservationConfirmed,
-    serviceOrderPresent: Boolean(serviceOrderId),
+    serviceOrderPresent,
+    serviceOrderPending,
     serviceOrderId,
     serviceOrderNumber: input.serviceOrderNumber || null,
     paidInFull: paidInFull && !canceled,
     awaitingDeposit: Boolean(input.proposalAccepted) && !depositPaid && !canceled,
     financialStatus,
   }
+}
+
+/**
+ * Paid + no OS (or failed OS/agenda) must not be reported as a successful
+ * operational close. Payment itself stays completed.
+ */
+export function resolvePaidContractEnsureOutcome(input: {
+  serviceOrderId?: string | null
+  convertError?: string | null
+  agendaOk: boolean
+  agendaError?: string | null
+}): PaidContractEnsureOutcome {
+  if (!input.serviceOrderId) {
+    return {
+      ok: false,
+      error: input.convertError || 'service_order_ensure_failed',
+      failedStep: 'service_order',
+    }
+  }
+  if (!input.agendaOk) {
+    return {
+      ok: false,
+      error: input.agendaError || 'agenda_ensure_failed',
+      failedStep: 'agenda',
+    }
+  }
+  return { ok: true, error: null, failedStep: null }
+}
+
+/** Next capture/webhook/Zelle/Commercial Review must try again. */
+export function shouldRetryPaidContractEnsure(lifecycle: ContractLifecycle): boolean {
+  return lifecycle.serviceOrderPending
 }

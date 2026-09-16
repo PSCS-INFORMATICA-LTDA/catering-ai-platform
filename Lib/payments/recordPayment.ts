@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { confirmPaidDepositReservation } from '@/Lib/payments/confirmPaidDeposit'
+import { ensurePaidContractAdvance } from '@/Lib/payments/confirmPaidDeposit'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { invoiceAmountContext, resolveServerAmountDue } from './loadInvoiceAmountDue'
 import { toInvoice } from './createInvoiceFromQuote'
@@ -40,14 +40,14 @@ async function ensurePaidContract(
   ) {
     return
   }
-  await confirmPaidDepositReservation({
+  return ensurePaidContractAdvance({
     companyId: input.companyId,
     invoiceId: invoice.id,
     source: 'record_payment',
     providerOrderId: input.providerOrderId ?? null,
     providerCaptureId: input.providerCaptureId ?? null,
     actorUserId: input.actorUserId ?? null,
-  }).catch(() => null)
+  })
 }
 
 function toPayment(row: Record<string, unknown>): InvoicePaymentRecord {

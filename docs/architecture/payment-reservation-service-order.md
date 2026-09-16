@@ -36,7 +36,9 @@ An inactive quote returns `quote_inactive` and never creates an OS.
 - Agenda: unique active `(company_id, quote_id)`
 - OS: unique `(company_id, quote_version_id)` + `quotes.converted_service_order_id`
 - Refresh / webhook / retry / double-click return the same OS (`already_existed: true`)
-- `recordPaymentAttempt` still calls `ensurePaidContract` on completed duplicates so a retry after a partial failure cannot skip OS creation
+- `recordPaymentAttempt` calls `ensurePaidContractAdvance` on completed duplicates so a retry after a partial failure cannot skip OS creation
+- A failed OS/agenda returns `ok: false`. It does not swallow with `.catch(() => null)`
+- Duplicate capture, webhook `503`, Zelle, and Commercial Review page load retry the same ensure
 
 At most one operational reservation and one canonical OS per contract.
 
@@ -58,6 +60,8 @@ At most one operational reservation and one canonical OS per contract.
 - `payment_completed`
 - `reservation_confirmed`
 - `service_order_created`
+- `service_order_ensure_failed`
+- `agenda_ensure_failed`
 
 plus the existing `convert_quote_to_service_order`.
 
@@ -67,4 +71,4 @@ Stable IDs stay in-domain: company, customer, quote, quote_version, invoice, pay
 
 ## Commercial Review
 
-`ContractLifecycleCard` shows the real lifecycle. Reservation is never shown as confirmed before the deposit is financially satisfied.
+`ContractLifecycleCard` shows the real lifecycle. Reservation is never shown as confirmed before the deposit is financially satisfied. A paid reservation without an OS shows **Ordem de Serviço pendente de geração** and the Commercial Review server load retries the ensure once.
