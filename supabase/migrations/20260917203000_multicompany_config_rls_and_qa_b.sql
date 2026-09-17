@@ -2,9 +2,8 @@
 -- Issue #52 — company-configurable brand/assistant, RLS classification,
 -- franchise-group membership visibility, and least-privilege grants.
 --
--- Product migration: no QA Company B UUID, no DEV-only seed rows keyed by
--- a1111111-1111-4111-8111-111111111111. Company B fixtures live in
--- scripts/dev/setup-multicompany-company-b.mjs.
+-- Product migration: no QA Company B UUID and no DEV-only sequence seed.
+-- Company B fixtures live in scripts/dev/setup-multicompany-company-b.mjs.
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
