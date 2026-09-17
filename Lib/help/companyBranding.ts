@@ -1,6 +1,4 @@
 import type { Company } from '@/Lib/tenant/types'
-import { CDL_DEFAULT_COMPANY_ID } from '@/Lib/cdlCompany'
-import { CDL_LOGO_PATH } from '@/Lib/cdlLogo'
 
 export type CompanyBrand = {
   companyId: string
@@ -46,15 +44,7 @@ export function resolveCompanyDisplayName(
     pickStringField(record, ['company_name', 'companyName']) ||
     pickStringField(record, ['legal_name', 'legalName'])
   if (name) return name
-
-  const id = companyId?.trim() || company?.id?.trim()
-  if (id === CDL_DEFAULT_COMPANY_ID) {
-    return (
-      process.env.NEXT_PUBLIC_CDL_COMPANY_NAME?.trim() ||
-      'CDL Services BBQ at Home'
-    )
-  }
-
+  void companyId
   return 'Catering Help'
 }
 
@@ -72,18 +62,7 @@ export function resolveCompanyLogoUrl(
     process.env.NEXT_PUBLIC_CDL_LOGO_URL?.trim() ||
     null
   if (fromEnv) return fromEnv
-
-  const id = companyId?.trim() || company?.id?.trim()
-  if (id === CDL_DEFAULT_COMPANY_ID) {
-    return CDL_LOGO_PATH
-  }
-
-  const slug = pickStringField(record, ['slug'])
-  const name = resolveCompanyDisplayName(company)
-  if (/cdl/i.test(slug ?? '') || /cdl/i.test(name)) {
-    return CDL_LOGO_PATH
-  }
-
+  void companyId
   return null
 }
 
@@ -92,11 +71,7 @@ export function resolveCompanyInitials(
   displayName?: string,
   companyId?: string,
 ): string {
-  const id = companyId?.trim() || company?.id?.trim()
-  if (id === CDL_DEFAULT_COMPANY_ID) {
-    return 'CDL'
-  }
-
+  void companyId
   const record = company as Record<string, unknown> | null
   const code =
     pickStringField(record, ['company_code', 'companyCode']) ||

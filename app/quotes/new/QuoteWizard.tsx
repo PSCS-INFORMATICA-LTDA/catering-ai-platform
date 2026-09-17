@@ -53,7 +53,6 @@ import {
 } from '../../../Lib/i18n/locales'
 import { tCommon } from '../../../Lib/i18n/common'
 import PackageOptionsDebugPanel from '../../../components/quotes/PackageOptionsDebugPanel'
-import { CDL_DEFAULT_COMPANY_ID } from '../../../Lib/cdlCompany'
 import type { PackageOptionQueryDebug } from '../../../Lib/fetchPackageOptionGroups'
 import {
   sortPackagesByCommercialTier,
@@ -1524,7 +1523,7 @@ export default function QuoteWizardCore({
   const debugCompanyId =
     publicContext?.companyId?.trim() ||
     tenantCompanyId?.trim() ||
-    CDL_DEFAULT_COMPANY_ID
+    ''
   const debugBranchId =
     state.branchId?.trim() ||
     publicContext?.branchId?.trim() ||
