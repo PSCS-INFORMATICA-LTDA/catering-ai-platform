@@ -1,13 +1,15 @@
 -- =============================================================================
 -- Issue #52 — company-configurable brand/assistant, RLS classification,
--- and DEV Company B (QA MULTICOMPANY) sequences.
--- DEV ONLY. Does not invent a sentinel company. Reuses the existing isolation
--- tenant a1111111-1111-4111-8111-111111111111.
+-- franchise-group membership visibility, and least-privilege grants.
+--
+-- Product migration: no QA Company B UUID, no DEV-only seed rows keyed by
+-- a1111111-1111-4111-8111-111111111111. Company B fixtures live in
+-- scripts/dev/setup-multicompany-company-b.mjs.
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
 -- A. Company assistant / location as commercial_rules (configuration-first)
---    CDL seed preserves current Brasinha + invoice location copy.
+--    Seeds only the existing CDL tenant by company_code, never by a QA UUID.
 -- ---------------------------------------------------------------------------
 
 INSERT INTO public.commercial_rules (
@@ -39,45 +41,10 @@ WHERE c.company_code = 'CDL'
   );
 
 COMMENT ON TABLE public.commercial_rules IS
-  'Tenant (or optional global) commercial configuration. Keys such as deposit_percentage, mileage_*, schedule_turnaround_buffer, and assistant_persona are company settings — never engine constants.';
+  'Tenant commercial configuration. company_id stays nullable only to allow optional platform-wide defaults (company_id IS NULL). Live DEV has 0 NULL rows; engine may still read global defaults. Keys such as deposit_percentage, mileage_*, schedule_turnaround_buffer, and assistant_persona are company settings — never engine constants.';
 
 -- ---------------------------------------------------------------------------
--- B. Company B = existing DEV isolation tenant. Do not create a fake UUID.
--- ---------------------------------------------------------------------------
-
-UPDATE public.companies
-SET trade_name = COALESCE(NULLIF(btrim(trade_name), ''), 'QA MULTICOMPANY'),
-    updated_at = now()
-WHERE id = 'a1111111-1111-4111-8111-111111111111'::uuid;
-
-INSERT INTO public.document_sequences (
-  company_id, document_type, prefix, year, current_number, padding, active
-)
-SELECT
-  'a1111111-1111-4111-8111-111111111111'::uuid,
-  v.document_type,
-  v.prefix,
-  v.year,
-  0,
-  6,
-  true
-FROM (
-  VALUES
-    ('quote', 'Q', EXTRACT(YEAR FROM CURRENT_DATE)::integer),
-    ('invoice', 'INV', EXTRACT(YEAR FROM CURRENT_DATE)::integer),
-    ('service_order', 'SO', EXTRACT(YEAR FROM CURRENT_DATE)::integer),
-    ('customer', 'AB', 0)
-) AS v(document_type, prefix, year)
-WHERE NOT EXISTS (
-  SELECT 1
-  FROM public.document_sequences AS s
-  WHERE s.company_id = 'a1111111-1111-4111-8111-111111111111'::uuid
-    AND s.document_type = v.document_type
-    AND s.year = v.year
-);
-
--- ---------------------------------------------------------------------------
--- C. RLS classification. Do not add policies just to silence the advisor.
+-- B. RLS classification. Do not add policies just to silence the advisor.
 -- ---------------------------------------------------------------------------
 
 COMMENT ON TABLE public.payment_schedule_holds IS
@@ -106,19 +73,23 @@ BEGIN
   END IF;
 END $$;
 
--- Global reference reads. Write remains deny-by-default (no INSERT/UPDATE/DELETE policy).
+-- ---------------------------------------------------------------------------
+-- C. languages = GLOBAL_REFERENCE (read-only for authenticated).
+--    franchise_groups = membership-scoped hierarchy (not USING true).
+-- ---------------------------------------------------------------------------
+
 ALTER TABLE IF EXISTS public.languages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.franchise_groups ENABLE ROW LEVEL SECURITY;
 
+REVOKE ALL ON TABLE public.languages FROM anon, authenticated;
+REVOKE ALL ON TABLE public.franchise_groups FROM anon, authenticated;
+GRANT SELECT ON TABLE public.languages TO authenticated;
+GRANT SELECT ON TABLE public.franchise_groups TO authenticated;
+
 DO $$
 BEGIN
-  IF to_regclass('public.languages') IS NOT NULL
-     AND NOT EXISTS (
-       SELECT 1 FROM pg_policies
-       WHERE schemaname = 'public'
-         AND tablename = 'languages'
-         AND policyname = 'languages_select_authenticated'
-     ) THEN
+  IF to_regclass('public.languages') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS languages_select_authenticated ON public.languages';
     EXECUTE $p$
       CREATE POLICY languages_select_authenticated
         ON public.languages
@@ -127,24 +98,27 @@ BEGIN
     $p$;
   END IF;
 
-  IF to_regclass('public.franchise_groups') IS NOT NULL
-     AND NOT EXISTS (
-       SELECT 1 FROM pg_policies
-       WHERE schemaname = 'public'
-         AND tablename = 'franchise_groups'
-         AND policyname = 'franchise_groups_select_authenticated'
-     ) THEN
+  IF to_regclass('public.franchise_groups') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS franchise_groups_select_authenticated ON public.franchise_groups';
     EXECUTE $p$
       CREATE POLICY franchise_groups_select_authenticated
         ON public.franchise_groups
         FOR SELECT TO authenticated
-        USING (true)
+        USING (
+          private.is_platform_master()
+          OR EXISTS (
+            SELECT 1
+            FROM public.companies AS c
+            WHERE c.franchise_group_id = franchise_groups.id
+              AND private.is_company_member(c.id)
+          )
+        )
     $p$;
   END IF;
 END $$;
 
 COMMENT ON TABLE public.languages IS
-  'GLOBAL_REFERENCE: controlled SELECT for authenticated. Writes remain platform/service-role.';
+  'GLOBAL_REFERENCE: authenticated SELECT only. Writes remain platform/service-role. anon has no grant.';
 
 COMMENT ON TABLE public.franchise_groups IS
-  'GLOBAL_REFERENCE / hierarchy: controlled SELECT for authenticated. Writes remain platform/service-role.';
+  'TENANT_HIERARCHY: authenticated SELECT only for groups linked to a company where the caller has an active membership, or platform master. Not a global open catalog.';
