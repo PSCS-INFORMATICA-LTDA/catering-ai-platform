@@ -2,7 +2,8 @@ import React from 'react'
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import type { PdfLogoSource } from '@/Lib/cdlLogo'
 import { tEventFinancialCloseout } from '@/Lib/i18n/eventFinancialCloseout'
-import { tPayments } from '@/Lib/i18n/payments'
+import { invoiceStatusLabel, tPayments } from '@/Lib/i18n/payments'
+import { INVOICE_LOGO_PDF } from '@/Lib/payments/invoiceBrand'
 import { buildInvoiceFinancialPresentation } from '@/Lib/payments/invoiceFinancialPresentation'
 import type { InvoiceRecord } from '@/Lib/payments/types'
 
@@ -94,20 +95,33 @@ export function InvoicePdfDocument({
               // eslint-disable-next-line jsx-a11y/alt-text
               <Image
                 src={logo.filePath || logo.src || ''}
-                style={{ width: 92, height: 48 }}
+                style={{
+                  width: INVOICE_LOGO_PDF.width,
+                  height: INVOICE_LOGO_PDF.height,
+                  objectFit: 'contain',
+                }}
               />
             ) : (
-              <Text style={styles.title}>CDL BBQ AT HOME</Text>
+              <Text style={styles.title}>
+                {tPayments(lang, 'invoiceTitle')}
+              </Text>
             )}
-            <Text style={styles.muted}>Orlando, Florida</Text>
           </View>
           <View>
             <Text style={styles.title}>
               {tPayments(lang, 'invoiceNumber', { number: invoice.invoice_number })}
             </Text>
             <Text style={styles.muted}>
-              {tPayments(lang, 'paymentStatus')}: {invoice.status}
+              {tPayments(lang, 'sourceQuote')}: {snap.quote.number || '—'}
             </Text>
+            <Text style={styles.muted}>
+              {tPayments(lang, 'paymentStatus')}: {invoiceStatusLabel(invoice.status, lang)}
+            </Text>
+            {invoice.created_at ? (
+              <Text style={styles.muted}>
+                {tPayments(lang, 'issuedAt')}: {String(invoice.created_at).slice(0, 10)}
+              </Text>
+            ) : null}
             {adjustment ? (
               <Text style={styles.muted}>{tEventFinancialCloseout(lang, 'supplementalInvoice')}</Text>
             ) : null}
@@ -129,12 +143,13 @@ export function InvoicePdfDocument({
           <Text style={styles.heading}>{snap.customer.name}</Text>
           <Text>{snap.customer.email || snap.customer.phone || '—'}</Text>
           <Text style={styles.muted}>
-            {snap.event.date} · {snap.event.address}
+            {[snap.event.date, snap.event.address].filter(Boolean).join(' · ') || '—'}
           </Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.heading}>{presentation.packageName || snap.package.key}</Text>
+          <Text style={styles.heading}>{tPayments(lang, 'sectionPackage')}</Text>
+          <Text>{presentation.packageName || snap.package.key}</Text>
           <Text>
             {tPayments(lang, 'adults')}: {presentation.guests.adults} ·{' '}
             {tPayments(lang, 'children4To12')}: {presentation.guests.children4To12} ·{' '}
@@ -147,6 +162,16 @@ export function InvoicePdfDocument({
           <Text style={styles.muted}>
             {tPayments(lang, 'eventDate')}: {snap.event.date || '—'}
           </Text>
+          {snap.event.startTime || snap.event.endTime ? (
+            <Text style={styles.muted}>
+              {tPayments(lang, 'eventTime')}: {[snap.event.startTime, snap.event.endTime].filter(Boolean).join(' – ')}
+            </Text>
+          ) : null}
+          {snap.event.name ? (
+            <Text style={styles.muted}>
+              {tPayments(lang, 'event')}: {snap.event.name}
+            </Text>
+          ) : null}
           <Text style={styles.muted}>
             {tPayments(lang, 'eventAddress')}: {snap.event.address || '—'}
           </Text>
@@ -155,18 +180,34 @@ export function InvoicePdfDocument({
         <View style={styles.box}>
           {presentation.chargeRows
             .filter((row) => row.amount != null)
-            .map((row) => (
-              <View key={row.id} style={styles.row}>
-                <Text>
-                  {row.labelText || tPayments(lang, row.labelKey as Parameters<typeof tPayments>[1])}
-                  {row.formula ? ` (${row.formula})` : ''}
-                  {row.included ? ` — ${tPayments(lang, 'included')}` : ''}
-                </Text>
-                <Text>
-                  {row.included ? tPayments(lang, 'included') : money(Number(row.amount), invoice.currency_code)}
-                </Text>
-              </View>
-            ))}
+            .map((row, index, rows) => {
+              const prev = rows[index - 1]
+              const sectionTitle =
+                row.kind === 'package' && prev?.kind !== 'package'
+                  ? tPayments(lang, 'sectionPackage')
+                  : row.kind === 'garnish' && prev?.kind !== 'garnish'
+                    ? tPayments(lang, 'sectionSides')
+                    : row.kind === 'additional' && prev?.kind !== 'additional'
+                      ? tPayments(lang, 'sectionAddons')
+                      : null
+              return (
+                <View key={row.id}>
+                  {sectionTitle ? (
+                    <Text style={[styles.heading, { marginTop: 6 }]}>{sectionTitle}</Text>
+                  ) : null}
+                  <View style={styles.row}>
+                    <Text>
+                      {row.labelText || tPayments(lang, row.labelKey as Parameters<typeof tPayments>[1])}
+                      {row.formula ? ` (${row.formula})` : ''}
+                      {row.included ? ` — ${tPayments(lang, 'included')}` : ''}
+                    </Text>
+                    <Text>
+                      {row.included ? tPayments(lang, 'included') : money(Number(row.amount), invoice.currency_code)}
+                    </Text>
+                  </View>
+                </View>
+              )
+            })}
           {presentation.mileage.visible ? (
             <View style={[styles.box, { marginTop: 8 }]}>
               <Text style={styles.heading}>{tPayments(lang, 'mileage')}</Text>

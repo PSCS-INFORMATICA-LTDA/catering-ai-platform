@@ -237,7 +237,10 @@ const { t, list } = makeI18nModule('payments', 'billing', {
     en: 'Package unit price',
     es: 'Precio unitario del paquete',
   },
-  additionals: { pt: 'Adicionais', en: 'Additionals', es: 'Adicionales' },
+  sectionPackage: { pt: 'Pacote', en: 'Package', es: 'Paquete' },
+  sectionSides: { pt: 'Guarnições', en: 'Sides', es: 'Guarniciones' },
+  sectionAddons: { pt: 'Adicionais', en: 'Add-ons', es: 'Extras' },
+  additionals: { pt: 'Adicionais', en: 'Add-ons', es: 'Extras' },
   garnishes: { pt: 'Guarnições', en: 'Sides', es: 'Guarniciones' },
   garnishesIncluded: {
     pt: 'Guarnições — incluídas',
@@ -376,6 +379,8 @@ const { t, list } = makeI18nModule('payments', 'billing', {
   },
   subtotal: { pt: 'Subtotal', en: 'Subtotal', es: 'Subtotal' },
   eventDate: { pt: 'Data do evento', en: 'Event date', es: 'Fecha del evento' },
+  eventTime: { pt: 'Horário do evento', en: 'Event time', es: 'Horario del evento' },
+  issuedAt: { pt: 'Emitida em', en: 'Issued on', es: 'Emitida el' },
   eventAddress: { pt: 'Endereço', en: 'Event address', es: 'Dirección' },
   quoteNotAccepted: {
     pt: 'A cotação precisa estar aceita para gerar fatura.',

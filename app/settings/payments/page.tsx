@@ -14,6 +14,7 @@ import {
   loadCompanyOfflinePaymentSettings,
   loadCompanyPaymentMethods,
 } from '@/Lib/payments/companyProviders'
+import { loadPaymentNotificationSummary } from '@/Lib/notifications/loadPaymentNotificationSummary'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { redirect } from 'next/navigation'
 
@@ -51,6 +52,7 @@ export default async function PaymentSettingsPage() {
   const paypal = await toPublicPaypalSettings(companyId, session.userId)
   const methods = await loadCompanyPaymentMethods(companyId)
   const offlineSettings = await loadCompanyOfflinePaymentSettings(companyId)
+  const notificationSummary = await loadPaymentNotificationSummary(companyId)
   return (
     <PaymentSettingsDashboard
       key={companyId}
@@ -58,6 +60,7 @@ export default async function PaymentSettingsPage() {
       initialPaypal={paypal}
       initialMethods={methods}
       initialOfflineSettings={offlineSettings}
+      notificationSummary={notificationSummary}
     />
   )
 }

@@ -206,6 +206,14 @@ export default function InvoiceDetailView({
               label={tPayments(locale, 'eventDate')}
               value={formatUiDate(invoice.event_date, locale)}
             />
+            {snapshot?.event.startTime || snapshot?.event.endTime ? (
+              <DetailRow
+                label={tPayments(documentLocale, 'eventTime')}
+                value={[snapshot.event.startTime, snapshot.event.endTime]
+                  .filter(Boolean)
+                  .join(' – ')}
+              />
+            ) : null}
             <DetailRow
               label={tPayments(locale, 'eventAddress')}
               value={eventAddress || '—'}

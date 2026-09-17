@@ -133,6 +133,11 @@ export const CATERING_NAV: NavGroup[] = [
     children: [
       { href: '/settings/company', label: 'Empresa' },
       { href: '/settings/payments', label: 'Pagamentos' },
+      {
+        href: '/settings/notifications',
+        label: 'Notificações',
+        requiredAnyPermission: ['notifications.view', 'notification_deliveries.view'],
+      },
       { href: '/settings/dictionary', label: 'Dicionário de dados' },
       { href: '/users', label: 'Usuários e acessos' },
       { href: '/profile', label: 'Meu perfil' },

@@ -1,0 +1,70 @@
+import { makeI18nModule } from './makeModule.ts'
+
+const { t, list } = makeI18nModule('notifications', 'notifications', {
+  title: { pt: 'Central de notificações', en: 'Notification Center', es: 'Centro de notificaciones' },
+  recipients: { pt: 'Destinatários', en: 'Recipients', es: 'Destinatarios' },
+  deliveries: { pt: 'Histórico de entregas', en: 'Delivery history', es: 'Historial de entregas' },
+  eventQuoteCreated: { pt: 'Nova cotação', en: 'New quote', es: 'Nuevo presupuesto' },
+  channelWhatsapp: { pt: 'WhatsApp', en: 'WhatsApp', es: 'WhatsApp' },
+  enabled: { pt: 'Ativo', en: 'Enabled', es: 'Activo' },
+  disabled: { pt: 'Desativado', en: 'Disabled', es: 'Desactivado' },
+  addRecipient: { pt: 'Adicionar destinatário', en: 'Add recipient', es: 'Añadir destinatario' },
+  displayName: { pt: 'Nome', en: 'Name', es: 'Nombre' },
+  phone: { pt: 'Telefone', en: 'Phone', es: 'Teléfono' },
+  locale: { pt: 'Idioma', en: 'Locale', es: 'Idioma' },
+  save: { pt: 'Salvar', en: 'Save', es: 'Guardar' },
+  retry: { pt: 'Tentar de novo', en: 'Retry', es: 'Reintentar' },
+  status: { pt: 'Status', en: 'Status', es: 'Estado' },
+  channel: { pt: 'Canal', en: 'Channel', es: 'Canal' },
+  template: { pt: 'Template', en: 'Template', es: 'Plantilla' },
+  providerId: { pt: 'ID do provedor', en: 'Provider ID', es: 'ID del proveedor' },
+  error: { pt: 'Erro', en: 'Error', es: 'Error' },
+  createdAt: { pt: 'Criado em', en: 'Created at', es: 'Creado el' },
+  emptyRecipients: {
+    pt: 'Nenhum destinatário configurado para quote.created.',
+    en: 'No recipients configured for quote.created.',
+    es: 'No hay destinatarios configurados para quote.created.',
+  },
+  emptyDeliveries: {
+    pt: 'Nenhuma entrega registrada.',
+    en: 'No deliveries recorded.',
+    es: 'No hay entregas registradas.',
+  },
+  templatePending: {
+    pt: 'Código pronto. Os templates Meta ainda precisam de aprovação externa.',
+    en: 'Code is ready. Meta templates still need external approval.',
+    es: 'El código está listo. Las plantillas de Meta aún necesitan aprobación externa.',
+  },
+  companyContextRequired: {
+    pt: 'Selecione uma empresa para configurar notificações.',
+    en: 'Select a company to configure notifications.',
+    es: 'Seleccione una empresa para configurar notificaciones.',
+  },
+  events: { pt: 'Eventos recebidos', en: 'Subscribed events', es: 'Eventos recibidos' },
+  eventDeposit: { pt: 'Depósito recebido', en: 'Deposit received', es: 'Depósito recibido' },
+  eventFull: { pt: 'Pagamento total recebido', en: 'Full payment received', es: 'Pago total recibido' },
+  futureChannels: {
+    pt: 'Canais futuros: e-mail, Web Push e in-app.',
+    en: 'Future channels: email, Web Push and in-app.',
+    es: 'Canales futuros: correo, Web Push y in-app.',
+  },
+  providerStatus: { pt: 'Status do WhatsApp', en: 'WhatsApp status', es: 'Estado de WhatsApp' },
+  providerConfigured: { pt: 'WhatsApp configurado', en: 'WhatsApp configured', es: 'WhatsApp configurado' },
+  providerMissing: { pt: 'WhatsApp não configurado', en: 'WhatsApp not configured', es: 'WhatsApp no configurado' },
+  providerFallback: {
+    pt: 'Usando fallback DEV da plataforma',
+    en: 'Using platform DEV fallback',
+    es: 'Usando fallback DEV de la plataforma',
+  },
+  filterEvent: { pt: 'Evento', en: 'Event', es: 'Evento' },
+  filterStatus: { pt: 'Status', en: 'Status', es: 'Estado' },
+  filterFrom: { pt: 'De', en: 'From', es: 'Desde' },
+  filterTo: { pt: 'Até', en: 'To', es: 'Hasta' },
+  openEntity: { pt: 'Abrir', en: 'Open', es: 'Abrir' },
+  company: { pt: 'Empresa', en: 'Company', es: 'Empresa' },
+  entity: { pt: 'Entidade', en: 'Entity', es: 'Entidad' },
+  attempts: { pt: 'Tentativas', en: 'Attempts', es: 'Intentos' },
+})
+
+export const tNotifications = t
+export const listNotificationsI18nEntries = list
