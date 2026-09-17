@@ -60,3 +60,23 @@ test('loaded session without coupon permission hides coupon center', () => {
     false,
   )
 })
+
+const notificationsChild = {
+  href: '/settings/notifications',
+  label: 'Notificações',
+  requiredAnyPermission: ['notifications.view', 'notification_deliveries.view'],
+}
+
+test('notification center is hidden without notification permissions', () => {
+  assert.equal(
+    canSeeNavChild({ isPlatformAdmin: false, permissions: ['quotes.view'] }, notificationsChild),
+    false,
+  )
+  assert.equal(
+    canSeeNavChild(
+      { isPlatformAdmin: false, permissions: ['notifications.view'] },
+      notificationsChild,
+    ),
+    true,
+  )
+})

@@ -20,6 +20,7 @@ import {
   computeServerPricingForSave,
   mergeServerPricingIntoSaveInput,
 } from './pricing/applyServerPricingToQuoteSave'
+import { enqueueQuoteCreatedNotificationSafe } from '@/Lib/notifications/enqueueQuoteCreated'
 
 export type CreateQuoteResult = {
   data: { id: string; quote_number: string | null } | null
@@ -297,6 +298,17 @@ export async function createQuote(input: QuoteSaveInput): Promise<CreateQuoteRes
   }
 
   if (saveInput.additionals.length === 0) {
+    void enqueueQuoteCreatedNotificationSafe({
+      companyId,
+      quoteId,
+      quoteNumber: data.quote_number as string | null,
+      customerName: saveInput.customerDraft?.name ?? null,
+      eventDate: saveInput.eventDate,
+      eventTime: [saveInput.startTime, saveInput.endTime].filter(Boolean).join(' – ') || null,
+      total: Number(pricingResult.breakdown?.total ?? saveInput.reservationAmount) || null,
+      locale: saveInput.language ?? 'pt',
+      source: 'operator',
+    })
     return {
       data: { id: quoteId, quote_number: data.quote_number as string | null },
       error: null,
@@ -339,6 +351,17 @@ export async function createQuote(input: QuoteSaveInput): Promise<CreateQuoteRes
     return { data: null, error: errorInfo }
   }
 
+  void enqueueQuoteCreatedNotificationSafe({
+    companyId,
+    quoteId,
+    quoteNumber: data.quote_number as string | null,
+    customerName: saveInput.customerDraft?.name ?? null,
+    eventDate: saveInput.eventDate,
+    eventTime: [saveInput.startTime, saveInput.endTime].filter(Boolean).join(' – ') || null,
+    total: Number(pricingResult.breakdown?.total ?? saveInput.reservationAmount) || null,
+    locale: saveInput.language ?? 'pt',
+    source: 'operator',
+  })
   return {
     data: { id: quoteId, quote_number: data.quote_number as string | null },
     error: null,

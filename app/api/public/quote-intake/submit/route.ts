@@ -32,6 +32,7 @@ import { validateCompletePublicQuoteDraft } from '@/Lib/publicQuote/validation'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { fetchSupabaseCommercialRules } from '@/Lib/supabaseCommercialRules'
 import { CDL_CANCEL_POLICY_VERSION } from '@/Lib/cdlCancellationPolicy'
+import { enqueueQuoteCreatedNotificationSafe } from '@/Lib/notifications/enqueueQuoteCreated'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -110,6 +111,16 @@ export async function POST(request: NextRequest) {
         .eq('quote_id', existing.id)
         .eq('company_id', session.company_id)
         .maybeSingle()
+      void enqueueQuoteCreatedNotificationSafe({
+        companyId: session.company_id,
+        quoteId: existing.id,
+        quoteNumber: existing.quote_number ?? null,
+        eventDate: event?.event_date ?? null,
+        total: Number(existing.quote_total) || null,
+        currency: existing.currency_code ?? null,
+        locale: session.locale === 'en' || session.locale === 'es' ? session.locale : 'pt',
+        source: 'public_quote',
+      })
       return NextResponse.json(
         {
           quote: {
@@ -385,6 +396,23 @@ export async function POST(request: NextRequest) {
 
     if (result.quote && couponResolution?.valid && couponResolution.appliedDiscountAmount > 0) {
       result.quote.total = pricing.breakdown.total
+    }
+
+    if (result.quote?.id) {
+      void enqueueQuoteCreatedNotificationSafe({
+        companyId: session.company_id,
+        quoteId: result.quote.id,
+        quoteNumber: result.quote.number ?? null,
+        customerName: [draft.contact.firstName, draft.contact.lastName].filter(Boolean).join(' ') || null,
+        eventDate: result.quote.eventDate ?? draft.event.eventDate ?? null,
+        eventTime: draft.event.startTime
+          ? [draft.event.startTime, draft.event.endTime].filter(Boolean).join(' – ')
+          : null,
+        total: Number(result.quote.total ?? pricing.totals.quoteTotal) || null,
+        currency: result.quote.currency ?? null,
+        locale: session.locale === 'en' || session.locale === 'es' ? session.locale : 'pt',
+        source: 'public_quote',
+      })
     }
 
     return NextResponse.json(
