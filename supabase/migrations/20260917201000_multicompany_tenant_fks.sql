@@ -264,16 +264,16 @@ $$;
 SELECT private.add_company_fk_if_safe('app_roles', 'app_roles_company_id_fkey', 'RESTRICT', false);
 SELECT private.add_company_fk_if_safe('app_users', 'app_users_company_id_fkey', 'SET NULL', true);
 SELECT private.add_company_fk_if_safe('catalog_item_prices', 'catalog_item_prices_company_id_fkey', 'RESTRICT', false);
-SELECT private.add_company_fk_if_safe('catalog_items', 'catalog_items_company_id_fkey', 'RESTRICT', true);
+SELECT private.add_company_fk_if_safe('catalog_items', 'catalog_items_company_id_fkey', 'RESTRICT', false);
 SELECT private.add_company_fk_if_safe('commercial_rules', 'commercial_rules_company_id_fkey', 'RESTRICT', true);
-SELECT private.add_company_fk_if_safe('customers', 'customers_company_id_fkey', 'RESTRICT', true);
+SELECT private.add_company_fk_if_safe('customers', 'customers_company_id_fkey', 'RESTRICT', false);
 SELECT private.add_company_fk_if_safe('media_assets', 'media_assets_company_id_fkey', 'RESTRICT', false);
-SELECT private.add_company_fk_if_safe('package_categories', 'package_categories_company_id_fkey', 'RESTRICT', true);
-SELECT private.add_company_fk_if_safe('package_items', 'package_items_company_id_fkey', 'RESTRICT', true);
+SELECT private.add_company_fk_if_safe('package_categories', 'package_categories_company_id_fkey', 'RESTRICT', false);
+SELECT private.add_company_fk_if_safe('package_items', 'package_items_company_id_fkey', 'RESTRICT', false);
 SELECT private.add_company_fk_if_safe('package_option_groups', 'package_option_groups_company_id_fkey', 'RESTRICT', false);
 SELECT private.add_company_fk_if_safe('package_option_values', 'package_option_values_company_id_fkey', 'RESTRICT', false);
 SELECT private.add_company_fk_if_safe('package_side_items', 'package_side_items_company_id_fkey', 'RESTRICT', false);
-SELECT private.add_company_fk_if_safe('packages', 'packages_company_id_fkey', 'RESTRICT', true);
+SELECT private.add_company_fk_if_safe('packages', 'packages_company_id_fkey', 'RESTRICT', false);
 SELECT private.add_company_fk_if_safe('payment_rules', 'payment_rules_company_id_fkey', 'RESTRICT', false);
 SELECT private.add_company_fk_if_safe('quote_additional_items', 'quote_additional_items_company_id_fkey', 'RESTRICT', false);
 SELECT private.add_company_fk_if_safe('quote_items', 'quote_items_company_id_fkey', 'RESTRICT', false);
@@ -285,7 +285,7 @@ SELECT private.add_company_fk_if_safe('quote_text_templates', 'quote_text_templa
 SELECT private.add_company_fk_if_safe('quotes', 'quotes_company_id_fkey', 'RESTRICT', false);
 SELECT private.add_company_fk_if_safe('staff_rules', 'staff_rules_company_id_fkey', 'RESTRICT', false);
 SELECT private.add_company_fk_if_safe('users', 'users_company_id_fkey', 'SET NULL', true);
-SELECT private.add_company_fk_if_safe('company_assets', 'company_assets_company_id_fkey', 'RESTRICT', true);
+SELECT private.add_company_fk_if_safe('company_assets', 'company_assets_company_id_fkey', 'RESTRICT', false);
 SELECT private.add_company_fk_if_safe('company_features', 'company_features_company_id_fkey', 'RESTRICT', false);
 
 -- Explicit classifications
@@ -305,6 +305,6 @@ COMMENT ON TABLE public.role_permissions IS
   'Platform role-to-permission map. Not tenant-owned.';
 
 COMMENT ON TABLE public.franchise_groups IS
-  'Optional brand/network hierarchy above companies. Platform/hierarchy, not a billing tenant.';
+  'Brand/network hierarchy above companies. Not a global open catalog. Visibility is limited to groups linked to a caller membership (or platform master).';
 
 DROP FUNCTION IF EXISTS private.add_company_fk_if_safe(text, text, text, boolean);

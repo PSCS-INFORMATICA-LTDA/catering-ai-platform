@@ -14,6 +14,7 @@ const FILES = [
   'supabase/migrations/20260917201000_multicompany_tenant_fks.sql',
   'supabase/migrations/20260917202000_multicompany_composite_integrity.sql',
   'supabase/migrations/20260917203000_multicompany_config_rls_and_qa_b.sql',
+  'supabase/migrations/20260917204000_multicompany_composite_integrity_round2.sql',
 ]
 
 function parseEnvFile(path) {
