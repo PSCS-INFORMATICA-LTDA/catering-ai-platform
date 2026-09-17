@@ -85,10 +85,48 @@ export default function InvoiceFinancialBreakdown({
         <h3 className="text-xs font-black uppercase tracking-wider text-[#6b6560]">
           {tPayments(lang, 'financialBreakdown')}
         </h3>
-        <div className="space-y-3">
-          {presentation.chargeRows.map((row) => (
-            <Row key={row.id} row={row} currency={currency} lang={lang} />
-          ))}
+        <div className="space-y-4">
+          {(['package', 'sides', 'addons', 'other'] as const).map((section) => {
+            const rows = presentation.chargeRows.filter((row) => {
+              if (section === 'package') {
+                return row.kind === 'package' || row.kind === 'guest' || row.kind === 'info'
+              }
+              if (section === 'sides') return row.kind === 'garnish'
+              if (section === 'addons') return row.kind === 'additional'
+              return (
+                row.kind !== 'package' &&
+                row.kind !== 'guest' &&
+                row.kind !== 'info' &&
+                row.kind !== 'garnish' &&
+                row.kind !== 'additional'
+              )
+            })
+            if (rows.length === 0) return null
+            const title =
+              section === 'package'
+                ? tPayments(lang, 'sectionPackage')
+                : section === 'sides'
+                  ? tPayments(lang, 'sectionSides')
+                  : section === 'addons'
+                    ? tPayments(lang, 'sectionAddons')
+                    : null
+            return (
+              <div
+                key={section}
+                data-invoice-section={section}
+                className="space-y-3"
+              >
+                {title ? (
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-[#111111]">
+                    {title}
+                  </h4>
+                ) : null}
+                {rows.map((row) => (
+                  <Row key={row.id} row={row} currency={currency} lang={lang} />
+                ))}
+              </div>
+            )
+          })}
         </div>
       </section>
 

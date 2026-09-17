@@ -7,6 +7,7 @@ import {
   paymentStatusLabel,
   tPayments,
 } from '@/Lib/i18n/payments'
+import { INVOICE_LOGO_WEB_CLASS } from '@/Lib/payments/invoiceBrand'
 import { resolvePublicPaymentLocale } from '@/Lib/payments/invoiceDocumentLocale'
 import { buildInvoiceFinancialPresentation } from '@/Lib/payments/invoiceFinancialPresentation'
 import { isAppPublicLogoPath } from '@/Lib/payments/paymentOgCopy'
@@ -88,7 +89,7 @@ export default function PublicPaymentPage({
         <header>
           {logoSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoSrc} alt="" className="mb-3 h-10 w-auto" />
+            <img src={logoSrc} alt="" className={INVOICE_LOGO_WEB_CLASS} />
           ) : null}
           <p
             data-testid="payment-company-brand"
