@@ -55,6 +55,16 @@ test('WhatsApp provider is abstracted and secret-safe', () => {
   assert.doesNotMatch(provider, /Caio|4079152242/)
 })
 
+test('quote.created payload keeps a catering event reference without duplicating the quote', () => {
+  const types = read('Lib/notifications/types.ts')
+  const enqueue = read('Lib/notifications/enqueueQuoteCreated.ts')
+  const create = read('Lib/createQuote.ts')
+  assert.match(types, /eventId: string \| null/)
+  assert.match(enqueue, /eventId: cateringEventId/)
+  assert.match(create, /eventId,/)
+  assert.doesNotMatch(enqueue, /pricingBreakdown|internalNotes|margin/)
+})
+
 test('public quote flow files are not redesigned by this hook', () => {
   const submit = read('app/api/public/quote-intake/submit/route.ts')
   assert.match(submit, /finalize_public_quote/)

@@ -115,6 +115,7 @@ export async function POST(request: NextRequest) {
         companyId: session.company_id,
         quoteId: existing.id,
         quoteNumber: existing.quote_number ?? null,
+        eventId: existing.event_id ?? null,
         eventDate: event?.event_date ?? null,
         total: Number(existing.quote_total) || null,
         currency: existing.currency_code ?? null,

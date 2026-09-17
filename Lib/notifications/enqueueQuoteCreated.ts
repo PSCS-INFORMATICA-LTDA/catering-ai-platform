@@ -8,6 +8,7 @@ export type EnqueueQuoteCreatedInput = {
   companyId: string
   quoteId: string
   quoteNumber?: string | null
+  eventId?: string | null
   customerName?: string | null
   eventDate?: string | null
   eventTime?: string | null
@@ -29,9 +30,20 @@ export async function enqueueQuoteCreatedNotification(
   }
 
   const db = getSupabaseServerClient()
+  let cateringEventId = input.eventId ?? null
+  if (!cateringEventId) {
+    const quoteRow = await db
+      .from('quotes')
+      .select('event_id')
+      .eq('id', input.quoteId)
+      .eq('company_id', input.companyId)
+      .maybeSingle()
+    cateringEventId = (quoteRow.data?.event_id as string | undefined) ?? null
+  }
   const payload: QuoteCreatedPayload = {
     quoteId: input.quoteId,
     quoteNumber: input.quoteNumber ?? null,
+    eventId: cateringEventId,
     customerName: input.customerName ?? null,
     eventDate: input.eventDate ?? null,
     eventTime: input.eventTime ?? null,

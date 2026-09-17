@@ -18,6 +18,7 @@ export type NotificationDeliveryStatus = (typeof NOTIFICATION_STATUSES)[number]
 export type QuoteCreatedPayload = {
   quoteId: string
   quoteNumber: string | null
+  eventId: string | null
   customerName: string | null
   eventDate: string | null
   eventTime: string | null
