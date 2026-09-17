@@ -20,6 +20,8 @@ export type QuoteReviewData = {
   quoteNumber?: string
   quoteStatus?: string | null
   preview?: boolean
+  companyDisplayName?: string | null
+  companyLocation?: string | null
   customerName: string
   customerPhone?: string | null
   customerEmail?: string | null

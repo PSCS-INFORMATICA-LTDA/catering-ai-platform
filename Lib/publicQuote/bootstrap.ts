@@ -26,12 +26,16 @@ import {
 } from '@/Lib/media/loadPublishedPublicMedia'
 import { resolveCompanyLogoUrl } from '@/Lib/help/companyBranding'
 import type { Company } from '@/Lib/tenant/types'
+import { loadCompanyAssistantBrand } from '@/Lib/tenant/loadCompanyAssistantBrand'
+import { resolveCompanyPublicBrand } from '@/Lib/tenant/companyPublicBrand'
 
 export type PublicQuoteCompanyRow = {
   id: string
   company_name: string
   trade_name?: string | null
   slug: string
+  city?: string | null
+  state?: string | null
   default_language?: string | null
   currency_code?: string | null
   default_currency?: string | null
@@ -135,7 +139,7 @@ export async function resolvePublicQuoteTenant(
   const { data, error } = await supabase
     .from('companies')
     .select(
-      'id, company_name, trade_name, slug, default_language, currency_code, default_currency, billing_email, logo_url, brand_logo_url, primary_color, secondary_color, active',
+      'id, company_name, trade_name, slug, city, state, default_language, currency_code, default_currency, billing_email, logo_url, brand_logo_url, primary_color, secondary_color, active',
     )
     .eq('slug', companySlug)
     .eq('active', true)
@@ -159,7 +163,7 @@ export async function resolvePublicQuoteTenantByCompanyId(
   const { data, error } = await supabase
     .from('companies')
     .select(
-      'id, company_name, trade_name, slug, default_language, currency_code, default_currency, billing_email, logo_url, brand_logo_url, primary_color, secondary_color, active',
+      'id, company_name, trade_name, slug, city, state, default_language, currency_code, default_currency, billing_email, logo_url, brand_logo_url, primary_color, secondary_color, active',
     )
     .eq('id', companyId)
     .eq('active', true)
@@ -434,11 +438,20 @@ export async function getPublicQuoteBootstrap(
     company.trade_name?.trim() || company.company_name.trim()
   const defaultLocale =
     parsePublicQuoteLocale(company.default_language) ?? allowedLocales[0] ?? 'pt'
-  const [managedHero, managedVideo, managedVideos] = await Promise.all([
-    loadManagedPublicHero(company.id),
-    loadManagedHowItWorksVideo(company.id, locale, defaultLocale),
-    loadManagedHowItWorksVideos(company.id),
-  ])
+  const [managedHero, managedVideo, managedVideos, assistantBrand] =
+    await Promise.all([
+      loadManagedPublicHero(company.id),
+      loadManagedHowItWorksVideo(company.id, locale, defaultLocale),
+      loadManagedHowItWorksVideos(company.id),
+      loadCompanyAssistantBrand(company.id),
+    ])
+  const companyLocation = resolveCompanyPublicBrand({
+    ...assistantBrand,
+    companyName: company.company_name,
+    tradeName: company.trade_name,
+    city: company.city ?? assistantBrand.city,
+    state: company.state ?? assistantBrand.state,
+  }).location
   const currencyCode =
     company.default_currency?.trim() ||
     company.currency_code?.trim() ||
@@ -471,6 +484,7 @@ export async function getPublicQuoteBootstrap(
         '#d4a017',
       ),
       currencyCode,
+      location: companyLocation,
     },
     settings: {
       enabled: true,

@@ -59,7 +59,6 @@ export function resolveCompanyLogoUrl(
   const fromEnv =
     process.env.NEXT_PUBLIC_COMPANY_LOGO_URL?.trim() ||
     process.env.NEXT_PUBLIC_TENANT_LOGO_URL?.trim() ||
-    process.env.NEXT_PUBLIC_CDL_LOGO_URL?.trim() ||
     null
   if (fromEnv) return fromEnv
   void companyId

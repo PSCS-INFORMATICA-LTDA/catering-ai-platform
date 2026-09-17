@@ -117,6 +117,19 @@ export function resolveCompanyPublicBrand(
   }
 }
 
+export function resolveProposalCompanyLocation(input: {
+  companyLocation?: string | null
+  locationLabel?: string | null
+  city?: string | null
+  state?: string | null
+}): string | null {
+  return formatCompanyLocation({
+    locationLabel: input.companyLocation || input.locationLabel,
+    city: input.city,
+    state: input.state,
+  })
+}
+
 export function parseAssistantPersonaRule(value: unknown): {
   name: string | null
   role: string | null

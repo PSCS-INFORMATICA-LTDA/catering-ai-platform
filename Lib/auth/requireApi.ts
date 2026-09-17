@@ -1,7 +1,6 @@
 import { hasPermission } from '@/Lib/auth/permissions'
 import { getAuthSession } from '@/Lib/auth/session'
 import type { AuthSessionContext } from '@/Lib/auth/types'
-import { getCdlCompanyId } from '@/Lib/cdlCompany'
 
 export type ApiAuthOk = { ok: true; session: AuthSessionContext }
 export type ApiAuthErr = { ok: false; response: Response }
@@ -12,11 +11,7 @@ function jsonError(status: number, error: string): Response {
 }
 
 export function resolveAuthorizedCompanyId(session: AuthSessionContext): string {
-  return (
-    session.supportSession?.target_company_id ||
-    session.activeMembership?.company_id ||
-    getCdlCompanyId()
-  )
+  return resolveSessionCompanyId(session) || ''
 }
 
 /** Payment settings must not fall back to a hardcoded CDL merchant. */

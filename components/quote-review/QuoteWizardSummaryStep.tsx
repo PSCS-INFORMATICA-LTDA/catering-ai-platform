@@ -55,6 +55,7 @@ export default function QuoteWizardSummaryStep({
   onBack,
   onSave,
   uiLanguage,
+  companyLocation = null,
 }: {
   state: WizardState
   quoteTotals: QuoteTotals
@@ -84,6 +85,7 @@ export default function QuoteWizardSummaryStep({
   onSave: (openReview: boolean) => void | Promise<void>
   /** Idioma da UI do operador. O preview do documento usa state.language. */
   uiLanguage?: WizardState['language']
+  companyLocation?: string | null
 }) {
   const reviewData = useMemo(
     () =>
@@ -105,6 +107,7 @@ export default function QuoteWizardSummaryStep({
         billableGuestCount,
         commercialRules,
         displayLanguage: uiLanguage ?? state.language,
+        companyLocation,
       }),
     [
       state,
@@ -124,6 +127,7 @@ export default function QuoteWizardSummaryStep({
       billableGuestCount,
       commercialRules,
       uiLanguage,
+      companyLocation,
     ],
   )
 

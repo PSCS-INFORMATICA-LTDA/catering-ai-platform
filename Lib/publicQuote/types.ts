@@ -27,6 +27,7 @@ export type PublicQuoteBootstrap = {
     primaryColor: string
     accentColor: string
     currencyCode: string
+    location: string | null
   }
   settings: {
     enabled: boolean

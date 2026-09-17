@@ -33,6 +33,7 @@ import {
   formatEventAddressLines,
   isSameEventDestination,
 } from '@/Lib/formatEventAddress'
+import { resolveProposalCompanyLocation } from '@/Lib/tenant/companyPublicBrand'
 import { mileageDestinationAddress } from '@/Lib/publicQuote/mileageDestination'
 import { resolvePublicGrillSummaryImageUrl } from '@/Lib/publicQuote/ownGrillDisplay'
 import PricingBreakdownView from './PricingBreakdownView'
@@ -206,6 +207,9 @@ function ConfirmationProposalBody({
   afterPricing?: ReactNode
 }) {
   const lang = data.language ?? 'pt'
+  const proposalLocation = resolveProposalCompanyLocation({
+    companyLocation: data.companyLocation,
+  })
   const t = getQuoteStrings(lang)
   const w = t.wizard
   const mileageLine = findBreakdownLine(breakdown, 'mileage')
@@ -610,7 +614,9 @@ function ConfirmationProposalBody({
           </div>
         ) : null}
         <p className="quote-proposal-footer-brand">BBQ AT HOME</p>
-        <p className="quote-proposal-footer-tagline">Orlando, Florida</p>
+        {proposalLocation ? (
+          <p className="quote-proposal-footer-tagline">{proposalLocation}</p>
+        ) : null}
         {!publicReviewFooter ? (
           <img
             src="/brand/pscs-one.png"
@@ -1071,6 +1077,9 @@ export default function QuoteReviewLayout({
   afterPricing?: ReactNode
 }) {
   const lang = data.language ?? 'pt'
+  const proposalLocation = resolveProposalCompanyLocation({
+    companyLocation: data.companyLocation,
+  })
   const t = getQuoteStrings(lang)
   const w = t.wizard
   const eventAddressLines = formatEventAddressLines({
@@ -1250,7 +1259,9 @@ export default function QuoteReviewLayout({
               <p className="quote-proposal-tagline">
                 Premium Brazilian BBQ Experience
               </p>
-              <p className="quote-proposal-location">Orlando, Florida</p>
+              {proposalLocation ? (
+                <p className="quote-proposal-location">{proposalLocation}</p>
+              ) : null}
             </div>
           </div>
           <div className="quote-proposal-hero-meta">
@@ -1305,7 +1316,9 @@ export default function QuoteReviewLayout({
           <footer className="quote-print-footer quote-proposal-footer">
             <p className="quote-proposal-footer-brand">BBQ AT HOME</p>
             <p className="quote-proposal-footer-tagline">
-              Premium Brazilian BBQ Experience · Orlando, Florida
+              {proposalLocation
+                ? `Premium Brazilian BBQ Experience · ${proposalLocation}`
+                : 'Premium Brazilian BBQ Experience'}
             </p>
             <img
               src="/brand/pscs-one.png"

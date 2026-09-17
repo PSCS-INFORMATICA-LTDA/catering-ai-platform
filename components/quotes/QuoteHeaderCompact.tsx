@@ -8,9 +8,11 @@ import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 export default function QuoteHeaderCompact({
   isEditMode = false,
   language = 'pt',
+  companyLocation = null,
 }: {
   isEditMode?: boolean
   language?: QuoteLanguage | string | null
+  companyLocation?: string | null
 }) {
   const t = getQuoteStrings(
     language === 'en' || language === 'es' ? language : 'pt',
@@ -28,7 +30,7 @@ export default function QuoteHeaderCompact({
           {isEditMode ? t.editQuoteTitle : t.newQuoteTitle}
         </p>
         <p className="truncate text-xs text-cdl-muted">
-          BBQ at Home · Orlando, Florida
+          {companyLocation ? `BBQ at Home · ${companyLocation}` : 'BBQ at Home'}
         </p>
       </div>
     </header>

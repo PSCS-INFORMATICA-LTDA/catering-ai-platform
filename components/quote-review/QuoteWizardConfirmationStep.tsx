@@ -54,6 +54,7 @@ export default function QuoteWizardConfirmationStep({
   onSave,
   onDistanceChange,
   uiLanguage,
+  companyLocation = null,
 }: {
   state: WizardState
   breakdown: PricingBreakdown | null
@@ -82,6 +83,7 @@ export default function QuoteWizardConfirmationStep({
   onSave: () => void | Promise<void>
   onDistanceChange: (distance: number) => void
   uiLanguage: QuoteLanguage
+  companyLocation?: string | null
 }) {
   const chrome = getQuoteStrings(uiLanguage)
   const optionalWarnings = getOptionalStepWarnings(stepStatusCtx)
@@ -110,6 +112,7 @@ export default function QuoteWizardConfirmationStep({
             billableGuestCount:
               breakdown.guest_counts.billable_guest_count,
             displayLanguage: uiLanguage,
+            companyLocation,
           })
         : null,
     [
@@ -127,6 +130,7 @@ export default function QuoteWizardConfirmationStep({
       fromWithSidesSection,
       additionals,
       uiLanguage,
+      companyLocation,
     ],
   )
 
