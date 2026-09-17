@@ -2,6 +2,7 @@ import 'server-only'
 
 import { createHash, randomUUID } from 'node:crypto'
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
+import { enqueuePaymentReceivedNotificationSafe } from '@/Lib/notifications/enqueuePaymentReceived'
 import {
   ensurePaidContractAdvance,
   type PaidContractEnsureResult,
@@ -272,6 +273,20 @@ export async function recordManualPayment(input: {
     paymentStatus: 'completed',
     depositSatisfied: depositAmount > 0 && paidTotal + 0.009 >= depositAmount,
     operational: reservation,
+  })
+
+  void enqueuePaymentReceivedNotificationSafe({
+    companyId: input.companyId,
+    paymentId,
+    purpose,
+    amount: recordedAmount,
+    currency: String(reconciled.invoice.currency_code || 'USD'),
+    invoiceId: input.invoiceId,
+    invoiceTotal: money(reconciled.invoice.total),
+    invoicePaidTotal: paidTotal,
+    invoiceStatus: String(reconciled.invoice.status || ''),
+    quoteId,
+    source: 'manual_payment',
   })
 
   await writeOperationalAudit({

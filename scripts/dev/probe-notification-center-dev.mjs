@@ -63,7 +63,6 @@ async function main() {
     .from('notification_recipients')
     .insert({
       company_id: companyId,
-      event_key: 'quote.created',
       channel: 'whatsapp',
       display_name: 'QA Notification Center',
       phone_raw: FAKE_PHONE,
@@ -73,6 +72,14 @@ async function main() {
     })
     .select('id')
     .single()
+  if (!recipient.error) {
+    await db.from('notification_subscriptions').insert({
+      company_id: companyId,
+      recipient_id: recipient.data.id,
+      event_key: 'quote.created',
+      enabled: true,
+    })
+  }
   if (recipient.error) throw new Error(recipient.error.message)
 
   const payload = {

@@ -31,15 +31,39 @@ const { t, list } = makeI18nModule('notifications', 'notifications', {
     es: 'No hay entregas registradas.',
   },
   templatePending: {
-    pt: 'Código pronto. O template Meta ainda precisa de aprovação externa.',
-    en: 'Code is ready. The Meta template still needs external approval.',
-    es: 'El código está listo. La plantilla de Meta aún necesita aprobación externa.',
+    pt: 'Código pronto. Os templates Meta ainda precisam de aprovação externa.',
+    en: 'Code is ready. Meta templates still need external approval.',
+    es: 'El código está listo. Las plantillas de Meta aún necesitan aprobación externa.',
   },
   companyContextRequired: {
     pt: 'Selecione uma empresa para configurar notificações.',
     en: 'Select a company to configure notifications.',
     es: 'Seleccione una empresa para configurar notificaciones.',
   },
+  events: { pt: 'Eventos recebidos', en: 'Subscribed events', es: 'Eventos recibidos' },
+  eventDeposit: { pt: 'Depósito recebido', en: 'Deposit received', es: 'Depósito recibido' },
+  eventFull: { pt: 'Pagamento total recebido', en: 'Full payment received', es: 'Pago total recibido' },
+  futureChannels: {
+    pt: 'Canais futuros: e-mail, Web Push e in-app.',
+    en: 'Future channels: email, Web Push and in-app.',
+    es: 'Canales futuros: correo, Web Push y in-app.',
+  },
+  providerStatus: { pt: 'Status do WhatsApp', en: 'WhatsApp status', es: 'Estado de WhatsApp' },
+  providerConfigured: { pt: 'WhatsApp configurado', en: 'WhatsApp configured', es: 'WhatsApp configurado' },
+  providerMissing: { pt: 'WhatsApp não configurado', en: 'WhatsApp not configured', es: 'WhatsApp no configurado' },
+  providerFallback: {
+    pt: 'Usando fallback DEV da plataforma',
+    en: 'Using platform DEV fallback',
+    es: 'Usando fallback DEV de la plataforma',
+  },
+  filterEvent: { pt: 'Evento', en: 'Event', es: 'Evento' },
+  filterStatus: { pt: 'Status', en: 'Status', es: 'Estado' },
+  filterFrom: { pt: 'De', en: 'From', es: 'Desde' },
+  filterTo: { pt: 'Até', en: 'To', es: 'Hasta' },
+  openEntity: { pt: 'Abrir', en: 'Open', es: 'Abrir' },
+  company: { pt: 'Empresa', en: 'Company', es: 'Empresa' },
+  entity: { pt: 'Entidade', en: 'Entity', es: 'Entidad' },
+  attempts: { pt: 'Tentativas', en: 'Attempts', es: 'Intentos' },
 })
 
 export const tNotifications = t

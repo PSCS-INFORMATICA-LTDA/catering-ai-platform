@@ -23,10 +23,6 @@ export function whatsAppPhoneNumberId() {
   )
 }
 
-export function whatsAppTemplateName() {
-  return process.env.WHATSAPP_TEMPLATE_NEW_QUOTE?.trim() || 'new_quote_internal'
-}
-
 export function notificationAppOrigin() {
   return (
     process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, '') ||
@@ -39,6 +35,28 @@ export function quoteDeepLinkPath(quoteId: string) {
   return `/quotes/${quoteId}`
 }
 
+export function invoiceDeepLinkPath(invoiceId: string) {
+  return `/invoices/${invoiceId}`
+}
+
 export function quoteDeepLinkUrl(quoteId: string) {
   return `${notificationAppOrigin()}${quoteDeepLinkPath(quoteId)}`
+}
+
+export function invoiceDeepLinkUrl(invoiceId: string) {
+  return `${notificationAppOrigin()}${invoiceDeepLinkPath(invoiceId)}`
+}
+
+export function notificationDeepLinkUrl(path: string) {
+  return `${notificationAppOrigin()}${path.startsWith('/') ? path : `/${path}`}`
+}
+
+export function whatsAppTemplateName(eventKey?: string) {
+  if (eventKey === 'payment.deposit_received') {
+    return process.env.WHATSAPP_TEMPLATE_DEPOSIT?.trim() || 'payment_deposit_received_internal'
+  }
+  if (eventKey === 'payment.full_received') {
+    return process.env.WHATSAPP_TEMPLATE_FULL?.trim() || 'payment_full_received_internal'
+  }
+  return process.env.WHATSAPP_TEMPLATE_NEW_QUOTE?.trim() || 'new_quote_internal'
 }

@@ -1,7 +1,8 @@
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
-import { quoteDeepLinkUrl } from './env'
+import { notificationDeepLinkUrl } from './env'
 import { getNotificationProvider } from './providers'
-import type { NotificationChannel, QuoteCreatedPayload } from './types'
+import { templateKeyForEvent } from './templates'
+import type { NotificationChannel, NotificationPayload } from './types'
 
 export async function dispatchNotificationDelivery(input: {
   deliveryId: string
@@ -9,7 +10,7 @@ export async function dispatchNotificationDelivery(input: {
   channel: string
   toE164: string | null
   locale: 'pt' | 'en' | 'es'
-  payload: QuoteCreatedPayload
+  payload: NotificationPayload
 }) {
   const db = getSupabaseServerClient()
   const claimed = await db
@@ -20,7 +21,7 @@ export async function dispatchNotificationDelivery(input: {
     .eq('id', input.deliveryId)
     .eq('company_id', input.companyId)
     .in('status', ['pending', 'failed'])
-    .select('id, attempt_count')
+    .select('id, attempt_count, template_key')
     .maybeSingle()
 
   if (!claimed.data?.id) return { ok: false as const, error: 'not_claimable' }
@@ -41,15 +42,16 @@ export async function dispatchNotificationDelivery(input: {
     return { ok: false as const, error: 'provider_unavailable' }
   }
 
+  const templateKey = claimed.data.template_key || templateKeyForEvent(input.payload.eventKey)
   try {
     const result = await provider.send({
       companyId: input.companyId,
       channel: provider.channel,
       toE164: input.toE164 || '',
       locale: input.locale,
-      templateKey: 'new_quote_internal',
+      templateKey,
       payload: input.payload,
-      deepLinkUrl: quoteDeepLinkUrl(input.payload.quoteId),
+      deepLinkUrl: notificationDeepLinkUrl(input.payload.deepLinkPath),
     })
     if (result.ok) {
       await db

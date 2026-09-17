@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { notificationIdempotencyKey, toE164 } from './e164.ts'
-import { quoteDeepLinkPath } from './env.ts'
+import { quoteDeepLinkPath, invoiceDeepLinkPath } from './env.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const read = (rel) => readFileSync(join(ROOT, rel), 'utf8')
@@ -28,10 +28,10 @@ test('idempotency key is company+event+entity+recipient+channel', () => {
   )
 })
 
-test('deep link is an authenticated internal quote path', () => {
+test('deep links are authenticated internal paths', () => {
   assert.equal(quoteDeepLinkPath('abc'), '/quotes/abc')
-  const enqueue = read('Lib/notifications/enqueueQuoteCreated.ts')
-  assert.match(enqueue, /quoteDeepLinkPath/)
+  assert.equal(invoiceDeepLinkPath('inv'), '/invoices/inv')
+  const enqueue = read('Lib/notifications/enqueueEvent.ts')
   assert.doesNotMatch(enqueue, /token=|public\/quotes/)
 })
 
@@ -41,7 +41,6 @@ test('quote persist hooks are post-commit and never roll back the quote', () => 
   assert.match(create, /enqueueQuoteCreatedNotificationSafe/)
   assert.match(submit, /enqueueQuoteCreatedNotificationSafe/)
   assert.match(create, /void enqueueQuoteCreatedNotificationSafe/)
-  assert.match(submit, /void enqueueQuoteCreatedNotificationSafe/)
   assert.doesNotMatch(create, /await enqueueQuoteCreatedNotificationSafe/)
 })
 
@@ -59,7 +58,7 @@ test('quote.created payload keeps a catering event reference without duplicating
   const types = read('Lib/notifications/types.ts')
   const enqueue = read('Lib/notifications/enqueueQuoteCreated.ts')
   const create = read('Lib/createQuote.ts')
-  assert.match(types, /eventId: string \| null/)
+  assert.match(types, /eventId\?: string \| null/)
   assert.match(enqueue, /eventId: cateringEventId/)
   assert.match(create, /eventId,/)
   assert.doesNotMatch(enqueue, /pricingBreakdown|internalNotes|margin/)

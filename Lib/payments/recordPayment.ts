@@ -4,6 +4,7 @@ import {
   ensurePaidContractAdvance,
   type PaidContractEnsureResult,
 } from '@/Lib/payments/confirmPaidDeposit'
+import { enqueuePaymentReceivedNotificationSafe } from '@/Lib/notifications/enqueuePaymentReceived'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { invoiceAmountContext, resolveServerAmountDue } from './loadInvoiceAmountDue'
 import { toInvoice } from './createInvoiceFromQuote'
@@ -104,6 +105,20 @@ async function completedPaymentResult(
       paidTotal: invoice.paid_total,
     }),
     operational: reservation,
+  })
+  void enqueuePaymentReceivedNotificationSafe({
+    companyId: input.companyId,
+    paymentId: payment.id,
+    purpose: payment.purpose,
+    amount: payment.amount,
+    currency: payment.currency_code,
+    invoiceId: invoice.id,
+    invoiceNumber: invoice.invoice_number,
+    invoiceTotal: invoice.total,
+    invoicePaidTotal: invoice.paid_total,
+    invoiceStatus: invoice.status,
+    quoteId: invoice.quote_id,
+    source: 'record_payment',
   })
   return {
     ok: true,

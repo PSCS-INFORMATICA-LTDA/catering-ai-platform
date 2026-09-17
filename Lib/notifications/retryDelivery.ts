@@ -1,7 +1,7 @@
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { toE164 } from './e164'
 import { dispatchNotificationDelivery } from './dispatch'
-import type { QuoteCreatedPayload } from './types'
+import type { NotificationPayload } from './types'
 
 export async function retryNotificationDelivery(input: {
   companyId: string
@@ -38,7 +38,7 @@ export async function retryNotificationDelivery(input: {
     return { ok: false as const, error: 'recipient_disabled' }
   }
 
-  const payload = (event.payload || {}) as QuoteCreatedPayload
+  const payload = (event.payload || {}) as NotificationPayload
   return dispatchNotificationDelivery({
     deliveryId: delivery.id,
     companyId: input.companyId,

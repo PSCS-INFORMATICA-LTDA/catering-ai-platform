@@ -1,9 +1,5 @@
-import {
-  isWhatsAppNotificationsEnabled,
-  whatsAppAccessToken,
-  whatsAppPhoneNumberId,
-  whatsAppTemplateName,
-} from '../env'
+import { resolveWhatsAppConfig } from '../resolveProvider'
+import { templateKeyForEvent, whatsAppButtonParameter, whatsAppTemplateBody } from '../templates'
 import type { NotificationProvider, NotificationSendResult } from '../types'
 
 function languageCode(locale: 'pt' | 'en' | 'es') {
@@ -12,27 +8,21 @@ function languageCode(locale: 'pt' | 'en' | 'es') {
   return 'pt_BR'
 }
 
-function money(value: number | null, currency: string | null) {
-  if (value == null || !Number.isFinite(value)) return '—'
-  return `${currency || 'USD'} ${value.toFixed(2)}`
-}
-
 export const whatsAppMetaProvider: NotificationProvider = {
   channel: 'whatsapp',
   async send(input): Promise<NotificationSendResult> {
-    if (!isWhatsAppNotificationsEnabled()) {
+    const config = await resolveWhatsAppConfig(input.companyId)
+    if (!config.enabled) {
       return { ok: false, provider: 'meta_whatsapp', error: 'whatsapp_disabled' }
     }
-    const token = whatsAppAccessToken()
-    const phoneNumberId = whatsAppPhoneNumberId()
-    if (!token || !phoneNumberId) {
+    if (!config.accessToken || !config.phoneNumberId) {
       return { ok: false, provider: 'meta_whatsapp', error: 'whatsapp_not_configured' }
     }
     if (!input.toE164) {
       return { ok: false, provider: 'meta_whatsapp', error: 'recipient_phone_missing' }
     }
 
-    const template = whatsAppTemplateName()
+    const template = input.templateKey || templateKeyForEvent(input.payload.eventKey)
     const body = {
       messaging_product: 'whatsapp',
       to: input.toE164.replace(/^\+/, ''),
@@ -43,32 +33,28 @@ export const whatsAppMetaProvider: NotificationProvider = {
         components: [
           {
             type: 'body',
-            parameters: [
-              { type: 'text', text: input.payload.customerName || '—' },
-              {
-                type: 'text',
-                text: [input.payload.eventDate, input.payload.eventTime].filter(Boolean).join(' ') || '—',
-              },
-              { type: 'text', text: input.payload.quoteNumber || input.payload.quoteId },
-              { type: 'text', text: money(input.payload.total, input.payload.currency) },
-            ],
+            parameters: whatsAppTemplateBody({
+              templateKey: template,
+              locale: input.locale,
+              payload: input.payload,
+            }).map((text) => ({ type: 'text', text })),
           },
           {
             type: 'button',
             sub_type: 'url',
             index: '0',
-            parameters: [{ type: 'text', text: input.payload.quoteId }],
+            parameters: [{ type: 'text', text: whatsAppButtonParameter(input.payload) }],
           },
         ],
       },
     }
 
     const response = await fetch(
-      `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
+      `https://graph.facebook.com/v21.0/${config.phoneNumberId}/messages`,
       {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${config.accessToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
@@ -82,13 +68,13 @@ export const whatsAppMetaProvider: NotificationProvider = {
       const message = json?.error?.message || `whatsapp_http_${response.status}`
       return {
         ok: false,
-        provider: 'meta_whatsapp',
+        provider: config.provider || 'meta_whatsapp',
         error: String(message).slice(0, 240),
       }
     }
     return {
       ok: true,
-      provider: 'meta_whatsapp',
+      provider: config.provider || 'meta_whatsapp',
       providerMessageId: json?.messages?.[0]?.id ?? null,
     }
   },
