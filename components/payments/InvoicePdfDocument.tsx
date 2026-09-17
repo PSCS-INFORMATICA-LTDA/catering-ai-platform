@@ -67,9 +67,11 @@ function money(value: number, currency = 'USD') {
 export function InvoicePdfDocument({
   invoice,
   logo,
+  brand,
 }: {
   invoice: InvoiceRecord
   logo?: PdfLogoSource | null
+  brand?: { displayName?: string | null; location?: string | null } | null
 }) {
   const snap = invoice.snapshot
   const lang = invoice.locale
@@ -97,9 +99,11 @@ export function InvoicePdfDocument({
                 style={{ width: 92, height: 48 }}
               />
             ) : (
-              <Text style={styles.title}>CDL BBQ AT HOME</Text>
+              <Text style={styles.title}>{brand?.displayName || 'Invoice'}</Text>
             )}
-            <Text style={styles.muted}>Orlando, Florida</Text>
+            {brand?.location ? (
+              <Text style={styles.muted}>{brand.location}</Text>
+            ) : null}
           </View>
           <View>
             <Text style={styles.title}>

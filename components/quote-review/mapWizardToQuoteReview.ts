@@ -63,6 +63,8 @@ export type MapWizardToQuoteReviewInput = {
   /** Idioma da UI do operador (perfil). Itens e chrome da revisão seguem este locale. */
   displayLanguage?: WizardState['language']
   grillDefaultImageUrl?: string | null
+  companyDisplayName?: string | null
+  companyLocation?: string | null
 }
 
 export function mapWizardToQuoteReview(
@@ -166,6 +168,8 @@ export function mapWizardToQuoteReview(
 
   return {
     preview: true,
+    companyDisplayName: input.companyDisplayName?.trim() || null,
+    companyLocation: input.companyLocation?.trim() || null,
     customerName: input.customerName,
     customerPhone:
       displayPublicPhone(state.customerDraftPhone) ||

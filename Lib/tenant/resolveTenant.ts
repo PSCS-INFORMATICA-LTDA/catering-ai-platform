@@ -1,16 +1,25 @@
-import { CDL_DEFAULT_COMPANY_ID } from '@/Lib/cdlCompany'
 import type { CompanyRole } from './types'
 
 /**
- * Active company ID for the current deployment/session.
- * Today: env-based (CDL pilot). Future: Supabase Auth membership.
+ * Explicit DEV override only. Never a silent CDL UUID fallback.
+ * Authenticated traffic must resolve membership/session company_id.
  */
-export function getActiveCompanyId(): string {
+export function getConfiguredDevCompanyId(): string | null {
   return (
     process.env.NEXT_PUBLIC_CDL_COMPANY_ID?.trim() ||
     process.env.CDL_COMPANY_ID?.trim() ||
-    CDL_DEFAULT_COMPANY_ID
+    null
   )
+}
+
+/**
+ * Active company ID for scripts / single-tenant DEV when env is set.
+ * Fail closed when no explicit company context exists.
+ */
+export function getActiveCompanyId(): string {
+  const configured = getConfiguredDevCompanyId()
+  if (configured) return configured
+  throw new Error('company_context_required')
 }
 
 /**

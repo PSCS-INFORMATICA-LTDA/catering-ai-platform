@@ -8,9 +8,11 @@ import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 export default function QuoteHeroBanner({
   isEditMode = false,
   language = 'pt',
+  companyLocation = null,
 }: {
   isEditMode?: boolean
   language?: QuoteLanguage | string | null
+  companyLocation?: string | null
 }) {
   const t = getQuoteStrings(
     language === 'en' || language === 'es' ? language : 'pt',
@@ -31,7 +33,9 @@ export default function QuoteHeroBanner({
             BBQ AT HOME
           </h1>
           <p className="mt-3 max-w-2xl text-base text-cdl-text-secondary sm:text-lg">
-            Premium Brazilian BBQ Experience · Orlando, Florida
+            {companyLocation
+              ? `Premium Brazilian BBQ Experience · ${companyLocation}`
+              : 'Premium Brazilian BBQ Experience'}
           </p>
         </div>
       </div>

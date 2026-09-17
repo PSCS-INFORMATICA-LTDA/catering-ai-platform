@@ -232,6 +232,9 @@ export async function fetchSupabaseCommercialRules(
   companyIdOverride?: string | null,
 ): Promise<CommercialRulesSnapshot> {
   const companyId = companyIdOverride?.trim() || getActiveCompanyId()
+  if (!companyId) {
+    throw new Error('company_context_required')
+  }
   const supabase = getSupabaseServerClient()
 
   for (const table of RULE_TABLE_CANDIDATES) {
@@ -240,9 +243,7 @@ export async function fetchSupabaseCommercialRules(
       .select(
         'id, company_id, rule_key, rule_value, active, created_at, updated_at, rule_type',
       )
-    if (companyId?.trim()) {
-      query = query.or(`company_id.eq.${companyId},company_id.is.null`)
-    }
+    query = query.or(`company_id.eq.${companyId},company_id.is.null`)
     const { data, error } = await query
 
     if (error) {

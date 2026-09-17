@@ -1,3 +1,4 @@
+import type { CompanyPublicBrandInput } from '@/Lib/tenant/companyPublicBrand'
 import type { BrasinhaQuoteDraft } from '../intake/draft.ts'
 import { nextIntakePrompt } from '../intake/review.ts'
 import { getCompanyPersona, personaIntro } from '../persona.ts'
@@ -37,6 +38,7 @@ export type BrasinhaReasonerInput = {
   history?: BrasinhaStoredMessage[]
   draft?: BrasinhaQuoteDraft
   onDraft?: (draft: BrasinhaQuoteDraft) => void
+  brand?: CompanyPublicBrandInput
 }
 
 export type BrasinhaReasonerResult = {
@@ -61,7 +63,7 @@ export type BrasinhaReasoner = {
 export async function answerDeterministicIntent(
   input: BrasinhaReasonerInput,
 ): Promise<BrasinhaReasonerResult> {
-  const persona = getCompanyPersona(input.companyId)
+  const persona = getCompanyPersona(input.companyId, input.brand)
   const pending = input.draft?.conversation.pendingAction
   const social = detectSocialTurn(input.text)
   if (social && !pending) {

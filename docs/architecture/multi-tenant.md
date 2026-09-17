@@ -1,5 +1,8 @@
 # Multi-tenant architecture
 
+Canonical rules now live in `docs/architecture/multicompany-foundation.md`.
+This page is the older implementation sketch and still mentions env-based CDL fallbacks as a legacy phase.
+
 ## Hierarchy
 
 | Layer | Table | Purpose |
