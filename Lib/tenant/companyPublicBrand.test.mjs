@@ -6,6 +6,7 @@ import {
   formatCompanyLocation,
   parseAssistantPersonaRule,
   resolveCompanyPublicBrand,
+  resolveProposalCompanyLocation,
 } from './companyPublicBrand.ts'
 
 test('company location uses settings first, then city + expanded region', () => {
@@ -47,6 +48,21 @@ test('assistant persona rule accepts both raw and wrapped values', () => {
     value: { name: 'Host', role: 'Concierge' },
   })
   assert.equal(wrapped.name, 'Host')
+})
+
+test('Company B does not inherit Orlando when settings are empty', () => {
+  assert.equal(
+    resolveProposalCompanyLocation({
+      city: 'Miami',
+      state: 'FL',
+    }),
+    'Miami, Florida',
+  )
+  assert.equal(resolveProposalCompanyLocation({}), null)
+  assert.equal(
+    resolveProposalCompanyLocation({ locationLabel: 'Orlando, Florida' }),
+    'Orlando, Florida',
+  )
 })
 
 test('engine files no longer switch on the CDL company UUID', () => {

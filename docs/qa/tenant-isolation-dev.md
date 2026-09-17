@@ -56,20 +56,21 @@ classification: `tenant` | `global_reference` | `platform` | `tenant_root`
 | app_roles | tenant | yes | no | 16 | 0 | 0 | 0 | add FK |
 | permissions | global_reference | no | | 42 | | | | platform catalog |
 | role_permissions | global_reference | no | | 170 | | | | platform map |
-| languages | global_reference | no | | 0 | | | | SELECT authenticated |
-| franchise_groups | global_reference | no | | 2 | | | | SELECT authenticated |
+| languages | global_reference | no | | 0 | | | | SELECT authenticated (GRANT SELECT only) |
+| franchise_groups | tenant_hierarchy | no | | 2 | | | | SELECT via membership or platform master |
 | inventory_movement_types | global_reference | yes | yes | 7 | 7 | 0 | 0 | codebook; no NOT NULL |
 | document_sequences | tenant | yes | no | 5 | 0 | 0 | 1 | freeze sentinel; FK deferred |
-| customers | tenant | yes | openapi yes | 246 | 0 | 0 | 0 | add FK |
-| catalog_items | tenant | yes | openapi yes | 115 | 0 | 0 | 0 | add FK |
+| customers | tenant | yes | no (after #52) | 246 | 0 | 0 | 0 | FK + NOT NULL |
+| catalog_items | tenant | yes | no (after #52) | 115 | 0 | 0 | 0 | FK + NOT NULL |
 | catalog_item_prices | tenant | yes | openapi yes | 121 | 0 | 0 | 0 | add FK |
-| packages | tenant | yes | openapi yes | 13 | 0 | 0 | 0 | add FK + unique(id,company) |
-| package_categories | tenant | yes | openapi yes | 4 | 0 | 0 | 0 | add FK |
-| package_items | tenant | yes | openapi yes | 100 | 0 | 0 | 0 | add FK |
+| packages | tenant | yes | no (after #52) | 13 | 0 | 0 | 0 | FK + NOT NULL + unique(id,company) |
+| package_categories | tenant | yes | no (after #52) | 4 | 0 | 0 | 0 | FK + NOT NULL |
+| package_items | tenant | yes | no (after #52) | 100 | 0 | 0 | 0 | FK + NOT NULL |
 | package_option_groups | tenant | yes | no | 32 | 0 | 0 | 0 | add FK |
 | package_option_values | tenant | yes | no | 20 | 0 | 0 | 0 | add FK |
 | media_assets | tenant | yes | no | 25 | 0 | 0 | 0 | add FK |
-| commercial_rules | tenant | yes | yes | 20 | 0 | 0 | 0 | add FK; keep NULL for global fallback |
+| commercial_rules | tenant | yes | yes | 20 | 0 | 0 | 0 | FK; nullable kept for optional global defaults (0 NULL rows today) |
+| company_assets | tenant | yes | no (after #52) | | 0 | 0 | 0 | FK + NOT NULL |
 | payment_rules | tenant | yes | no | 9 | 0 | 0 | 0 | add FK |
 | staff_rules | tenant | yes | no | 8 | 0 | 0 | 0 | add FK |
 | quote_text_templates | tenant | yes | no | 5 | 0 | 0 | 0 | add FK |
@@ -104,8 +105,8 @@ Views (`quote_detail_view`, `inventory_availability`, `vw_customer_display`) inh
 | public_quote_intake_sessions | SAFE_AS_IS | token hash, server-only |
 | public_quote_rate_limits | SAFE_AS_IS | server-only |
 | inventory_document_sequences | SAFE_AS_IS | already documented |
-| languages | FIXED | authenticated SELECT, no writes |
-| franchise_groups | FIXED | authenticated SELECT, no writes |
+| languages | FIXED | authenticated SELECT only; INSERT/UPDATE/DELETE/TRUNCATE revoked |
+| franchise_groups | FIXED | membership-scoped SELECT + platform master; not USING (true) |
 | v_package_id | DEFERRED_WITH_REASON | compatibility relation; dummy policy would hide the real question |
 
 Do not add policies just to zero the advisor.
@@ -127,20 +128,38 @@ No public token may switch `company_id`.
 
 | Occurrence | Class |
 |---|---|
-| CDL seeds, logos under `public/cdl`, catalog scripts | SEED_OK |
-| `commercial_rules` deposit/mileage/capacity including 4 events / 6 teams / 180 minutes | SEED_OK / COMPANY_SETTING |
-| `assistant_persona` Brasinha + Orlando, Florida | COMPANY_SETTING (seeded for CDL) |
-| Invoice PDF title/location | REMOVE_HARDCODE (now company brand) |
-| Brasinha UUID switch | REMOVE_HARDCODE |
-| Help branding UUID/logo fallback | REMOVE_HARDCODE |
-| Quote proposal “Orlando, Florida” | REMOVE_HARDCODE (deferred; Caio quote copy) |
-| `getActiveCompanyId` CDL fallback | LEGACY_EXCEPTION |
+| CDL seeds, logos under `public/cdl`, catalog scripts | TENANT_SEED_OK |
+| `commercial_rules` deposit/mileage/capacity including 4 events / 6 teams / 180 minutes | TENANT_SEED_OK / COMPANY_SETTING |
+| `assistant_persona` Brasinha + Orlando, Florida | COMPANY_SETTING (seeded for CDL by `company_code`) |
+| Company / branch city+state | COMPANY_SETTING / BRANCH_SETTING |
+| Invoice PDF title/location | REMOVE_FROM_ENGINE (company brand) |
+| Brasinha UUID switch | REMOVE_FROM_ENGINE |
+| Help branding UUID / `NEXT_PUBLIC_CDL_LOGO_URL` | REMOVE_FROM_ENGINE |
+| Quote proposal “Orlando, Florida” | REMOVE_FROM_ENGINE (now `resolveProposalCompanyLocation`) |
+| `getActiveCompanyId` hardcoded CDL UUID | REMOVE_FROM_ENGINE (fail closed) |
+| Explicit `NEXT_PUBLIC_CDL_COMPANY_ID` | PLATFORM_DEFAULT (DEV only) |
+| `CDL_DEFAULT_COMPANY_ID` export | TEST_FIXTURE / TENANT_SEED_OK |
+| `cdlCommercialRules` numeric fallbacks | REMOVE_FROM_ENGINE (kept this round so Caio pricing does not change on fetch miss) |
+| PayPal / notification defaults | COMPANY_SETTING / ENTITLEMENT (PR #51) |
 | QA scripts using CDL / isolation UUIDs | TEST_FIXTURE |
 | Sentinel UUID in payment QA as dummy id | TEST_FIXTURE |
+
+## Structural proof
+
+```bash
+node scripts/dev/test-tenant-structural-integrity-ab.mjs
+node scripts/dev/setup-multicompany-company-b.mjs
+```
+
+Live negative inserts require the versioned migrations to be applied. Until then the script reports `LIVE_NEGATIVE=PENDING_APPLY` and still PASSes the SQL contract.
+
+`ADVISORS_AFTER_APPLY=PENDING_PHILIPPE`
 
 ## Advisors
 
 Advisors cannot be re-run from this environment (no `SUPABASE_ACCESS_TOKEN`). After the versioned migrations are applied on DEV, re-run Database/Security/Performance advisors and attach the after-report here. Cosmetic “add 119 indexes” remains out of scope.
+
+`ADVISORS_AFTER_APPLY=PENDING_PHILIPPE`
 
 ## Performance choices
 

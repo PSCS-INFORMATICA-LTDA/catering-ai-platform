@@ -56,7 +56,8 @@ Action: do **not** backfill `app_users.company_id`.
 |---|---|---|
 | tenant_root | `companies` | n/a (`id`) |
 | tenant | quotes, invoices, catalog, media, agenda, inventory docs, Brasinha | required |
-| global_reference | `languages`, `permissions`, `role_permissions`, `inventory_movement_types` (NULL = codebook), `franchise_groups` | absent or NULL |
+| global_reference | `languages`, `permissions`, `role_permissions`, `inventory_movement_types` (NULL = codebook) | absent or NULL |
+| tenant_hierarchy | `franchise_groups` | absent — visible only via companies the caller belongs to, or platform master |
 | platform | `app_users`, `support_access_sessions`, `admin_audit_events` | optional |
 
 `inventory_movement_types` is a global codebook today (7 rows, all `company_id` NULL). Future per-company codes use the existing unique `(company_id, code)` index. Do not force `NOT NULL`.
@@ -73,16 +74,20 @@ Live DEV still has one `document_sequences` row:
 - surviving OS numbers are `SO-2026-000004`…`000009`, all CDL
 - numbers 1–3 and 10–13 have no surviving documents
 
-Result: **RETAINED_INACTIVE_PENDING_LINEAGE**. The row is deactivated. It is not deleted or reassigned. New sentinel allocations are rejected. The `document_sequences.company_id` FK is deferred until a human retires that row.
+Result: **RETAINED_INACTIVE_PENDING_LINEAGE**. The row is deactivated. It is not deleted or reassigned. It is frozen legacy data, not a tenant. New sentinel allocations are rejected (`private.reject_sentinel_company_id` + `get_next_document_number` requires a real `companies.id`). The `document_sequences.company_id` FK is deferred until a human retires that row. Do not create another fake tenant to replace it.
 
 ## Structural isolation
 
 Membership RLS (`private.is_company_member`) is necessary but not sufficient.
 
-Child rows must satisfy `child.company_id = parent.company_id` via composite foreign keys `(company_id, parent_id)` on quote, order, invoice, inventory document, closeout, and Brasinha graphs.
+Child rows must satisfy `child.company_id = parent.company_id` via composite foreign keys `(company_id, parent_id)` on quote, order, invoice, inventory, catalog/package, agenda, and Brasinha graphs.
 
 Finance already had composite FKs from `20260911153500_finance_tenant_integrity.sql`.
 Brasinha already had `(conversation_id, company_id)`.
+Round 1 (`20260917202000`) covered quote/order children.
+Round 2 (`20260917204000`) covers quotes → customer/event/package, catalog/package graph, agenda, inventory, public intake, and operations. SET NULL refs use `private.assert_same_company_ref` so `company_id` is never nulled.
+
+QA Company B seed is **not** a product migration. Use `scripts/dev/setup-multicompany-company-b.mjs`.
 
 ## Configuration-first
 
