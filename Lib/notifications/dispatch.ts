@@ -1,6 +1,7 @@
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { notificationDeepLinkUrl } from './env'
 import { getNotificationProvider } from './providers'
+import { recipientSendBlockReason } from './recipientConsent'
 import { templateKeyForEvent } from './templates'
 import type { NotificationChannel, NotificationPayload } from './types'
 
@@ -32,10 +33,30 @@ export async function dispatchNotificationDelivery(input: {
     .eq('id', input.deliveryId)
     .eq('company_id', input.companyId)
     .in('status', ['pending', 'failed'])
-    .select('id, attempt_count, template_key, max_attempts, status')
+    .select('id, attempt_count, template_key, max_attempts, status, recipient_id')
     .maybeSingle()
 
   if (!claimed.data?.id) return { ok: false as const, error: 'not_claimable' }
+
+  const { data: recipient } = await db
+    .from('notification_recipients')
+    .select('enabled, consent_status')
+    .eq('id', claimed.data.recipient_id)
+    .eq('company_id', input.companyId)
+    .maybeSingle()
+  const block = recipientSendBlockReason(recipient || { consent_status: null })
+  if (block) {
+    await db
+      .from('notification_deliveries')
+      .update({
+        status: 'cancelled',
+        last_error: block,
+        claimed_at: null,
+      })
+      .eq('id', input.deliveryId)
+      .eq('company_id', input.companyId)
+    return { ok: false as const, error: block }
+  }
 
   const attemptCount = Number(claimed.data.attempt_count || 0) + 1
   const maxAttempts = Number(claimed.data.max_attempts || 5)

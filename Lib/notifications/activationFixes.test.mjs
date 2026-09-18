@@ -34,6 +34,8 @@ test('only confirmed consent is sendable on every path', () => {
   assert.match(process, /isRecipientSendable|recipientSendBlockReason/)
   assert.match(retry, /isRecipientSendable|recipientSendBlockReason/)
   assert.match(retry, /consent_status/)
+  const dispatch = read('Lib/notifications/dispatch.ts')
+  assert.match(dispatch, /recipientSendBlockReason/)
   assert.doesNotMatch(testRoute, /ignoreConsent/)
   assert.match(testRoute, /consent_status/)
 })
@@ -62,6 +64,18 @@ test('exhausted failed rows are excluded before LIMIT', () => {
   assert.match(process, /queue_eligible/)
   assert.match(migration, /queue_eligible boolean/)
   assert.match(migration, /attempt_count < max_attempts/)
+})
+
+test('disabled recipient or provider never sends and db errors are not empty success', () => {
+  assert.equal(isRecipientSendable({ enabled: false, consent_status: 'confirmed' }), false)
+  const process = read('Lib/notifications/processDeliveryQueue.ts')
+  const resolve = read('Lib/notifications/resolveProvider.ts')
+  const worker = read('app/api/notifications/worker/route.ts')
+  assert.match(process, /queue_list_failed|queue_recover_failed/)
+  assert.match(process, /recipient_disabled|recipientSendBlockReason/)
+  assert.match(resolve, /provider_disabled/)
+  assert.match(worker, /status: 500/)
+  assert.doesNotMatch(process, /return \{[^}]*processed: 0[^}]*\}[\s\S]*pending.error/)
 })
 
 test('concurrent claim uses status predicate so the second worker cannot send', () => {

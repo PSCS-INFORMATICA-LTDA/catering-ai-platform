@@ -148,6 +148,91 @@ begin
   ) then
     raise exception 'authenticated_must_not_write_events';
   end if;
+
+  if exists (
+    select 1
+    from public.notification_recipients ra
+    join public.notification_recipients rb
+      on ra.phone_e164 = rb.phone_e164
+     and ra.company_id = a
+     and rb.company_id = b
+  ) then
+    raise exception 'company_b_inherited_company_a_phone';
+  end if;
+
+  if exists (
+    select 1
+    from public.company_notification_providers p
+    where p.company_id = b
+  ) then
+    raise exception 'company_b_inherited_company_a_sender';
+  end if;
+end
+$$;
+
+create table if not exists private.session_grants (
+  user_id uuid not null,
+  company_id uuid not null,
+  permission_key text not null
+);
+
+create or replace function private.has_permission(p_company uuid, p_key text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = private, public
+as $$
+  select exists (
+    select 1
+    from private.session_grants g
+    where g.company_id = p_company
+      and g.permission_key = p_key
+      and g.user_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+  );
+$$;
+grant execute on function private.has_permission(uuid, text) to authenticated;
+
+do $$
+declare
+  company_a uuid;
+  company_b uuid;
+  user_a uuid := gen_random_uuid();
+  user_b uuid := gen_random_uuid();
+  seen_a int;
+  seen_b int;
+  seen_cross int;
+begin
+  select id into company_a from public.companies where name = 'Company A';
+  select id into company_b from public.companies where name = 'Company B';
+  insert into private.session_grants(user_id, company_id, permission_key)
+  values
+    (user_a, company_a, 'notifications.view'),
+    (user_a, company_a, 'notification_deliveries.view'),
+    (user_b, company_b, 'notifications.view'),
+    (user_b, company_b, 'notification_deliveries.view');
+
+  perform set_config('request.jwt.claim.sub', user_a::text, true);
+  execute 'set role authenticated';
+  select count(*) into seen_a from public.notification_recipients;
+  select count(*) into seen_cross
+    from public.notification_recipients
+    where company_id = company_b;
+  execute 'reset role';
+  if seen_a <> 1 or seen_cross <> 0 then
+    raise exception 'user_a_read_isolation_failed a=% cross=%', seen_a, seen_cross;
+  end if;
+
+  perform set_config('request.jwt.claim.sub', user_b::text, true);
+  execute 'set role authenticated';
+  select count(*) into seen_b from public.notification_recipients;
+  select count(*) into seen_cross
+    from public.notification_recipients
+    where company_id = company_a;
+  execute 'reset role';
+  if seen_b <> 1 or seen_cross <> 0 then
+    raise exception 'user_b_read_isolation_failed b=% cross=%', seen_b, seen_cross;
+  end if;
 end
 $$;
 `
