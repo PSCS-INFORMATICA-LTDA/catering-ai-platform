@@ -11,6 +11,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const files = [
   'supabase/migrations/20260917190000_notification_center_v1.sql',
   'supabase/migrations/20260918183219_notification_center_v12_auto.sql',
+  'supabase/migrations/20260918213000_notification_center_v13_lineage.sql',
 ]
 
 const rows = files.map((rel) => {
@@ -20,7 +21,7 @@ const rows = files.map((rel) => {
     sha256: createHash('sha256').update(sql).digest('hex'),
     bytes: sql.length,
     has_phone_fixture: /2242|Caio Rodrigues|407915/.test(sql),
-    mentions_prod_guard: /Never apply this file to Production|Never apply this file to Production/i.test(sql),
+    mentions_prod_guard: /Never apply this file to Production/i.test(sql),
   }
 })
 
@@ -29,8 +30,12 @@ console.log(
     {
       target_project_ref: 'yasprgtlqclwsjcshtls',
       apply: false,
+      current_shared_dev_apply_approval: 'NOT_GRANTED_FOR_UNCORRECTED_SQL',
       prod_untouched: true,
+      order: files,
       migrations: rows,
+      scheduler_sql: 'supabase/ops/dev/notification_worker_pg_cron.sql',
+      scheduler_secrets_in_git: false,
     },
     null,
     2,

@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   let query = getSupabaseServerClient()
     .from('notification_deliveries')
     .select(
-      'id, company_id, event_id, recipient_id, channel, provider, template_key, status, provider_message_id, attempt_count, last_error, created_at, sent_at, delivered_at, read_at, failed_at, notification_events(event_key, entity_type, entity_id, payload), notification_recipients(display_name, phone_e164, locale)',
+      'id, company_id, event_id, recipient_id, channel, provider, template_key, status, provider_message_id, attempt_count, last_error, created_at, sent_at, delivered_at, read_at, failed_at, notification_events!event_id(event_key, entity_type, entity_id, payload), notification_recipients!recipient_id(display_name, phone_e164, locale)',
     )
     .eq('company_id', companyId)
     .order('created_at', { ascending: false })

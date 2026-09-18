@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { requireApiPermission, requireSessionCompanyId } from '@/Lib/auth/requireApi'
 import { enqueueNotificationEvent } from '@/Lib/notifications/enqueueEvent'
 import { processNotificationQueue } from '@/Lib/notifications/processDeliveryQueue'
+import { recipientSendBlockReason } from '@/Lib/notifications/recipientConsent'
 import { V1_NOTIFICATION_EVENT_KEYS } from '@/Lib/notifications/types'
 import { environmentBanner } from '@/Lib/notifications/whatsappCopy'
 import { quoteDeepLinkPath } from '@/Lib/notifications/env'
@@ -29,13 +30,14 @@ export async function POST(request: Request) {
   const db = getSupabaseServerClient()
   const { data: recipient } = await db
     .from('notification_recipients')
-    .select('id, enabled, locale, display_name')
+    .select('id, enabled, locale, display_name, consent_status')
     .eq('id', body.recipientId)
     .eq('company_id', company.companyId)
     .maybeSingle()
   if (!recipient) return Response.json({ error: 'recipient_not_found' }, { status: 404 })
-  if (recipient.enabled === false) {
-    return Response.json({ error: 'recipient_disabled' }, { status: 409 })
+  const block = recipientSendBlockReason(recipient)
+  if (block) {
+    return Response.json({ error: block }, { status: 409 })
   }
 
   const entityId = randomUUID()
@@ -57,7 +59,6 @@ export async function POST(request: Request) {
       environmentBanner: environmentBanner(locale),
     },
     source: 'manual_test',
-    ignoreConsent: true,
   })
   await processNotificationQueue({ companyId: company.companyId, limit: 5, reason: 'manual_test' })
   return Response.json({ data: { ...result, test: true, replay: false } })

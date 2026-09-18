@@ -1,6 +1,7 @@
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { toE164 } from './e164'
 import { dispatchNotificationDelivery } from './dispatch'
+import { recipientSendBlockReason } from './recipientConsent'
 import type { NotificationPayload } from './types'
 
 export async function retryNotificationDelivery(input: {
@@ -39,15 +40,14 @@ export async function retryNotificationDelivery(input: {
       .maybeSingle(),
     db
       .from('notification_recipients')
-      .select('phone_e164, phone_raw, locale, enabled')
+      .select('phone_e164, phone_raw, locale, enabled, consent_status')
       .eq('id', delivery.recipient_id)
       .eq('company_id', input.companyId)
       .maybeSingle(),
   ])
   if (!event || !recipient) return { ok: false as const, error: 'delivery_context_missing' }
-  if (recipient.enabled === false) {
-    return { ok: false as const, error: 'recipient_disabled' }
-  }
+  const block = recipientSendBlockReason(recipient)
+  if (block) return { ok: false as const, error: block }
 
   const payload = (event.payload || {}) as NotificationPayload
   return dispatchNotificationDelivery({

@@ -39,6 +39,19 @@ export async function dispatchNotificationDelivery(input: {
 
   const attemptCount = Number(claimed.data.attempt_count || 0) + 1
   const maxAttempts = Number(claimed.data.max_attempts || 5)
+  const marked = await db
+    .from('notification_deliveries')
+    .update({
+      send_attempted_at: new Date().toISOString(),
+      last_attempt_at: new Date().toISOString(),
+    })
+    .eq('id', input.deliveryId)
+    .eq('company_id', input.companyId)
+    .eq('status', 'processing')
+    .select('id')
+    .maybeSingle()
+  if (!marked.data?.id) return { ok: false as const, error: 'send_mark_failed' }
+
   const provider = getNotificationProvider(input.channel as NotificationChannel)
   if (!provider) {
     await db

@@ -76,6 +76,15 @@ export async function POST(request: Request) {
   }
   const locale = body?.locale === 'en' || body?.locale === 'es' ? body.locale : 'pt'
   const db = getSupabaseServerClient()
+  if (body?.personId) {
+    const { data: person } = await db
+      .from('customers')
+      .select('id')
+      .eq('id', body.personId)
+      .eq('company_id', companyId)
+      .maybeSingle()
+    if (!person) return Response.json({ error: 'person_company_mismatch' }, { status: 400 })
+  }
   const { data, error } = await db
     .from('notification_recipients')
     .insert({
@@ -126,6 +135,7 @@ export async function PATCH(request: Request) {
     subscriptions?: Record<string, boolean>
   } | null
   if (!body?.id) return Response.json({ error: 'id_required' }, { status: 400 })
+  const db = getSupabaseServerClient()
   const patch: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   }
@@ -140,7 +150,18 @@ export async function PATCH(request: Request) {
   if (body.locale === 'pt' || body.locale === 'en' || body.locale === 'es') {
     patch.locale = body.locale
   }
-  if (typeof body.personId === 'string') patch.person_id = body.personId || null
+  if (typeof body.personId === 'string') {
+    if (body.personId) {
+      const { data: person } = await db
+        .from('customers')
+        .select('id')
+        .eq('id', body.personId)
+        .eq('company_id', companyId)
+        .maybeSingle()
+      if (!person) return Response.json({ error: 'person_company_mismatch' }, { status: 400 })
+    }
+    patch.person_id = body.personId || null
+  }
   if (body.confirmConsent === true) {
     patch.consent_status = 'confirmed'
     patch.consent_source = 'operator_recorded'
@@ -151,7 +172,6 @@ export async function PATCH(request: Request) {
     patch.consent_source = 'operator_recorded'
     patch.consent_at = new Date().toISOString()
   }
-  const db = getSupabaseServerClient()
   const { data, error } = await db
     .from('notification_recipients')
     .update(patch)

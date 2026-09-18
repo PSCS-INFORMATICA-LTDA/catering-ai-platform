@@ -1,5 +1,7 @@
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { notificationIdempotencyKey, toE164 } from './e164'
+import { NOTIFICATION_RECIPIENT_EMBED } from './embeds'
+import { isRecipientSendable } from './recipientConsent'
 import { scheduleNotificationWorker } from './scheduleWorker'
 import { templateKeyForEvent } from './templates'
 import type { NotificationPayload } from './types'
@@ -13,18 +15,6 @@ export type EnqueueNotificationInput = {
   source: string
   /** Immediate Meta send is forbidden on the financial path. Worker handles send. */
   dispatch?: boolean
-  ignoreConsent?: boolean
-}
-
-function recipientAllowed(recipient: {
-  enabled?: boolean | null
-  consent_status?: string | null
-}) {
-  if (recipient.enabled === false) return false
-  const consent = recipient.consent_status
-  if (consent === 'denied') return false
-  if (consent === 'unknown') return false
-  return consent === 'confirmed' || consent == null
 }
 
 export async function enqueueNotificationEvent(
@@ -63,7 +53,7 @@ export async function enqueueNotificationEvent(
   const subscriptions = await db
     .from('notification_subscriptions')
     .select(
-      'recipient_id, enabled, notification_recipients(id, channel, phone_raw, phone_e164, locale, enabled, consent_status)',
+      `recipient_id, enabled, ${NOTIFICATION_RECIPIENT_EMBED}(id, channel, phone_raw, phone_e164, locale, enabled, consent_status)`,
     )
     .eq('company_id', input.companyId)
     .eq('event_key', input.eventKey)
@@ -75,8 +65,7 @@ export async function enqueueNotificationEvent(
     const recipient = Array.isArray(row.notification_recipients)
       ? row.notification_recipients[0]
       : row.notification_recipients
-    if (!recipient || (!input.ignoreConsent && !recipientAllowed(recipient))) continue
-    if (recipient.enabled === false) continue
+    if (!recipient || !isRecipientSendable(recipient)) continue
     const channel = String(recipient.channel || '')
     if (channel !== 'whatsapp' && channel !== 'web_push' && channel !== 'email' && channel !== 'in_app') {
       continue

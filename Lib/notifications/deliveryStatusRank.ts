@@ -21,8 +21,8 @@ export function canAdvanceDeliveryStatus(
   next: string | null | undefined,
 ) {
   if (!next) return false
-  if (!current || current === next) return current === next || !current
   if (current === next) return false
+  if (!current) return true
   if (current === 'cancelled') return false
   if (current === 'read' && (next === 'sent' || next === 'delivered' || next === 'processing')) {
     return false

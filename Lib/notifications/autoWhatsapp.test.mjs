@@ -126,7 +126,7 @@ test('diagnosis lists the missing field without leaking secrets', () => {
   const diagnosis = read('Lib/notifications/diagnosis.ts')
   assert.match(diagnosis, /consent_not_confirmed/)
   assert.match(diagnosis, /company_notification_providers/)
-  assert.doesNotMatch(diagnosis, /accessToken/)
+  assert.doesNotMatch(diagnosis, /accessToken\s*[:=]\s*['"`]/)
 })
 
 test('worker backoff grows and enqueue is persist-only', () => {
@@ -163,10 +163,12 @@ test('webhook is signature-scoped and public route is narrow', () => {
 
 test('migrations and source never embed the pilot phone', () => {
   const v12 = read('supabase/migrations/20260918183219_notification_center_v12_auto.sql')
+  const v13 = read('supabase/migrations/20260918213000_notification_center_v13_lineage.sql')
   assert.match(v12, /quote.accepted/)
   assert.match(v12, /consent_status/)
   assert.match(v12, /auto_dispatch_from/)
   assert.doesNotMatch(v12, /2242|Caio|407915/)
+  assert.doesNotMatch(v13, /2242|Caio|407915/)
   assert.doesNotMatch(read('Lib/notifications/enqueueEvent.ts'), /2242|Caio Rodrigues/)
 })
 

@@ -5,6 +5,7 @@ const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), '
 
 const migration = read('supabase/migrations/20260917190000_notification_center_v1.sql')
 const migrationV12 = read('supabase/migrations/20260918183219_notification_center_v12_auto.sql')
+const migrationV13 = read('supabase/migrations/20260918213000_notification_center_v13_lineage.sql')
 const enqueue = read('Lib/notifications/enqueueEvent.ts')
 const provider = read('Lib/notifications/providers/whatsappMeta.ts')
 const create = read('Lib/createQuote.ts')
@@ -33,6 +34,9 @@ assert.match(replay, /mutated_payment: false/)
 assert.match(migrationV12, /quote.accepted/)
 assert.match(migrationV12, /company_notification_settings/)
 assert.doesNotMatch(migrationV12, /2242|Caio/)
+assert.match(migrationV13, /notification_deliveries_event_tenant_fkey/)
+assert.match(migrationV13, /queue_eligible/)
+assert.doesNotMatch(migrationV13, /2242|Caio/)
 assert.match(enqueue, /scheduleNotificationWorker/)
 assert.doesNotMatch(enqueue, /dispatchNotificationDelivery/)
 

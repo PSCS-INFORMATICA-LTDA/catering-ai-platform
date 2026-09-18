@@ -4,6 +4,7 @@ import { requireSessionCompanyId } from '@/Lib/auth/requireApi'
 import { getAuthSession } from '@/Lib/auth/session'
 import { tNotifications } from '@/Lib/i18n/notifications'
 import { resolveAuthLocale } from '@/Lib/i18n/authUsers'
+import { buildMetaChecklist } from '@/Lib/notifications/metaChecklist'
 import { loadPaymentNotificationSummary } from '@/Lib/notifications/loadPaymentNotificationSummary'
 import { maskPhone } from '@/Lib/notifications/maskPhone'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
@@ -46,7 +47,7 @@ export default async function NotificationSettingsPage() {
     db
       .from('notification_deliveries')
       .select(
-        'id, channel, provider, template_key, status, provider_message_id, attempt_count, last_error, created_at, sent_at, delivered_at, read_at, failed_at, notification_events(event_key, entity_type, entity_id, payload), notification_recipients(display_name, phone_e164)',
+        'id, channel, provider, template_key, status, provider_message_id, attempt_count, last_error, created_at, sent_at, delivered_at, read_at, failed_at, notification_events!event_id(event_key, entity_type, entity_id, payload), notification_recipients!recipient_id(display_name, phone_e164)',
       )
       .eq('company_id', companyContext.companyId)
       .order('created_at', { ascending: false })
@@ -89,6 +90,7 @@ export default async function NotificationSettingsPage() {
         }
       })}
       provider={summary.provider}
+      meta={buildMetaChecklist()}
     />
   )
 }

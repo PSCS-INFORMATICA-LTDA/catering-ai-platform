@@ -43,6 +43,25 @@ type ProviderStatus = {
   reason?: string | null
 }
 
+type MetaPresence = 'CONFIGURADO' | 'AUSENTE' | 'NÃO VERIFICADO'
+
+type MetaChecklist = {
+  appSecret: MetaPresence
+  accessToken: MetaPresence
+  phoneNumberId: MetaPresence
+  verifyToken: MetaPresence
+  workerSecret: MetaPresence
+  sharedSenderAllowlist: MetaPresence
+  callbackSignature: MetaPresence
+  templates: {
+    new_quote_internal: MetaPresence
+    quote_accepted_internal: MetaPresence
+    payment_deposit_received_internal: MetaPresence
+    payment_full_received_internal: MetaPresence
+  }
+  templateLanguages: { pt: MetaPresence; en: MetaPresence; es: MetaPresence }
+}
+
 type ContactHit = {
   id: string
   displayName: string
@@ -76,6 +95,7 @@ export default function NotificationCenterView({
   recipients,
   deliveries,
   provider,
+  meta,
 }: {
   title: string
   locale: string
@@ -83,6 +103,7 @@ export default function NotificationCenterView({
   recipients: Recipient[]
   deliveries: Delivery[]
   provider: ProviderStatus
+  meta?: MetaChecklist
 }) {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -151,12 +172,18 @@ export default function NotificationCenterView({
 
   async function sendTest(id: string) {
     setBusy(true)
-    await fetch('/api/notifications/test', {
+    setError(null)
+    const response = await fetch('/api/notifications/test', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ recipientId: id, eventKey: 'quote.created' }),
     })
+    const json = await response.json().catch(() => null)
     setBusy(false)
+    if (!response.ok) {
+      setError(json?.error || 'recipient_consent_missing')
+      return
+    }
     window.location.reload()
   }
 
@@ -180,6 +207,35 @@ export default function NotificationCenterView({
           <p className="mt-1 text-xs text-amber-800">
             {tNotifications(locale, 'missingConfig')}: {provider.reason}
           </p>
+        ) : null}
+        {meta ? (
+          <dl className="mt-4 grid gap-2 text-xs sm:grid-cols-2">
+            {(
+              [
+                ['checklistAppSecret', meta.appSecret],
+                ['checklistAccessToken', meta.accessToken],
+                ['checklistPhoneNumberId', meta.phoneNumberId],
+                ['checklistVerifyToken', meta.verifyToken],
+                ['checklistWorkerSecret', meta.workerSecret],
+                ['checklistSharedSender', meta.sharedSenderAllowlist],
+                ['checklistCallback', meta.callbackSignature],
+                ['checklistTemplatePt', meta.templateLanguages.pt],
+                ['checklistTemplateEn', meta.templateLanguages.en],
+                ['checklistTemplateEs', meta.templateLanguages.es],
+              ] as const
+            ).map(([key, value]) => (
+              <div key={key} className="flex justify-between gap-3 rounded-lg bg-neutral-50 px-3 py-2">
+                <dt>{tNotifications(locale, key)}</dt>
+                <dd className="font-bold">
+                  {value === 'CONFIGURADO'
+                    ? tNotifications(locale, 'presenceConfigured')
+                    : value === 'AUSENTE'
+                      ? tNotifications(locale, 'presenceAbsent')
+                      : tNotifications(locale, 'presenceUnverified')}
+                </dd>
+              </div>
+            ))}
+          </dl>
         ) : null}
         <p className="mt-3 text-xs text-neutral-500">{tNotifications(locale, 'futureChannels')}</p>
         <Link href="/activities" className="mt-3 inline-block text-xs font-bold uppercase text-[var(--brand-primary-2)]">
@@ -248,11 +304,16 @@ export default function NotificationCenterView({
                           <button
                             type="button"
                             className="rounded-lg bg-[var(--brand-primary-2,#1e3a5f)] px-3 py-1 text-xs font-bold uppercase text-white disabled:opacity-50"
-                            disabled={busy || !row.enabled}
+                            disabled={busy || !row.enabled || consent !== 'confirmed'}
                             onClick={() => sendTest(row.id)}
                           >
                             {tNotifications(locale, 'sendTest')}
                           </button>
+                          {consent !== 'confirmed' ? (
+                            <p className="w-full text-xs text-amber-800">
+                              {tNotifications(locale, 'testRequiresConsent')}
+                            </p>
+                          ) : null}
                         </>
                       ) : (
                         <span className="text-xs font-bold uppercase">
@@ -362,7 +423,17 @@ export default function NotificationCenterView({
             </button>
           </div>
         ) : null}
-        {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
+        {error ? (
+          <p className="mt-2 text-sm text-red-600">
+            {error === 'recipient_consent_missing'
+              ? tNotifications(locale, 'consentUnknown')
+              : error === 'recipient_disabled'
+                ? tNotifications(locale, 'disabled')
+                : error === 'person_company_mismatch'
+                  ? tNotifications(locale, 'personCompanyMismatch')
+                  : error}
+          </p>
+        ) : null}
       </section>
 
       <section className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">

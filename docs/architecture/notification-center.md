@@ -5,7 +5,7 @@
 ```
 CONFIRMED BUSINESS TRANSITION
   → DURABLE notification_events + notification_deliveries
-    → after() worker kick + Vercel cron
+    → after() worker kick + daily Hobby cron + optional 5-min DEV scheduler
       → COMPANY PROVIDER (no silent global fallback)
         → WhatsApp Cloud API
           → delivery history / Meta callback
@@ -30,11 +30,12 @@ Persist is durable. Meta is never called inside the financial transaction.
 `enqueueEvent` writes pending deliveries and schedules `after()` → `processNotificationQueue`.
 Cron backup: `GET/POST /api/notifications/worker` daily at 11:00 UTC on Hobby
 (`0 11 * * *`). Immediate send uses `after()` after each persist.
-Minute cadence needs a Pro cron or an external ping of the same worker.
+5-minute recovery uses Vault + pg_cron/pg_net on DEV (reviewed separately) or an optional GitHub ping. Not a Vercel plan upgrade.
 
-Retries: limited backoff. Stuck `processing` (>2 min) is recovered.
-Timeout after calling Meta → `uncertain`. Do not resend blindly.
-Manual retry is optional, not required for the happy path.
+Retries: limited backoff. Exhausted failed rows are excluded before LIMIT (`queue_eligible`).
+Stuck `processing` without `send_attempted_at` / `provider_message_id` returns to pending.
+Stuck `processing` after a possible Meta accept is quarantined as `uncertain` and is not resent blindly.
+Timeout after calling Meta → `uncertain`. Manual retry is optional and still requires confirmed consent.
 
 Activation watermark: `company_notification_settings.auto_dispatch_from`.
 No automatic backfill of old payments. Replay remains explicit and DEV-only.
@@ -51,7 +52,8 @@ No automatic backfill of old payments. Replay remains explicit and DEV-only.
 
 ## Recipients
 
-Consent starts as `unknown`. Automatic send requires `confirmed` + enabled + subscription.
+Consent starts as `unknown`. Only `consent_status = confirmed` is sendable.
+`null`, `unknown`, and `denied` block worker, test, retry, and dispatch.
 Do not invent consent. Phone lives on the notification recipient, not PayPal.
 
 ## Screens

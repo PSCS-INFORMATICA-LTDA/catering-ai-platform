@@ -22,12 +22,17 @@ async function run(request: Request) {
   }
   const url = new URL(request.url)
   const companyId = url.searchParams.get('companyId')?.trim() || undefined
-  const result = await processNotificationQueue({
-    limit: 25,
-    companyId,
-    reason: 'cron_or_worker',
-  })
-  return Response.json({ data: result })
+  try {
+    const result = await processNotificationQueue({
+      limit: 25,
+      companyId,
+      reason: 'cron_or_worker',
+    })
+    return Response.json({ data: result })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'queue_failed'
+    return Response.json({ error: message }, { status: 500 })
+  }
 }
 
 export async function GET(request: Request) {

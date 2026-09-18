@@ -101,7 +101,7 @@ export async function loadActivityCenter(
     db
       .from('notification_deliveries')
       .select(
-        'id, status, attempt_count, last_error, created_at, event_id, notification_events(event_key, entity_id, payload), notification_recipients(display_name, phone_e164)',
+        'id, status, attempt_count, last_error, created_at, event_id, notification_events!event_id(event_key, entity_id, payload), notification_recipients!recipient_id(display_name, phone_e164)',
       )
       .eq('company_id', companyId)
       .order('created_at', { ascending: false })

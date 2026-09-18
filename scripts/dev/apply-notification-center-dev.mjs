@@ -59,6 +59,18 @@ async function tableReady(url, service) {
 }
 
 async function main() {
+  const approval = String(process.env.NOTIFICATION_CENTER_DEV_APPLY_APPROVAL || '').trim()
+  if (approval !== 'GRANTED_BY_PHILIPPE') {
+    console.log(
+      JSON.stringify({
+        target_project_ref: DEV_REF,
+        applied: false,
+        blocked: 'CURRENT_SHARED_DEV_APPLY_APPROVAL=NOT_GRANTED_FOR_UNCORRECTED_SQL',
+        prod_untouched: true,
+      }),
+    )
+    return
+  }
   const env = loadDevEnv(root)
   assertDevUrl(env.url)
   if (String(env.url).includes(PROD_REF)) throw new Error('Refused: Catering PROD')
