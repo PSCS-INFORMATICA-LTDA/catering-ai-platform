@@ -17,6 +17,14 @@ export const PACKAGE_FILES = [
   'supabase/migrations/20260918213000_notification_center_v13_lineage.sql',
 ]
 
+/** Combined reviewed apply on Catering DEV. Not three history rows. Not a source-file checksum. */
+export const VERIFIED_COMBINED_BUNDLE = {
+  version: '20260918221541',
+  name: 'notification_center_v1_v12_v13_reviewed_dev',
+  source_files: PACKAGE_FILES,
+  note: 'One combined history row covers V1→V1.2→V1.3. Missing source timestamps do not mean the schema is missing. Do not reapply or invent three history rows.',
+}
+
 const TABLES = [
   'notification_recipients',
   'notification_subscriptions',
@@ -204,6 +212,22 @@ export async function inspectNotificationCenterDev() {
   if (!v12Present) pending.push('20260918183219_notification_center_v12_auto.sql')
   if (!v13Present) pending.push('20260918213000_notification_center_v13_lineage.sql')
 
+  const counts = {}
+  for (const table of [
+    'notification_recipients',
+    'notification_events',
+    'notification_deliveries',
+    'company_notification_providers',
+  ]) {
+    if (tables[table]?.present && tables[table]?.readable) {
+      const counted = await db.from(table).select('id', { count: 'exact', head: true })
+      counts[table] = counted.error ? null : counted.count
+    } else {
+      counts[table] = null
+    }
+  }
+
+  const schemaApplied = pending.length === 0
   return {
     inspected_at: new Date().toISOString(),
     target_project_ref: DEV_REF,
@@ -226,12 +250,18 @@ export async function inspectNotificationCenterDev() {
     companies_visible: companyCount,
     migration_history: await tryMigrationHistory(env.url, env.service),
     openapi: await openApiNotificationPaths(env.url, env.service),
+    row_counts: counts,
+    verified_combined_bundle: schemaApplied ? VERIFIED_COMBINED_BUNDLE : null,
+    do_not_reapply: schemaApplied,
     inferred_package: {
       v1: v1Present ? 'PRESENT' : 'ABSENT',
       v12: v12Present ? 'PRESENT' : v1Present ? 'ABSENT_OR_PARTIAL' : 'ABSENT',
       v13: v13Present ? 'PRESENT' : v12Present ? 'ABSENT_OR_PARTIAL' : 'ABSENT',
       pending_files: pending,
-      status: pending.length === 0 ? 'APLICADO' : v1Present || v12Present ? 'PARCIAL' : 'PENDENTE',
+      history_alignment: schemaApplied
+        ? 'combined_row_20260918221541_not_three_source_timestamps'
+        : 'source_files_pending_or_partial',
+      status: schemaApplied ? 'APLICADO' : v1Present || v12Present ? 'PARCIAL' : 'PENDENTE',
     },
     management_token_present: Boolean(
       process.env.SUPABASE_ACCESS_TOKEN || process.env.SUPABASE_PERSONAL_ACCESS_TOKEN,

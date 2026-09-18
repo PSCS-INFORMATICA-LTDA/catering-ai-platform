@@ -9,7 +9,11 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { assertDevUrl, DEV_REF, loadDevEnv, PROD_REF } from './loadDevEnv.mjs'
-import { inspectNotificationCenterDev, PACKAGE_FILES } from './inspect-notification-center-dev.mjs'
+import {
+  inspectNotificationCenterDev,
+  PACKAGE_FILES,
+  VERIFIED_COMBINED_BUNDLE,
+} from './inspect-notification-center-dev.mjs'
 
 const API_BASE = 'https://api.supabase.com'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -56,16 +60,16 @@ async function main() {
   if (String(env.url).includes(PROD_REF)) throw new Error('Refused: Catering PROD')
 
   const before = await inspectNotificationCenterDev()
-  const approval = String(process.env.NOTIFICATION_CENTER_DEV_APPLY_APPROVAL || '').trim()
-  if (!APPROVALS.has(approval)) {
+  if (before.do_not_reapply || before.inferred_package.status === 'APLICADO') {
     console.log(
       JSON.stringify(
         {
           target_project_ref: DEV_REF,
           applied: false,
-          blocked: 'approval_required',
-          accepted_approvals: [...APPROVALS],
+          already_present: true,
+          recognized_bundle: VERIFIED_COMBINED_BUNDLE,
           before: before.inferred_package,
+          row_counts: before.row_counts,
           prod_untouched: true,
         },
         null,
@@ -75,13 +79,15 @@ async function main() {
     return
   }
 
-  if (before.inferred_package.status === 'APLICADO') {
+  const approval = String(process.env.NOTIFICATION_CENTER_DEV_APPLY_APPROVAL || '').trim()
+  if (!APPROVALS.has(approval)) {
     console.log(
       JSON.stringify(
         {
           target_project_ref: DEV_REF,
           applied: false,
-          already_present: true,
+          blocked: 'approval_required',
+          accepted_approvals: [...APPROVALS],
           before: before.inferred_package,
           prod_untouched: true,
         },

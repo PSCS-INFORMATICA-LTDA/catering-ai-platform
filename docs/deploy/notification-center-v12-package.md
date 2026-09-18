@@ -85,20 +85,22 @@ Immediate dispatch is `after()` after each durable enqueue.
 
 Replay: `npm run replay:dev:payment-notification -- --payment-id=<uuid> --dry-run`
 
-## Live inspect (2026-09-18)
+## Live inspect (2026-09-18, after combined apply)
 
 `npm run inspect:dev:notification-center` on `yasprgtlqclwsjcshtls`:
 
-- OpenAPI has zero `/notification_*` paths
-- `permissions.notifications.*` absent; `finance.invoices.view` present
-- Inferred package = PENDENTE (V1/V1.2/V1.3 objects missing)
-- Checksums unchanged from the reviewed files
-- Apply script refuses without `SUPABASE_ACCESS_TOKEN` and leaves external send off
+- Verified history row: version `20260918221541`, name `notification_center_v1_v12_v13_reviewed_dev`
+- That **one** row covers the SQL statements from V1 → V1.2 → V1.3 at PR HEAD `9849020`
+- Source-file timestamps are **not** separate history rows. Their absence does not mean the schema is missing
+- Do **not** describe the executed bundle checksum as one of the three source checksums
+- Objects present: 7 public notification tables, RLS on, queue columns, 4 composite tenant FKs, 4 enabled events
+- Recipients/providers/events/deliveries start at 0
+- `npm run apply:dev:notification-center` must no-op (`already_present`) and must not rerun the three files or `db push`
 
-Disposable Postgres lineage for the same three files: PASS.
+Disposable Postgres lineage for the three source files remains PASS.
 
 ## Next human action (one step)
 
-In the Supabase dashboard for **yasprgtlqclwsjcshtls only** → SQL Editor, run the three reviewed files in order. Do not run `notification_worker_pg_cron.sql`. Do not paste tokens in chat.
+Do **not** rerun the three SQL files.
 
-Alternatively add `SUPABASE_ACCESS_TOKEN` to this agent environment so the inspect-first apply script can run the same files.
+When ready for the first real WhatsApp: in [Meta App Dashboard](https://developers.facebook.com/apps) open the existing PSCS app (do not create a duplicate) → **WhatsApp → API Setup**. Use the test number Meta already provides. Do not register Caio's commercial WhatsApp. Do not paste tokens in chat; put Preview server-only env vars in Vercel Preview for this branch only.

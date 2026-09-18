@@ -64,5 +64,7 @@ Do not invent consent. Phone lives on the notification recipient, not PayPal.
 
 CODE READY, not META TEMPLATE APPROVED.
 
+DEV schema: combined history row `20260918221541` / `notification_center_v1_v12_v13_reviewed_dev`. Do not reapply the three source files.
+
 PSCS One contract (no second registry): `docs/integration/pscs-one-notification-readiness.md`.
 Shared sender is PSCS-managed. Tenant IDs are mapped, never assumed equal.

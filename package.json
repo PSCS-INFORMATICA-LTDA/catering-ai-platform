@@ -31,6 +31,7 @@
     "preflight:dev:notification-center-v12": "node scripts/dev/preflight-notification-center-v12.mjs",
     "test:dev:notification-lineage": "node scripts/dev/test-notification-lineage.mjs",
     "test:dev:notification-center-probe": "node scripts/dev/probe-notification-center-dev.mjs",
+    "test:dev:notification-center-live-ab": "node scripts/dev/test-notification-center-live-ab.mjs",
     "replay:dev:payment-notification": "node --experimental-strip-types scripts/dev/replay-payment-notification.mjs",
     "env:check": "node scripts/env-check.mjs",
     "env:dev:check": "node scripts/env-check.mjs --expected dev",
