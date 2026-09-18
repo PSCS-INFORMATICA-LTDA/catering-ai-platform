@@ -1,6 +1,7 @@
 import { isInvoiceFullyPaid } from '../payments/invoiceStatus.ts'
 import { invoiceDeepLinkPath } from './env.ts'
 import { currentInvoiceOutstanding, invoicePaidStatusLabel } from './outstanding.ts'
+import { environmentBanner } from './whatsappCopy.ts'
 import type { NotificationPayload, V1NotificationEventKey } from './types.ts'
 
 export function paymentNotificationEventKey(input: {
@@ -11,13 +12,11 @@ export function paymentNotificationEventKey(input: {
   invoiceStatus?: string | null
 }): V1NotificationEventKey | null {
   if (input.status !== 'completed') return null
+  const fullyPaid =
+    input.invoiceStatus === 'paid' ||
+    isInvoiceFullyPaid({ total: input.invoiceTotal, paidTotal: input.invoicePaidTotal })
   if (input.purpose === 'deposit') return 'payment.deposit_received'
-  if (input.purpose === 'full') return 'payment.full_received'
-  if (
-    input.purpose === 'balance' &&
-    (input.invoiceStatus === 'paid' ||
-      isInvoiceFullyPaid({ total: input.invoiceTotal, paidTotal: input.invoicePaidTotal }))
-  ) {
+  if ((input.purpose === 'full' || input.purpose === 'balance') && fullyPaid) {
     return 'payment.full_received'
   }
   return null
@@ -43,6 +42,7 @@ export function buildPaymentNotificationPayload(input: {
   eventTime?: string | null
   locale?: 'pt' | 'en' | 'es' | null
   source: string
+  complementaryInvoicePending?: boolean
 }): { eventKey: V1NotificationEventKey; payload: NotificationPayload } | null {
   const eventKey = paymentNotificationEventKey({
     purpose: input.purpose,
@@ -83,17 +83,27 @@ export function buildPaymentNotificationPayload(input: {
       currency: input.currency ?? 'USD',
       invoiceStatus: fullyPaid ? 'paid' : input.invoiceStatus ?? null,
       invoiceFullyPaid: fullyPaid,
+      complementaryInvoicePending: Boolean(input.complementaryInvoicePending),
       locale,
       source: input.source,
       deepLinkPath: invoiceDeepLinkPath(input.invoiceId),
+      environmentBanner: environmentBanner(locale),
     },
   }
 }
 
 export function paymentStatusCopy(
   locale: 'pt' | 'en' | 'es',
-  payload: Pick<NotificationPayload, 'total' | 'paidTotal' | 'invoiceStatus' | 'invoiceFullyPaid'>,
+  payload: Pick<
+    NotificationPayload,
+    'total' | 'paidTotal' | 'invoiceStatus' | 'invoiceFullyPaid' | 'complementaryInvoicePending'
+  >,
 ) {
+  if (payload.invoiceFullyPaid && payload.complementaryInvoicePending) {
+    if (locale === 'en') return 'This invoice settled — another invoice still open'
+    if (locale === 'es') return 'Esta factura saldada — otra factura sigue abierta'
+    return 'Fatura quitada — outra fatura ainda aberta'
+  }
   return invoicePaidStatusLabel(locale, {
     total: Number(payload.total || 0),
     paidTotal: Number(payload.paidTotal || 0),

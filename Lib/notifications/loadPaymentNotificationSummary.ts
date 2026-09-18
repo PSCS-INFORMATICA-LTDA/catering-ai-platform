@@ -5,6 +5,7 @@ export type PaymentNotificationSummary = {
   activeRecipients: number
   depositEnabled: boolean
   fullEnabled: boolean
+  acceptedEnabled: boolean
   provider: ReturnType<typeof publicWhatsAppProviderStatus>
 }
 
@@ -15,6 +16,7 @@ export async function loadPaymentNotificationSummary(
     activeRecipients: 0,
     depositEnabled: false,
     fullEnabled: false,
+    acceptedEnabled: false,
     provider: publicWhatsAppProviderStatus({
       source: 'none',
       enabled: false,
@@ -50,6 +52,12 @@ export async function loadPaymentNotificationSummary(
       fullEnabled: (subscriptions ?? []).some(
         (row) =>
           row.event_key === 'payment.full_received' &&
+          row.enabled &&
+          activeIds.has(String(row.recipient_id)),
+      ),
+      acceptedEnabled: (subscriptions ?? []).some(
+        (row) =>
+          row.event_key === 'quote.accepted' &&
           row.enabled &&
           activeIds.has(String(row.recipient_id)),
       ),

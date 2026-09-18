@@ -1,6 +1,7 @@
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { quoteDeepLinkPath } from './env'
 import { enqueueNotificationEventSafe } from './enqueueEvent'
+import { environmentBanner } from './whatsappCopy'
 import type { NotificationPayload } from './types'
 
 export type EnqueueQuoteCreatedInput = {
@@ -47,6 +48,9 @@ export async function enqueueQuoteCreatedNotification(input: EnqueueQuoteCreated
     locale: input.locale === 'en' || input.locale === 'es' ? input.locale : 'pt',
     source: input.source,
     deepLinkPath: quoteDeepLinkPath(input.quoteId),
+    environmentBanner: environmentBanner(
+      input.locale === 'en' || input.locale === 'es' ? input.locale : 'pt',
+    ),
   }
   return enqueueNotificationEventSafe({
     companyId: input.companyId,

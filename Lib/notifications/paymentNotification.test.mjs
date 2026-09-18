@@ -52,6 +52,16 @@ test('purpose mapping is provider-agnostic', () => {
       purpose: 'full',
       status: 'completed',
       invoiceTotal: 100,
+      invoicePaidTotal: 50,
+      invoiceStatus: 'partially_paid',
+    }),
+    null,
+  )
+  assert.equal(
+    paymentNotificationEventKey({
+      purpose: 'full',
+      status: 'completed',
+      invoiceTotal: 100,
       invoicePaidTotal: 100,
       invoiceStatus: 'paid',
     }),
@@ -91,8 +101,7 @@ test('full received copy is not Paid when invoice is not fully paid', () => {
     invoiceStatus: 'partially_paid',
     source: 'test',
   })
-  assert.equal(mapped?.eventKey, 'payment.full_received')
-  assert.equal(mapped?.payload.invoiceFullyPaid, false)
+  assert.equal(mapped, null)
   assert.equal(invoicePaidStatusLabel('pt', { total: 100, paidTotal: 50 }), 'Parcialmente pago')
   assert.equal(invoicePaidStatusLabel('en', { total: 100, paidTotal: 100, status: 'paid' }), 'Paid')
   assert.equal(invoicePaidStatusLabel('es', { total: 100, paidTotal: 100 }), 'Pagado')
@@ -119,7 +128,8 @@ test('templates and deep links stay internal', () => {
     locale: 'pt',
     payload: deposit.payload,
   })
-  assert.equal(body.length, 6)
+  assert.equal(body.length, 7)
+  assert.match(body[0], /TESTE DEV/)
 })
 
 test('idempotency is company+event+entity+recipient+channel', () => {

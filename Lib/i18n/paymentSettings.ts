@@ -174,9 +174,9 @@ const { t, list } = makeI18nModule('paymentSettings', 'billing', {
     es: 'Notificaciones de pago',
   },
   paymentNotificationsHint: {
-    pt: 'Avisos internos de depósito e pagamento total. Telefones ficam na Central de Notificações.',
-    en: 'Internal deposit and full-payment alerts. Phone numbers live in the Notification Center.',
-    es: 'Avisos internos de depósito y pago total. Los teléfonos viven en el Centro de notificaciones.',
+    pt: 'Avisos internos de aceite, sinal e quitação. Telefones ficam na Central de Notificações.',
+    en: 'Internal alerts for acceptance, deposit, and settlement. Phone numbers live in the Notification Center.',
+    es: 'Avisos internos de aceptación, señal y liquidación. Los teléfonos viven en el Centro de notificaciones.',
   },
   configureNotifications: {
     pt: 'Configurar notificações',

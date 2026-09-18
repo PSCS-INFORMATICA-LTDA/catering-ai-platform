@@ -1,6 +1,6 @@
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { notificationIdempotencyKey, toE164 } from './e164'
-import { dispatchNotificationDelivery } from './dispatch'
+import { scheduleNotificationWorker } from './scheduleWorker'
 import { templateKeyForEvent } from './templates'
 import type { NotificationPayload } from './types'
 
@@ -11,7 +11,20 @@ export type EnqueueNotificationInput = {
   entityId: string
   payload: NotificationPayload
   source: string
+  /** Immediate Meta send is forbidden on the financial path. Worker handles send. */
   dispatch?: boolean
+  ignoreConsent?: boolean
+}
+
+function recipientAllowed(recipient: {
+  enabled?: boolean | null
+  consent_status?: string | null
+}) {
+  if (recipient.enabled === false) return false
+  const consent = recipient.consent_status
+  if (consent === 'denied') return false
+  if (consent === 'unknown') return false
+  return consent === 'confirmed' || consent == null
 }
 
 export async function enqueueNotificationEvent(
@@ -49,7 +62,9 @@ export async function enqueueNotificationEvent(
 
   const subscriptions = await db
     .from('notification_subscriptions')
-    .select('recipient_id, enabled, notification_recipients(id, channel, phone_raw, phone_e164, locale, enabled)')
+    .select(
+      'recipient_id, enabled, notification_recipients(id, channel, phone_raw, phone_e164, locale, enabled, consent_status)',
+    )
     .eq('company_id', input.companyId)
     .eq('event_key', input.eventKey)
     .eq('enabled', true)
@@ -60,9 +75,13 @@ export async function enqueueNotificationEvent(
     const recipient = Array.isArray(row.notification_recipients)
       ? row.notification_recipients[0]
       : row.notification_recipients
-    if (!recipient || recipient.enabled === false) continue
+    if (!recipient || (!input.ignoreConsent && !recipientAllowed(recipient))) continue
+    if (recipient.enabled === false) continue
     const channel = String(recipient.channel || '')
     if (channel !== 'whatsapp' && channel !== 'web_push' && channel !== 'email' && channel !== 'in_app') {
+      continue
+    }
+    if (channel === 'whatsapp' && !toE164(recipient.phone_e164 || recipient.phone_raw)) {
       continue
     }
     const idempotencyKey = notificationIdempotencyKey({
@@ -82,6 +101,7 @@ export async function enqueueNotificationEvent(
         template_key: templateKeyForEvent(input.eventKey),
         status: 'pending',
         idempotency_key: idempotencyKey,
+        next_attempt_at: new Date().toISOString(),
       },
       { onConflict: 'idempotency_key', ignoreDuplicates: true },
     )
@@ -94,22 +114,10 @@ export async function enqueueNotificationEvent(
     const deliveryId = delivery.data?.id as string | undefined
     if (!deliveryId) continue
     deliveryCount += 1
-    if (
-      delivery.data?.status === 'sent' ||
-      delivery.data?.status === 'delivered' ||
-      delivery.data?.status === 'read'
-    ) {
-      continue
-    }
-    if (input.dispatch === false) continue
-    await dispatchNotificationDelivery({
-      deliveryId,
-      companyId: input.companyId,
-      channel,
-      toE164: toE164(recipient.phone_e164 || recipient.phone_raw),
-      locale: recipient.locale === 'en' || recipient.locale === 'es' ? recipient.locale : 'pt',
-      payload: input.payload,
-    })
+  }
+
+  if (deliveryCount > 0 && input.dispatch !== true) {
+    scheduleNotificationWorker()
   }
 
   return { eventId, deliveryCount }

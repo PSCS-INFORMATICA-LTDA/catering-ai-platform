@@ -36,7 +36,7 @@ export default async function NotificationSettingsPage() {
   const [recipients, subscriptions, deliveries, summary] = await Promise.all([
     db
       .from('notification_recipients')
-      .select('id, display_name, phone_e164, locale, enabled, channel, created_at')
+      .select('id, display_name, phone_e164, locale, enabled, channel, person_id, consent_status, created_at')
       .eq('company_id', companyContext.companyId)
       .order('created_at', { ascending: false }),
     db
@@ -62,6 +62,7 @@ export default async function NotificationSettingsPage() {
       canManage={canManage}
       recipients={(recipients.data ?? []).map((row) => ({
         ...row,
+        consent_status: row.consent_status ?? 'unknown',
         subscriptions: (subscriptions.data ?? []).filter((item) => item.recipient_id === row.id),
       }))}
       deliveries={(deliveries.data ?? []).map((row) => {

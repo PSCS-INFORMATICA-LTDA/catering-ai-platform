@@ -61,11 +61,36 @@ test('loaded session without coupon permission hides coupon center', () => {
   )
 })
 
+const activitiesChild = {
+  href: '/activities',
+  label: 'Atividades e transações',
+  requiredAnyPermission: [
+    'notifications.view',
+    'notification_deliveries.view',
+    'finance.invoices.view',
+    'orders.financial.view',
+  ],
+}
+
 const notificationsChild = {
   href: '/settings/notifications',
   label: 'Notificações',
   requiredAnyPermission: ['notifications.view', 'notification_deliveries.view'],
 }
+
+test('activities center is hidden without notification or finance permissions', () => {
+  assert.equal(
+    canSeeNavChild({ isPlatformAdmin: false, permissions: ['quotes.view'] }, activitiesChild),
+    false,
+  )
+  assert.equal(
+    canSeeNavChild(
+      { isPlatformAdmin: false, permissions: ['notifications.view'] },
+      activitiesChild,
+    ),
+    true,
+  )
+})
 
 test('notification center is hidden without notification permissions', () => {
   assert.equal(

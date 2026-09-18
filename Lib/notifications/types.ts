@@ -1,5 +1,6 @@
 export const V1_NOTIFICATION_EVENT_KEYS = [
   'quote.created',
+  'quote.accepted',
   'payment.deposit_received',
   'payment.full_received',
 ] as const
@@ -33,8 +34,12 @@ export const NOTIFICATION_STATUSES = [
   'read',
   'failed',
   'cancelled',
+  'uncertain',
 ] as const
 export type NotificationDeliveryStatus = (typeof NOTIFICATION_STATUSES)[number]
+
+export const CONSENT_STATUSES = ['unknown', 'confirmed', 'denied'] as const
+export type NotificationConsentStatus = (typeof CONSENT_STATUSES)[number]
 
 export type NotificationPayload = {
   eventKey: string
@@ -42,6 +47,7 @@ export type NotificationPayload = {
   entityId: string
   quoteId?: string | null
   quoteNumber?: string | null
+  acceptedVersionId?: string | null
   invoiceId?: string | null
   invoiceNumber?: string | null
   paymentId?: string | null
@@ -57,9 +63,11 @@ export type NotificationPayload = {
   currency?: string | null
   invoiceStatus?: string | null
   invoiceFullyPaid?: boolean
+  complementaryInvoicePending?: boolean
   locale: 'pt' | 'en' | 'es'
   source: string
   deepLinkPath: string
+  environmentBanner?: string | null
 }
 
 /** @deprecated use NotificationPayload */
@@ -80,6 +88,8 @@ export type NotificationSendResult = {
   provider: string
   providerMessageId?: string | null
   error?: string | null
+  uncertain?: boolean
+  retryAfterSeconds?: number | null
 }
 
 export type NotificationProvider = {
@@ -88,9 +98,10 @@ export type NotificationProvider = {
 }
 
 export type WhatsAppResolvedConfig = {
-  source: 'company' | 'env_fallback' | 'none'
+  source: 'company' | 'shared_explicit' | 'none'
   enabled: boolean
   accessToken: string
   phoneNumberId: string
   provider: string
+  reason?: string | null
 }

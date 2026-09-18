@@ -38,10 +38,12 @@ test('deep links are authenticated internal paths', () => {
 test('quote persist hooks are post-commit and never roll back the quote', () => {
   const create = read('Lib/createQuote.ts')
   const submit = read('app/api/public/quote-intake/submit/route.ts')
+  const accept = read('app/api/public/proposta/[token]/route.ts')
   assert.match(create, /enqueueQuoteCreatedNotificationSafe/)
   assert.match(submit, /enqueueQuoteCreatedNotificationSafe/)
   assert.match(create, /void enqueueQuoteCreatedNotificationSafe/)
   assert.doesNotMatch(create, /await enqueueQuoteCreatedNotificationSafe/)
+  assert.match(accept, /void enqueueQuoteAcceptedNotificationSafe/)
 })
 
 test('WhatsApp provider is abstracted and secret-safe', () => {

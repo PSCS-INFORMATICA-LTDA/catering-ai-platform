@@ -18,6 +18,17 @@ export async function retryNotificationDelivery(input: {
   if (delivery.status === 'sent' || delivery.status === 'delivered' || delivery.status === 'read') {
     return { ok: true as const, duplicate: true }
   }
+  if (delivery.status === 'uncertain') {
+    await db
+      .from('notification_deliveries')
+      .update({
+        status: 'pending',
+        next_attempt_at: new Date().toISOString(),
+        last_error: 'manual_retry_after_uncertain',
+      })
+      .eq('id', input.deliveryId)
+      .eq('company_id', input.companyId)
+  }
 
   const [{ data: event }, { data: recipient }] = await Promise.all([
     db

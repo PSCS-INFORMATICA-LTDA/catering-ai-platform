@@ -16,6 +16,7 @@ import { listHelpI18nEntries } from './help.ts'
 import { listInventoryUiI18nEntries } from './inventoryUi.ts'
 import { listMediaI18nEntries } from './media.ts'
 import { listPackagesI18nEntries } from './packages.ts'
+import { listActivitiesI18nEntries } from './activities.ts'
 import { listNotificationsI18nEntries } from './notifications.ts'
 import { listPaymentsI18nEntries } from './payments.ts'
 import { listPaymentSettingsI18nEntries } from './paymentSettings.ts'
@@ -57,6 +58,7 @@ export function buildTranslationRegistry(): TranslationRegistryEntry[] {
     ...listShareI18nEntries(),
     ...listPaymentsI18nEntries(),
     ...listNotificationsI18nEntries(),
+    ...listActivitiesI18nEntries(),
     ...listPaymentSettingsI18nEntries(),
     ...listEventFinancialCloseoutI18nEntries(),
     ...listFinanceObservabilityI18nEntries(),

@@ -1,10 +1,7 @@
 export function isWhatsAppNotificationsEnabled() {
   const flag = String(process.env.WHATSAPP_NOTIFICATIONS_ENABLED || '').trim().toLowerCase()
   if (flag === 'false' || flag === '0' || flag === 'off') return false
-  if (flag === 'true' || flag === '1' || flag === 'on') {
-    return Boolean(whatsAppAccessToken() && whatsAppPhoneNumberId())
-  }
-  return Boolean(whatsAppAccessToken() && whatsAppPhoneNumberId())
+  return true
 }
 
 export function whatsAppAccessToken() {
@@ -23,6 +20,26 @@ export function whatsAppPhoneNumberId() {
   )
 }
 
+export function sharedWhatsAppCompanyAllowlist() {
+  return String(process.env.WHATSAPP_SHARED_SENDER_COMPANY_IDS || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+}
+
+export function companyMayUseSharedWhatsAppSender(companyId: string) {
+  if (!companyId) return false
+  return sharedWhatsAppCompanyAllowlist().includes(companyId)
+}
+
+export function notificationWorkerSecret() {
+  return (
+    process.env.NOTIFICATION_WORKER_SECRET?.trim() ||
+    process.env.CRON_SECRET?.trim() ||
+    ''
+  )
+}
+
 export function notificationAppOrigin() {
   return (
     process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, '') ||
@@ -37,6 +54,17 @@ export function quoteDeepLinkPath(quoteId: string) {
 
 export function invoiceDeepLinkPath(invoiceId: string) {
   return `/invoices/${invoiceId}`
+}
+
+export function activityDeepLinkPath(input: {
+  paymentId?: string | null
+  invoiceId?: string | null
+  quoteId?: string | null
+}) {
+  if (input.paymentId) return `/activities?tab=transactions&focus=payment:${input.paymentId}`
+  if (input.invoiceId) return invoiceDeepLinkPath(input.invoiceId)
+  if (input.quoteId) return quoteDeepLinkPath(input.quoteId)
+  return '/activities'
 }
 
 export function quoteDeepLinkUrl(quoteId: string) {
@@ -58,5 +86,13 @@ export function whatsAppTemplateName(eventKey?: string) {
   if (eventKey === 'payment.full_received') {
     return process.env.WHATSAPP_TEMPLATE_FULL?.trim() || 'payment_full_received_internal'
   }
+  if (eventKey === 'quote.accepted') {
+    return process.env.WHATSAPP_TEMPLATE_QUOTE_ACCEPTED?.trim() || 'quote_accepted_internal'
+  }
   return process.env.WHATSAPP_TEMPLATE_NEW_QUOTE?.trim() || 'new_quote_internal'
+}
+
+export function includeDevHeaderInWhatsAppTemplate() {
+  const flag = String(process.env.WHATSAPP_TEMPLATE_INCLUDE_DEV_HEADER || '').trim().toLowerCase()
+  return flag === 'true' || flag === '1' || flag === 'on'
 }

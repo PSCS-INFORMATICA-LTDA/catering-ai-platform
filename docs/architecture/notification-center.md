@@ -1,74 +1,61 @@
-# Notification Center V1.1
+# Notification Center V1.2
 
 **DEV only.** Multi-company. Channel-neutral.
 
 ```
-BUSINESS EVENT
-  → NOTIFICATION EVENT
-    → SUBSCRIPTION / RECIPIENT RESOLUTION
-      → COMPANY PROVIDER (or DEV env fallback)
-        → CHANNEL
-          → DELIVERY / AUDIT
+CONFIRMED BUSINESS TRANSITION
+  → DURABLE notification_events + notification_deliveries
+    → after() worker kick + Vercel cron
+      → COMPANY PROVIDER (no silent global fallback)
+        → WhatsApp Cloud API
+          → delivery history / Meta callback
 ```
 
-V1.1 events:
+V1.2 events:
 
 - `quote.created`
+- `quote.accepted` (accepted version actually persisted)
 - `payment.deposit_received`
-- `payment.full_received`
+- `payment.full_received` (only when the invoice is fully paid)
 
-Future catalog rows exist but are disabled:
+Acceptance is not payment. Payment is not a confirmed reservation.
+`purpose=full` without a settled invoice does **not** emit quitação.
 
-- `payment.failed`
-- `payment.refund_completed`
-- `order.confirmed`
-- `event.today`
-- `event.tomorrow`
-- `inventory.low_stock` (only when real thresholds exist)
-- `brasinha.action`
-- `brasinha.customer_reply`
+Outstanding = `max(invoice.total - invoice.paid_total, 0)`. Never `balance_amount`.
 
-AI Secretary must consume these same events later. Do not build a parallel engine.
+## Automatic worker
 
-## Recipients vs subscriptions
+Persist is durable. Meta is never called inside the financial transaction.
+`recordPayment` / proposal accept / quote create stay `void enqueue*Safe`.
+`enqueueEvent` writes pending deliveries and schedules `after()` → `processNotificationQueue`.
+Cron backup: `GET/POST /api/notifications/worker` every minute (`CRON_SECRET` or `NOTIFICATION_WORKER_SECRET`).
 
-- `notification_recipients`: person + channel + phone + locale
-- `notification_subscriptions`: which events that recipient receives
+Retries: limited backoff. Stuck `processing` (>2 min) is recovered.
+Timeout after calling Meta → `uncertain`. Do not resend blindly.
+Manual retry is optional, not required for the happy path.
 
-One phone is not duplicated per event.
+Activation watermark: `company_notification_settings.auto_dispatch_from`.
+No automatic backfill of old payments. Replay remains explicit and DEV-only.
 
-## Payment source
+## Security
 
-Canonical completed payment:
+- WhatsApp POST verifies `X-Hub-Signature-256` on the raw body with the App Secret.
+- GET verify token does not authorize POST.
+- Updates are scoped by company + `phone_number_id` / WABA.
+- Status never regresses `read` → `sent`.
+- Callback never changes financial state.
+- Disabled provider or decrypt failure does not fall back to global credentials.
+- Shared sender requires `WHATSAPP_SHARED_SENDER_COMPANY_IDS` or `provider=pscs_shared`.
 
-- `recordPaymentAttempt` (PayPal capture + verified webhook)
-- `recordManualPayment` (Zelle / bank)
+## Recipients
 
-Not PayPal-only. Entity id is `invoice_payments.id`.
+Consent starts as `unknown`. Automatic send requires `confirmed` + enabled + subscription.
+Do not invent consent. Phone lives on the notification recipient, not PayPal.
 
-Outstanding = `max(invoice.total - invoice.paid_total, 0)`.
-Never use `balance_amount` as current remaining balance.
+## Screens
 
-## Providers
+- `/settings/notifications` — recipients, events, diagnosis, controlled test
+- `/settings/payments` — shortcut “Notificações de pagamento”
+- `/activities` — summary / transactions / WhatsApp (financial ledger stays on invoices)
 
-`company_notification_providers` + `private.notification_provider_secrets`.
-Global `WHATSAPP_*` env is DEV fallback only.
-
-## WhatsApp templates
-
-CODE READY, not META TEMPLATE APPROVED:
-
-- `new_quote_internal`
-- `payment_deposit_received_internal`
-- `payment_full_received_internal`
-
-Deep links: `/quotes/{id}` or `/invoices/{id}`. Existing auth/RBAC stays enforced.
-
-## Reliability
-
-Quote and payment persistence stay primary.
-Enqueue is `void` + try/catch. WhatsApp failure never rolls back money, invoice, or reservation.
-
-Replay without charging:
-
-`node scripts/dev/replay-payment-notification.mjs --payment-id=<uuid> --dry-run`
+CODE READY, not META TEMPLATE APPROVED.

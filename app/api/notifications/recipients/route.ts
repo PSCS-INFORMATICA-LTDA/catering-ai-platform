@@ -1,7 +1,7 @@
 import {
   requireApiPermission,
   requireAnyApiPermission,
-  resolveAuthorizedCompanyId,
+  requireSessionCompanyId,
 } from '@/Lib/auth/requireApi'
 import { toE164 } from '@/Lib/notifications/e164'
 import { V1_NOTIFICATION_EVENT_KEYS } from '@/Lib/notifications/types'
@@ -27,13 +27,15 @@ async function defaultSubscriptions(companyId: string, recipientId: string) {
 export async function GET() {
   const auth = await requireAnyApiPermission('notifications.view', 'notification_deliveries.view')
   if (!auth.ok) return auth.response
-  const companyId = resolveAuthorizedCompanyId(auth.session)
+  const company = requireSessionCompanyId(auth.session)
+  if (!company.ok) return company.response
+  const companyId = company.companyId
   const db = getSupabaseServerClient()
   const [{ data, error }, { data: subscriptions }] = await Promise.all([
     db
       .from('notification_recipients')
       .select(
-        'id, company_id, display_name, person_id, phone_raw, phone_e164, locale, enabled, channel, created_at, updated_at',
+        'id, company_id, display_name, person_id, phone_raw, phone_e164, locale, enabled, channel, consent_status, consent_source, consent_at, created_at, updated_at',
       )
       .eq('company_id', companyId)
       .order('created_at', { ascending: false }),
@@ -54,13 +56,17 @@ export async function GET() {
 export async function POST(request: Request) {
   const auth = await requireApiPermission('notifications.manage')
   if (!auth.ok) return auth.response
-  const companyId = resolveAuthorizedCompanyId(auth.session)
+  const company = requireSessionCompanyId(auth.session)
+  if (!company.ok) return company.response
+  const companyId = company.companyId
   const body = (await request.json().catch(() => null)) as {
     displayName?: string
     phone?: string
     locale?: string
     enabled?: boolean
     channel?: string
+    personId?: string
+    consentStatus?: string
     subscriptions?: Record<string, boolean>
   } | null
   const phoneRaw = String(body?.phone || '').trim()
@@ -76,10 +82,12 @@ export async function POST(request: Request) {
       company_id: companyId,
       channel: body?.channel === 'whatsapp' ? 'whatsapp' : 'whatsapp',
       display_name: String(body?.displayName || '').trim() || null,
+      person_id: body?.personId || null,
       phone_raw: phoneRaw,
       phone_e164: phoneE164,
       locale,
       enabled: body?.enabled !== false,
+      consent_status: 'unknown',
     })
     .select('*')
     .single()
@@ -103,13 +111,18 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const auth = await requireApiPermission('notifications.manage')
   if (!auth.ok) return auth.response
-  const companyId = resolveAuthorizedCompanyId(auth.session)
+  const company = requireSessionCompanyId(auth.session)
+  if (!company.ok) return company.response
+  const companyId = company.companyId
   const body = (await request.json().catch(() => null)) as {
     id?: string
     enabled?: boolean
     displayName?: string
     phone?: string
     locale?: string
+    personId?: string
+    confirmConsent?: boolean
+    denyConsent?: boolean
     subscriptions?: Record<string, boolean>
   } | null
   if (!body?.id) return Response.json({ error: 'id_required' }, { status: 400 })
@@ -126,6 +139,17 @@ export async function PATCH(request: Request) {
   }
   if (body.locale === 'pt' || body.locale === 'en' || body.locale === 'es') {
     patch.locale = body.locale
+  }
+  if (typeof body.personId === 'string') patch.person_id = body.personId || null
+  if (body.confirmConsent === true) {
+    patch.consent_status = 'confirmed'
+    patch.consent_source = 'operator_recorded'
+    patch.consent_at = new Date().toISOString()
+  }
+  if (body.denyConsent === true) {
+    patch.consent_status = 'denied'
+    patch.consent_source = 'operator_recorded'
+    patch.consent_at = new Date().toISOString()
   }
   const db = getSupabaseServerClient()
   const { data, error } = await db
