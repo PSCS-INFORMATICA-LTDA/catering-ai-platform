@@ -14,6 +14,7 @@ import { useAuthLocaleFromMe } from '@/Lib/i18n/useAuthLocaleFromMe'
 import type { CompanyPaypalPublicSettings } from '@/Lib/payments/paypalSettingsTypes'
 import type { OfflinePaymentSettings } from '@/Lib/payments/offlinePaymentSettingsTypes'
 import { paymentHelpLabels, paymentHelpText } from '@/Lib/payments/paymentSetupHelp'
+import type { PaymentNotificationSummary } from '@/Lib/notifications/loadPaymentNotificationSummary'
 import PaymentSetupHelp from './PaymentSetupHelp'
 
 type OfflineMethods = { zelle: boolean; bankTransfer: boolean }
@@ -38,12 +39,13 @@ function friendlyError(locale: string, code: string) {
 }
 
 export default function PaymentSettingsDashboard({
-  companyName, initialPaypal, initialMethods, initialOfflineSettings,
+  companyName, initialPaypal, initialMethods, initialOfflineSettings, notificationSummary,
 }: {
   companyName: string
   initialPaypal: CompanyPaypalPublicSettings
   initialMethods: OfflineMethods
   initialOfflineSettings: OfflinePaymentSettings
+  notificationSummary?: PaymentNotificationSummary | null
 }) {
   const locale = useAuthLocaleFromMe()
   const [paypal, setPaypal] = useState(initialPaypal)
@@ -175,6 +177,39 @@ export default function PaymentSettingsDashboard({
         <p className="mt-2 text-xs text-neutral-500">{tPaymentSettings(locale, 'canonicalNote')}</p>
         <p className="mt-1 text-xs text-neutral-500">{tPaymentSettings(locale, canManage ? 'credentialManagerYes' : 'credentialManagerNo')}</p>
       </header>
+
+      {notificationSummary ? (
+        <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-black uppercase tracking-wider">
+            {tPaymentSettings(locale, 'paymentNotifications')}
+          </h2>
+          <p className="mt-2 text-sm text-neutral-600">
+            {tPaymentSettings(locale, 'paymentNotificationsHint')}
+          </p>
+          <p className="mt-3 text-sm font-semibold">
+            {tPaymentSettings(locale, 'activeRecipients', {
+              n: notificationSummary.activeRecipients,
+            })}
+          </p>
+          <p className="mt-1 text-sm text-neutral-700">
+            {tPaymentSettings(locale, 'depositAlerts')}:{' '}
+            {notificationSummary.depositEnabled
+              ? tPaymentSettings(locale, 'alertOn')
+              : tPaymentSettings(locale, 'alertOff')}
+            {' · '}
+            {tPaymentSettings(locale, 'fullAlerts')}:{' '}
+            {notificationSummary.fullEnabled
+              ? tPaymentSettings(locale, 'alertOn')
+              : tPaymentSettings(locale, 'alertOff')}
+          </p>
+          <a
+            href="/settings/notifications"
+            className="mt-4 inline-flex rounded-lg bg-[var(--brand-primary-2,#1e3a5f)] px-4 py-2 text-xs font-bold uppercase text-white"
+          >
+            {tPaymentSettings(locale, 'configureNotifications')}
+          </a>
+        </section>
+      ) : null}
 
       <div className="mb-6"><PaymentSetupHelp locale={locale} /></div>
       {error ? <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}

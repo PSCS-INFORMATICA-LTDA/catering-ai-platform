@@ -1,0 +1,38 @@
+name: notification-worker-dev
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    if: ${{ vars.NOTIFICATION_WORKER_DEV_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping DEV worker
+        env:
+          WORKER_URL: ${{ secrets.NOTIFICATION_WORKER_URL }}
+          WORKER_SECRET: ${{ secrets.NOTIFICATION_WORKER_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${WORKER_URL:-}" ] || [ -z "${WORKER_SECRET:-}" ]; then
+            echo "SKIP=missing_worker_secrets"
+            exit 0
+          fi
+          case "$WORKER_URL" in
+            *catering-ai-agenda.vercel.app*|*prod*|*production*)
+              echo "REFUSED=production_url"
+              exit 1
+              ;;
+          esac
+          code=$(curl -sS -o /tmp/worker-body.txt -w '%{http_code}' \
+            -H "Authorization: Bearer ${WORKER_SECRET}" \
+            -H "Content-Type: application/json" \
+            -X POST "$WORKER_URL")
+          echo "WORKER_HTTP=$code"
+          if [ "$code" != "200" ] && [ "$code" != "401" ]; then
+            echo "WORKER_BODY_PREVIEW=$(head -c 200 /tmp/worker-body.txt)"
+          fi
+          test "$code" = "200"

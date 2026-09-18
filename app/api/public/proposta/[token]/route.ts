@@ -1,6 +1,7 @@
 import { writeOperationalAudit } from '@/Lib/orders/writeOperationalAudit'
 import { loadPublicProposalByToken } from '@/Lib/commercialReview/loadPublicProposal'
 import { quoteHasPendingCoupon } from '@/Lib/coupons/resolveCoupon'
+import { enqueueQuoteAcceptedNotificationSafe } from '@/Lib/notifications/enqueueQuoteAccepted'
 import { loadPublicProposalPaymentSnapshot } from '@/Lib/payments/publicProposalPayment'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 
@@ -151,6 +152,15 @@ export async function POST(request: Request, { params }: Params) {
         body.action === 'accept' ? sharedVersionId : null,
     },
   })
+
+  if (body.action === 'accept') {
+    void enqueueQuoteAcceptedNotificationSafe({
+      companyId: quote.company_id,
+      quoteId: quote.id,
+      acceptedVersionId: sharedVersionId,
+      source: 'public_proposal_accept',
+    })
+  }
 
   const payment =
     body.action === 'accept'

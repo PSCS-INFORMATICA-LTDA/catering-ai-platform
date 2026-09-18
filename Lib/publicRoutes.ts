@@ -15,6 +15,8 @@ const SEGMENT_PUBLIC_PREFIXES = [
   '/conferencia-saida',
   '/pay',
   '/api/payments/paypal',
+  '/api/notifications/whatsapp/status',
+  '/api/notifications/worker',
   '/api/public',
   '/cdl/video',
   '/cdl/brand',

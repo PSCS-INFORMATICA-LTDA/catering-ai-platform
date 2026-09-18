@@ -89,6 +89,16 @@ export const CATERING_NAV: NavGroup[] = [
         requiredAnyPermission: ['finance.invoices.view', 'orders.financial.view'],
       },
       {
+        href: '/activities',
+        label: 'Atividades e transações',
+        requiredAnyPermission: [
+          'notifications.view',
+          'notification_deliveries.view',
+          'finance.invoices.view',
+          'orders.financial.view',
+        ],
+      },
+      {
         href: '/payments/paypal-control',
         label: 'PayPal',
         requiredPermission: 'finance.invoices.view',
@@ -133,6 +143,11 @@ export const CATERING_NAV: NavGroup[] = [
     children: [
       { href: '/settings/company', label: 'Empresa' },
       { href: '/settings/payments', label: 'Pagamentos' },
+      {
+        href: '/settings/notifications',
+        label: 'Notificações',
+        requiredAnyPermission: ['notifications.view', 'notification_deliveries.view'],
+      },
       { href: '/settings/dictionary', label: 'Dicionário de dados' },
       { href: '/users', label: 'Usuários e acessos' },
       { href: '/profile', label: 'Meu perfil' },
@@ -168,6 +183,9 @@ export function isNavHrefActive(pathname: string, href: string): boolean {
   }
   if (href === '/invoices') {
     return pathname === '/invoices' || pathname.startsWith('/invoices/')
+  }
+  if (href === '/activities') {
+    return pathname === '/activities' || pathname.startsWith('/activities/')
   }
   if (href === '/coupons') {
     return pathname === '/coupons' || pathname.startsWith('/coupons/')

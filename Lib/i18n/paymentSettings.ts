@@ -168,6 +168,30 @@ const { t, list } = makeI18nModule('paymentSettings', 'billing', {
     en: 'Company is resolved from the session / PSCS One mapping. Browser company_id is not authorization.',
     es: 'Empresa resuelta por la sesión / mapping PSCS One. company_id del navegador no autoriza.',
   },
+  paymentNotifications: {
+    pt: 'Notificações de pagamento',
+    en: 'Payment notifications',
+    es: 'Notificaciones de pago',
+  },
+  paymentNotificationsHint: {
+    pt: 'Avisos internos de aceite, sinal e quitação. Telefones ficam na Central de Notificações.',
+    en: 'Internal alerts for acceptance, deposit, and settlement. Phone numbers live in the Notification Center.',
+    es: 'Avisos internos de aceptación, señal y liquidación. Los teléfonos viven en el Centro de notificaciones.',
+  },
+  configureNotifications: {
+    pt: 'Configurar notificações',
+    en: 'Configure notifications',
+    es: 'Configurar notificaciones',
+  },
+  activeRecipients: {
+    pt: '{n} destinatários ativos',
+    en: '{n} active recipients',
+    es: '{n} destinatarios activos',
+  },
+  depositAlerts: { pt: 'Depósito', en: 'Deposit', es: 'Depósito' },
+  fullAlerts: { pt: 'Pagamento total', en: 'Full payment', es: 'Pago total' },
+  alertOn: { pt: 'ativo', en: 'on', es: 'activo' },
+  alertOff: { pt: 'inativo', en: 'off', es: 'inactivo' },
 })
 
 export const tPaymentSettings = t
