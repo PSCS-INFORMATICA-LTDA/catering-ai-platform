@@ -41,6 +41,12 @@ V1.2 is additive. Safe rollback is:
 
 Do not delete recipients, events, or delivery history.
 
+## Worker cadence
+
+Immediate dispatch is `after()` after each durable enqueue.
+`vercel.json` cron is daily (`0 11 * * *`) so Preview can deploy on Hobby.
+For minute recovery, ping `/api/notifications/worker` with `CRON_SECRET` or upgrade cron.
+
 ## External Meta checklist (not in this package)
 
 - App Secret in `WHATSAPP_APP_SECRET` (server-only)

@@ -28,7 +28,9 @@ Outstanding = `max(invoice.total - invoice.paid_total, 0)`. Never `balance_amoun
 Persist is durable. Meta is never called inside the financial transaction.
 `recordPayment` / proposal accept / quote create stay `void enqueue*Safe`.
 `enqueueEvent` writes pending deliveries and schedules `after()` → `processNotificationQueue`.
-Cron backup: `GET/POST /api/notifications/worker` every minute (`CRON_SECRET` or `NOTIFICATION_WORKER_SECRET`).
+Cron backup: `GET/POST /api/notifications/worker` daily at 11:00 UTC on Hobby
+(`0 11 * * *`). Immediate send uses `after()` after each persist.
+Minute cadence needs a Pro cron or an external ping of the same worker.
 
 Retries: limited backoff. Stuck `processing` (>2 min) is recovered.
 Timeout after calling Meta → `uncertain`. Do not resend blindly.
