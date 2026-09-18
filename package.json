@@ -27,6 +27,7 @@
     "apply:dev:coupon-usage-lock": "node scripts/dev/apply-coupon-customer-usage-lock-dev.mjs",
     "apply:dev:coupon-decide": "node scripts/dev/apply-coupon-decide-dev.mjs",
     "apply:dev:notification-center": "node scripts/dev/apply-notification-center-dev.mjs",
+    "inspect:dev:notification-center": "node scripts/dev/inspect-notification-center-dev.mjs",
     "preflight:dev:notification-center-v12": "node scripts/dev/preflight-notification-center-v12.mjs",
     "test:dev:notification-lineage": "node scripts/dev/test-notification-lineage.mjs",
     "test:dev:notification-center-probe": "node scripts/dev/probe-notification-center-dev.mjs",

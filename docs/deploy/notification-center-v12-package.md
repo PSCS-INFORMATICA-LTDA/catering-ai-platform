@@ -3,8 +3,10 @@
 **Não aplicar em PROD. Não rebindar o alias DEV oficial.**
 Aplicação no Supabase DEV compartilhado somente após revisão Philippe/ChatGPT.
 
-`CURRENT_SHARED_DEV_APPLY_APPROVAL=NOT_GRANTED_FOR_UNCORRECTED_SQL` until the
-incremental lineage migration is reviewed. Do not apply V1/V1.2 alone.
+`CURRENT_SHARED_DEV_APPLY_APPROVAL=GRANTED_BY_PHILIPPE_EXECUTION_MISSION_2026_09_18`
+for the reviewed three-file package after live inspect. Do not apply V1/V1.2
+alone. Do not reapply objects already present. External send stays off during
+DDL. Management token is still required; this approval does not invent one.
 
 ## Ordem
 
@@ -82,3 +84,21 @@ Immediate dispatch is `after()` after each durable enqueue.
 5-minute recovery: see `docs/deploy/notification-center-dev-scheduler.md`.
 
 Replay: `npm run replay:dev:payment-notification -- --payment-id=<uuid> --dry-run`
+
+## Live inspect (2026-09-18)
+
+`npm run inspect:dev:notification-center` on `yasprgtlqclwsjcshtls`:
+
+- OpenAPI has zero `/notification_*` paths
+- `permissions.notifications.*` absent; `finance.invoices.view` present
+- Inferred package = PENDENTE (V1/V1.2/V1.3 objects missing)
+- Checksums unchanged from the reviewed files
+- Apply script refuses without `SUPABASE_ACCESS_TOKEN` and leaves external send off
+
+Disposable Postgres lineage for the same three files: PASS.
+
+## Next human action (one step)
+
+In the Supabase dashboard for **yasprgtlqclwsjcshtls only** → SQL Editor, run the three reviewed files in order. Do not run `notification_worker_pg_cron.sql`. Do not paste tokens in chat.
+
+Alternatively add `SUPABASE_ACCESS_TOKEN` to this agent environment so the inspect-first apply script can run the same files.

@@ -30,7 +30,8 @@ console.log(
     {
       target_project_ref: 'yasprgtlqclwsjcshtls',
       apply: false,
-      current_shared_dev_apply_approval: 'NOT_GRANTED_FOR_UNCORRECTED_SQL',
+      current_shared_dev_apply_approval: 'GRANTED_BY_PHILIPPE_EXECUTION_MISSION_2026_09_18',
+      note: 'Apply still requires inspect-first + SUPABASE_ACCESS_TOKEN. Do not reapply present objects.',
       prod_untouched: true,
       order: files,
       migrations: rows,

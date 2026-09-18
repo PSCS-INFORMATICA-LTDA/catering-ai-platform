@@ -63,3 +63,6 @@ Do not invent consent. Phone lives on the notification recipient, not PayPal.
 - `/activities` — summary / transactions / WhatsApp (financial ledger stays on invoices)
 
 CODE READY, not META TEMPLATE APPROVED.
+
+PSCS One contract (no second registry): `docs/integration/pscs-one-notification-readiness.md`.
+Shared sender is PSCS-managed. Tenant IDs are mapped, never assumed equal.
