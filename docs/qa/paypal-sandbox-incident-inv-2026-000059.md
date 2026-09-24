@@ -91,6 +91,25 @@ WHERE provider = 'paypal'
   AND COALESCE(metadata->>'environment', '') <> 'live';
 ```
 
+### Other legacy Sandbox rows found by query 5
+
+The DEV database holds six un-stamped PayPal `completed` rows (USD 24,876.55),
+all captured through the Sandbox adapter (the only adapter that exists):
+
+| Invoice | Purpose | Amount | Captured | Invoice status |
+| --- | --- | --- | --- | --- |
+| INV-2026-000004 | deposit | 1242.00 | 2026-09-11 | partially_paid |
+| INV-2026-000053 | deposit | 555.00 | 2026-09-16 | partially_paid |
+| INV-2026-000054 | deposit | 3396.00 | 2026-09-16 | partially_paid |
+| INV-2026-000055 | full | 1805.00 | 2026-09-16 | paid |
+| INV-2026-000058 | full | 17323.25 | 2026-09-17 | paid |
+| INV-2026-000059 | deposit | 555.30 | 2026-09-24 | partially_paid (incident) |
+
+With the hotfix, the finance dashboard already excludes all of them from real
+totals (real received = USD 1,467.00, Zelle only). Their invoice `paid_total`
+and operational state are unchanged; whether they were internal QA or real
+customers must be confirmed before any of them are corrected like the incident row.
+
 ## Proposed correction — NOT APPLIED, requires approval
 
 Reclassify the capture as a Sandbox TEST transaction using the same shape the

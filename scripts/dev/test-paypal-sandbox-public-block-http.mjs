@@ -144,7 +144,7 @@ async function main() {
   const internalMode = attr(internalPage.text, 'data-paypal-mode')
   check('INT-staff-never-live', internalMode !== 'live', `mode=${internalMode}`)
   if (internalMode === 'internal_sandbox') {
-    check('INT-test-banner', internalPage.text.includes('paypal-sandbox-test-banner') && /NO REAL MONEY/i.test(internalPage.text), 'TEST banner')
+    check('INT-test-banner', internalPage.text.includes('paypal-sandbox-test-banner') && /NO REAL MONEY|SEM DINHEIRO REAL|SIN DINERO REAL/i.test(internalPage.text), 'TEST banner')
   } else {
     // The company secret is wrapped with the deployment key; locally it may not decrypt.
     console.log(`INFO  staff Sandbox unavailable here (mode=${internalMode}); fail-closed without a usable secret`)
