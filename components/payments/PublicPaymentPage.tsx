@@ -10,6 +10,7 @@ import {
 import { resolvePublicPaymentLocale } from '@/Lib/payments/invoiceDocumentLocale'
 import { buildInvoiceFinancialPresentation } from '@/Lib/payments/invoiceFinancialPresentation'
 import { isAppPublicLogoPath } from '@/Lib/payments/paymentOgCopy'
+import type { PaypalCheckoutMode } from '@/Lib/payments/paypal/checkoutPolicy'
 import type { InvoiceRecord, PaymentPurpose } from '@/Lib/payments/types'
 import type { QuoteLanguage } from '@/Lib/quoteWizardTypes'
 
@@ -26,7 +27,7 @@ export default function PublicPaymentPage({
   invoiceOutstanding,
   companyDisplayName,
   companyLogoSrc,
-  publicCheckout,
+  paypalMode,
   paypalClientId,
   paymentToken,
   locale,
@@ -39,7 +40,7 @@ export default function PublicPaymentPage({
   invoiceOutstanding: number
   companyDisplayName: string
   companyLogoSrc?: string | null
-  publicCheckout: boolean
+  paypalMode: PaypalCheckoutMode
   paypalClientId: string | null
   paymentToken: string
   locale?: string | null
@@ -55,7 +56,8 @@ export default function PublicPaymentPage({
   const brandName = companyDisplayName.trim() || FALLBACK_COMPANY
   const logoSrc = isAppPublicLogoPath(companyLogoSrc) ? companyLogoSrc : null
   const paypalReady =
-    publicCheckout && Boolean(paypalClientId) && amountDue > 0 && purposeAvailable
+    paypalMode !== 'blocked' && Boolean(paypalClientId) && amountDue > 0 && purposeAvailable
+  const publicCheckout = paypalReady && paypalMode === 'live'
   const presentation = buildInvoiceFinancialPresentation({
     snapshot: snap,
     invoiceKind: invoice.invoice_kind,
@@ -77,6 +79,7 @@ export default function PublicPaymentPage({
     <main
       data-public-payment
       data-paypal-public-checkout={publicCheckout ? 'on' : 'off'}
+      data-paypal-mode={paypalReady ? paypalMode : 'blocked'}
       data-invoice-number={invoice.invoice_number}
       data-invoice-kind={invoice.invoice_kind}
       data-company-brand={brandName}
@@ -147,12 +150,15 @@ export default function PublicPaymentPage({
             clientId={paypalClientId}
             currency={invoice.currency_code}
             locale={lang}
+            environment={paypalMode === 'live' ? 'live' : 'sandbox'}
           />
-        ) : (
-          <section data-payment-methods className="space-y-3 rounded-2xl border border-[#e8e2d9] bg-white p-5">
-            <h2 className="text-sm font-bold uppercase tracking-wider">{tPayments(lang, 'methods')}</h2>
-            <p data-method-zelle className="text-sm">{tPayments(lang, 'zelle')}</p>
-            <p data-method-bank-transfer className="text-sm">{tPayments(lang, 'bankTransfer')}</p>
+        ) : null}
+
+        <section data-payment-methods className="space-y-3 rounded-2xl border border-[#e8e2d9] bg-white p-5">
+          <h2 className="text-sm font-bold uppercase tracking-wider">{tPayments(lang, 'methods')}</h2>
+          <p data-method-zelle className="text-sm">{tPayments(lang, 'zelle')}</p>
+          <p data-method-bank-transfer className="text-sm">{tPayments(lang, 'bankTransfer')}</p>
+          {paypalReady ? null : (
             <p data-method-paypal-off className="text-sm text-[#6b6560]">
               {amountDue <= 0
                 ? invoice.status === 'paid'
@@ -160,8 +166,8 @@ export default function PublicPaymentPage({
                   : `${paymentPurposeLabel(purpose, lang)}: ${paymentStatusLabel('completed', lang)}`
                 : tPayments(lang, 'paypalUnavailable')}
             </p>
-          </section>
-        )}
+          )}
+        </section>
       </div>
     </main>
   )

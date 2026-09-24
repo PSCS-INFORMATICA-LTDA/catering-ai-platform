@@ -16,7 +16,7 @@ import {
   paymentOgMetadataIsSafe,
   resolvePaymentOgOrigin,
 } from '@/Lib/payments/paymentOgCopy'
-import { resolvePublicPaypalCheckoutReadiness } from '@/Lib/payments/paypal/publicCheckout'
+import { resolvePaypalCheckoutAccess } from '@/Lib/payments/paypal/publicCheckout'
 import { resolvePublicPaymentLocale } from '@/Lib/payments/invoiceDocumentLocale'
 import { resolvePaymentLink } from '@/Lib/payments/resolvePaymentLink'
 
@@ -104,7 +104,7 @@ export default async function PublicPayPage({
     )
   }
 
-  const readiness = await resolvePublicPaypalCheckoutReadiness(resolved.invoice.company_id)
+  const paypalAccess = await resolvePaypalCheckoutAccess(resolved.invoice.company_id)
   const locale = resolvePublicPaymentLocale({
     invoiceLocale: resolved.invoice.locale,
     previewLang: query.lang,
@@ -139,8 +139,8 @@ export default async function PublicPayPage({
       invoiceOutstanding={amounts.fullDue}
       companyDisplayName={brand.displayName}
       companyLogoSrc={isAppPublicLogoPath(brand.logoUrl) ? brand.logoUrl : null}
-      publicCheckout={readiness.ready && purposeAvailable}
-      paypalClientId={readiness.clientId}
+      paypalMode={paypalAccess.allowed && purposeAvailable ? paypalAccess.mode : 'blocked'}
+      paypalClientId={paypalAccess.allowed ? paypalAccess.clientId : null}
       paymentToken={token}
       locale={locale}
       purposeAvailable={purposeAvailable}
