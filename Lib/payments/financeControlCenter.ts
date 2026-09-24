@@ -16,6 +16,7 @@ import type {
 } from './financeControlCenterTypes.ts'
 import type { ObservabilityAlert } from './financeObservabilityTypes.ts'
 import type { InvoiceKind, InvoiceStatus, PaymentAttemptStatus, PaymentProvider } from './types.ts'
+import { isSandboxTestPayment, sandboxAmountByInvoice } from './paypal/checkoutPolicy.ts'
 
 export const FINANCE_CONTROL_SEARCH_MIN = 2
 export const FINANCE_CONTROL_SEARCH_LIMIT = 8
@@ -31,6 +32,48 @@ export function computeCaptureSuccessRate(captured: number, failed: number): num
   const valid = captured + failed
   if (valid <= 0) return null
   return roundFinanceMoney((captured / valid) * 100)
+}
+
+/**
+ * Real financial KPIs never include PayPal Sandbox/mock money. Sandbox rows are
+ * dropped, and any Sandbox amount already folded into invoices.paid_total by a
+ * pre-hotfix capture is subtracted so "received" reflects real money only.
+ */
+export function excludeSandboxFromFinance<
+  I extends { id: string; paid_total: number },
+  P extends {
+    invoice_id?: string | null
+    provider: string
+    status: string
+    amount: number
+    metadata?: unknown
+  },
+>(input: { invoices: I[]; payments: P[] }): {
+  invoices: Array<I & { sandbox_paid_total: number }>
+  payments: P[]
+  sandboxPayments: P[]
+} {
+  const sandboxByInvoice = sandboxAmountByInvoice(
+    input.payments.map((payment) => ({
+      invoice_id: payment.invoice_id ?? null,
+      provider: payment.provider,
+      status: payment.status,
+      amount: payment.amount,
+      metadata: payment.metadata,
+    })),
+  )
+  return {
+    invoices: input.invoices.map((invoice) => {
+      const sandbox = sandboxByInvoice.get(invoice.id) ?? 0
+      return {
+        ...invoice,
+        paid_total: roundFinanceMoney(Math.max(0, invoice.paid_total - sandbox)),
+        sandbox_paid_total: sandbox,
+      }
+    }),
+    payments: input.payments.filter((payment) => !isSandboxTestPayment(payment)),
+    sandboxPayments: input.payments.filter((payment) => isSandboxTestPayment(payment)),
+  }
 }
 
 export function groupFinanceTotalsByCurrency(input: {
@@ -69,7 +112,7 @@ export function groupFinanceTotalsByCurrency(input: {
     const row = bucket(invoice.currency_code)
     row.invoice_count += 1
     if (invoice.invoice_kind === 'post_event_adjustment') row.post_event_count += 1
-    if (invoice.status === 'partially_paid') row.partially_paid_count += 1
+    if (invoice.status === 'partially_paid' && invoice.paid_total > 0) row.partially_paid_count += 1
     if (invoice.status === 'canceled') continue
     row.billed_total = roundFinanceMoney(row.billed_total + invoice.total)
     row.received_total = roundFinanceMoney(row.received_total + invoice.paid_total)

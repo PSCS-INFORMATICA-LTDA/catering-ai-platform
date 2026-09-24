@@ -320,6 +320,8 @@ export type PaypalControlKpis = {
   total_captured: number
   total_refunded: number
   currency_code: string
+  /** Sandbox Control KPIs are TEST only and never part of real finance totals. */
+  test_mode: boolean
 }
 
 export type PaypalTransactionRow = {
@@ -343,6 +345,8 @@ export type PaypalTransactionRow = {
   provider_capture_id: string | null
   idempotency_summary: string | null
   metadata: Record<string, unknown>
+  test_transaction: boolean
+  sandbox_captured: boolean
 }
 
 export type ObservabilityAlert = {

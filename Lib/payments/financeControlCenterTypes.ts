@@ -213,6 +213,8 @@ export type FinanceOverviewPayload = {
     refunded_value: number | null
     capture_success_rate: number | null
     currency_code: string
+    /** PayPal numbers come from Sandbox Control: TEST only, never real money. */
+    test_mode: boolean
   }
   pscs_one: {
     pending: number
