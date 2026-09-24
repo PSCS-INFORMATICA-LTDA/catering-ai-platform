@@ -7,14 +7,29 @@ import {
 } from '@/Lib/payments/confirmPaidDeposit'
 import { assertInvoiceAcceptsPayment } from '@/Lib/payments/invoiceCancellation'
 import { createPaypalAdapter, type PaypalCaptureResult } from '@/Lib/payments/paypal/adapter'
-import { resolvePublicPaypalCheckoutReadiness } from '@/Lib/payments/paypal/publicCheckout'
+import { invoiceAmountContext, resolveServerAmountDue } from '@/Lib/payments/loadInvoiceAmountDue'
+import {
+  isRecordedSandboxTestCapture,
+  isSandboxTestPayment,
+  paypalEnvironmentMatches,
+  type PaypalPaymentEnvironment,
+} from '@/Lib/payments/paypal/checkoutPolicy'
+import {
+  paypalLiveNotAvailableResponse,
+  resolvePaypalCheckoutAccess,
+} from '@/Lib/payments/paypal/publicCheckout'
 import { issueFromUnknownCaptureError } from '@/Lib/payments/paypal/sandboxError'
 import { logPaypalSandbox } from '@/Lib/payments/paypal/sandboxLog'
-import { findPaymentByProviderOrder, recordPaymentAttempt } from '@/Lib/payments/recordPayment'
+import {
+  findPaymentByProviderOrder,
+  recordPaymentAttempt,
+  recordSandboxTestCapture,
+} from '@/Lib/payments/recordPayment'
 import { resolvePaymentLink } from '@/Lib/payments/resolvePaymentLink'
 import {
   acquirePaymentScheduleHold,
   consumePaymentScheduleHold,
+  releasePaymentScheduleHold,
 } from '@/Lib/payments/scheduleHold'
 import { createHash } from 'node:crypto'
 
@@ -26,6 +41,26 @@ function cents(value: number) {
 
 function paypalRequestId(parts: string[]) {
   return createHash('sha256').update(parts.join('|')).digest('hex')
+}
+
+function sandboxTestBody(input: {
+  captureId: string | null
+  paymentId: string
+  duplicate: boolean
+}) {
+  return {
+    data: {
+      captureId: input.captureId,
+      paymentId: input.paymentId,
+      duplicate: input.duplicate,
+      environment: 'sandbox' as const,
+      testTransaction: true,
+      financialCompleted: false,
+      operationalAdvanceCompleted: false,
+      operationalError: null,
+      reservation: null,
+    },
+  }
 }
 
 function closeFromReservation(reservation: PaidContractEnsureResult) {
@@ -52,15 +87,15 @@ export async function POST(request: Request) {
   let companyId = ''
   let invoiceId = ''
   let paymentLinkId: string | null = null
+  let environment: PaypalPaymentEnvironment = 'sandbox'
   if (body.token) {
     const resolved = await resolvePaymentLink(body.token)
     if (!resolved.ok) {
       return Response.json({ error: resolved.error }, { status: resolved.status })
     }
-    const readiness = await resolvePublicPaypalCheckoutReadiness(resolved.invoice.company_id)
-    if (!readiness.ready) {
-      return Response.json({ error: readiness.reason }, { status: 403 })
-    }
+    const access = await resolvePaypalCheckoutAccess(resolved.invoice.company_id)
+    if (!access.allowed) return paypalLiveNotAvailableResponse()
+    environment = access.environment
     companyId = resolved.invoice.company_id
     invoiceId = resolved.invoice.id
     paymentLinkId = resolved.link.id
@@ -81,6 +116,23 @@ export async function POST(request: Request) {
     return Response.json({ error: 'order_invoice_mismatch' }, { status: 403 })
   }
   invoiceId = existing.invoice_id
+
+  if (!paypalEnvironmentMatches(existing.metadata, environment)) {
+    return Response.json({ error: 'paypal_environment_mismatch' }, { status: 409 })
+  }
+
+  if (
+    isRecordedSandboxTestCapture(existing) ||
+    (existing.status === 'completed' && isSandboxTestPayment(existing))
+  ) {
+    return Response.json(
+      sandboxTestBody({
+        captureId: existing.provider_capture_id,
+        paymentId: existing.id,
+        duplicate: true,
+      }),
+    )
+  }
 
   if (existing.status === 'completed') {
     const reservation = await confirmPaidDepositReservation({
@@ -109,6 +161,25 @@ export async function POST(request: Request) {
   const acceptsPayment = await assertInvoiceAcceptsPayment(companyId, invoiceId)
   if (!acceptsPayment.ok) {
     return Response.json({ error: acceptsPayment.error }, { status: 409 })
+  }
+
+  // Never ask PayPal to capture money the ledger no longer owes (another order
+  // or a manual payment already satisfied this purpose).
+  const { loadCompanyInvoice } = await import('@/Lib/payments/createInvoiceFromQuote')
+  const invoice = await loadCompanyInvoice(companyId, invoiceId)
+  if (!invoice) return Response.json({ error: 'invoice_not_found' }, { status: 404 })
+  if (invoice.status === 'paid') {
+    return Response.json({ error: 'payment_already_completed' }, { status: 409 })
+  }
+  const due = await resolveServerAmountDue(
+    invoiceAmountContext(invoice),
+    existing.purpose ?? 'deposit',
+  )
+  if (due.amount <= 0) {
+    return Response.json({ error: 'payment_already_completed' }, { status: 409 })
+  }
+  if (cents(due.amount) < cents(existing.amount)) {
+    return Response.json({ error: 'payment_amount_changed' }, { status: 409 })
   }
 
   // Critical last-moment gate: approval in PayPal is not enough. Revalidate the
@@ -231,6 +302,40 @@ export async function POST(request: Request) {
     return Response.json({ error: 'paypal_capture_amount_mismatch' }, { status: 409 })
   }
 
+  if (environment !== 'live') {
+    const test = await recordSandboxTestCapture({
+      companyId,
+      paymentId: existing.id,
+      providerOrderId: captured.orderId,
+      providerCaptureId: captured.captureId,
+      amount: captured.amount,
+      currency: captured.currency,
+      captureStatus: captured.status,
+      source: 'paypal_capture',
+      metadata: {
+        mock: captured.mock,
+        verifiedAmount: true,
+        verifiedCurrency: true,
+      },
+    })
+    // A TEST capture must not keep the agenda slot reserved.
+    await releasePaymentScheduleHold({
+      companyId,
+      invoiceId,
+      reason: 'paypal_sandbox_test_capture',
+    })
+    if (!test.ok) {
+      return Response.json({ error: test.error }, { status: test.status })
+    }
+    return Response.json(
+      sandboxTestBody({
+        captureId: captured.captureId,
+        paymentId: test.payment.id,
+        duplicate: test.duplicate,
+      }),
+    )
+  }
+
   const recorded = await recordPaymentAttempt({
     companyId,
     invoiceId,
@@ -244,6 +349,7 @@ export async function POST(request: Request) {
     idempotencyKey: `capture:${captured.orderId}`,
     metadata: {
       mock: captured.mock,
+      environment,
       verifiedAmount: true,
       verifiedCurrency: true,
       scheduleHoldId: hold.holdId ?? null,
