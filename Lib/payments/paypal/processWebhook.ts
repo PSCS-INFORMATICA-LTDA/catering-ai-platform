@@ -6,8 +6,14 @@ import {
   isRetryableOperationalFailure,
   paidContractEnsureFailedBody,
 } from '@/Lib/payments/paidContractAdvance'
-import { recordPaymentAttempt } from '@/Lib/payments/recordPayment'
+import { recordPaymentAttempt, recordSandboxTestCapture } from '@/Lib/payments/recordPayment'
+import { releasePaymentScheduleHold } from '@/Lib/payments/scheduleHold'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
+import {
+  isRecordedSandboxTestCapture,
+  paypalEnvironmentMatches,
+  type PaypalPaymentEnvironment,
+} from './checkoutPolicy'
 import { webhookEventId } from './webhook'
 import { logPaypalSandbox } from './sandboxLog'
 
@@ -47,6 +53,7 @@ async function processVerifiedPaypalRefund(input: {
   resource: Record<string, unknown>
   eventId: string
   expectedCompanyId?: string
+  environment: PaypalPaymentEnvironment
 }) {
   const providerRefundId = typeof input.resource.id === 'string' ? input.resource.id : null
   const amount = objectValue(input.resource.amount)
@@ -63,6 +70,21 @@ async function processVerifiedPaypalRefund(input: {
   }
 
   const db = getSupabaseServerClient()
+  if (input.environment !== 'live') {
+    let testQuery = db
+      .from('invoice_payments')
+      .select('id, company_id, provider, status, provider_capture_id, metadata')
+      .eq('provider', 'paypal')
+      .eq('provider_capture_id', captureId)
+    if (input.expectedCompanyId) testQuery = testQuery.eq('company_id', input.expectedCompanyId)
+    const { data: testRows } = await testQuery.limit(2)
+    const testRow = testRows?.length === 1 ? testRows[0] : null
+    if (testRow && isRecordedSandboxTestCapture({ ...testRow, provider: String(testRow.provider), status: String(testRow.status) })) {
+      return Response.json({
+        data: { ignored: true, reason: 'sandbox_test_capture', testTransaction: true },
+      })
+    }
+  }
   let paymentQuery = db
     .from('invoice_payments')
     .select('id, company_id, invoice_id, provider, provider_capture_id, status')
@@ -141,6 +163,8 @@ async function processVerifiedPaypalRefund(input: {
 export async function processVerifiedPaypalCapture(input: {
   rawBody: string
   expectedCompanyId?: string
+  /** Environment of the PayPal account/API that verified this webhook. */
+  environment: PaypalPaymentEnvironment
 }) {
   let payload: Record<string, unknown> = {}
   try {
@@ -159,6 +183,7 @@ export async function processVerifiedPaypalCapture(input: {
       resource,
       eventId,
       expectedCompanyId: input.expectedCompanyId,
+      environment: input.environment,
     })
   }
   if (eventType !== 'PAYMENT.CAPTURE.COMPLETED') {
@@ -194,6 +219,65 @@ export async function processVerifiedPaypalCapture(input: {
     String(amount.currency_code || '').toUpperCase() !== String(payment.currency_code).toUpperCase()
   ) {
     return Response.json({ error: 'paypal_webhook_amount_mismatch' }, { status: 409 })
+  }
+
+  if (!paypalEnvironmentMatches(payment.metadata, input.environment)) {
+    return Response.json({ error: 'paypal_environment_mismatch' }, { status: 409 })
+  }
+  if (payment.provider_capture_id && payment.provider_capture_id !== captureId) {
+    return Response.json({ error: 'paypal_capture_mismatch' }, { status: 409 })
+  }
+
+  if (input.environment !== 'live') {
+    if (payment.status === 'completed') {
+      return Response.json({
+        data: {
+          ignored: true,
+          reason: 'sandbox_legacy_completed',
+          eventId,
+          testTransaction: true,
+          financialCompleted: false,
+        },
+      })
+    }
+    const test = await recordSandboxTestCapture({
+      companyId: String(payment.company_id),
+      paymentId: String(payment.id),
+      providerOrderId: orderId,
+      providerCaptureId: captureId,
+      amount: Number(amount.value),
+      currency: String(amount.currency_code),
+      captureStatus: 'COMPLETED',
+      source: 'paypal_webhook',
+      metadata: { eventType, eventId, verifiedAmount: true, verifiedCurrency: true },
+    })
+    if (!test.ok) return Response.json({ error: test.error }, { status: test.status })
+    await releasePaymentScheduleHold({
+      companyId: String(payment.company_id),
+      invoiceId: String(payment.invoice_id),
+      reason: 'paypal_sandbox_test_capture',
+    })
+    logPaypalSandbox({
+      action: 'webhook_capture',
+      invoiceId: String(payment.invoice_id),
+      purpose: String(payment.purpose || ''),
+      orderId,
+      environment: 'sandbox',
+      captureStatus: 'COMPLETED',
+      result: test.duplicate ? 'duplicate_test' : 'recorded_test',
+    })
+    return Response.json({
+      data: {
+        eventId,
+        duplicate: test.duplicate,
+        environment: 'sandbox',
+        testTransaction: true,
+        financialCompleted: false,
+        operationalAdvanceCompleted: false,
+        operationalError: null,
+        reservation: null,
+      },
+    })
   }
 
   if (payment.status === 'completed') {
@@ -245,7 +329,13 @@ export async function processVerifiedPaypalCapture(input: {
     providerOrderId: orderId,
     providerCaptureId: captureId,
     idempotencyKey: `webhook:${eventId}`,
-    metadata: { eventType, eventId, verifiedAmount: true, verifiedCurrency: true },
+    metadata: {
+      eventType,
+      eventId,
+      environment: input.environment,
+      verifiedAmount: true,
+      verifiedCurrency: true,
+    },
   })
   if (!recorded.ok) {
     return Response.json({ error: recorded.error }, { status: recorded.status })

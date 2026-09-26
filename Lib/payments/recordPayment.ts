@@ -9,6 +9,11 @@ import { invoiceAmountContext, resolveServerAmountDue } from './loadInvoiceAmoun
 import { toInvoice } from './createInvoiceFromQuote'
 import { deriveInvoiceStatus, isDepositSatisfied } from './invoiceStatus'
 import { readRecordedPaymentClose } from './paidContractAdvance'
+import {
+  isRecordedSandboxTestCapture,
+  isSandboxTestPayment,
+  SANDBOX_TEST_CAPTURE_STATUS,
+} from './paypal/checkoutPolicy'
 import type {
   InvoicePaymentRecord,
   InvoiceRecord,
@@ -134,6 +139,108 @@ function toPayment(row: Record<string, unknown>): InvoicePaymentRecord {
   }
 }
 
+export type SandboxTestCaptureInput = {
+  companyId: string
+  paymentId: string
+  providerOrderId: string
+  providerCaptureId: string
+  amount: number
+  currency: string
+  captureStatus: string
+  source: 'paypal_capture' | 'paypal_webhook'
+  metadata?: Record<string, unknown>
+}
+
+export type SandboxTestCaptureResult =
+  | { ok: true; payment: InvoicePaymentRecord; duplicate: boolean; legacyCompleted: boolean }
+  | RecordPaymentFailure
+
+/**
+ * Stores a PayPal Sandbox capture as an auditable TEST record. It never uses
+ * status `completed`, so it cannot move paid_total, invoice status, the
+ * reservation/OS advance, the finance outbox or payment notifications.
+ */
+export async function recordSandboxTestCapture(
+  input: SandboxTestCaptureInput,
+): Promise<SandboxTestCaptureResult> {
+  const supabase = getSupabaseServerClient()
+  const current = await supabase
+    .from('invoice_payments')
+    .select('*')
+    .eq('id', input.paymentId)
+    .eq('company_id', input.companyId)
+    .maybeSingle()
+  if (!current.data) return { ok: false, status: 404, error: 'payment_not_found' }
+  const row = toPayment(current.data)
+  if (!isSandboxTestPayment(row)) {
+    return { ok: false, status: 409, error: 'paypal_environment_mismatch' }
+  }
+  if (row.provider_order_id !== input.providerOrderId) {
+    return { ok: false, status: 409, error: 'paypal_order_mismatch' }
+  }
+  if (row.status === 'completed') {
+    // Pre-hotfix Sandbox rows stay untouched until an approved data correction.
+    return { ok: true, payment: row, duplicate: true, legacyCompleted: true }
+  }
+  if (isRecordedSandboxTestCapture(row)) {
+    if (row.provider_capture_id !== input.providerCaptureId) {
+      return { ok: false, status: 409, error: 'paypal_capture_mismatch' }
+    }
+    return { ok: true, payment: row, duplicate: true, legacyCompleted: false }
+  }
+  if (row.status !== 'created' && row.status !== SANDBOX_TEST_CAPTURE_STATUS) {
+    return { ok: false, status: 409, error: 'payment_not_capturable' }
+  }
+
+  const now = new Date().toISOString()
+  const updated = await supabase
+    .from('invoice_payments')
+    .update({
+      status: SANDBOX_TEST_CAPTURE_STATUS,
+      provider_capture_id: input.providerCaptureId,
+      captured_at: now,
+      updated_at: now,
+      metadata: {
+        ...row.metadata,
+        ...(input.metadata ?? {}),
+        environment: 'sandbox',
+        test_transaction: true,
+        paypal_capture_status: input.captureStatus,
+        sandbox_capture: {
+          source: input.source,
+          order_id: input.providerOrderId,
+          capture_id: input.providerCaptureId,
+          status: input.captureStatus,
+          amount: input.amount,
+          currency: input.currency,
+          recorded_at: now,
+        },
+      },
+    })
+    .eq('id', row.id)
+    .eq('company_id', input.companyId)
+    .in('status', ['created', SANDBOX_TEST_CAPTURE_STATUS])
+    .is('provider_capture_id', null)
+    .select('*')
+    .maybeSingle()
+
+  if (updated.data) {
+    return { ok: true, payment: toPayment(updated.data), duplicate: false, legacyCompleted: false }
+  }
+
+  const reread = await supabase
+    .from('invoice_payments')
+    .select('*')
+    .eq('id', row.id)
+    .eq('company_id', input.companyId)
+    .maybeSingle()
+  const raced = reread.data ? toPayment(reread.data) : null
+  if (raced && isRecordedSandboxTestCapture(raced) && raced.provider_capture_id === input.providerCaptureId) {
+    return { ok: true, payment: raced, duplicate: true, legacyCompleted: false }
+  }
+  return { ok: false, status: 409, error: updated.error ? 'sandbox_capture_record_failed' : 'payment_not_capturable' }
+}
+
 export async function findPaymentByIdempotency(
   companyId: string,
   idempotencyKey: string,
@@ -186,6 +293,13 @@ async function reconcileInvoicePaidTotal(
 export async function recordPaymentAttempt(
   input: RecordPaymentInput,
 ): Promise<RecordPaymentResult> {
+  if (
+    input.provider === 'paypal' &&
+    input.status === 'completed' &&
+    input.metadata?.environment !== 'live'
+  ) {
+    return { ok: false, status: 409, error: 'paypal_sandbox_not_financial' }
+  }
   const supabase = getSupabaseServerClient()
   const existing = await findPaymentByIdempotency(input.companyId, input.idempotencyKey)
   if (existing) {

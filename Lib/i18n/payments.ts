@@ -174,9 +174,9 @@ const { t, list } = makeI18nModule('payments', 'billing', {
     es: 'Transferencia bancaria — pida los datos a CDL.',
   },
   paypalUnavailable: {
-    pt: 'PayPal online estará disponível após homologação. Nenhum pagamento online está ativo para o cliente final.',
-    en: 'Online PayPal will be available after approval. No live customer checkout is enabled.',
-    es: 'PayPal online estará disponible después de la homologación. El checkout público no está activo.',
+    pt: 'O PayPal está temporariamente indisponível. Use a forma de pagamento alternativa disponível.',
+    en: 'PayPal is temporarily unavailable. Please use the available alternative payment method.',
+    es: 'PayPal no está disponible temporalmente. Utilice el método de pago alternativo disponible.',
   },
   paypalSandboxReady: {
     pt: 'PayPal Sandbox (homologação interna)',

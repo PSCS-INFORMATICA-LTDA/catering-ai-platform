@@ -1,74 +1,152 @@
 import 'server-only'
 
+import { hasPermission } from '@/Lib/auth/permissions'
+import { resolveSessionCompanyId } from '@/Lib/auth/requireApi'
+import { getAuthSession } from '@/Lib/auth/session'
 import {
   loadCompanyPaypalCredentials,
   loadCompanyPaypalRow,
 } from '@/Lib/payments/companyPaypal'
-import { readPaypalRuntimeConfig } from './config'
+import {
+  decideInternalSandboxCheckout,
+  decideLivePaypalCheckout,
+  PAYPAL_LIVE_NOT_AVAILABLE,
+  type PaypalCheckoutMode,
+  type PaypalPaymentEnvironment,
+  type PublicPaypalBlockReason,
+} from './checkoutPolicy'
+import {
+  activePaypalApiBase,
+  PAYPAL_LIVE_ADAPTER_AVAILABLE,
+  readPaypalRequestedEnv,
+  readPaypalRuntimeConfig,
+  readPublicCheckoutFlag,
+  readRuntimeEnv,
+} from './config'
 
-export type PublicPaypalCheckoutReason =
-  | 'ready'
-  | 'paypal_production_blocked'
-  | 'paypal_live_blocked'
-  | 'paypal_disabled'
-  | 'paypal_public_checkout_off'
-  | 'paypal_not_configured'
-  | 'paypal_company_disabled'
-  | 'paypal_sandbox_required'
-  | 'paypal_credentials_missing'
-  | 'paypal_test_required'
-  | 'paypal_webhook_required'
+export const PAYPAL_INTERNAL_SANDBOX_PERMISSION = 'quotes.manage'
 
-export type PublicPaypalCheckoutReadiness = {
-  ready: boolean
-  reason: PublicPaypalCheckoutReason
-  clientId: string | null
-  environment: 'sandbox'
+export const PAYPAL_LIVE_NOT_AVAILABLE_MESSAGE =
+  'PayPal is temporarily unavailable. Please use the available alternative payment method.'
+
+export type PaypalLiveCheckoutResult =
+  | { ok: true; environment: 'live'; clientId: string }
+  | { ok: false; error: typeof PAYPAL_LIVE_NOT_AVAILABLE; reason: PublicPaypalBlockReason }
+
+export type PaypalCheckoutAccess =
+  | {
+      allowed: true
+      mode: Exclude<PaypalCheckoutMode, 'blocked'>
+      environment: PaypalPaymentEnvironment
+      clientId: string
+    }
+  | {
+      allowed: false
+      mode: 'blocked'
+      error: typeof PAYPAL_LIVE_NOT_AVAILABLE
+      reason: PublicPaypalBlockReason
+    }
+
+function metadataOf(row: { metadata?: unknown } | null) {
+  return row?.metadata && typeof row.metadata === 'object'
+    ? (row.metadata as Record<string, unknown>)
+    : {}
 }
 
-function blocked(reason: PublicPaypalCheckoutReason): PublicPaypalCheckoutReadiness {
-  return { ready: false, reason, clientId: null, environment: 'sandbox' }
+async function loadCompanyPaypalState(companyId: string) {
+  const [row, credentials] = await Promise.all([
+    loadCompanyPaypalRow(companyId),
+    loadCompanyPaypalCredentials(companyId),
+  ])
+  return {
+    row,
+    credentials,
+    credentialsPresent: Boolean(credentials.clientId && credentials.clientSecret),
+  }
 }
 
 /**
- * Public checkout is intentionally stricter than the authenticated operator flow.
- * It requires every sandbox safety gate to be green before a browser can start
- * a PayPal order. No secret is ever returned from this helper.
+ * Canonical server-side guard for the PUBLIC customer PayPal checkout.
+ * Allowed only when PayPal is explicitly LIVE end to end; anything else is
+ * PAYPAL_LIVE_NOT_AVAILABLE. Never returns secrets.
  */
-export async function resolvePublicPaypalCheckoutReadiness(
+export async function assertPayPalLiveCheckoutAllowed(
   companyId: string,
-): Promise<PublicPaypalCheckoutReadiness> {
+): Promise<PaypalLiveCheckoutResult> {
   const runtime = readPaypalRuntimeConfig()
-  if (runtime.productionBlocked) return blocked('paypal_production_blocked')
-  if (runtime.liveBlocked) return blocked('paypal_live_blocked')
-  if (!runtime.enabled) return blocked('paypal_disabled')
-  if (!runtime.publicCheckout) return blocked('paypal_public_checkout_off')
+  const { row, credentials, credentialsPresent } = await loadCompanyPaypalState(companyId)
+  const decision = decideLivePaypalCheckout({
+    requestedEnv: readPaypalRequestedEnv(),
+    runtimeEnv: readRuntimeEnv(),
+    activeApiBase: activePaypalApiBase(runtime),
+    liveAdapterAvailable: PAYPAL_LIVE_ADAPTER_AVAILABLE,
+    platformEnabled: runtime.enabled,
+    publicCheckoutFlag: readPublicCheckoutFlag(),
+    companyConfigured: Boolean(row),
+    companyEnvironment: row?.environment ? String(row.environment) : null,
+    companyEnabled: row?.enabled === true,
+    credentialsPresent,
+    connectionValidated: metadataOf(row).connection_status === 'validated',
+    webhookConfigured: Boolean(credentials.webhookId && credentials.webhookRouteKey),
+  })
+  if (!decision.allowed || !credentials.clientId) {
+    return {
+      ok: false,
+      error: PAYPAL_LIVE_NOT_AVAILABLE,
+      reason: decision.allowed ? 'paypal_credentials_missing' : decision.reason,
+    }
+  }
+  return { ok: true, environment: 'live', clientId: credentials.clientId }
+}
 
-  const row = await loadCompanyPaypalRow(companyId)
-  if (!row) return blocked('paypal_not_configured')
-  if (row.environment === 'live') return blocked('paypal_sandbox_required')
-  if (row.enabled !== true) return blocked('paypal_company_disabled')
+async function isInternalViewerForCompany(companyId: string): Promise<boolean> {
+  const session = await getAuthSession().catch(() => null)
+  if (!session) return false
+  if (resolveSessionCompanyId(session) !== companyId) return false
+  return (
+    session.isPlatformAdmin ||
+    hasPermission(session.permissions, PAYPAL_INTERNAL_SANDBOX_PERMISSION)
+  )
+}
 
-  const credentials = await loadCompanyPaypalCredentials(companyId)
-  if (!credentials.clientId || !credentials.clientSecret) {
-    return blocked('paypal_credentials_missing')
+/**
+ * Resolves who may run a PayPal checkout for a public payment link:
+ * - LIVE: any customer, only when assertPayPalLiveCheckoutAllowed passes;
+ * - internal Sandbox: authenticated staff of the same company (TEST only);
+ * - otherwise blocked with PAYPAL_LIVE_NOT_AVAILABLE.
+ */
+export async function resolvePaypalCheckoutAccess(companyId: string): Promise<PaypalCheckoutAccess> {
+  const live = await assertPayPalLiveCheckoutAllowed(companyId)
+  if (live.ok) {
+    return { allowed: true, mode: 'live', environment: 'live', clientId: live.clientId }
   }
 
-  const metadata =
-    row.metadata && typeof row.metadata === 'object'
-      ? (row.metadata as Record<string, unknown>)
-      : {}
-  if (metadata.connection_status !== 'validated') {
-    return blocked('paypal_test_required')
+  const runtime = readPaypalRuntimeConfig()
+  const { row, credentials, credentialsPresent } = await loadCompanyPaypalState(companyId)
+  const internalViewer = await isInternalViewerForCompany(companyId)
+  const sandboxAllowed = decideInternalSandboxCheckout({
+    sandboxRuntimeAllowed: !runtime.productionBlocked && !runtime.liveBlocked,
+    platformEnabled: runtime.enabled,
+    companyConfigured: Boolean(row),
+    companyEnvironment: row?.environment ? String(row.environment) : null,
+    companyEnabled: row?.enabled === true,
+    credentialsPresent,
+    internalViewer,
+  })
+  if (sandboxAllowed && credentials.clientId) {
+    return {
+      allowed: true,
+      mode: 'internal_sandbox',
+      environment: 'sandbox',
+      clientId: credentials.clientId,
+    }
   }
-  if (!credentials.webhookId || !credentials.webhookRouteKey) {
-    return blocked('paypal_webhook_required')
-  }
+  return { allowed: false, mode: 'blocked', error: live.error, reason: live.reason }
+}
 
-  return {
-    ready: true,
-    reason: 'ready',
-    clientId: credentials.clientId,
-    environment: 'sandbox',
-  }
+export function paypalLiveNotAvailableResponse() {
+  return Response.json(
+    { error: PAYPAL_LIVE_NOT_AVAILABLE, message: PAYPAL_LIVE_NOT_AVAILABLE_MESSAGE },
+    { status: 403 },
+  )
 }

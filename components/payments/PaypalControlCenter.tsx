@@ -160,6 +160,16 @@ export default function PaypalControlCenter() {
         <p className="text-xs font-semibold text-neutral-500">{tFinanceObservability(locale, 'readOnlyNotice')}</p>
       </div>
 
+      <div
+        data-testid="paypal-sandbox-test-banner"
+        role="note"
+        className="rounded-2xl border-4 border-dashed border-amber-500 bg-amber-100 p-4 text-amber-950"
+      >
+        <p className="text-lg font-black tracking-[0.18em]">{tFinanceObservability(locale, 'sandboxTestBannerTitle')}</p>
+        <p className="text-sm font-black tracking-[0.12em]">{tFinanceObservability(locale, 'sandboxTestBannerSubtitle')}</p>
+        <p className="mt-1 text-xs font-semibold">{tFinanceObservability(locale, 'sandboxTestBannerCopy')}</p>
+      </div>
+
       <div className="flex flex-wrap gap-2">
         {tabs.map((item) => (
           <button
@@ -262,6 +272,23 @@ export default function PaypalControlCenter() {
       ) : null}
     </div>
   )
+}
+
+function TestChip({ locale }: { locale: string }) {
+  return (
+    <span
+      data-testid="paypal-test-chip"
+      className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-black tracking-wider text-amber-950"
+    >
+      {tFinanceObservability(locale, 'testChip')}
+    </span>
+  )
+}
+
+function rowStatusLabel(row: PaypalTransactionRow, locale: string) {
+  return row.sandbox_captured && row.status !== 'completed'
+    ? tFinanceObservability(locale, 'statusSandboxCaptured')
+    : paymentStatusLabel(row.status, locale)
 }
 
 function PeriodBar({
@@ -442,7 +469,10 @@ function Transactions({
                     <span className="truncate">{row.customer_name || '—'}</span>
                     <span>{paymentPurposeLabel(row.purpose, locale)}</span>
                     <span className="font-bold">{formatFinanceMoney(row.amount, row.currency_code, locale)}</span>
-                    <span>{paymentStatusLabel(row.status, locale)}</span>
+                    <span className="flex flex-wrap items-center gap-1">
+                      {row.test_transaction ? <TestChip locale={locale} /> : null}
+                      {rowStatusLabel(row, locale)}
+                    </span>
                     <span className="truncate font-mono text-xs">{row.provider_order_id || '—'}</span>
                     <span className="truncate font-mono text-xs">{row.provider_capture_id || '—'}</span>
                   </button>
@@ -460,7 +490,10 @@ function Transactions({
                 >
                   <p className="font-black">{row.invoice_number || row.id}</p>
                   <p className="text-sm text-neutral-600">{row.customer_name || '—'}</p>
-                  <p className="mt-2 text-sm font-bold">{formatFinanceMoney(row.amount, row.currency_code, locale)} · {paymentStatusLabel(row.status, locale)}</p>
+                  <p className="mt-2 flex flex-wrap items-center gap-1 text-sm font-bold">
+                    {row.test_transaction ? <TestChip locale={locale} /> : null}
+                    {formatFinanceMoney(row.amount, row.currency_code, locale)} · {rowStatusLabel(row, locale)}
+                  </p>
                   <p className="text-xs text-neutral-500">{formatFinanceDateTime(row.created_at, locale)}</p>
                 </button>
               </li>

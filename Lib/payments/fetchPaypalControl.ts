@@ -28,6 +28,11 @@ import {
   summarizeIdempotencyKey,
 } from './sanitizeFinanceObservability'
 import type { InvoiceKind, InvoiceStatus, PaymentAttemptStatus, PaymentPurpose } from './types'
+import {
+  isRecordedSandboxTestCapture,
+  isSandboxCapturedPayment,
+  isSandboxTestPayment,
+} from './paypal/checkoutPolicy'
 
 function money(value: unknown): number {
   const number = Number(value ?? 0)
@@ -76,7 +81,7 @@ export async function fetchPaypalOverview(input: {
   const [paymentsResult, refundsResult] = await Promise.all([
     supabase
       .from('invoice_payments')
-      .select('id, status, amount, currency_code, created_at, captured_at')
+      .select('id, provider, status, amount, currency_code, provider_capture_id, metadata, created_at, captured_at')
       .eq('company_id', input.companyId)
       .eq('provider', 'paypal')
       .order('created_at', { ascending: false })
@@ -103,8 +108,16 @@ export async function fetchPaypalOverview(input: {
   const payments = paymentsResult.data ?? []
   const paypalPaymentIds = new Set(payments.map((payment) => String(payment.id)))
   const refunds = (refundsResult.data ?? []).filter((refund) => paypalPaymentIds.has(String(refund.payment_id)))
+  const asPolicyRow = (payment: (typeof payments)[number]) => ({
+    provider: String(payment.provider),
+    status: String(payment.status),
+    metadata: payment.metadata,
+    provider_capture_id: payment.provider_capture_id ? String(payment.provider_capture_id) : null,
+  })
   const capturedInPeriod = payments.filter(
-    (payment) => payment.status === 'completed' && inPeriod(String(payment.captured_at || payment.created_at)),
+    (payment) =>
+      isSandboxCapturedPayment(asPolicyRow(payment)) &&
+      inPeriod(String(payment.captured_at || payment.created_at)),
   )
 
   return {
@@ -117,7 +130,11 @@ export async function fetchPaypalOverview(input: {
       failed_in_period: payments.filter(
         (payment) => payment.status === 'failed' && inPeriod(String(payment.created_at)),
       ).length,
-      pending_created: payments.filter((payment) => payment.status === 'created' || payment.status === 'approved').length,
+      pending_created: payments.filter(
+        (payment) =>
+          payment.status === 'created' ||
+          (payment.status === 'approved' && !isRecordedSandboxTestCapture(asPolicyRow(payment))),
+      ).length,
       total_captured: money(
         capturedInPeriod.reduce((sum, payment) => sum + Number(payment.amount || 0), 0),
       ),
@@ -127,6 +144,7 @@ export async function fetchPaypalOverview(input: {
           .reduce((sum, refund) => sum + Number(refund.amount || 0), 0),
       ),
       currency_code: String(payments[0]?.currency_code || 'USD'),
+      test_mode: true,
     },
     error: null,
   }
@@ -313,6 +331,13 @@ export async function fetchPaypalTransactions(input: {
         payment.idempotency_key ? String(payment.idempotency_key) : null,
       ),
       metadata: sanitizePaymentMetadataForBackoffice(payment.metadata),
+      test_transaction: isSandboxTestPayment({ provider: 'paypal', metadata: payment.metadata }),
+      sandbox_captured: isSandboxCapturedPayment({
+        provider: 'paypal',
+        status: String(payment.status),
+        metadata: payment.metadata,
+        provider_capture_id: payment.provider_capture_id ? String(payment.provider_capture_id) : null,
+      }),
     }
   })
 

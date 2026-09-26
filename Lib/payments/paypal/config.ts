@@ -80,6 +80,28 @@ export function paypalApiBase(environment: PaypalEnvironment = 'sandbox') {
     : 'https://api-m.sandbox.paypal.com'
 }
 
+/**
+ * The Orders/Webhook adapters only talk to the Sandbox API today. Flip this only
+ * together with a reviewed LIVE adapter; the public checkout policy reads it.
+ */
+export const PAYPAL_LIVE_ADAPTER_AVAILABLE: boolean = false
+
+export function readPaypalRequestedEnv(): string | null {
+  return read('PAYPAL_ENV')
+}
+
+export function readRuntimeEnv(): string | null {
+  return read('VERCEL_ENV')?.toLowerCase() || read('NODE_ENV')?.toLowerCase() || null
+}
+
+export function activePaypalApiBase(config = readPaypalRuntimeConfig()) {
+  return paypalApiBase(config.environment)
+}
+
+export function readPublicCheckoutFlag(): boolean {
+  return enabledUnlessExplicitlyFalse('PAYPAL_PUBLIC_CHECKOUT')
+}
+
 export function assertSandboxOnly(config = readPaypalRuntimeConfig()) {
   if (config.productionBlocked) throw new Error('PAYPAL_PRODUCTION_BLOCKED')
   if (config.liveBlocked) throw new Error('PAYPAL_LIVE_BLOCKED')

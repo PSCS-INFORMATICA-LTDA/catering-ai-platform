@@ -47,8 +47,11 @@ export async function POST(
     return Response.json({ error: verified.reason }, { status: 400 })
   }
 
+  // Signature was verified against the Sandbox API with Sandbox credentials, so
+  // this event can only ever be a Sandbox (TEST) event.
   return processVerifiedPaypalCapture({
     rawBody,
     expectedCompanyId: String(provider.company_id),
+    environment: 'sandbox',
   })
 }

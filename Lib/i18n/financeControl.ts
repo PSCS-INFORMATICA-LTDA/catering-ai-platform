@@ -21,9 +21,14 @@ const { t, list } = makeI18nModule('financeControl', 'finance', {
   environmentDev: { pt: 'DEV', en: 'DEV', es: 'DEV' },
   paypalSandbox: { pt: 'PAYPAL SANDBOX', en: 'PAYPAL SANDBOX', es: 'PAYPAL SANDBOX' },
   sandboxNotReal: {
-    pt: 'Valores de sandbox. Não é dinheiro real.',
-    en: 'Sandbox amounts. This is not real money.',
-    es: 'Montos de sandbox. No es dinero real.',
+    pt: 'Faturado, Recebido e tendência excluem transações PayPal Sandbox (TESTE, sem dinheiro real).',
+    en: 'Billed, Received and trend exclude PayPal Sandbox transactions (TEST, no real money).',
+    es: 'Facturado, Recibido y tendencia excluyen transacciones PayPal Sandbox (PRUEBA, sin dinero real).',
+  },
+  paypalTestOnly: {
+    pt: 'TESTE — SEM DINHEIRO REAL',
+    en: 'TEST — NO REAL MONEY',
+    es: 'PRUEBA — SIN DINERO REAL',
   },
   kpiBilled: { pt: 'Faturado', en: 'Billed', es: 'Facturado' },
   kpiReceived: { pt: 'Recebido', en: 'Received', es: 'Recibido' },

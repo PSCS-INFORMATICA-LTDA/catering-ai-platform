@@ -423,6 +423,14 @@ function HealthCard({ locale, overview }: { locale: string; overview: FinanceOve
           {' · '}
           {overview.paypal.enabled ? tFinanceControl(locale, 'yes') : tFinanceControl(locale, 'no')}
         </p>
+        {overview.paypal.test_mode ? (
+          <p
+            data-testid="finance-paypal-test-badge"
+            className="mt-2 inline-flex rounded-full border-2 border-amber-400 bg-amber-100 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-amber-950"
+          >
+            {tFinanceControl(locale, 'paypalTestOnly')}
+          </p>
+        ) : null}
         {rate != null ? (
           <p className="mt-2 text-2xl font-black">
             {tFinanceControl(locale, 'captureSuccessRate')} {rate.toFixed(1)}%
