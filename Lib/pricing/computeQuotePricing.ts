@@ -89,6 +89,7 @@ export async function computeQuotePricing(
       quantity: line.quantity,
       unitPrice: line.unitPrice,
       perPerson: line.perPerson,
+      countsTowardMinimum: line.countsTowardMinimum,
     })),
     mileageDistance: input.mileageDistance ?? 0,
     grillRentalRequired: input.grillRentalRequired,

@@ -29,7 +29,7 @@ export const HOLIDAY_SURCHARGE_PERCENT = 100
 export const HOLIDAY_MIN_ORDER = 2000
 
 /** Datas clássicas CDL (subset). Acréscimo 100% cobre todos os feriados federais EUA — ver Lib/usHolidays.ts. */
-export { HOLIDAY_DATES, CDL_EXTRA_SURCHARGE_DATES } from './usHolidays'
+export { HOLIDAY_DATES, CDL_EXTRA_SURCHARGE_DATES } from './usHolidays.ts'
 
 export const CHILD_FREE_AGE_MAX = 3
 export const CHILD_HALF_AGE_MAX = 12
@@ -179,7 +179,6 @@ export const CDL_PACKAGES: CdlPackageDefinition[] = [
       'Lagosta ou Vieira com bacon',
       'Salmão ou camarão',
       'Costela de porco ou boi',
-      'Fraldinha Angus',
       'Carré de cordeiro',
       'Linguiça',
       'Frango sobrecoxa desossada',
@@ -276,7 +275,6 @@ export const CDL_PACKAGES: CdlPackageDefinition[] = [
       'Lagosta ou Vieira com bacon',
       'Salmão ou camarão',
       'Costela de porco ou boi',
-      'Fraldinha Angus',
       'Carré de cordeiro',
       'Linguiça',
       'Frango sobrecoxa desossada',

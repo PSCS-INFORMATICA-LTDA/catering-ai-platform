@@ -64,6 +64,10 @@ export type PricingBreakdown = {
   computed_at: string
   engine_version: string
   coupon?: Record<string, unknown> | null
+  /** Package, eligible additionals and mileage. Grill and waiter are excluded. */
+  minimum_eligible_subtotal?: number
+  /** Grill, waiter and any other amount billed after the floor. */
+  excluded_from_minimum_total?: number
 }
 
 export type PricingConfigurationError = {
