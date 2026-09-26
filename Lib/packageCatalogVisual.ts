@@ -415,7 +415,6 @@ const PACKAGE_HERO_ITEMS_PT: Record<string, readonly string[]> = {
   BBQLUX: [
     'Picanha Angus',
     'Picanha Wagyu',
-    'Fraldinha Angus',
     'Carré de cordeiro',
     'Linguiça',
     'Frango sobrecoxa desossada',

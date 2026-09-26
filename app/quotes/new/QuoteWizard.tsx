@@ -33,6 +33,7 @@ import {
   SUGGESTED_EXTRAS_DISPLAY_KEY,
 } from '@/Lib/publicQuote/suggestedExtras'
 import { getAdditionalItemCategoryKey } from '@/Lib/additionalItemFieldAccess'
+import { formatPublicClock, to24Hour } from '@/Lib/publicQuote/twelveHourClock'
 import {
   buildAdditionalCategoryDisplayLabels,
   getUnvisitedAdditionalCategoryKeys,
@@ -370,10 +371,7 @@ function getCalendarWeekdays(locale: string | null | undefined) {
 }
 
 function formatTime(value: string) {
-  if (!value) return '—'
-  const [hours, minutes] = value.split(':')
-  if (!hours || minutes === undefined) return value
-  return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`
+  return formatPublicClock(value)
 }
 
 function formatTimeRange(start: string, end: string) {
@@ -546,7 +544,7 @@ function WizardFieldLabel({
   )
 }
 
-const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => hour)
+const HOUR_OPTIONS = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 const MINUTE_OPTIONS = [0, 15, 30, 45]
 
 function parseTimeParts(value: string) {
@@ -916,27 +914,52 @@ function TimePickerField({
           className="absolute left-0 top-full z-30 mt-2 w-full min-w-[300px] rounded-2xl border border-cdl-border bg-cdl-surface p-4 shadow-cdl-popup sm:w-[320px]"
         >
           <p className="mb-3 text-center text-sm font-bold text-cdl-accent">
-            {toTimeValue(draftHour, draftMinute)}
+            {formatPublicClock(toTimeValue(draftHour, draftMinute))}
           </p>
+
+          <div className="mb-3 grid grid-cols-2 gap-1" data-time-period>
+            {(['AM', 'PM'] as const).map((period) => {
+              const selected = (draftHour >= 12 ? 'PM' : 'AM') === period
+              return (
+                <button
+                  key={period}
+                  type="button"
+                  onClick={() => {
+                    const hour12 = draftHour % 12 === 0 ? 12 : draftHour % 12
+                    selectHour(to24Hour(hour12, period))
+                  }}
+                  className={`flex h-9 items-center justify-center rounded-lg text-sm font-black tracking-wider ${
+                    selected
+                      ? 'bg-cdl-accent text-cdl-on-accent'
+                      : 'text-cdl-fg hover:bg-cdl-muted-bg'
+                  }`}
+                >
+                  {period}
+                </button>
+              )
+            })}
+          </div>
 
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-cdl-muted">
             {tw(language, 'hour')}
           </p>
-          <div className="mb-4 grid max-h-40 grid-cols-6 gap-1 overflow-y-auto pr-1">
-            {HOUR_OPTIONS.map((hour) => {
-              const isSelected = draftHour === hour
+          <div className="mb-4 grid grid-cols-6 gap-1">
+            {HOUR_OPTIONS.map((hour12) => {
+              const period = draftHour >= 12 ? 'PM' : 'AM'
+              const hour24 = to24Hour(hour12, period)
+              const isSelected = draftHour === hour24
               return (
                 <button
-                  key={hour}
+                  key={hour12}
                   type="button"
-                  onClick={() => selectHour(hour)}
+                  onClick={() => selectHour(hour24)}
                   className={`flex h-9 items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
                     isSelected
                       ? 'bg-cdl-accent text-cdl-on-accent'
                       : 'text-cdl-fg hover:bg-cdl-muted-bg hover:text-cdl-accent'
                   }`}
                 >
-                  {String(hour).padStart(2, '0')}
+                  {hour12}
                 </button>
               )
             })}

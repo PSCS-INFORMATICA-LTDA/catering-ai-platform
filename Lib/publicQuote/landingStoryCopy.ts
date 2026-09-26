@@ -54,7 +54,7 @@ export const PUBLIC_LANDING_STORY = {
         { text: 'O melhor do', breakAfter: true },
         { text: 'churrasco', highlight: 'red', breakAfter: true },
         { text: 'brasileiro,', highlight: 'red', breakAfter: true },
-        { text: 'onde você estiver.' },
+        { text: 'onde você estiver na Flórida.' },
       ],
       subtitle:
         'Uma experiência completa de Brazilian BBQ no seu evento — estrutura, chef churrasqueiro e preparo ao vivo.',
@@ -143,7 +143,7 @@ export const PUBLIC_LANDING_STORY = {
         { text: 'The best of', breakAfter: true },
         { text: 'Brazilian', highlight: 'red', breakAfter: true },
         { text: 'barbecue,', highlight: 'red', breakAfter: true },
-        { text: 'wherever you are.' },
+        { text: 'wherever you are in Florida.' },
       ],
       subtitle:
         'A complete Brazilian BBQ experience at your event — full setup, grill chef and live preparation.',
@@ -232,7 +232,7 @@ export const PUBLIC_LANDING_STORY = {
         { text: 'Lo mejor de la', breakAfter: true },
         { text: 'parrilla', highlight: 'red', breakAfter: true },
         { text: 'brasileña,', highlight: 'red', breakAfter: true },
-        { text: 'donde tú estés.' },
+        { text: 'donde tú estés en Florida.' },
       ],
       subtitle:
         'Una experiencia completa de Brazilian BBQ en tu evento — estructura, chef parrillero y preparación en vivo.',
