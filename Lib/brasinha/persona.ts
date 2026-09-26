@@ -1,6 +1,8 @@
 import type { BrasinhaLanguage } from './types'
-
-const CDL_COMPANY_ID = '65fd576f-8d97-49ba-bf38-61bc1e94e94a'
+import {
+  resolveCompanyPublicBrand,
+  type CompanyPublicBrandInput,
+} from '@/Lib/tenant/companyPublicBrand'
 
 export type BrasinhaPersona = {
   name: string
@@ -10,22 +12,17 @@ export type BrasinhaPersona = {
   occasionalEmoji: '🔥' | null
 }
 
-const CDL_PERSONA: BrasinhaPersona = {
-  name: 'Brasinha',
-  role: 'Assistente digital da CDL Services BBQ At Home.',
-  tone: ['simpático', 'objetivo', 'acolhedor', 'comercial', 'profissional'],
-  companyId: CDL_COMPANY_ID,
-  occasionalEmoji: '🔥',
-}
-
-export function getCompanyPersona(companyId: string): BrasinhaPersona {
-  if (companyId === CDL_COMPANY_ID) return CDL_PERSONA
+export function getCompanyPersona(
+  companyId: string,
+  profile?: CompanyPublicBrandInput,
+): BrasinhaPersona {
+  const brand = resolveCompanyPublicBrand(profile ?? {})
   return {
-    name: 'Assistant',
-    role: 'Digital catering assistant',
+    name: brand.assistantName,
+    role: brand.assistantRole,
     tone: ['clear', 'professional', 'helpful'],
     companyId,
-    occasionalEmoji: null,
+    occasionalEmoji: brand.occasionalEmoji,
   }
 }
 

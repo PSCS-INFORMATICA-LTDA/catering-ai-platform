@@ -6,6 +6,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import AdminCompactMenu from '../../../components/quotes/AdminCompactMenu'
 import { useTenant } from '../../../components/tenant/TenantProvider'
+import { resolveProposalCompanyLocation } from '@/Lib/tenant/companyPublicBrand'
 import CatalogImageFrame from '../../../components/CatalogImageFrame'
 import QuoteStepHeader from '../../../components/quotes/QuoteStepHeader'
 import QuoteStepper from '../../../components/quotes/QuoteStepper'
@@ -54,7 +55,6 @@ import {
 } from '../../../Lib/i18n/locales'
 import { tCommon } from '../../../Lib/i18n/common'
 import PackageOptionsDebugPanel from '../../../components/quotes/PackageOptionsDebugPanel'
-import { CDL_DEFAULT_COMPANY_ID } from '../../../Lib/cdlCompany'
 import type { PackageOptionQueryDebug } from '../../../Lib/fetchPackageOptionGroups'
 import {
   sortPackagesByCommercialTier,
@@ -236,6 +236,7 @@ export type PublicQuoteWizardContext = {
   currencyCode?: string
   serviceDurationMinutes?: number
   locationBias?: PublicLocationBias | null
+  companyLocation?: string | null
 }
 
 export type PublicQuoteSubmissionResult = {
@@ -1442,7 +1443,13 @@ export default function QuoteWizardCore({
   const itemCatalog = catalogItems ?? additionalItems ?? []
   const isEditMode = mode === 'edit' && Boolean(quoteId)
   const isPublicMode = entryMode === 'public'
-  const { branchId: tenantBranchId, companyId: tenantCompanyId } = useTenant()
+  const { branchId: tenantBranchId, companyId: tenantCompanyId, company, branch } =
+    useTenant()
+  const companyLocation = resolveProposalCompanyLocation({
+    companyLocation: publicContext?.companyLocation,
+    city: company?.city ?? branch?.city,
+    state: company?.state ?? branch?.state,
+  })
   const [step, setStep] = useState(() =>
     Math.min(Math.max(initialStep, 0), WIZARD_STEP_COUNT - 1),
   )
@@ -1547,7 +1554,7 @@ export default function QuoteWizardCore({
   const debugCompanyId =
     publicContext?.companyId?.trim() ||
     tenantCompanyId?.trim() ||
-    CDL_DEFAULT_COMPANY_ID
+    ''
   const debugBranchId =
     state.branchId?.trim() ||
     publicContext?.branchId?.trim() ||
@@ -4224,6 +4231,7 @@ export default function QuoteWizardCore({
               }
               language={uiLocale}
               grillDefaultImageUrl={grillRentalDisplayUrl}
+              companyLocation={companyLocation}
               consentLabel={publicContext?.consentLabel || ''}
               privacyUrl={publicContext?.privacyUrl}
               cancellationPolicyAccepted={state.cancellationPolicyAccepted}
@@ -4302,6 +4310,7 @@ export default function QuoteWizardCore({
               isEditMode={isEditMode}
               quoteId={quoteId}
               uiLanguage={uiLocale}
+              companyLocation={companyLocation}
               onGoToStep={(nextStep) => {
                 if (!canNavigateToStep(nextStep, stepStatusCtx)) return
                 setStep(nextStep)

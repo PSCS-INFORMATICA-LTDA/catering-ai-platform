@@ -25,6 +25,8 @@ export type Company = {
   legal_name?: string | null
   trade_name?: string | null
   slug?: string | null
+  city?: string | null
+  state?: string | null
   currency_code?: string | null
   default_language?: string | null
   timezone?: string | null

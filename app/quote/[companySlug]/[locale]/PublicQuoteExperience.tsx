@@ -59,6 +59,7 @@ export type PublicQuotePageBootstrap = {
     primaryColor: string
     accentColor: string
     currencyCode: string
+    location: string | null
   }
   settings: {
     enabled: boolean
@@ -588,6 +589,7 @@ export default function PublicQuoteExperience({
             currencyCode: bootstrap.company.currencyCode,
             serviceDurationMinutes: bootstrap.settings.serviceDurationMinutes,
             locationBias: bootstrap.settings.locationBias ?? null,
+            companyLocation: bootstrap.company.location,
           }}
           onPublicSuccess={handlePublicSuccess}
         />

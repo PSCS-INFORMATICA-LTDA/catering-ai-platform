@@ -1,0 +1,307 @@
+{
+  "project_ref": "yasprgtlqclwsjcshtls",
+  "companies": [
+    {
+      "id": "a1111111-1111-4111-8111-111111111111",
+      "company_name": "TESTE DEV — Empresa Isolamento",
+      "company_code": "TEST-DEV-ISO",
+      "slug": "teste-dev-empresa-isolamento",
+      "city": null,
+      "state": null,
+      "timezone": "America/New_York",
+      "currency_code": "USD",
+      "default_language": "pt",
+      "logo_url": null,
+      "phone": null,
+      "website": null,
+      "primary_color": null
+    },
+    {
+      "id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "company_name": "CDL Services BBQ At Home",
+      "company_code": "CDL",
+      "slug": "cdl",
+      "city": "Orlando",
+      "state": "FL",
+      "timezone": "America/New_York",
+      "currency_code": "USD",
+      "default_language": "pt",
+      "logo_url": "/cdl/logo.png",
+      "phone": null,
+      "website": null,
+      "primary_color": null
+    }
+  ],
+  "branches": [],
+  "public_quote_settings": [
+    {
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "enabled": true,
+      "allowed_languages": [
+        "pt",
+        "en",
+        "es"
+      ],
+      "support_phone": null,
+      "has_landing_copy": true,
+      "landing_copy_keys": [
+        "en",
+        "es",
+        "pt"
+      ]
+    }
+  ],
+  "commercial_rule_keys": [
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:schedule_turnaround_buffer",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:coupon.WELCOME",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:coupon.CDL10",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:deposit_percentage",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:mileage_base_location",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:mileage_free_limit",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:mileage_rate",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:children_under_3_factor",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:children_4_to_12_factor",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:quote_validity_days",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:Adicional de Datas Comemorativas",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:Pedido mínimo",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:teste",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:supplier_garnish_kit_packing",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:distance_display_unit",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:service_duration_hours",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:crew_setup_lead_minutes",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:extra_service_hour_percentage",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:coupon.WEEKDAY50",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:coupon.PARTNER7"
+  ],
+  "staff_rule_keys": [],
+  "payment_rule_keys": [
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:SERVICE_DURATION_HOURS",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:MINIMUM_ORDER_WEEKDAY",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:MINIMUM_ORDER_WEEKEND",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:RESERVATION_DEPOSIT_DEFAULT",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:CHILD_HALF_PRICE_RULE",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:MILEAGE_FREE_LIMIT",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:MILEAGE_RATE_PER_MILE",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:MILEAGE_BASE_LOCATION",
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a:DECEMBER_HOLIDAY_MINIMUM_RULE"
+  ],
+  "payment_providers": [],
+  "service_orders": [
+    {
+      "id": "f5aa587f-7edc-4f7b-882c-237f03e46933",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "service_order_number": "SO-2026-000008",
+      "quote_id": "808aeef6-5425-4ed6-822c-ff5ff842c669",
+      "created_at": "2026-09-16T20:36:19.694689+00:00",
+      "status": "planned"
+    },
+    {
+      "id": "ce8d8816-431c-488c-8cc4-af63b0d6e23a",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "service_order_number": "SO-2026-000009",
+      "quote_id": "8e61fa6a-9eec-496d-8873-22393b73d1c6",
+      "created_at": "2026-09-17T14:05:13.667682+00:00",
+      "status": "planned"
+    },
+    {
+      "id": "f5b493cf-226b-480a-a494-81f23b9bb482",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "service_order_number": "SO-2026-000004",
+      "quote_id": "77a13c8d-a9af-4c51-a970-2cc9fcfe11ee",
+      "created_at": "2026-09-03T17:04:06.798491+00:00",
+      "status": "planned"
+    },
+    {
+      "id": "ea84de81-c68f-43b1-a945-36dbed5448a9",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "service_order_number": "SO-2026-000005",
+      "quote_id": "bda9b136-17f6-4377-8d7b-596927fd619d",
+      "created_at": "2026-09-16T14:07:40.284337+00:00",
+      "status": "planned"
+    },
+    {
+      "id": "61d8f3da-53b9-493d-ae84-1ecf25339135",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "service_order_number": "SO-2026-000006",
+      "quote_id": "5fe36cd3-d547-45ab-9257-1413fb0b58d6",
+      "created_at": "2026-09-16T14:20:39.30622+00:00",
+      "status": "planned"
+    },
+    {
+      "id": "ed07303e-7b2e-4b6f-8970-ab28b89f3cda",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "service_order_number": "SO-2026-000007",
+      "quote_id": "4dcd0445-70c3-4f45-b4d6-fc00f9cbb1c9",
+      "created_at": "2026-09-16T19:24:58.886283+00:00",
+      "status": "planned"
+    }
+  ],
+  "service_order_numbers": [
+    "SO-2026-000004",
+    "SO-2026-000005",
+    "SO-2026-000006",
+    "SO-2026-000007",
+    "SO-2026-000008",
+    "SO-2026-000009"
+  ],
+  "quotes": [],
+  "invoices": [
+    {
+      "id": "e1281349-a412-45b7-b383-c6806295212f",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "invoice_number": "INV-2026-000050",
+      "quote_id": "949589cd-17e4-48c7-985f-26fb6dd2ae95"
+    },
+    {
+      "id": "391bbf21-24ad-4fb3-8d11-d7bc5352ea83",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "invoice_number": "INV-2026-000051",
+      "quote_id": "5fe36cd3-d547-45ab-9257-1413fb0b58d6"
+    },
+    {
+      "id": "54e65b14-cb6b-4dfd-94d2-b96534f770fe",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "invoice_number": "INV-2026-000052",
+      "quote_id": "bda9b136-17f6-4377-8d7b-596927fd619d"
+    },
+    {
+      "id": "94c953be-4f51-43f8-9417-ab6861a22935",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "invoice_number": "INV-2026-000004",
+      "quote_id": "77a13c8d-a9af-4c51-a970-2cc9fcfe11ee"
+    },
+    {
+      "id": "e31df4c3-e867-4e86-a3f0-c8a5a20ab85a",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "invoice_number": "INV-2026-000053",
+      "quote_id": "4dcd0445-70c3-4f45-b4d6-fc00f9cbb1c9"
+    },
+    {
+      "id": "9d0981d1-6a38-4d71-9f12-317c905c620b",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "invoice_number": "INV-2026-000054",
+      "quote_id": "9949d9f3-6837-4253-ad0d-24f50b09776e"
+    },
+    {
+      "id": "95fa44fd-b412-4154-9adc-5e0b553e940f",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "invoice_number": "INV-2026-000055",
+      "quote_id": "808aeef6-5425-4ed6-822c-ff5ff842c669"
+    },
+    {
+      "id": "2fbee6b4-95b6-470d-9210-c5571730ad74",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "invoice_number": "INV-2026-000056",
+      "quote_id": "10bb5548-15f9-4892-82e4-80acd94f3bbb"
+    },
+    {
+      "id": "4da13180-3a10-43f5-9ef3-8ee034352dd4",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "invoice_number": "INV-2026-000057",
+      "quote_id": "4c554c06-3c62-40bf-946e-f339b1ba82f2"
+    },
+    {
+      "id": "14d04f5c-437d-49d0-8f6c-a962f3c92263",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "invoice_number": "INV-2026-000058",
+      "quote_id": "8e61fa6a-9eec-496d-8873-22393b73d1c6"
+    }
+  ],
+  "sentinel_so_consumed_in_table": [
+    {
+      "id": "f5aa587f-7edc-4f7b-882c-237f03e46933",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "service_order_number": "SO-2026-000008",
+      "quote_id": "808aeef6-5425-4ed6-822c-ff5ff842c669",
+      "created_at": "2026-09-16T20:36:19.694689+00:00",
+      "status": "planned"
+    },
+    {
+      "id": "ce8d8816-431c-488c-8cc4-af63b0d6e23a",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "service_order_number": "SO-2026-000009",
+      "quote_id": "8e61fa6a-9eec-496d-8873-22393b73d1c6",
+      "created_at": "2026-09-17T14:05:13.667682+00:00",
+      "status": "planned"
+    },
+    {
+      "id": "f5b493cf-226b-480a-a494-81f23b9bb482",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "service_order_number": "SO-2026-000004",
+      "quote_id": "77a13c8d-a9af-4c51-a970-2cc9fcfe11ee",
+      "created_at": "2026-09-03T17:04:06.798491+00:00",
+      "status": "planned"
+    },
+    {
+      "id": "ea84de81-c68f-43b1-a945-36dbed5448a9",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "service_order_number": "SO-2026-000005",
+      "quote_id": "bda9b136-17f6-4377-8d7b-596927fd619d",
+      "created_at": "2026-09-16T14:07:40.284337+00:00",
+      "status": "planned"
+    },
+    {
+      "id": "61d8f3da-53b9-493d-ae84-1ecf25339135",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "service_order_number": "SO-2026-000006",
+      "quote_id": "5fe36cd3-d547-45ab-9257-1413fb0b58d6",
+      "created_at": "2026-09-16T14:20:39.30622+00:00",
+      "status": "planned"
+    },
+    {
+      "id": "ed07303e-7b2e-4b6f-8970-ab28b89f3cda",
+      "company_id": "65fd576f-8d97-49ba-bf38-61bc1e94e94a",
+      "service_order_number": "SO-2026-000007",
+      "quote_id": "4dcd0445-70c3-4f45-b4d6-fc00f9cbb1c9",
+      "created_at": "2026-09-16T19:24:58.886283+00:00",
+      "status": "planned"
+    }
+  ],
+  "cdl_so_sequence_overlap_risk": true,
+  "composite_mismatches": {
+    "quote_versions": 0,
+    "quote_additional_items": 0,
+    "quote_package_selections": 0,
+    "invoice_payments": 0,
+    "invoice_refunds": 0,
+    "service_order_items": 0,
+    "brasinha_messages": 0,
+    "agenda_events": 0,
+    "event_financial_closeout_lines": 0,
+    "errors": {
+      "quote_versions": "Could not embed because more than one relationship was found for 'quote_versions' and 'quotes'",
+      "quote_additional_items": "Could not find a relationship between 'quote_additional_items' and 'quotes' in the schema cache",
+      "quote_package_selections": null,
+      "invoice_payments": "Could not embed because more than one relationship was found for 'invoice_payments' and 'invoices'",
+      "invoice_refunds": null,
+      "service_order_items": "Could not embed because more than one relationship was found for 'service_order_items' and 'service_orders'",
+      "brasinha_messages": null,
+      "agenda_events": "Could not find a relationship between 'agenda_events' and 'events' in the schema cache",
+      "closeout_lines": "Could not embed because more than one relationship was found for 'event_financial_closeout_lines' and 'event_financial_closeouts'"
+    }
+  },
+  "isolation_counts": {
+    "customers": 1,
+    "packages": 1,
+    "catalog_items": 1,
+    "quotes": 0,
+    "invoices": 0,
+    "invoice_payments": 0,
+    "service_orders": 0,
+    "events": 0,
+    "agenda_events": 0,
+    "media_assets": 1,
+    "coupons": 0,
+    "brasinha_conversations": 0,
+    "company_payment_providers": 3
+  },
+  "media_by_company": {
+    "65fd576f-8d97-49ba-bf38-61bc1e94e94a": 24,
+    "a1111111-1111-4111-8111-111111111111": 1
+  },
+  "sentinel_in_runtime_tables": {
+    "quotes": 0,
+    "service_orders": 0,
+    "invoices": 0
+  }
+}

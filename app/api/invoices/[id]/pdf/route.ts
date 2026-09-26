@@ -7,6 +7,7 @@ import {
   generateInvoicePdfBuffer,
   getInvoicePdfResponseHeaders,
 } from '@/Lib/generateInvoicePdf'
+import { loadCompanyAssistantBrand } from '@/Lib/tenant/loadCompanyAssistantBrand'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +24,8 @@ export async function GET(_request: Request, { params }: Params) {
   if (!invoice) return Response.json({ error: 'not_found' }, { status: 404 })
 
   try {
-    const buffer = await generateInvoicePdfBuffer(invoice)
+    const brand = await loadCompanyAssistantBrand(invoice.company_id)
+    const buffer = await generateInvoicePdfBuffer(invoice, brand)
     return new Response(new Uint8Array(buffer), {
       headers: getInvoicePdfResponseHeaders(invoice),
     })

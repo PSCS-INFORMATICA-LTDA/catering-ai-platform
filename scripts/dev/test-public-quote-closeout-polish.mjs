@@ -400,7 +400,8 @@ test('FOOTER_BRAND_AND_LOCATION', () => {
     layout.indexOf('function DefaultProposalBody'),
   )
   assert.match(footer, /BBQ AT HOME/)
-  assert.match(footer, /Orlando, Florida/)
+  assert.match(footer, /proposalLocation/)
+  assert.doesNotMatch(footer, /Orlando, Florida/)
   assert.match(footer, /data-public-review-cdl-logo/)
 })
 

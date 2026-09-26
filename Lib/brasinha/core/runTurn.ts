@@ -17,6 +17,7 @@ import type {
 import { extraHourHandoffReply } from './copy.ts'
 import { selectConversationHistory } from './history.ts'
 import { detectBrasinhaIntent } from './intent.ts'
+import { loadCompanyAssistantBrand } from '@/Lib/tenant/loadCompanyAssistantBrand'
 import {
   createDeterministicReasoner,
   type BrasinhaReasoner,
@@ -125,12 +126,14 @@ export async function runBrasinhaTurn(input: {
     )
   } else {
     const stored = await input.store.listMessages(companyId, conversation.id)
+    const brand = await loadCompanyAssistantBrand(companyId)
     const answer = await reasoner.answer({
       companyId,
       language,
       text: input.inbound.text,
       catalog: input.catalog,
       history: selectConversationHistory(stored, { excludeLastInbound: true }),
+      brand,
       draft,
       onDraft(next) {
         draft = next

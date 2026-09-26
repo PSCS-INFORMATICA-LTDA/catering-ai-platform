@@ -586,12 +586,20 @@ function PdfLogoMark({
   )
 }
 
-function PdfPageFooter({ pscsSrc }: { pscsSrc: string | null }) {
+function PdfPageFooter({
+  pscsSrc,
+  location,
+  website,
+}: {
+  pscsSrc: string | null
+  location?: string | null
+  website?: string | null
+}) {
   return (
     <View style={styles.pageFooter} fixed>
       <Text style={styles.pageFooterBrand}>BBQ AT HOME</Text>
-      <Text style={styles.pageFooterLine}>Orlando, Florida</Text>
-      <Text style={styles.pageFooterLine}>www.cdlbbq.com</Text>
+      {location ? <Text style={styles.pageFooterLine}>{location}</Text> : null}
+      {website ? <Text style={styles.pageFooterLine}>{website}</Text> : null}
       {pscsSrc ? <Image src={pscsSrc} style={styles.pageFooterPscs} /> : null}
     </View>
   )
@@ -620,17 +628,21 @@ function PdfDocumentPage({
   quoteNumber,
   logoSrc,
   pscsSrc,
+  location,
+  website,
   children,
 }: {
   quoteNumber: string
   logoSrc: string | null
   pscsSrc: string | null
+  location?: string | null
+  website?: string | null
   children: React.ReactNode
 }) {
   return (
     <Page size="A4" style={styles.contentPage} wrap>
       <PdfCompactHeader quoteNumber={quoteNumber} logoSrc={logoSrc} />
-      <PdfPageFooter pscsSrc={pscsSrc} />
+      <PdfPageFooter pscsSrc={pscsSrc} location={location} website={website} />
       {children}
     </Page>
   )
@@ -641,11 +653,15 @@ export function QuotePdfDocument({
   logo,
   pscs,
   packageImageSrc = null,
+  companyLocation = null,
+  companyWebsite = null,
 }: {
   quote: QuoteDetail
   logo?: PdfLogoSource
   pscs?: PdfLogoSource
   packageImageSrc?: string | null
+  companyLocation?: string | null
+  companyWebsite?: string | null
 }) {
   const logoSrc = logo?.filePath ?? logo?.src ?? null
   const pscsSrc = pscs?.filePath ?? pscs?.src ?? null
@@ -808,7 +824,13 @@ export function QuotePdfDocument({
         </View>
       </Page>
 
-      <PdfDocumentPage quoteNumber={quoteNumber} logoSrc={logoSrc} pscsSrc={pscsSrc}>
+      <PdfDocumentPage
+        quoteNumber={quoteNumber}
+        logoSrc={logoSrc}
+        pscsSrc={pscsSrc}
+        location={companyLocation}
+        website={companyWebsite}
+      >
         <View wrap={false} style={styles.overview}>
           <View style={styles.overviewItem}>
             <Text style={styles.overviewLabel}>{t('docCustomer')}</Text>
@@ -1070,7 +1092,13 @@ export function QuotePdfDocument({
         </View>
       </PdfDocumentPage>
 
-      <PdfDocumentPage quoteNumber={quoteNumber} logoSrc={logoSrc} pscsSrc={pscsSrc}>
+      <PdfDocumentPage
+        quoteNumber={quoteNumber}
+        logoSrc={logoSrc}
+        pscsSrc={pscsSrc}
+        location={companyLocation}
+        website={companyWebsite}
+      >
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('docRulesSectionTitle')}</Text>
           <RulesBlock title={t('docMinOrderRuleTitle')} items={IMPORTANT_RULES.minimumOrder} />

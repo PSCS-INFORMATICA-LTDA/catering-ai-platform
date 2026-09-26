@@ -102,7 +102,8 @@ async function answerWithOpenAI(
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
     const instructions = buildBrasinhaSystemPrompt({
-      companyName: profile.data?.name ?? null,
+      companyName: profile.data?.name ?? input.brand?.companyName ?? null,
+      assistantName: input.brand?.assistantName ?? null,
       language: input.language,
       draft: intake.draft,
     })
