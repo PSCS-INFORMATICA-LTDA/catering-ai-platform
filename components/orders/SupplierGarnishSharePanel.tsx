@@ -107,7 +107,7 @@ export default function SupplierGarnishSharePanel({
   companyName?: string | null
   language?: string | null
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   const [suppliers, setSuppliers] = useState<SupplierRow[]>([])
   const [supplierId, setSupplierId] = useState('')
   const [phone, setPhone] = useState('')
@@ -339,7 +339,17 @@ export default function SupplierGarnishSharePanel({
         : tQuotesOrders(uiLocale, 'notSent')
 
   return (
-    <section className="liquid-glass-card space-y-3 p-5">
+    <section
+      data-testid="garnish-share-panel"
+      data-garnish-status={
+        garnish?.supplier_garnish_response === 'confirmed'
+          ? 'confirmed'
+          : garnish?.supplier_garnish_sent_at
+            ? 'awaiting'
+            : 'not_sent'
+      }
+      className="liquid-glass-card space-y-3 border-2 border-amber-400 p-5"
+    >
         <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold text-cdl-fg">
@@ -355,25 +365,27 @@ export default function SupplierGarnishSharePanel({
           </span>
           <button
             type="button"
-            className={
-              open
-                ? glassBtn('secondary')
-                : glassAction('green')
-            }
+            data-garnish-cta
+            className={glassAction('green')}
             onClick={() => {
-              setOpen((v) => !v)
+              setOpen(true)
               setHint(null)
             }}
           >
-            {open ? (
-              tCommon(uiLocale, 'close')
-            ) : (
-              <span className="inline-flex items-center gap-2">
-                <WhatsAppIcon className="h-5 w-5 text-white" />
-                {tQuotesOrders(uiLocale, 'supplierWhatsApp')}
-              </span>
-            )}
+            <span className="inline-flex items-center gap-2">
+              <WhatsAppIcon className="h-5 w-5 text-white" />
+              {tQuotesOrders(uiLocale, 'sendGarnishOrder')}
+            </span>
           </button>
+          {open ? (
+            <button
+              type="button"
+              className={glassBtn('secondary')}
+              onClick={() => setOpen(false)}
+            >
+              {tCommon(uiLocale, 'close')}
+            </button>
+          ) : null}
         </div>
       </div>
 
