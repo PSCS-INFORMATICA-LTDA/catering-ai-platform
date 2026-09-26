@@ -52,6 +52,57 @@ function formatMoney(value: number | null | undefined) {
   return `$${Number(value).toFixed(2)}`
 }
 
+function financeStatusLabel(
+  status: NonNullable<QuoteListItem['finance']>['finance_status'] | undefined,
+  locale: Parameters<typeof tQuotesOrders>[0],
+) {
+  if (status === 'paid_in_full') return tQuotesOrders(locale, 'financePaidInFull')
+  if (status === 'deposit_paid') return tQuotesOrders(locale, 'financeDepositPaid')
+  if (status === 'operational_error') return tQuotesOrders(locale, 'financeOperationalError')
+  return tQuotesOrders(locale, 'financeAwaitingDeposit')
+}
+
+function QuoteMoneySummary({
+  quote,
+  locale,
+}: {
+  quote: QuoteListItem
+  locale: Parameters<typeof tQuotesOrders>[0]
+}) {
+  const finance = quote.finance
+  const total = finance?.total ?? quote.quote_total
+  const deposit = finance?.deposit_required ?? quote.reservation_amount
+  const paid = finance?.paid_total ?? 0
+  const balance = finance?.balance ?? quote.balance_due
+  const osCreated = finance?.service_order === 'created' || Boolean(quote.converted_service_order_id)
+  return (
+    <div data-quote-finance className="space-y-1 text-left">
+      <p className="text-sm font-black text-neutral-900">
+        {tQuotesOrders(locale, 'total')} {formatMoney(total)}
+      </p>
+      <p className="text-[11px] leading-4 text-neutral-600">
+        {tQuotesOrders(locale, 'depositRequired')} {formatMoney(deposit)}
+      </p>
+      <p className="text-[11px] leading-4 text-neutral-600">
+        {tQuotesOrders(locale, 'paidSoFar')} {formatMoney(paid)}
+      </p>
+      <p className="text-[11px] leading-4 text-neutral-600">
+        {tQuotesOrders(locale, 'realBalance')} {formatMoney(balance)}
+      </p>
+      <div className="flex flex-wrap gap-1 pt-1">
+        <Pill className={quoteStatusClassName(finance?.finance_status === 'operational_error' ? 'rejected' : finance?.finance_status === 'awaiting_deposit' ? 'draft' : 'accepted')}>
+          {financeStatusLabel(finance?.finance_status, locale)}
+        </Pill>
+        <Pill className={osCreated ? 'border-cdl-success-border bg-cdl-success-soft text-cdl-success' : 'border-cdl-border bg-cdl-inset text-cdl-text-secondary'}>
+          {osCreated
+            ? tQuotesOrders(locale, 'osCreatedAutomatically')
+            : tQuotesOrders(locale, 'osPending')}
+        </Pill>
+      </div>
+    </div>
+  )
+}
+
 function formatDate(
   value: string | null | undefined,
   locale: string | null | undefined,
@@ -501,9 +552,7 @@ export default function QuotesDashboard({
                       {formatDate(quote.event_date, locale)}
                     </p>
                   </div>
-                  <p className="shrink-0 text-sm font-black text-neutral-900">
-                    {formatMoney(quote.quote_total)}
-                  </p>
+                  <QuoteMoneySummary quote={quote} locale={locale} />
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Pill className={quoteStatusClassName(quote.quote_status)}>
@@ -604,8 +653,8 @@ export default function QuotesDashboard({
                         </Pill>
                       </div>
                     </td>
-                    <td className="align-middle whitespace-nowrap px-2 py-2.5 text-xs font-black text-neutral-900">
-                      {formatMoney(quote.quote_total)}
+                    <td className="align-middle px-2 py-2.5">
+                      <QuoteMoneySummary quote={quote} locale={locale} />
                     </td>
                     <td className="align-middle px-2 py-2.5">
                       <QuoteListActions
@@ -658,6 +707,8 @@ const QuoteListActions = memo(function QuoteListActions({
   onDeleted: (quoteId: string) => void
 }) {
   const eligible = isConvertEligible(quote)
+  const osCreated =
+    quote.finance?.service_order === 'created' || Boolean(quote.converted_service_order_id)
   const converting = convertingId === quote.id
   const viewHref = `/quotes/${quote.id}`
   const actionBtn =
@@ -681,9 +732,9 @@ const QuoteListActions = memo(function QuoteListActions({
       >
         {tQuotesOrders(locale, 'pdf')}
       </Link>
-      {canConvert && quote.converted_service_order_id ? (
+      {canConvert && osCreated ? (
         <span className="inline-flex min-h-[28px] items-center justify-center rounded-lg border border-cdl-success-border bg-cdl-success-soft px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-cdl-success">
-          {tQuotesOrders(locale, 'converted')}
+          {tQuotesOrders(locale, 'osCreatedAutomatically')}
         </span>
       ) : canConvert && eligible ? (
         <button

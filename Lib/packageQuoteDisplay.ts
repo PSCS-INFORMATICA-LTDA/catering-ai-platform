@@ -23,10 +23,11 @@ import { pickLocalizedText } from '@/Lib/i18n/locales'
 import { translateCdlItemList } from '@/Lib/cdlPackageItemI18n'
 
 const OPTION_GROUP_ORDER: Record<string, number> = {
-  LUXURY_LOBSTER_SCALLOP_CHOICE: 0,
-  SEAFOOD_OPTION: 1,
-  COSTELA_OPTION: 2,
-  SIDE_OPTION: 3,
+  LINGUICA_OPTION: 0,
+  LUXURY_LOBSTER_SCALLOP_CHOICE: 1,
+  SEAFOOD_OPTION: 2,
+  COSTELA_OPTION: 3,
+  SIDE_OPTION: 4,
 }
 
 export type PackageItemDisplayCategory =

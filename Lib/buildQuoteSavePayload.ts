@@ -23,6 +23,8 @@ export type QuoteAdditionalSaveLine = {
   unitPrice: number
   perPerson: boolean
   totalPrice: number
+  /** False for waiter service: billed, but not part of the order minimum. */
+  countsTowardMinimum?: boolean
 }
 
 export type QuoteCustomerDraft = {
@@ -275,6 +277,7 @@ export function buildQuoteSavePayload(
       quantity: line.quantity,
       unitPrice: line.unitPrice,
       perPerson: line.perPerson,
+      countsTowardMinimum: line.countsTowardMinimum,
     })),
     mileageDistance: input.distance,
     grillRentalRequired: input.grillRentalRequired,

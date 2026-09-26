@@ -274,6 +274,7 @@ type QuoteStrings = {
     cancellationPolicyAccept: string
     cancellationPolicyRequired: string
     bothConsentsRequired: string
+    reviewScrollHint: string
     /** Featured virtual extras category — merchandising only. */
     suggestedExtrasTitle: string
     suggestedExtrasBody: string
@@ -764,6 +765,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       cancellationPolicyRequired: 'Aceite a Política de Cancelamento para enviar.',
       bothConsentsRequired:
         'Aceite a Política de Cancelamento e o consentimento de contato para enviar.',
+      reviewScrollHint:
+        'Role até o fim do resumo para liberar os consentimentos e o envio.',
       suggestedExtrasTitle: 'EXTRAS SUGERIDOS',
       suggestedExtrasBody:
         'Selecionamos alguns dos cortes e extras premium mais procurados para você personalizar seu evento.',
@@ -1280,6 +1283,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       cancellationPolicyRequired: 'Accept the Cancellation Policy to submit.',
       bothConsentsRequired:
         'Accept the Cancellation Policy and the contact consent to submit.',
+      reviewScrollHint:
+        'Scroll to the end of the summary to unlock the consents and submit.',
       suggestedExtrasTitle: 'SUGGESTED EXTRAS',
       suggestedExtrasBody:
         'Explore a selection of premium cuts and extras to personalize your event.',
@@ -1796,6 +1801,8 @@ const STRINGS: Record<QuoteLanguage, QuoteStrings> = {
       cancellationPolicyRequired: 'Acepta la Política de Cancelación para enviar.',
       bothConsentsRequired:
         'Acepta la Política de Cancelación y el consentimiento de contacto para enviar.',
+      reviewScrollHint:
+        'Desplázate hasta el final del resumen para liberar los consentimientos y el envío.',
       suggestedExtrasTitle: 'EXTRAS SUGERIDOS',
       suggestedExtrasBody:
         'Descubre una selección de cortes premium y extras para personalizar tu evento.',

@@ -15,6 +15,7 @@ import {
 import { sanitizeServiceOrderDetailForActor } from '@/Lib/orders/sanitizeServiceOrderFinancial'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import { CATALOG_ITEMS_TABLE } from '@/Lib/catalogItemsTableSchema'
+import { resolveServiceOrderPackageId } from '@/Lib/orders/resolveServiceOrderPackageId'
 
 export type ServiceOrderDetail = {
   id: string
@@ -138,7 +139,11 @@ export async function fetchServiceOrderDetail(
     agendaRes,
     kitRuleRes,
   ] = await Promise.all([
-      supabase.from('quotes').select('quote_number').eq('id', order.quote_id).maybeSingle(),
+      supabase
+        .from('quotes')
+        .select('quote_number, package_id')
+        .eq('id', order.quote_id)
+        .maybeSingle(),
       order.customer_id
         ? supabase
             .from('customers')
@@ -213,8 +218,14 @@ export async function fetchServiceOrderDetail(
       item_name?: string | null
       selected?: boolean
     }>
+    selection?: { packageId?: string | null }
   }
-  const packageId = snapshot.package?.id?.trim() || null
+  const packageId = resolveServiceOrderPackageId({
+    snapshotPackageId: snapshot.package?.id,
+    selectionPackageId: snapshot.selection?.packageId,
+    quotePackageId: (quoteRes.data as { package_id?: string | null } | null)
+      ?.package_id,
+  })
   const snapshotAdult = Number(snapshot.guest_counts?.adult_count ?? NaN)
   const adultCount =
     Number.isFinite(snapshotAdult) && snapshotAdult > 0

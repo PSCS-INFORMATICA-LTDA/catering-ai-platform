@@ -16,6 +16,12 @@ import {
 } from './quotes/listCursor'
 import { normalizeQuoteStatus } from './quotes/statusMachine'
 import { getSupabaseServerClient } from './supabaseServer'
+import {
+  buildQuoteOperationalSummary,
+  type ContractInvoiceSnapshot,
+  type ContractPaymentSnapshot,
+  type QuoteOperationalSummary,
+} from './quotes/quoteOperationalSummary'
 
 export const QUOTE_LIST_PAGE_SIZE = 25
 export const QUOTE_LIST_MAX_PAGE_SIZE = 30
@@ -57,6 +63,7 @@ export type QuoteListItem = {
   mileage_distance: number | null
   proposal_response: string | null
   converted_service_order_id: string | null
+  finance?: QuoteOperationalSummary
 }
 
 export type QuoteListQuery = {
@@ -261,6 +268,77 @@ function applyServerFilters<T extends { or: Function; eq: Function; is: Function
   return next
 }
 
+function latestInvoice(rows: ContractInvoiceSnapshot[], quoteId: string) {
+  return rows
+    .filter((row) => row.quote_id === quoteId)
+    .sort((left, right) => String(right.created_at ?? '').localeCompare(String(left.created_at ?? '')))[0] ?? null
+}
+
+async function attachOperationalSummaries(
+  supabase: ReturnType<typeof getSupabaseServerClient>,
+  companyId: string,
+  items: QuoteListItem[],
+): Promise<QuoteListItem[]> {
+  if (items.length === 0) return items
+  const ids = items.map((item) => item.id)
+  const [invoicesRes, ordersRes, agendaRes] = await Promise.all([
+    supabase
+      .from('invoices')
+      .select('id, quote_id, status, total, deposit_amount, paid_total, created_at, invoice_kind')
+      .eq('company_id', companyId)
+      .eq('invoice_kind', 'original')
+      .in('quote_id', ids),
+    supabase
+      .from('service_orders')
+      .select('id, quote_id')
+      .eq('company_id', companyId)
+      .in('quote_id', ids),
+    supabase
+      .from('agenda_events')
+      .select('id, quote_id, status')
+      .eq('company_id', companyId)
+      .in('quote_id', ids),
+  ])
+  if (invoicesRes.error || ordersRes.error || agendaRes.error) return items
+
+  const invoices = (invoicesRes.data ?? []) as ContractInvoiceSnapshot[]
+  const invoiceIds = invoices.map((row) => row.id)
+  const paymentsRes = invoiceIds.length
+    ? await supabase
+        .from('invoice_payments')
+        .select('invoice_id, provider, status, amount, metadata')
+        .eq('company_id', companyId)
+        .in('invoice_id', invoiceIds)
+        .eq('status', 'completed')
+    : { data: [] as ContractPaymentSnapshot[], error: null }
+  if (paymentsRes.error) return items
+
+  const payments = (paymentsRes.data ?? []) as ContractPaymentSnapshot[]
+  const orderByQuote = new Map<string, string>()
+  for (const row of (ordersRes.data ?? []) as Array<{ id: string; quote_id: string }>) {
+    if (!orderByQuote.has(row.quote_id)) orderByQuote.set(row.quote_id, row.id)
+  }
+  const reserved = new Set(
+    ((agendaRes.data ?? []) as Array<{ quote_id: string; status: string | null }>)
+      .filter((row) => ['reserved', 'scheduled', 'completed'].includes(String(row.status ?? '')))
+      .map((row) => row.quote_id),
+  )
+
+  return items.map((item) => ({
+    ...item,
+    finance: buildQuoteOperationalSummary({
+      quoteTotal: item.quote_total,
+      reservationAmount: item.reservation_amount,
+      balanceDue: item.balance_due,
+      convertedServiceOrderId: item.converted_service_order_id,
+      invoice: latestInvoice(invoices, item.id),
+      payments,
+      serviceOrderId: orderByQuote.get(item.id) ?? null,
+      agendaReserved: reserved.has(item.id),
+    }),
+  }))
+}
+
 function toCursor(value: QuoteListQuery['cursor']): QuoteListCursor | null {
   if (!value) return null
   if (typeof value === 'string') return decodeQuoteListCursor(value)
@@ -330,7 +408,11 @@ export async function fetchQuoteList(
   )
   const hasMore = rows.length > pageSize
   const pageRows = hasMore ? rows.slice(0, pageSize) : rows
-  const data = pageRows.map(mapQuoteListRow)
+  const data = await attachOperationalSummaries(
+    supabase,
+    companyId,
+    pageRows.map(mapQuoteListRow),
+  )
   const last = data[data.length - 1]
   const nextCursor =
     hasMore && last ? { created_at: last.created_at, id: last.id } : null

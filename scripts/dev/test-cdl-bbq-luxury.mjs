@@ -141,8 +141,15 @@ test('LUXURY_PICANHA_ANGUS', () => {
 test('LUXURY_PICANHA_WAGYU', () => {
   assert.ok(itemsFor(base.id).some((row) => catalogById[row.additional_item_id] === 'ITEM_009'))
 })
-test('LUXURY_FRALDINHA_ANGUS', () => {
-  assert.ok(itemsFor(base.id).some((row) => catalogById[row.additional_item_id] === 'ITEM_004'))
+test('LUXURY_FRALDINHA_NOT_INCLUDED', () => {
+  const rows = itemsFor(base.id).filter(
+    (row) => catalogById[row.additional_item_id] === 'ITEM_004',
+  )
+  assert.ok(rows.every((row) => row.included !== true))
+  const plusRows = itemsFor(plus.id).filter(
+    (row) => catalogById[row.additional_item_id] === 'ITEM_004',
+  )
+  assert.ok(plusRows.every((row) => row.included !== true))
 })
 test('LUXURY_CARRE_CORDEIRO', () => {
   assert.ok(itemsFor(base.id).some((row) => catalogById[row.additional_item_id] === 'ITEM_047'))

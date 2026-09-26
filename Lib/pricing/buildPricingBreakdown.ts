@@ -104,6 +104,7 @@ export function buildPricingBreakdown(
       metadata: {
         per_person: line.perPerson,
         selected_quantity: line.quantity,
+        counts_toward_minimum: line.countsTowardMinimum !== false,
       },
     })
   }
@@ -145,6 +146,7 @@ export function buildPricingBreakdown(
       unit_price: GRILL_RENTAL_FEE,
       amount: totals.grillRentalTotal,
       formula: grillRentalRequired ? `${GRILL_RENTAL_FEE} × 1` : '0',
+      metadata: { counts_toward_minimum: false },
     })
   }
 
@@ -183,9 +185,11 @@ export function buildPricingBreakdown(
       unit: 'adjustment',
       unit_price: totals.minimumOrderAdjustment,
       amount: totals.minimumOrderAdjustment,
-      formula: `max(0, ${totals.minimumOrderAmount} - subtotal_comercial)`,
+      formula: `max(0, ${totals.minimumOrderAmount} - ${totals.minimumEligibleSubtotal ?? 0})`,
       metadata: {
         minimum_order_amount: totals.minimumOrderAmount,
+        minimum_eligible_subtotal: totals.minimumEligibleSubtotal,
+        excluded_from_minimum_total: totals.excludedFromMinimumTotal,
       },
     })
   }
@@ -235,5 +239,7 @@ export function buildPricingBreakdown(
     },
     computed_at: new Date().toISOString(),
     engine_version: PRICING_ENGINE_VERSION,
+    minimum_eligible_subtotal: totals.minimumEligibleSubtotal,
+    excluded_from_minimum_total: totals.excludedFromMinimumTotal,
   }
 }
