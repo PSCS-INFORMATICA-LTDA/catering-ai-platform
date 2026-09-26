@@ -203,8 +203,8 @@ test('LIVE_PAYMENT = NO', () => {
 
 test('PUBLIC CHECKOUT OFF BY DEFAULT', () => {
   assert.match(configSrc, /PAYPAL_PUBLIC_CHECKOUT/)
-  assert.match(read('Lib/payments/paypal/publicCheckout.ts'), /paypal_public_checkout_off/)
-  assert.match(ordersRoute, /resolvePublicPaypalCheckoutReadiness/)
+  assert.match(read('Lib/payments/paypal/checkoutPolicy.ts'), /paypal_public_checkout_off/)
+  assert.match(ordersRoute, /resolvePaypalCheckoutAccess/)
   assert.match(payPage, /paypalUnavailable/)
 })
 

@@ -70,7 +70,6 @@ const LUXURY_ITEMS = [
   'Lagosta ou Vieira com bacon',
   'Salmão ou camarão',
   'Costela de porco ou boi',
-  'Fraldinha Angus',
   'Carré de cordeiro',
   'Linguiça',
   'Frango sobrecoxa desossada',
@@ -128,7 +127,7 @@ function buildDescription(withSides) {
 }
 
 const ITEMS_DESCRIPTION =
-  'Picanha Angus • Picanha Wagyu • Fraldinha Angus • Carré de cordeiro • Linguiça • Frango sobrecoxa desossada • Pão de alho • Queijo coalho • Milho • Lagosta ou Vieira com bacon • Salmão ou camarão • Costela de boi ou costela de porco • Chimichurri • Farofa • Mel • Goiabada • Pimenta de bico • Geleia de pimenta'
+  'Picanha Angus • Picanha Wagyu • Carré de cordeiro • Linguiça • Frango sobrecoxa desossada • Pão de alho • Queijo coalho • Milho • Lagosta ou Vieira com bacon • Salmão ou camarão • Costela de boi ou costela de porco • Chimichurri • Farofa • Mel • Goiabada • Pimenta de bico • Geleia de pimenta'
 
 const HIGHLIGHTS =
   'Picanha Wagyu • Lagosta ou Vieira com bacon • Salmão ou camarão • Costela de boi ou costela de porco • Experiência luxury completa'
@@ -385,14 +384,6 @@ const FIXED_ITEMS = [
     label_pt: 'Picanha Wagyu',
     label_en: 'Wagyu Picanha',
     label_es: 'Picaña Wagyu',
-  },
-  {
-    order: 3,
-    itemKey: 'FRALDINHA',
-    catalogKey: 'FRALDINHA_ANGUS',
-    label_pt: 'Fraldinha Angus',
-    label_en: 'Angus Fraldinha',
-    label_es: 'Entraña Angus',
   },
   {
     order: 4,

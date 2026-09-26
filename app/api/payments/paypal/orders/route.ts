@@ -11,7 +11,11 @@ import { assertCompanyPaypalEligible } from '@/Lib/payments/companyProviders'
 import { loadCompanyPaypalCredentials } from '@/Lib/payments/companyPaypal'
 import { assertInvoiceAcceptsPayment } from '@/Lib/payments/invoiceCancellation'
 import { createPaypalAdapter } from '@/Lib/payments/paypal/adapter'
-import { resolvePublicPaypalCheckoutReadiness } from '@/Lib/payments/paypal/publicCheckout'
+import type { PaypalPaymentEnvironment } from '@/Lib/payments/paypal/checkoutPolicy'
+import {
+  paypalLiveNotAvailableResponse,
+  resolvePaypalCheckoutAccess,
+} from '@/Lib/payments/paypal/publicCheckout'
 import { isPaypalSandboxRequestError } from '@/Lib/payments/paypal/sandboxError'
 import { logPaypalSandbox } from '@/Lib/payments/paypal/sandboxLog'
 import { isPaymentPurpose } from '@/Lib/payments/paymentLinks'
@@ -53,16 +57,16 @@ export async function POST(request: Request) {
   let balanceAmount = 0
   let paidTotal = 0
   let paymentLinkId = 'operator'
+  let environment: PaypalPaymentEnvironment = 'sandbox'
 
   if (body?.token) {
     const resolved = await resolvePaymentLink(body.token)
     if (!resolved.ok) {
       return Response.json({ error: resolved.error }, { status: resolved.status })
     }
-    const readiness = await resolvePublicPaypalCheckoutReadiness(resolved.invoice.company_id)
-    if (!readiness.ready) {
-      return Response.json({ error: readiness.reason }, { status: 403 })
-    }
+    const access = await resolvePaypalCheckoutAccess(resolved.invoice.company_id)
+    if (!access.allowed) return paypalLiveNotAvailableResponse()
+    environment = access.environment
     companyId = resolved.invoice.company_id
     invoiceId = resolved.invoice.id
     invoiceKind = resolved.invoice.invoice_kind
@@ -178,11 +182,13 @@ export async function POST(request: Request) {
     )
   }
 
+  // Keyed by invoice + purpose + outstanding amount, not by payment link: re-shared
+  // links for the same deposit must reuse one PayPal order instead of opening more.
   const requestId = paypalRequestId([
     'create',
+    environment,
     companyId,
     invoiceId,
-    paymentLinkId,
     purpose,
     due.amount.toFixed(2),
     paidTotal.toFixed(2),
@@ -216,6 +222,8 @@ export async function POST(request: Request) {
       metadata: {
         requestId,
         mock: order.mock,
+        environment,
+        test_transaction: environment !== 'live',
         paymentLinkId,
         invoiceKind,
         scheduleHoldId: hold.holdId ?? null,
@@ -258,6 +266,8 @@ export async function POST(request: Request) {
         duplicate: recorded.duplicate,
         mock: order.mock,
         publicCheckout: Boolean(body?.token),
+        environment,
+        testTransaction: environment !== 'live',
         scheduleHoldExpiresAt: hold.expiresAt ?? null,
         scheduleHoldRequired: !postEventPayment,
         requestId,

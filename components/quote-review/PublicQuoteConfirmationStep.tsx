@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PackageItem, PackageSideItem } from '@/Lib/packageConfiguration'
 import type {
   PackageOptionGroupItem,
@@ -89,6 +89,47 @@ export default function PublicQuoteConfirmationStep({
 }) {
   const copy = getQuoteStrings(language)
   const w = copy.wizard
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const [summaryReviewed, setSummaryReviewed] = useState(false)
+
+  useEffect(() => {
+    onCancellationPolicyChange(false)
+    onConsentChange(false)
+    setSummaryReviewed(false)
+
+    const node = sentinelRef.current
+    if (!node) return
+
+    const unlock = () => setSummaryReviewed(true)
+    const atReviewEnd = () => {
+      const root = document.scrollingElement || document.documentElement
+      return root.scrollHeight - root.scrollTop - root.clientHeight <= 12
+    }
+    if (atReviewEnd()) unlock()
+
+    const onScroll = () => {
+      if (atReviewEnd()) unlock()
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+
+    let observer: IntersectionObserver | null = null
+    if (typeof IntersectionObserver !== 'undefined') {
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) unlock()
+        },
+        { threshold: 0.85, rootMargin: '0px 0px -140px 0px' },
+      )
+      observer.observe(node)
+    }
+
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      observer?.disconnect()
+    }
+    // Relock whenever the customer returns to review or the priced summary changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [breakdown])
   const reviewData = useMemo(
     () =>
       breakdown
@@ -146,6 +187,7 @@ export default function PublicQuoteConfirmationStep({
               ? w.pricingCalcError
               : null
   const canSubmit =
+    summaryReviewed &&
     Boolean(breakdown) &&
     !pricingLoading &&
     !pricingError &&
@@ -155,7 +197,9 @@ export default function PublicQuoteConfirmationStep({
   const blockedReason =
     canSubmit || saving
       ? null
-      : !breakdown || pricingLoading || pricingError
+      : !summaryReviewed
+        ? w.reviewScrollHint
+        : !breakdown || pricingLoading || pricingError
         ? pricingMessage || w.pricingCalcError
         : !cancellationPolicyAccepted && !state.publicConsentAccepted
           ? w.bothConsentsRequired
@@ -255,22 +299,35 @@ export default function PublicQuoteConfirmationStep({
       ) : null}
 
       <div
+        ref={sentinelRef}
+        data-review-sentinel
+        className="h-8"
+        aria-hidden
+      />
+
+      <div
         data-public-review-actions
+        data-review-consent={summaryReviewed ? 'ready' : 'locked'}
         className="sticky bottom-0 z-20 -mx-4 border-t border-cdl-border bg-cdl-bg/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:mx-0 sm:rounded-t-2xl sm:px-5"
       >
-        <label data-cancellation-consent className="mb-3 flex cursor-pointer items-start gap-2.5">
+        {!summaryReviewed ? (
+          <p className="mb-3 text-xs font-semibold leading-5 text-cdl-muted">{w.reviewScrollHint}</p>
+        ) : null}
+        <label data-cancellation-consent className={`mb-3 flex items-start gap-2.5 ${summaryReviewed ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
           <input
             type="checkbox"
             checked={cancellationPolicyAccepted}
+            disabled={!summaryReviewed}
             onChange={(event) => onCancellationPolicyChange(event.target.checked)}
             className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--brand-primary)]"
           />
           <span className="text-xs leading-5 text-cdl-text-secondary">{cancellationPolicyLabel}</span>
         </label>
-        <label data-public-consent className="mb-3 flex cursor-pointer items-start gap-2.5">
+        <label data-public-consent className={`mb-3 flex items-start gap-2.5 ${summaryReviewed ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
           <input
             type="checkbox"
             checked={state.publicConsentAccepted}
+            disabled={!summaryReviewed}
             onChange={(event) => onConsentChange(event.target.checked)}
             className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--brand-primary)]"
           />

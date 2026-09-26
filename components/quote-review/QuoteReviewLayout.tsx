@@ -21,8 +21,8 @@ import {
   formatBool,
   formatCurrency,
   formatDate,
-  formatTime,
 } from '@/app/quotes/[id]/quoteDetailTypes'
+import { formatPublicClock } from '@/Lib/publicQuote/twelveHourClock'
 import { IconCalendar, IconClock, IconLocation } from './QuoteReviewIcons'
 import type { QuoteReviewAdditional, QuoteReviewData } from './quoteReviewTypes'
 import { getQuoteStrings, tw } from '@/Lib/quoteTranslations'
@@ -1092,7 +1092,7 @@ export default function QuoteReviewLayout({
   const eventAddressText = eventAddressLines.join('\n')
   const eventTimeLabel =
     data.startTime || data.endTime
-      ? `${formatTime(data.startTime)} – ${formatTime(data.endTime)}`
+      ? `${formatPublicClock(data.startTime)} – ${formatPublicClock(data.endTime)}`
       : '—'
   const groupedAdditionals = groupAdditionals(data.additionals)
   const chargedMiles = getChargedMiles(

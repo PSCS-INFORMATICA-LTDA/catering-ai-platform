@@ -1,4 +1,4 @@
-import { GRILL_RENTAL_FEE } from './cdlCommercialRules'
+import { GRILL_RENTAL_FEE } from './cdlCommercialRules.ts'
 
 /** Public and server grill rental is yes/no. Quantity is never customer-editable. */
 export function normalizeGrillRentalQty(required: boolean): 0 | 1 {

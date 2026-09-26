@@ -10,6 +10,7 @@ import type { CatalogItemListItem } from '@/Lib/itemCatalog'
 import { getCatalogItemSalePrice } from '@/Lib/itemCatalog'
 import { getPackagePrice } from '@/Lib/packageFieldAccess'
 import { isPerPersonAdditional } from '@/Lib/quoteAdditionalDisplay'
+import { isWaiterServiceItem } from '@/Lib/publicQuote/extrasEligibility'
 import { getActiveCompanyId } from '@/Lib/tenant/resolveTenant'
 import { getSupabaseServerClient } from '@/Lib/supabaseServer'
 import type { PricingConfigurationError } from './pricingBreakdownTypes'
@@ -190,6 +191,7 @@ export async function resolveQuotePricingInput(
       unitPrice,
       perPerson,
       totalPrice,
+      countsTowardMinimum: !isWaiterServiceItem(catalog),
     })
   }
 

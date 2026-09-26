@@ -11,6 +11,7 @@ const PAYMENT_METADATA_ALLOWLIST = new Set([
   'intent',
   'source',
   'environment',
+  'test_transaction',
   'purpose',
   'schedule_hold_id',
   'schedule_hold_status',

@@ -9,6 +9,7 @@ import {
   buildFinanceTrend,
   computeCaptureSuccessRate,
   emptyFinanceSearch,
+  excludeSandboxFromFinance,
   groupFinanceTotalsByCurrency,
   groupReconciliationRows,
   isPendingRefundStatus,
@@ -37,6 +38,7 @@ import type {
 } from './financeControlCenterTypes'
 import type { InvoiceKind, InvoiceStatus, PaymentAttemptStatus, PaymentProvider } from './types'
 import { sanitizeOutboxPayload } from './sanitizeFinanceObservability'
+import { isRealFinancialPayment, isSandboxTestPayment } from './paypal/checkoutPolicy'
 
 const INVOICE_SELECT =
   'id, invoice_number, invoice_kind, parent_invoice_id, quote_id, service_order_id, closeout_id, status, currency_code, snapshot, total, deposit_amount, paid_total, created_at, updated_at'
@@ -116,7 +118,7 @@ export async function fetchFinanceOverview(input: {
         .limit(800),
       supabase
         .from('invoice_payments')
-        .select('id, invoice_id, provider, status, amount, currency_code, created_at, captured_at')
+        .select('id, invoice_id, provider, status, amount, currency_code, metadata, created_at, captured_at')
         .eq('company_id', input.companyId)
         .order('created_at', { ascending: false })
         .limit(800),
@@ -156,8 +158,23 @@ export async function fetchFinanceOverview(input: {
     return time >= fromMs && time <= toMs
   }
 
-  const invoices = (invoicesResult.data ?? []).filter((row) => inPeriod(String(row.created_at)))
-  const payments = (paymentsResult.data ?? []).filter((row) =>
+  const real = excludeSandboxFromFinance({
+    invoices: (invoicesResult.data ?? []).map((row) => ({
+      ...row,
+      id: String(row.id),
+      paid_total: money(row.paid_total),
+    })),
+    payments: (paymentsResult.data ?? []).map((row) => ({
+      ...row,
+      invoice_id: row.invoice_id ? String(row.invoice_id) : null,
+      provider: String(row.provider),
+      status: String(row.status),
+      amount: money(row.amount),
+    })),
+  })
+  const allRealPayments = real.payments
+  const invoices = real.invoices.filter((row) => inPeriod(String(row.created_at)))
+  const payments = allRealPayments.filter((row) =>
     inPeriod(String(row.captured_at || row.created_at)),
   )
   const refunds = (refundsResult.data ?? []).filter((row) =>
@@ -216,7 +233,7 @@ export async function fetchFinanceOverview(input: {
       enabled: row.enabled === true,
       environment: row.environment ? String(row.environment) : null,
     })),
-    payments: (paymentsResult.data ?? []).map((payment) => ({
+    payments: allRealPayments.map((payment) => ({
       provider: payment.provider as PaymentProvider,
       status: payment.status as PaymentAttemptStatus,
       amount: money(payment.amount),
@@ -253,6 +270,7 @@ export async function fetchFinanceOverview(input: {
           ? computeCaptureSuccessRate(paypalKpis.captured_in_period, paypalKpis.failed_in_period)
           : null,
       currency_code: paypalKpis?.currency_code || 'USD',
+      test_mode: paypal.health?.sandbox !== false,
     },
     pscs_one: outboxDashboardCounts(outboxRows),
     providers,
@@ -357,7 +375,7 @@ export async function fetchFinanceActivity(input: {
       .limit(80),
     supabase
       .from('invoice_payments')
-      .select('id, invoice_id, provider, status, amount, currency_code, created_at, captured_at')
+      .select('id, invoice_id, provider, status, amount, currency_code, metadata, created_at, captured_at')
       .eq('company_id', input.companyId)
       .order('created_at', { ascending: false })
       .limit(80),
@@ -412,7 +430,7 @@ export async function fetchFinanceActivity(input: {
 
   for (const payment of paymentsResult.data ?? []) {
     const invoice = payment.invoice_id ? invoiceMeta.get(String(payment.invoice_id)) : null
-    if (payment.status === 'completed') {
+    if (isRealFinancialPayment({ ...payment, provider: String(payment.provider), status: String(payment.status) })) {
       items.push({
         id: `payment:${payment.id}:completed`,
         kind: payment.provider === 'paypal' ? 'paypal_captured' : 'manual_reconciled',
@@ -839,7 +857,7 @@ export async function fetchFinanceProviders(input: { companyId: string }) {
       .eq('company_id', input.companyId),
     supabase
       .from('invoice_payments')
-      .select('provider, status, amount, currency_code')
+      .select('provider, status, amount, currency_code, metadata')
       .eq('company_id', input.companyId)
       .limit(800),
   ])
@@ -853,12 +871,14 @@ export async function fetchFinanceProviders(input: { companyId: string }) {
         enabled: row.enabled === true,
         environment: row.environment ? String(row.environment) : null,
       })),
-      payments: (paymentsResult.data ?? []).map((payment) => ({
-        provider: payment.provider as PaymentProvider,
-        status: payment.status as PaymentAttemptStatus,
-        amount: money(payment.amount),
-        currency_code: String(payment.currency_code || 'USD'),
-      })),
+      payments: (paymentsResult.data ?? [])
+        .filter((payment) => !isSandboxTestPayment({ provider: String(payment.provider), metadata: payment.metadata }))
+        .map((payment) => ({
+          provider: payment.provider as PaymentProvider,
+          status: payment.status as PaymentAttemptStatus,
+          amount: money(payment.amount),
+          currency_code: String(payment.currency_code || 'USD'),
+        })),
     }),
     error: null,
   }

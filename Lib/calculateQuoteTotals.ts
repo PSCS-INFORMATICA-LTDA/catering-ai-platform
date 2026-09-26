@@ -3,17 +3,17 @@ import {
   MILEAGE_FREE_LIMIT,
   MILEAGE_RATE,
   RESERVATION_PERCENTAGE,
-} from './cdlCommercialRules'
-import { calcNormalizedGrillRentalFee } from './grillRental'
+} from './cdlCommercialRules.ts'
+import { calcNormalizedGrillRentalFee } from './grillRental.ts'
 import {
   applyCommercialMinimums,
   type CommercialMinimumRules,
-} from './quotes/applyCommercialMinimums'
+} from './quotes/applyCommercialMinimums.ts'
 import {
   calcBillableGuestCount,
   calcPhysicalGuestCount,
   type GuestCounts,
-} from './quoteGuestFields'
+} from './quoteGuestFields.ts'
 
 export type { GuestCounts }
 
@@ -21,6 +21,8 @@ export type AdditionalLineInput = {
   quantity: number
   unitPrice: number
   perPerson: boolean
+  /** Waiter service does not count toward the order minimum. Default true. */
+  countsTowardMinimum?: boolean
 }
 
 export type CalculateQuoteTotalsInput = {
@@ -35,6 +37,8 @@ export type CalculateQuoteTotalsInput = {
   grillRentalRequired?: boolean
   grillRentalQty?: number
   grillRentalFeeOverride?: number | null
+  /** Used only with additionalTotalOverride, for waiter amounts inside that override. */
+  excludedFromMinimumAdditionalTotal?: number | null
   reservationPercentage?: number
   reservationAmountOverride?: number | null
   useCustomReservation?: boolean
@@ -61,6 +65,10 @@ export type QuoteTotals = {
   grillRentalTotal: number
   /** Pacote + adicionais + milhagem + churrasqueira (antes de regras comerciais). */
   quoteSubtotal: number
+  /** Package + eligible additionals + mileage. Grill and waiter are excluded. */
+  minimumEligibleSubtotal?: number
+  /** Grill + waiter, billed on top of the minimum. */
+  excludedFromMinimumTotal?: number
   holidaySurchargeAmount: number
   holidaySurchargePercent: number
   minimumOrderAmount: number
@@ -141,16 +149,25 @@ export function calculateQuoteTotals(
     Math.max(0, packageTotal - includedSidesTotal),
   )
 
-  const additionalTotal =
-    input.additionalTotalOverride != null
-      ? roundMoney(toNumber(input.additionalTotalOverride))
-      : roundMoney(
-          (input.additionals ?? []).reduce(
-            (sum, line) =>
-              sum + calcAdditionalLineTotal(line, billableGuestCount),
-            0,
-          ),
-        )
+  let eligibleAdditional = 0
+  let excludedAdditional = 0
+  if (input.additionalTotalOverride != null) {
+    const override = roundMoney(toNumber(input.additionalTotalOverride))
+    excludedAdditional = Math.min(
+      override,
+      roundMoney(toNumber(input.excludedFromMinimumAdditionalTotal)),
+    )
+    eligibleAdditional = roundMoney(override - excludedAdditional)
+  } else {
+    for (const line of input.additionals ?? []) {
+      const amount = calcAdditionalLineTotal(line, billableGuestCount)
+      if (line.countsTowardMinimum === false) excludedAdditional += amount
+      else eligibleAdditional += amount
+    }
+    eligibleAdditional = roundMoney(eligibleAdditional)
+    excludedAdditional = roundMoney(excludedAdditional)
+  }
+  const additionalTotal = roundMoney(eligibleAdditional + excludedAdditional)
 
   const mileageFee =
     input.mileageFeeOverride != null
@@ -169,20 +186,31 @@ export function calculateQuoteTotals(
           input.grillRentalQty ?? 0,
         )
 
+  const excludedFromMinimumTotal = roundMoney(
+    grillRentalTotal + excludedAdditional,
+  )
+  const minimumEligibleSubtotal = roundMoney(
+    packageTotal + eligibleAdditional + mileageFee,
+  )
   const quoteSubtotal = roundMoney(
-    packageTotal + additionalTotal + mileageFee + grillRentalTotal,
+    minimumEligibleSubtotal + excludedFromMinimumTotal,
   )
 
   const commercial = input.commercialMinimums
     ? applyCommercialMinimums(
-        quoteSubtotal,
+        minimumEligibleSubtotal,
         input.eventDate,
         input.commercialMinimums,
-        { packageSurchargeBase: packageMeatTotal },
+        {
+          packageSurchargeBase: packageMeatTotal,
+          excludedFromMinimumTotal,
+        },
       )
     : {
         holidaySurchargeAmount: 0,
         holidaySurchargePercent: 0,
+        minimumEligibleSubtotal,
+        excludedFromMinimumTotal,
         minimumOrderAmount: 0,
         minimumOrderApplied: false,
         minimumOrderAdjustment: 0,
@@ -212,6 +240,8 @@ export function calculateQuoteTotals(
     mileageFee,
     grillRentalTotal,
     quoteSubtotal,
+    minimumEligibleSubtotal: commercial.minimumEligibleSubtotal,
+    excludedFromMinimumTotal: commercial.excludedFromMinimumTotal,
     holidaySurchargeAmount: commercial.holidaySurchargeAmount,
     holidaySurchargePercent: commercial.holidaySurchargePercent,
     minimumOrderAmount: commercial.minimumOrderAmount,
@@ -228,4 +258,4 @@ export {
   calcBillableGuestCount,
   calcPhysicalGuestCount,
   readOfficialGuestCountsFromQuote,
-} from './quoteGuestFields'
+} from './quoteGuestFields.ts'

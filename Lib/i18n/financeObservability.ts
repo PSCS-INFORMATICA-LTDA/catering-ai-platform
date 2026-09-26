@@ -108,6 +108,27 @@ const { t, list } = makeI18nModule('financeObservability', 'finance', {
     es: 'Monitoreo operativo de PayPal Sandbox. Solo lectura.',
   },
   paypalSandboxBadge: { pt: 'PayPal Sandbox', en: 'PayPal Sandbox', es: 'PayPal Sandbox' },
+  sandboxTestBannerTitle: {
+    pt: 'PAYPAL SANDBOX',
+    en: 'PAYPAL SANDBOX',
+    es: 'PAYPAL SANDBOX',
+  },
+  sandboxTestBannerSubtitle: {
+    pt: 'TRANSAÇÕES DE TESTE — SEM DINHEIRO REAL',
+    en: 'TEST TRANSACTIONS — NO REAL MONEY',
+    es: 'TRANSACCIONES DE PRUEBA — SIN DINERO REAL',
+  },
+  sandboxTestBannerCopy: {
+    pt: 'Nada nesta tela é receita. Estes valores nunca entram em Recebido, Faturado ou relatórios financeiros reais, e não marcam orçamento/pedido como pago.',
+    en: 'Nothing on this screen is revenue. These amounts never enter Received, Billed or real financial reports, and never mark a quote/order as paid.',
+    es: 'Nada en esta pantalla es ingreso. Estos montos nunca entran en Recibido, Facturado ni reportes financieros reales, y no marcan presupuesto/pedido como pagado.',
+  },
+  testChip: { pt: 'TESTE', en: 'TEST', es: 'PRUEBA' },
+  statusSandboxCaptured: {
+    pt: 'Capturado (teste)',
+    en: 'Captured (test)',
+    es: 'Capturado (prueba)',
+  },
   failClosedTitle: { pt: 'Ambiente não autorizado', en: 'Unauthorized environment', es: 'Entorno no autorizado' },
   failClosedCopy: {
     pt: 'O Control Center só opera com PayPal Sandbox. Controles operacionais foram bloqueados.',

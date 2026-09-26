@@ -3,7 +3,7 @@ import {
   matchHolidaySurchargeDate,
   parseEventDateParts,
   type HolidayDateParts,
-} from '../usHolidays'
+} from '../usHolidays.ts'
 
 export type CommercialMinimumRules = {
   minOrderWeekday: number
@@ -21,6 +21,11 @@ export type CommercialAdjustmentOptions = {
    * never to sides, extras, mileage, grill or waiter.
    */
   packageSurchargeBase?: number
+  /**
+   * Grill and waiter (and anything else that must not fill the order minimum).
+   * Added to the total after the floor, never subtracted from a combined subtotal.
+   */
+  excludedFromMinimumTotal?: number
 }
 
 export type CommercialAdjustmentResult = {
@@ -35,6 +40,10 @@ export type CommercialAdjustmentResult = {
   holidaySurchargePercent: number
   holidaySurchargeAmount: number
   commercialAfterSurcharge: number
+  /** Package, eligible additionals and mileage. Grill and waiter are not here. */
+  minimumEligibleSubtotal: number
+  /** Grill, waiter and any other amount that is billed on top of the floor. */
+  excludedFromMinimumTotal: number
   minimumOrderAmount: number
   minimumOrderApplied: boolean
   minimumOrderAdjustment: number
@@ -52,7 +61,7 @@ function roundMoney(value: number) {
   return Math.round(value * 100) / 100
 }
 
-export { parseEventDateParts } from '../usHolidays'
+export { parseEventDateParts } from '../usHolidays.ts'
 
 /** 0=Sun … 6=Sat, using local calendar date. */
 export function getWeekdayFromParts(parts: EventDateParts): number {
@@ -96,7 +105,8 @@ export function resolveApplicableMinimum(
  * Applies CDL 2026 seasonal floors and surcharges.
  * Special dates (Dec 24/25/31, Jan 1): +100% on the package meat component only.
  * Other US federal holidays outside Dec/Jan keep the previous full-subtotal surcharge.
- * `baseSubtotal` = package + sides + extras + mileage + grill.
+ * `baseSubtotal` is the minimum-eligible amount (package + eligible extras + mileage).
+ * Grill and waiter belong in `excludedFromMinimumTotal` and are billed after the floor.
  */
 export function applyCommercialMinimums(
   baseSubtotal: number,
@@ -104,7 +114,11 @@ export function applyCommercialMinimums(
   rules: CommercialMinimumRules,
   options?: CommercialAdjustmentOptions,
 ): CommercialAdjustmentResult {
-  const base = roundMoney(Math.max(0, Number(baseSubtotal) || 0))
+  const eligible = roundMoney(Math.max(0, Number(baseSubtotal) || 0))
+  const excluded = roundMoney(
+    Math.max(0, Number(options?.excludedFromMinimumTotal) || 0),
+  )
+  const base = eligible
   const parts = parseEventDateParts(eventDate)
   const holiday = parts ? matchHolidaySurchargeDate(parts) : null
   const isSpecialCdlDate = parts ? isCdlHolidayDate(parts) : false
@@ -131,11 +145,23 @@ export function applyCommercialMinimums(
           ) || 0,
         ),
       )
-    : base
+    : roundMoney(eligible + excluded)
   const holidaySurchargeAmount = roundMoney(
     surchargeBase * (holidaySurchargePercent / 100),
   )
-  const commercialAfterSurcharge = roundMoney(base + holidaySurchargeAmount)
+  let eligibleSurcharge = 0
+  let excludedSurcharge = 0
+  if (isSpecialCdlDate) {
+    eligibleSurcharge = holidaySurchargeAmount
+  } else if (isOutsideDecJanUsHoliday && holidaySurchargeAmount > 0) {
+    const fullCommercial = roundMoney(eligible + excluded)
+    eligibleSurcharge =
+      fullCommercial > 0
+        ? roundMoney(eligible * (holidaySurchargePercent / 100))
+        : 0
+    excludedSurcharge = roundMoney(holidaySurchargeAmount - eligibleSurcharge)
+  }
+  const commercialAfterSurcharge = roundMoney(eligible + eligibleSurcharge)
 
   const { amount: minimumOrderAmount, reasonLabelKey: minReason } =
     resolveApplicableMinimum(parts, rules)
@@ -145,7 +171,10 @@ export function applyCommercialMinimums(
   )
   const minimumOrderApplied = minimumOrderAdjustment > 0
   const quoteTotal = roundMoney(
-    commercialAfterSurcharge + minimumOrderAdjustment,
+    commercialAfterSurcharge +
+      minimumOrderAdjustment +
+      excluded +
+      excludedSurcharge,
   )
 
   const reasonLabelKey: CommercialAdjustmentResult['reasonLabelKey'] = isSpecialCdlDate
@@ -175,6 +204,8 @@ export function applyCommercialMinimums(
     holidaySurchargePercent,
     holidaySurchargeAmount,
     commercialAfterSurcharge,
+    minimumEligibleSubtotal: eligible,
+    excludedFromMinimumTotal: excluded,
     minimumOrderAmount,
     minimumOrderApplied,
     minimumOrderAdjustment,
